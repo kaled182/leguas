@@ -190,6 +190,140 @@ class SystemConfiguration(models.Model):
     # Redis Configuration
     redis_url = EncryptedCharField("URL do Redis", max_length=512, blank=True, null=True)
     
+    # ========== CRON JOBS - ANALYTICS ==========
+    
+    # Job 1: Calculate Daily Metrics
+    cron_metrics_enabled = models.BooleanField(
+        "Cálculo de Métricas Diárias Ativado",
+        default=False,
+        help_text="Ativa o job que calcula métricas agregadas diariamente"
+    )
+    cron_metrics_schedule = models.CharField(
+        "Horário de Execução (Métricas)",
+        max_length=5,
+        default="01:00",
+        help_text="Formato HH:MM (24h). Exemplo: 01:00 para 1h da manhã"
+    )
+    cron_metrics_backfill_days = models.IntegerField(
+        "Dias de Backfill (Métricas)",
+        default=1,
+        help_text="Quantos dias recalcular em cada execução (default: 1 = apenas ontem)"
+    )
+    cron_metrics_last_run = models.DateTimeField(
+        "Última Execução (Métricas)",
+        null=True,
+        blank=True,
+        editable=False
+    )
+    cron_metrics_last_status = models.CharField(
+        "Status Última Execução (Métricas)",
+        max_length=20,
+        choices=[
+            ('success', 'Sucesso'),
+            ('failed', 'Falhou'),
+            ('running', 'Em Execução'),
+        ],
+        null=True,
+        blank=True,
+        editable=False
+    )
+    
+    # Job 2: Generate Forecasts
+    cron_forecasts_enabled = models.BooleanField(
+        "Geração de Forecasts Ativada",
+        default=False,
+        help_text="Ativa o job que gera previsões de volume"
+    )
+    cron_forecasts_schedule = models.CharField(
+        "Horário de Execução (Forecasts)",
+        max_length=5,
+        default="02:00",
+        help_text="Formato HH:MM (24h). Exemplo: 02:00 para 2h da manhã"
+    )
+    cron_forecasts_days_ahead = models.IntegerField(
+        "Dias de Previsão",
+        default=7,
+        help_text="Quantos dias prever no futuro (default: 7)"
+    )
+    cron_forecasts_method = models.CharField(
+        "Método de Forecasting",
+        max_length=10,
+        default='ALL',
+        choices=[
+            ('MA7', 'Média Móvel 7 dias'),
+            ('MA30', 'Média Móvel 30 dias'),
+            ('EMA', 'Exponential Moving Average'),
+            ('TREND', 'Análise de Tendências'),
+            ('SEASONAL', 'Padrões Sazonais'),
+            ('ALL', 'Todos os Métodos'),
+        ],
+        help_text="Método estatístico para previsão"
+    )
+    cron_forecasts_best_only = models.BooleanField(
+        "Manter Apenas Melhor Previsão",
+        default=True,
+        help_text="Se True, mantém apenas o forecast com maior confiança por data"
+    )
+    cron_forecasts_last_run = models.DateTimeField(
+        "Última Execução (Forecasts)",
+        null=True,
+        blank=True,
+        editable=False
+    )
+    cron_forecasts_last_status = models.CharField(
+        "Status Última Execução (Forecasts)",
+        max_length=20,
+        choices=[
+            ('success', 'Sucesso'),
+            ('failed', 'Falhou'),
+            ('running', 'Em Execução'),
+        ],
+        null=True,
+        blank=True,
+        editable=False
+    )
+    
+    # Job 3: Check Performance Alerts
+    cron_alerts_enabled = models.BooleanField(
+        "Verificação de Alertas Ativada",
+        default=False,
+        help_text="Ativa o job que verifica thresholds de performance"
+    )
+    cron_alerts_schedule = models.CharField(
+        "Horários de Execução (Alertas)",
+        max_length=50,
+        default="06:00,12:00,18:00",
+        help_text="Múltiplos horários separados por vírgula. Ex: 06:00,12:00,18:00"
+    )
+    cron_alerts_check_days = models.IntegerField(
+        "Dias de Análise (Alertas)",
+        default=1,
+        help_text="Quantos dias de métricas analisar (default: 1 = hoje)"
+    )
+    cron_alerts_send_notifications = models.BooleanField(
+        "Enviar Notificações",
+        default=True,
+        help_text="Se True, envia notificações quando alertas são criados"
+    )
+    cron_alerts_last_run = models.DateTimeField(
+        "Última Execução (Alertas)",
+        null=True,
+        blank=True,
+        editable=False
+    )
+    cron_alerts_last_status = models.CharField(
+        "Status Última Execução (Alertas)",
+        max_length=20,
+        choices=[
+            ('success', 'Sucesso'),
+            ('failed', 'Falhou'),
+            ('running', 'Em Execução'),
+        ],
+        null=True,
+        blank=True,
+        editable=False
+    )
+    
     # System Status
     configured = models.BooleanField("Sistema Configurado", default=False)
     configured_at = models.DateTimeField("Configurado em", auto_now_add=True)
@@ -236,6 +370,89 @@ class ConfigurationAudit(models.Model):
     
     def __str__(self):
         return f"{self.user} - {self.action} - {self.timestamp}"
+
+
+class CronJobExecution(models.Model):
+    """Histórico de execuções dos Cron Jobs"""
+    
+    JOB_TYPES = [
+        ('metrics', 'Cálculo de Métricas Diárias'),
+        ('forecasts', 'Geração de Forecasts'),
+        ('alerts', 'Verificação de Alertas'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('success', 'Sucesso'),
+        ('failed', 'Falhou'),
+        ('running', 'Em Execução'),
+    ]
+    
+    job_type = models.CharField("Tipo de Job", max_length=20, choices=JOB_TYPES, db_index=True)
+    started_at = models.DateTimeField("Iniciado em", auto_now_add=True, db_index=True)
+    finished_at = models.DateTimeField("Finalizado em", null=True, blank=True)
+    duration_seconds = models.FloatField("Duração (segundos)", null=True, blank=True, editable=False)
+    status = models.CharField("Status", max_length=20, choices=STATUS_CHOICES, default='running')
+    
+    # Resultados da execução
+    records_created = models.IntegerField("Registros Criados", default=0)
+    records_updated = models.IntegerField("Registros Atualizados", default=0)
+    records_skipped = models.IntegerField("Registros Ignorados", default=0)
+    errors_count = models.IntegerField("Erros", default=0)
+    
+    # Logs e detalhes
+    output_log = models.TextField("Log de Saída", blank=True)
+    error_log = models.TextField("Log de Erros", blank=True)
+    parameters = models.JSONField("Parâmetros", default=dict, blank=True)
+    
+    # Metadata
+    triggered_by = models.CharField(
+        "Iniciado por",
+        max_length=50,
+        default='cron',
+        help_text="cron, manual, api, etc."
+    )
+    hostname = models.CharField("Hostname", max_length=255, blank=True)
+    
+    class Meta:
+        verbose_name = "Execução de Cron Job"
+        verbose_name_plural = "Execuções de Cron Jobs"
+        ordering = ['-started_at']
+        indexes = [
+            models.Index(fields=['job_type', '-started_at']),
+            models.Index(fields=['status', '-started_at']),
+        ]
+    
+    def __str__(self):
+        return f"{self.get_job_type_display()} - {self.started_at} - {self.get_status_display()}"
+    
+    def save(self, *args, **kwargs):
+        # Calculate duration if finished
+        if self.finished_at and self.started_at:
+            delta = self.finished_at - self.started_at
+            self.duration_seconds = delta.total_seconds()
+        super().save(*args, **kwargs)
+    
+    def get_duration_display(self):
+        """Retorna duração formatada"""
+        if self.duration_seconds is None:
+            return "Em execução..."
+        
+        if self.duration_seconds < 60:
+            return f"{self.duration_seconds:.1f}s"
+        elif self.duration_seconds < 3600:
+            minutes = self.duration_seconds / 60
+            return f"{minutes:.1f}m"
+        else:
+            hours = self.duration_seconds / 3600
+            return f"{hours:.1f}h"
+    
+    def get_success_rate(self):
+        """Retorna taxa de sucesso da execução"""
+        total = self.records_created + self.records_updated + self.records_skipped + self.errors_count
+        if total == 0:
+            return 0.0
+        successful = self.records_created + self.records_updated + self.records_skipped
+        return (successful / total) * 100
 
 
 class MessagingGateway(models.Model):

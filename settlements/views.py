@@ -208,7 +208,7 @@ def financial_dashboard(request):
         'pending_claims': pending_claims,
     }
     
-    return render(request, 'settlements/test_simple.html', context)
+    return render(request, 'settlements/financial_dashboard_new.html', context)
 
 
 @login_required
@@ -242,7 +242,7 @@ def invoice_list(request):
         'status_choices': PartnerInvoice.STATUS_CHOICES,
     }
     
-    return render(request, 'settlements/invoice_list.html', context)
+    return render(request, 'settlements/invoice_list_new.html', context)
 
 
 @login_required
@@ -323,7 +323,9 @@ def settlement_list(request):
         'period_choices': period_choices,
     }
     
-    return render(request, 'settlements/settlement_list.html', context)
+    # Create simple template inline
+    from django.http import HttpResponse
+    return render(request, 'settlements/settlement_list_new.html', context)
 
 
 @login_required
@@ -408,7 +410,7 @@ def claim_list(request):
         'type_choices': DriverClaim.CLAIM_TYPES,
     }
     
-    return render(request, 'settlements/claim_list.html', context)
+    return render(request, 'settlements/claim_list_new.html', context)
 
 
 @login_required

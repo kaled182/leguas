@@ -142,6 +142,18 @@ def save_config(request):
         
         # Redis
         'redis_url': 'redis_url',
+        
+        # Cron Jobs - Analytics
+        'cron_metrics_schedule': 'cron_metrics_schedule',
+        'cron_metrics_backfill_days': 'cron_metrics_backfill_days',
+        'cron_metrics_last_status': 'cron_metrics_last_status',
+        'cron_forecasts_schedule': 'cron_forecasts_schedule',
+        'cron_forecasts_days_ahead': 'cron_forecasts_days_ahead',
+        'cron_forecasts_method': 'cron_forecasts_method',
+        'cron_forecasts_last_status': 'cron_forecasts_last_status',
+        'cron_alerts_schedule': 'cron_alerts_schedule',
+        'cron_alerts_check_days': 'cron_alerts_check_days',
+        'cron_alerts_last_status': 'cron_alerts_last_status',
     }
     
     # Atualizar todos os campos de texto
@@ -174,6 +186,12 @@ def save_config(request):
         'enable_drawing_tools': 'enable_drawing_tools',
         'enable_fullscreen': 'enable_fullscreen',
         'mapbox_enable_3d': 'mapbox_enable_3d',
+        # Cron Jobs
+        'cron_metrics_enabled': 'cron_metrics_enabled',
+        'cron_forecasts_enabled': 'cron_forecasts_enabled',
+        'cron_forecasts_best_only': 'cron_forecasts_best_only',
+        'cron_alerts_enabled': 'cron_alerts_enabled',
+        'cron_alerts_send_notifications': 'cron_alerts_send_notifications',
     }
     
     for form_field, model_field in boolean_fields.items():

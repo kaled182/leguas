@@ -845,6 +845,241 @@
             </div>
         </details>
 
+        <!-- Cron Jobs - Analytics -->
+        <details class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
+            <summary class="px-6 py-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 flex items-center gap-2 font-semibold">
+                <i data-lucide="clock" class="w-5 h-5"></i>
+                ⏰ Cron Jobs - Analytics
+            </summary>
+            <div class="px-6 pb-6 space-y-6">
+                <!-- Visual Summary -->
+                <div class="p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border border-blue-200 dark:border-blue-700 rounded-lg">
+                    <h4 class="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                        <i data-lucide="activity" class="w-4 h-4"></i>
+                        Status dos Jobs Automáticos
+                    </h4>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <!-- Metrics Job -->
+                        <div class="p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="text-2xl">📊</span>
+                                <span class="text-sm font-medium">Métricas Diárias</span>
+                            </div>
+                            <div class="text-xs text-gray-600 dark:text-gray-400">
+                                <div>Status: <span class="{% if config.cron_metrics_enabled %}text-green-600 dark:text-green-400{% else %}text-gray-500{% endif %}">{% if config.cron_metrics_enabled %}✓ Ativo{% else %}○ Inativo{% endif %}</span></div>
+                                {% if config.cron_metrics_schedule %}<div>Horário: {{ config.cron_metrics_schedule }}</div>{% endif %}
+                                {% if config.cron_metrics_last_run %}<div>Última execução: {{ config.cron_metrics_last_run|date:"d/m/Y H:i" }}</div>{% endif %}
+                                {% if config.cron_metrics_last_status %}<div>Resultado: <span class="{% if config.cron_metrics_last_status == 'success' %}text-green-600{% elif config.cron_metrics_last_status == 'error' %}text-red-600{% else %}text-yellow-600{% endif %}">{{ config.cron_metrics_last_status }}</span></div>{% endif %}
+                            </div>
+                        </div>
+                        
+                        <!-- Forecasts Job -->
+                        <div class="p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="text-2xl">📈</span>
+                                <span class="text-sm font-medium">Previsões</span>
+                            </div>
+                            <div class="text-xs text-gray-600 dark:text-gray-400">
+                                <div>Status: <span class="{% if config.cron_forecasts_enabled %}text-green-600 dark:text-green-400{% else %}text-gray-500{% endif %}">{% if config.cron_forecasts_enabled %}✓ Ativo{% else %}○ Inativo{% endif %}</span></div>
+                                {% if config.cron_forecasts_schedule %}<div>Horário: {{ config.cron_forecasts_schedule }}</div>{% endif %}
+                                {% if config.cron_forecasts_last_run %}<div>Última execução: {{ config.cron_forecasts_last_run|date:"d/m/Y H:i" }}</div>{% endif %}
+                                {% if config.cron_forecasts_last_status %}<div>Resultado: <span class="{% if config.cron_forecasts_last_status == 'success' %}text-green-600{% elif config.cron_forecasts_last_status == 'error' %}text-red-600{% else %}text-yellow-600{% endif %}">{{ config.cron_forecasts_last_status }}</span></div>{% endif %}
+                            </div>
+                        </div>
+                        
+                        <!-- Alerts Job -->
+                        <div class="p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="text-2xl">🔔</span>
+                                <span class="text-sm font-medium">Alertas</span>
+                            </div>
+                            <div class="text-xs text-gray-600 dark:text-gray-400">
+                                <div>Status: <span class="{% if config.cron_alerts_enabled %}text-green-600 dark:text-green-400{% else %}text-gray-500{% endif %}">{% if config.cron_alerts_enabled %}✓ Ativo{% else %}○ Inativo{% endif %}</span></div>
+                                {% if config.cron_alerts_schedule %}<div>Horário: {{ config.cron_alerts_schedule }}</div>{% endif %}
+                                {% if config.cron_alerts_last_run %}<div>Última execução: {{ config.cron_alerts_last_run|date:"d/m/Y H:i" }}</div>{% endif %}
+                                {% if config.cron_alerts_last_status %}<div>Resultado: <span class="{% if config.cron_alerts_last_status == 'success' %}text-green-600{% elif config.cron_alerts_last_status == 'error' %}text-red-600{% else %}text-yellow-600{% endif %}">{{ config.cron_alerts_last_status }}</span></div>{% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 📊 Métricas Diárias -->
+                <div class="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
+                    <div class="flex items-center gap-2 mb-4">
+                        <span class="text-2xl">📊</span>
+                        <h4 class="text-base font-semibold text-gray-900 dark:text-white">Cálculo de Métricas Diárias</h4>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div class="flex items-center gap-3">
+                            <input type="checkbox" name="cron_metrics_enabled" id="cron_metrics_enabled" value="1"
+                                   {% if config.cron_metrics_enabled %}checked{% endif %}
+                                   class="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500">
+                            <label for="cron_metrics_enabled" class="font-medium text-gray-900 dark:text-white cursor-pointer">
+                                Ativar cálculo automático de métricas
+                            </label>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Horário de Execução (HH:MM)</label>
+                            <input type="time" name="cron_metrics_schedule" value="{{ config.cron_metrics_schedule|default:'02:00' }}"
+                                   class="w-full px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg dark:text-white">
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Job executado diariamente neste horário</p>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Dias de Backfill</label>
+                            <input type="number" name="cron_metrics_backfill_days" min="0" max="90" 
+                                   value="{{ config.cron_metrics_backfill_days|default:'7' }}"
+                                   class="w-full px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg dark:text-white">
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Recalcular métricas dos últimos N dias</p>
+                        </div>
+                        <div class="flex items-center gap-2 pt-7">
+                            <i data-lucide="info" class="w-4 h-4 text-blue-500"></i>
+                            <span class="text-xs text-gray-600 dark:text-gray-400">
+                                Calcula: total de pedidos, receita, distância, duração, taxa de sucesso, pedidos por hora
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 📈 Previsões -->
+                <div class="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
+                    <div class="flex items-center gap-2 mb-4">
+                        <span class="text-2xl">📈</span>
+                        <h4 class="text-base font-semibold text-gray-900 dark:text-white">Geração de Previsões</h4>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div class="flex items-center gap-3">
+                            <input type="checkbox" name="cron_forecasts_enabled" id="cron_forecasts_enabled" value="1"
+                                   {% if config.cron_forecasts_enabled %}checked{% endif %}
+                                   class="w-5 h-5 text-purple-600 rounded focus:ring-2 focus:ring-purple-500">
+                            <label for="cron_forecasts_enabled" class="font-medium text-gray-900 dark:text-white cursor-pointer">
+                                Ativar geração automática de previsões
+                            </label>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Horário de Execução (HH:MM)</label>
+                            <input type="time" name="cron_forecasts_schedule" value="{{ config.cron_forecasts_schedule|default:'03:00' }}"
+                                   class="w-full px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg dark:text-white">
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Job executado diariamente neste horário</p>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Dias à Frente</label>
+                            <input type="number" name="cron_forecasts_days_ahead" min="1" max="90" 
+                                   value="{{ config.cron_forecasts_days_ahead|default:'30' }}"
+                                   class="w-full px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg dark:text-white">
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Quantos dias prever no futuro</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Método de Previsão</label>
+                            <select name="cron_forecasts_method" 
+                                    class="w-full px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg dark:text-white">
+                                <option value="ALL" {% if config.cron_forecasts_method == 'ALL' %}selected{% endif %}>Todos os métodos</option>
+                                <option value="MA7" {% if config.cron_forecasts_method == 'MA7' %}selected{% endif %}>Média Móvel 7 dias</option>
+                                <option value="MA30" {% if config.cron_forecasts_method == 'MA30' %}selected{% endif %}>Média Móvel 30 dias</option>
+                                <option value="EMA" {% if config.cron_forecasts_method == 'EMA' %}selected{% endif %}>Média Exponencial</option>
+                                <option value="TREND" {% if config.cron_forecasts_method == 'TREND' %}selected{% endif %}>Análise de Tendência</option>
+                                <option value="SEASONAL" {% if config.cron_forecasts_method == 'SEASONAL' %}selected{% endif %}>Sazonalidade</option>
+                            </select>
+                        </div>
+                        <div class="flex items-center gap-3 pt-7">
+                            <input type="checkbox" name="cron_forecasts_best_only" id="cron_forecasts_best_only" value="1"
+                                   {% if config.cron_forecasts_best_only %}checked{% endif %}
+                                   class="w-4 h-4 text-purple-600 rounded">
+                            <label for="cron_forecasts_best_only" class="text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+                                Marcar melhor método automaticamente
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 🔔 Alertas de Performance -->
+                <div class="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
+                    <div class="flex items-center gap-2 mb-4">
+                        <span class="text-2xl">🔔</span>
+                        <h4 class="text-base font-semibold text-gray-900 dark:text-white">Verificação de Alertas</h4>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div class="flex items-center gap-3">
+                            <input type="checkbox" name="cron_alerts_enabled" id="cron_alerts_enabled" value="1"
+                                   {% if config.cron_alerts_enabled %}checked{% endif %}
+                                   class="w-5 h-5 text-orange-600 rounded focus:ring-2 focus:ring-orange-500">
+                            <label for="cron_alerts_enabled" class="font-medium text-gray-900 dark:text-white cursor-pointer">
+                                Ativar verificação automática de alertas
+                            </label>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Horário de Execução (HH:MM)</label>
+                            <input type="time" name="cron_alerts_schedule" value="{{ config.cron_alerts_schedule|default:'08:00' }}"
+                                   class="w-full px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg dark:text-white">
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Job executado diariamente neste horário</p>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Dias para Analisar</label>
+                            <input type="number" name="cron_alerts_check_days" min="1" max="30" 
+                                   value="{{ config.cron_alerts_check_days|default:'7' }}"
+                                   class="w-full px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg dark:text-white">
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Analisar performance dos últimos N dias</p>
+                        </div>
+                        <div class="flex items-center gap-3 pt-7">
+                            <input type="checkbox" name="cron_alerts_send_notifications" id="cron_alerts_send_notifications" value="1"
+                                   {% if config.cron_alerts_send_notifications %}checked{% endif %}
+                                   class="w-4 h-4 text-orange-600 rounded">
+                            <label for="cron_alerts_send_notifications" class="text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+                                Enviar notificações por email
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-3 p-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-700 rounded">
+                        <div class="flex items-start gap-2">
+                            <i data-lucide="bell" class="w-4 h-4 text-orange-600 mt-0.5 flex-shrink-0"></i>
+                            <div class="text-xs text-orange-800 dark:text-orange-200">
+                                <p class="font-medium mb-1">Tipos de Alertas Monitorados:</p>
+                                <ul class="list-disc list-inside space-y-0.5 ml-2">
+                                    <li>Queda de receita (&gt;20% vs média)</li>
+                                    <li>Redução de volume de pedidos (&gt;30% vs média)</li>
+                                    <li>Taxa de sucesso baixa (&lt;80%)</li>
+                                    <li>Aumento de tempo médio de entrega (&gt;30% vs média)</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Informação de Configuração -->
+                <div class="p-4 bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 rounded">
+                    <div class="flex items-start gap-2">
+                        <i data-lucide="info" class="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5"></i>
+                        <div class="text-sm text-blue-800 dark:text-blue-200">
+                            <p class="font-semibold mb-2">Como funciona:</p>
+                            <ol class="list-decimal list-inside space-y-1 ml-2 text-xs">
+                                <li>Configure os horários e parâmetros acima</li>
+                                <li>Salve as configurações</li>
+                                <li>O sistema executará os jobs automaticamente nos horários definidos</li>
+                                <li>Monitore o status e resultados na seção de resumo acima</li>
+                                <li>Logs detalhados disponíveis em: <code class="px-1 py-0.5 bg-blue-100 dark:bg-blue-900/30 rounded font-mono">Admin → Cron Job Executions</code></li>
+                            </ol>
+                            <p class="mt-3 text-xs">
+                                <strong>Execução Manual:</strong> Para testar ou executar imediatamente, use:<br>
+                                <code class="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 rounded font-mono mt-1 inline-block">python manage.py run_scheduled_jobs --force-job=metrics</code>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </details>
+
         <!-- Botões de Ação -->
         <div class="flex justify-end gap-4 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6">
             <a href="{% url 'paack_dashboard:dashboard_paack' %}" 

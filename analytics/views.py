@@ -265,7 +265,7 @@ def alerts_dashboard(request):
     
     # Alertas por tipo
     alerts_by_type = PerformanceAlert.objects.filter(
-        status='ACTIVE'
+        is_acknowledged=False
     ).values('alert_type').annotate(
         count=Count('id')
     ).order_by('-count')
@@ -430,10 +430,10 @@ def vehicles_performance_report(request):
         )),
         # Custo total de manutenções
         maintenance_cost=Sum(
-            'maintenances__cost',
+            'maintenance_records__cost',
             filter=Q(
-                maintenances__date__gte=start_date,
-                maintenances__date__lte=end_date
+                maintenance_records__completed_date__gte=start_date,
+                maintenance_records__completed_date__lte=end_date
             )
         ),
         # Custo de incidentes

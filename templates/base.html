@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="pt-br" class="h-full">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>
+      {% block title %}
+        Dashboard
+      {% endblock %}
+    </title>
+    {% load static %}
+
+    <!-- Fontes modernas -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <!-- Inicialização do tema ANTES do Tailwind -->
+    <script>
+      // Aplicar tema imediatamente para evitar flash
+      const savedTheme = localStorage.getItem('color-theme');
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      
+      if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    </script>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            fontFamily: {
+              'sans': ['Inter', 'Segoe UI', 'Arial', 'sans-serif'],
+            },
+            colors: {
+              primary: {
+                50: '#f0f9ff',
+                100: '#e0f2fe',
+                200: '#bae6fd',
+                300: '#7dd3fc',
+                400: '#38bdf8',
+                500: '#0ea5e9',
+                600: '#0284c7',
+                700: '#0369a1',
+                800: '#075985',
+                900: '#0c4a6e',
+              },
+              secondary: {
+                50: '#fdf4ff',
+                100: '#fae8ff',
+                200: '#f5d0fe',
+                300: '#f0abfc',
+                400: '#e879f9',
+                500: '#d946ef',
+                600: '#c026d3',
+                700: '#a21caf',
+                800: '#86198f',
+                900: '#701a75',
+              },
+              gray: {
+                50: '#f8fafc',
+                100: '#f1f5f9',
+                200: '#e2e8f0',
+                300: '#cbd5e1',
+                400: '#94a3b8',
+                500: '#64748b',
+                600: '#475569',
+                700: '#334155',
+                800: '#1e293b',
+                900: '#0f172a',
+              }
+            },
+            animation: {
+              'slide-in': 'slideIn 0.3s ease-out',
+              'fade-in': 'fadeIn 0.2s ease-out',
+            },
+            transitionProperty: {
+              'sidebar': 'transform, opacity, visibility',
+            }
+          },
+        },
+      }
+    </script>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{% static 'css/base.css' %}" />
+    <link rel="stylesheet" href="{% static 'css/modern-dashboard.css' %}" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
+
+    <!-- CSRF Token para requisições AJAX -->
+    <meta name="csrf-token" content="{{ csrf_token }}">
+
+    {% block extra_head %}
+    {% endblock %}
+  </head>
+  <body class="h-full bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-sans transition-colors duration-300 antialiased">
+    
+    <!-- Dark Mode Toggle - Posição fixa melhorada -->
+    <div class="fixed top-4 right-4 z-50">
+        <button
+            id="darkModeToggle"
+            class="group relative w-12 h-12 bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full shadow-lg hover:shadow-xl border border-gray-200 dark:border-gray-700 transition-all duration-300 flex items-center justify-center overflow-hidden"
+            title="Alternar tema"
+        >
+            <!-- Ícone Sol (modo claro) -->
+            <i data-lucide="sun" class="sun-icon w-5 h-5 text-amber-500 transition-all duration-300 absolute"></i>
+            <!-- Ícone Lua (modo escuro) -->
+            <i data-lucide="moon" class="moon-icon w-5 h-5 text-indigo-400 transition-all duration-300 absolute opacity-0"></i>
+        </button>
+    </div>
+    
+    <!-- Área de Notificações -->
+    <div id="notification-area" class="fixed top-4 right-20 z-40 space-y-3 max-w-sm"></div>
+
+    <div class="min-h-screen flex flex-row bg-gray-50 dark:bg-gray-900">
+      <!-- Overlay para mobile -->
+      <div id="sidebar-overlay" class="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 z-20 lg:hidden hidden transition-opacity duration-300"></div>
+      
+      <!-- Sidebar responsiva com transições melhoradas -->
+      <aside id="sidebar" class="fixed z-30 inset-y-0 left-0 w-64 transform -translate-x-full lg:translate-x-0 lg:static lg:flex flex-col min-h-screen bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-all duration-300 ease-in-out shadow-lg lg:shadow-none">
+        <!-- Header da sidebar -->
+        <div class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-600 rounded-lg flex items-center justify-center shadow-sm">
+              <span class="text-white text-lg">🚚</span>
+            </div>
+            <span class="text-lg font-bold text-gray-900 dark:text-white">{% block sidebar_title %}Dashboard{% endblock %}</span>
+          </div>
+          <!-- Botão fechar no mobile -->
+          <button id="sidebar-close" class="lg:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+            <i data-lucide="x" class="w-5 h-5 text-gray-500 dark:text-gray-400"></i>
+          </button>
+        </div>
+        
+        <!-- Navegação -->
+        <nav class="flex-1 p-4 space-y-2">
+          {% include 'partials/sidebar_links.html' %}
+        </nav>
+      </aside>
+      
+      <!-- Botão de toggle da sidebar (mobile) -->
+      <button id="sidebar-toggle" class="fixed top-4 left-4 z-40 lg:hidden bg-primary-600 hover:bg-primary-700 text-white p-3 rounded-lg shadow-lg transition-colors duration-200">
+        <i data-lucide="menu" class="w-5 h-5"></i>
+      </button>
+      <!-- Overlay para fechar sidebar no mobile -->
+      <div id="sidebarOverlay" class="fixed inset-0 bg-black bg-opacity-40 z-20 hidden lg:hidden"></div>
+      <!-- Conteúdo principal -->
+      <div class="flex-1 flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900">
+        {% block content %}{% endblock %}
+      </div>
+    </div>
+
+    <script>
+      lucide.createIcons();
+      
+      // Sidebar toggle logic melhorado
+      const sidebar = document.getElementById('sidebar');
+      const sidebarToggle = document.getElementById('sidebar-toggle');
+      const sidebarClose = document.getElementById('sidebar-close');
+      const sidebarOverlay = document.getElementById('sidebar-overlay');
+      
+      function openSidebar() {
+        sidebar.classList.remove('-translate-x-full');
+        sidebarOverlay.classList.remove('hidden');
+        // Adicionar classe para melhor transição
+        setTimeout(() => {
+          sidebarOverlay.classList.remove('opacity-0');
+        }, 10);
+      }
+      
+      function closeSidebar() {
+        sidebar.classList.add('-translate-x-full');
+        sidebarOverlay.classList.add('opacity-0');
+        setTimeout(() => {
+          sidebarOverlay.classList.add('hidden');
+        }, 300);
+      }
+      
+      // Event listeners
+      if (sidebarToggle) {
+        sidebarToggle.addEventListener('click', openSidebar);
+      }
+      if (sidebarClose) {
+        sidebarClose.addEventListener('click', closeSidebar);
+      }
+      if (sidebarOverlay) {
+        sidebarOverlay.addEventListener('click', closeSidebar);
+      }
+      
+      // Fechar sidebar ao redimensionar para desktop
+      window.addEventListener('resize', function() {
+        if (window.innerWidth >= 1024) {
+          closeSidebar();
+        }
+      });
+      
+      // Dark mode toggle logic melhorado
+      const darkModeToggle = document.getElementById('darkModeToggle');
+      const htmlEl = document.documentElement;
+      const sunIcon = document.querySelector('.sun-icon');
+      const moonIcon = document.querySelector('.moon-icon');
+      
+      function updateDarkModeIcons() {
+        if (htmlEl.classList.contains('dark')) {
+          if (sunIcon) sunIcon.classList.add('opacity-0', 'rotate-90');
+          if (moonIcon) moonIcon.classList.remove('opacity-0', 'rotate-90');
+        } else {
+          if (sunIcon) sunIcon.classList.remove('opacity-0', 'rotate-90');
+          if (moonIcon) moonIcon.classList.add('opacity-0', 'rotate-90');
+        }
+      }
+      
+      if (darkModeToggle) {
+        darkModeToggle.addEventListener('click', function() {
+          htmlEl.classList.toggle('dark');
+          if (htmlEl.classList.contains('dark')) {
+            localStorage.setItem('color-theme', 'dark');
+          } else {
+            localStorage.setItem('color-theme', 'light');
+          }
+          updateDarkModeIcons();
+        });
+        // Inicializa ícones corretos ao carregar
+        updateDarkModeIcons();
+      }
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+  </body>
+</html>

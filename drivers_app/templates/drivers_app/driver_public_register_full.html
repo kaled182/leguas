@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastro Completo de Motoristas - Leguas Franzinas</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .step-section {
+            display: none;
+        }
+        
+        .step-section.active {
+            display: block;
+            animation: fadeIn 0.3s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .input-field:focus {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.1);
+        }
+        
+        .progress-bar {
+            transition: width 0.3s ease;
+        }
+        
+        .file-upload-area {
+            border: 2px dashed #cbd5e0;
+            transition: all 0.3s;
+        }
+        
+        .file-upload-area:hover {
+            border-color: #667eea;
+            background-color: #f7fafc;
+        }
+        
+        .file-upload-area.dragover {
+            border-color: #667eea;
+            background-color: #eef2ff;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <header class="gradient-bg text-white py-6 shadow-lg">
+        <div class="max-w-6xl mx-auto px-4">
+            <div class="flex items-center gap-3">
+                <i data-lucide="truck" class="w-10 h-10"></i>
+                <div>
+                    <h1 class="text-2xl font-bold">Leguas Franzinas</h1>
+                    <p class="text-sm opacity-90">Cadastro Completo de Motoristas</p>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-4 py-12">
+        {% if messages %}
+        <div class="mb-8 space-y-4">
+            {% for message in messages %}
+            <div class="{% if message.tags == 'success' %}bg-green-50 border-green-200 text-green-800{% else %}bg-red-50 border-red-200 text-red-800{% endif %} border-l-4 p-4 rounded-lg flex items-center gap-3">
+                <i data-lucide="{% if message.tags == 'success' %}check-circle{% else %}alert-circle{% endif %}" class="w-5 h-5"></i>
+                <span>{{ message }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Progress Bar -->
+        <div class="bg-white rounded-2xl shadow-lg p-6 mb-8">
+            <div class="flex items-center justify-between mb-4">
+                <span class="text-sm font-medium text-gray-700">Progresso do Cadastro</span>
+                <span id="progress-text" class="text-sm font-semibold text-purple-600">Passo 1 de 4</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-3">
+                <div id="progress-bar" class="progress-bar bg-gradient-to-r from-purple-500 to-blue-500 h-3 rounded-full" style="width: 25%"></div>
+            </div>
+            <div class="flex justify-between mt-3 text-xs text-gray-600">
+                <span>Dados Pessoais</span>
+                <span>Documentos</span>
+                <span>Veiculo</span>
+                <span>Revisao</span>
+            </div>
+        </div>
+
+        <form method="POST" enctype="multipart/form-data" id="registration-form" class="bg-white rounded-2xl shadow-lg p-8">
+            {% csrf_token %}
+            
+            <!-- STEP 1: Dados Pessoais e Identificacao -->
+            <div class="step-section active" data-step="1">
+                <h2 class="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                    <i data-lucide="user" class="w-6 h-6 text-purple-600"></i>
+                    Dados Pessoais e Identificacao
+                </h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- NIF -->
+                    <div>
+                        <label class="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                            <i data-lucide="hash" class="w-4 h-4"></i>
+                            NIF <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" name="nif" id="nif" required maxlength="9" pattern="[0-9]{9}" 
+                               placeholder="123456789" class="input-field w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                        <p class="mt-1 text-xs text-gray-500">9 digitos numericos</p>
+                    </div>
+
+                    <!-- Nome Completo -->
+                    <div>
+                        <label class="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                            <i data-lucide="user-circle" class="w-4 h-4"></i>
+                            Nome Completo <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" name="nome_completo" required minlength="3" 
+                               placeholder="Joao Silva Santos" class="input-field w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                    </div>
+
+                    <!-- NISS -->
+                    <div>
+                        <label class="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                            <i data-lucide="credit-card" class="w-4 h-4"></i>
+                            NISS <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" name="niss" required maxlength="11" pattern="[0-9]{11}" 
+                               placeholder="12345678901" class="input-field w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                        <p class="mt-1 text-xs text-gray-500">11 digitos - Seguranca Social</p>
+                    </div>
+
+                    <!-- Data Nascimento -->
+                    <div>
+                        <label class="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                            <i data-lucide="calendar" class="w-4 h-4"></i>
+                            Data de Nascimento <span class="text-red-500">*</span>
+                        </label>
+                        <input type="date" name="data_nascimento" required 
+                               class="input-field w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                    </div>
+
+                    <!-- Nacionalidade -->
+                    <div>
+                        <label class="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                            <i data-lucide="flag" class="w-4 h-4"></i>
+                            Nacionalidade <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" name="nacionalidade" required value="Portugal"
+                               class="input-field w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                    </div>
+
+                    <!-- Telefone -->
+                    <div>
+                        <label class="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                            <i data-lucide="phone" class="w-4 h-4"></i>
+                            Telefone <span class="text-red-500">*</span>
+                        </label>
+                        <input type="tel" name="telefone" required placeholder="+351911111111" 
+                               pattern="^\+?[0-9]{9,15}$" class="input-field w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                    </div>
+
+                    <!-- Email -->
+                    <div class="md:col-span-2">
+                        <label class="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                            <i data-lucide="mail" class="w-4 h-4"></i>
+                            Email <span class="text-red-500">*</span>
+                        </label>
+                        <input type="email" name="email" required placeholder="joao.silva@example.com"
+                               class="input-field w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                    </div>
+
+                    <!-- Endereco -->
+                    <div class="md:col-span-2">
+                        <label class="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                            <i data-lucide="map-pin" class="w-4 h-4"></i>
+                            Endereco Completo <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" name="endereco_residencia" required 
+                               placeholder="Rua Example, n123, 1 Esquerdo" class="input-field w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                    </div>
+
+                    <!-- Codigo Postal -->
+                    <div>
+                        <label class="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                            <i data-lucide="map" class="w-4 h-4"></i>
+                            Codigo Postal <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" name="codigo_postal" required pattern="[0-9]{4}-[0-9]{3}" 
+                               placeholder="1000-001" class="input-field w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                    </div>
+
+                    <!-- Cidade -->
+                    <div>
+                        <label class="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                            <i data-lucide="building" class="w-4 h-4"></i>
+                            Cidade <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" name="cidade" required placeholder="Lisboa"
+                               class="input-field w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                    </div>
+
+                    <!-- Tipo de Vinculo -->
+                    <div class="md:col-span-2">
+                        <label class="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                            <i data-lucide="briefcase" class="w-4 h-4"></i>
+                            Tipo de Vinculo Profissional <span class="text-red-500">*</span>
+                        </label>
+                        <div class="grid grid-cols-2 gap-4">
+                            <label class="flex items-center p-4 border-2 border-gray-300 rounded-lg cursor-pointer hover:border-purple-500 transition-all">
+                                <input type="radio" name="tipo_vinculo" value="DIRETO" required class="mr-3 text-purple-600">
+                                <div>
+                                    <div class="font-medium">Direto</div>
+                                    <div class="text-xs text-gray-500">Recibos Verdes</div>
+                                </div>
+                            </label>
+                            <label class="flex items-center p-4 border-2 border-gray-300 rounded-lg cursor-pointer hover:border-purple-500 transition-all">
+                                <input type="radio" name="tipo_vinculo" value="PARCEIRO" required class="mr-3 text-purple-600">
+                                <div>
+                                    <div class="font-medium">Parceiro</div>
+                                    <div class="text-xs text-gray-500">Frota</div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Nome Frota (condicional) -->
+                    <div id="frota-field" class="md:col-span-2" style="display: none;">
+                        <label class="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                            <i data-lucide="users" class="w-4 h-4"></i>
+                            Nome da Frota
+                        </label>
+                        <input type="text" name="nome_frota" placeholder="Nome da empresa parceira"
+                               class="input-field w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                    </div>
+                </div>
+
+                <div class="mt-8 flex justify-end">
+                    <button type="button" onclick="nextStep()" class="gradient-bg text-white px-8 py-3 rounded-lg font-semibold flex items-center gap-2 hover:shadow-lg transition-all">
+                        Proximo <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- STEP 2: Documentos do Motorista -->
+            <div class="step-section" data-step="2">
+                <h2 class="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                    <i data-lucide="file-text" class="w-6 h-6 text-purple-600"></i>
+                    Documentos do Motorista
+                </h2>
+
+                <div class="space-y-6">
+                    <!-- Tipo Documento Identificacao -->
+                    <div>
+                        <label class="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                            <i data-lucide="id-card" class="w-4 h-4"></i>
+                            Tipo de Documento de Identificacao <span class="text-red-500">*</span>
+                        </label>
+                        <select name="tipo_doc_id" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                            <option value="">Selecione...</option>
+                            <option value="CC">Cartao de Cidadao</option>
+                            <option value="TR">Titulo de Residencia</option>
+                            <option value="PP">Passaporte</option>
+                        </select>
+                    </div>
+
+                    <!-- Upload Documento ID -->
+                    <div class="file-upload-area p-6 rounded-lg text-center">
+                        <i data-lucide="upload-cloud" class="w-12 h-12 mx-auto text-gray-400 mb-3"></i>
+                        <label class="block cursor-pointer">
+                            <span class="text-sm font-medium text-gray-700">Documento de Identificacao <span class="text-red-500">*</span></span>
+                            <input type="file" name="doc_identificacao" accept=".pdf,.jpg,.jpeg,.png" required class="hidden" onchange="showFileName(this, 'file-name-id')">
+                            <p class="text-xs text-gray-500 mt-1">PDF, JPG ou PNG (max 5MB)</p>
+                            <p id="file-name-id" class="text-xs text-green-600 mt-2 font-medium"></p>
+                        </label>
+                    </div>
+
+                    <div>
+                        <label class="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                            Data de Validade do Documento
+                        </label>
+                        <input type="date" name="validade_doc_id" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                    </div>
+
+                    <hr class="my-6">
+
+                    <!-- Carta de Conducao Frente -->
+                    <div class="file-upload-area p-6 rounded-lg text-center">
+                        <i data-lucide="upload-cloud" class="w-12 h-12 mx-auto text-gray-400 mb-3"></i>
+                        <label class="block cursor-pointer">
+                            <span class="text-sm font-medium text-gray-700">Carta de Conducao - Frente <span class="text-red-500">*</span></span>
+                            <input type="file" name="cnh_frente" accept=".pdf,.jpg,.jpeg,.png" required class="hidden" onchange="showFileName(this, 'file-name-cnh-f')">
+                            <p class="text-xs text-gray-500 mt-1">PDF, JPG ou PNG</p>
+                            <p id="file-name-cnh-f" class="text-xs text-green-600 mt-2 font-medium"></p>
+                        </label>
+                    </div>
+
+                    <!-- Carta de Conducao Verso -->
+                    <div class="file-upload-area p-6 rounded-lg text-center">
+                        <i data-lucide="upload-cloud" class="w-12 h-12 mx-auto text-gray-400 mb-3"></i>
+                        <label class="block cursor-pointer">
+                            <span class="text-sm font-medium text-gray-700">Carta de Conducao - Verso <span class="text-red-500">*</span></span>
+                            <input type="file" name="cnh_verso" accept=".pdf,.jpg,.jpeg,.png" required class="hidden" onchange="showFileName(this, 'file-name-cnh-v')">
+                            <p class="text-xs text-gray-500 mt-1">PDF, JPG ou PNG</p>
+                            <p id="file-name-cnh-v" class="text-xs text-green-600 mt-2 font-medium"></p>
+                        </label>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="text-sm font-medium text-gray-700 mb-2 block">Categoria CNH <span class="text-red-500">*</span></label>
+                            <input type="text" name="categoria_cnh" required placeholder="Ex: B" maxlength="10"
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                        </div>
+                        <div>
+                            <label class="text-sm font-medium text-gray-700 mb-2 block">Validade CNH <span class="text-red-500">*</span></label>
+                            <input type="date" name="validade_cnh" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                        </div>
+                    </div>
+
+                    <hr class="my-6">
+
+                    <!-- Registo Criminal -->
+                    <div class="file-upload-area p-6 rounded-lg text-center">
+                        <i data-lucide="upload-cloud" class="w-12 h-12 mx-auto text-gray-400 mb-3"></i>
+                        <label class="block cursor-pointer">
+                            <span class="text-sm font-medium text-gray-700">Registo Criminal <span class="text-red-500">*</span></span>
+                            <input type="file" name="registo_criminal" accept=".pdf,.jpg,.jpeg,.png" required class="hidden" onchange="showFileName(this, 'file-name-rc')">
+                            <p class="text-xs text-gray-500 mt-1">PDF, JPG ou PNG</p>
+                            <p id="file-name-rc" class="text-xs text-green-600 mt-2 font-medium"></p>
+                        </label>
+                    </div>
+
+                    <!-- Certificado ADR (Opcional) -->
+                    <div class="file-upload-area p-6 rounded-lg text-center bg-gray-50">
+                        <i data-lucide="upload-cloud" class="w-12 h-12 mx-auto text-gray-400 mb-3"></i>
+                        <label class="block cursor-pointer">
+                            <span class="text-sm font-medium text-gray-700">Certificado ADR <span class="text-gray-400">(Opcional)</span></span>
+                            <input type="file" name="certificado_adr" accept=".pdf,.jpg,.jpeg,.png" class="hidden" onchange="showFileName(this, 'file-name-adr')">
+                            <p class="text-xs text-gray-500 mt-1">Apenas se transportar mercadorias perigosas</p>
+                            <p id="file-name-adr" class="text-xs text-green-600 mt-2 font-medium"></p>
+                        </label>
+                    </div>
+
+                    <!-- Declaracao Atividade (Direto) -->
+                    <div id="declaracao-field" class="file-upload-area p-6 rounded-lg text-center" style="display: none;">
+                        <i data-lucide="upload-cloud" class="w-12 h-12 mx-auto text-gray-400 mb-3"></i>
+                        <label class="block cursor-pointer">
+                            <span class="text-sm font-medium text-gray-700">Declaracao de Inicio de Atividade <span class="text-red-500">*</span></span>
+                            <input type="file" name="declaracao_atividade" accept=".pdf,.jpg,.jpeg,.png" class="hidden" onchange="showFileName(this, 'file-name-decl')">
+                            <p class="text-xs text-gray-500 mt-1">Recibos Verdes - Obrigatorio para vinculos diretos</p>
+                            <p id="file-name-decl" class="text-xs text-green-600 mt-2 font-medium"></p>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="mt-8 flex justify-between">
+                    <button type="button" onclick="prevStep()" class="bg-gray-200 text-gray-700 px-8 py-3 rounded-lg font-semibold flex items-center gap-2 hover:bg-gray-300 transition-all">
+                        <i data-lucide="arrow-left" class="w-5 h-5"></i> Anterior
+                    </button>
+                    <button type="button" onclick="nextStep()" class="gradient-bg text-white px-8 py-3 rounded-lg font-semibold flex items-center gap-2 hover:shadow-lg transition-all">
+                        Proximo <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- STEP 3: Dados do Veiculo -->
+            <div class="step-section" data-step="3">
+                <h2 class="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                    <i data-lucide="car" class="w-6 h-6 text-purple-600"></i>
+                    Dados do Veiculo
+                </h2>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Matricula -->
+                    <div>
+                        <label class="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                            <i data-lucide="tag" class="w-4 h-4"></i>
+                            Matricula <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" name="matricula" required placeholder="00-AA-00" style="text-transform: uppercase;"
+                               class="input-field w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                    </div>
+
+                    <!-- Marca -->
+                    <div>
+                        <label class="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                            <i data-lucide="award" class="w-4 h-4"></i>
+                            Marca <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" name="marca" required placeholder="Renault, Peugeot, etc."
+                               class="input-field w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                    </div>
+
+                    <!-- Modelo -->
+                    <div>
+                        <label class="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                            <i data-lucide="box" class="w-4 h-4"></i>
+                            Modelo <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" name="modelo" required placeholder="Kangoo, Partner, etc."
+                               class="input-field w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                    </div>
+
+                    <!-- Ano -->
+                    <div>
+                        <label class="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                            <i data-lucide="calendar-days" class="w-4 h-4"></i>
+                            Ano
+                        </label>
+                        <input type="number" name="ano" min="1990" max="2026" placeholder="2020"
+                               class="input-field w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                    </div>
+
+                    <!-- Tipo Veiculo -->
+                    <div class="md:col-span-2">
+                        <label class="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                            <i data-lucide="truck" class="w-4 h-4"></i>
+                            Tipo de Veiculo <span class="text-red-500">*</span>
+                        </label>
+                        <select name="tipo_veiculo" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                            <option value="">Selecione...</option>
+                            <option value="MOTA">Mota</option>
+                            <option value="LIGEIRO">Ligeiro de Mercadorias</option>
+                            <option value="CARRINHA_35T">Carrinha ate 3.5t</option>
+                            <option value="CARRINHA_GRANDE">Carrinha acima 3.5t</option>
+                            <option value="OUTRO">Outro</option>
+                        </select>
+                    </div>
+                </div>
+
+                <hr class="my-8">
+
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Documentos do Veiculo</h3>
+
+                <div class="space-y-6">
+                    <!-- DUA -->
+                    <div class="file-upload-area p-6 rounded-lg text-center">
+                        <i data-lucide="upload-cloud" class="w-12 h-12 mx-auto text-gray-400 mb-3"></i>
+                        <label class="block cursor-pointer">
+                            <span class="text-sm font-medium text-gray-700">DUA - Documento Unico Automovel <span class="text-red-500">*</span></span>
+                            <input type="file" name="dua" accept=".pdf,.jpg,.jpeg,.png" required class="hidden" onchange="showFileName(this, 'file-name-dua')">
+                            <p class="text-xs text-gray-500 mt-1">PDF, JPG ou PNG</p>
+                            <p id="file-name-dua" class="text-xs text-green-600 mt-2 font-medium"></p>
+                        </label>
+                    </div>
+
+                    <!-- IPO -->
+                    <div class="file-upload-area p-6 rounded-lg text-center">
+                        <i data-lucide="upload-cloud" class="w-12 h-12 mx-auto text-gray-400 mb-3"></i>
+                        <label class="block cursor-pointer">
+                            <span class="text-sm font-medium text-gray-700">Folha da Inspecao (IPO)</span>
+                            <input type="file" name="ipo" accept=".pdf,.jpg,.jpeg,.png" class="hidden" onchange="showFileName(this, 'file-name-ipo')">
+                            <p class="text-xs text-gray-500 mt-1">Se aplicavel</p>
+                            <p id="file-name-ipo" class="text-xs text-green-600 mt-2 font-medium"></p>
+                        </label>
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium text-gray-700 mb-2 block">Validade IPO</label>
+                        <input type="date" name="validade_ipo" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                    </div>
+
+                    <!-- Seguro -->
+                    <div class="file-upload-area p-6 rounded-lg text-center">
+                        <i data-lucide="upload-cloud" class="w-12 h-12 mx-auto text-gray-400 mb-3"></i>
+                        <label class="block cursor-pointer">
+                            <span class="text-sm font-medium text-gray-700">Certificado de Seguro (Carta Verde) <span class="text-red-500">*</span></span>
+                            <input type="file" name="seguro" accept=".pdf,.jpg,.jpeg,.png" required class="hidden" onchange="showFileName(this, 'file-name-seguro')">
+                            <p class="text-xs text-gray-500 mt-1">PDF, JPG ou PNG</p>
+                            <p id="file-name-seguro" class="text-xs text-green-600 mt-2 font-medium"></p>
+                        </label>
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium text-gray-700 mb-2 block">Validade Seguro <span class="text-red-500">*</span></label>
+                        <input type="date" name="validade_seguro" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                    </div>
+                </div>
+
+                <div class="mt-8 flex justify-between">
+                    <button type="button" onclick="prevStep()" class="bg-gray-200 text-gray-700 px-8 py-3 rounded-lg font-semibold flex items-center gap-2 hover:bg-gray-300 transition-all">
+                        <i data-lucide="arrow-left" class="w-5 h-5"></i> Anterior
+                    </button>
+                    <button type="button" onclick="nextStep()" class="gradient-bg text-white px-8 py-3 rounded-lg font-semibold flex items-center gap-2 hover:shadow-lg transition-all">
+                        Revisar <i data-lucide="check" class="w-5 h-5"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- STEP 4: Revisao e Envio -->
+            <div class="step-section" data-step="4">
+                <h2 class="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                    <i data-lucide="check-circle" class="w-6 h-6 text-purple-600"></i>
+                    Revisao e Envio
+                </h2>
+
+                <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6">
+                    <p class="text-sm text-blue-800">
+                        <strong>Importante:</strong> Verifique todos os dados antes de enviar. Apos o envio, nossa equipe analisara seu cadastro em ate 48 horas uteis.
+                    </p>
+                </div>
+
+                <div class="space-y-4">
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <h3 class="font-semibold text-gray-900 mb-2">Status do Cadastro</h3>
+                        <ul class="text-sm text-gray-700 space-y-1 list-disc list-inside">
+                            <li>Status inicial: <strong>PENDENTE</strong> (aguardando analise)</li>
+                            <li>Apos analise: <strong>EM_ANALISE</strong></li>
+                            <li>Apos aprovacao: <strong>ATIVO</strong> (liberado para entregas)</li>
+                        </ul>
+                    </div>
+
+                    <div class="flex items-start gap-3 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                        <i data-lucide="alert-triangle" class="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5"></i>
+                        <div class="text-sm text-yellow-800">
+                            <strong>Sistema de Alertas:</strong> Voce sera notificado por email 30 dias antes do vencimento de qualquer documento.
+                        </div>
+                    </div>
+
+                    <!-- Termos -->
+                    <div class="flex items-start gap-3 p-4 border-2 border-gray-300 rounded-lg">
+                        <input type="checkbox" id="terms" name="terms" required class="mt-1 w-5 h-5 text-purple-600 border-gray-300 rounded focus:ring-purple-500">
+                        <label for="terms" class="text-sm text-gray-700">
+                            Declaro que todas as informacoes fornecidas sao verdadeiras e concordo com o processamento dos meus dados pessoais conforme a <strong>Lei de Protecao de Dados (RGPD)</strong>. 
+                            Estou ciente de que documentos expirados resultarao no bloqueio temporario da conta.
+                        </label>
+                    </div>
+                </div>
+
+                <div class="mt-8 flex justify-between">
+                    <button type="button" onclick="prevStep()" class="bg-gray-200 text-gray-700 px-8 py-3 rounded-lg font-semibold flex items-center gap-2 hover:bg-gray-300 transition-all">
+                        <i data-lucide="arrow-left" class="w-5 h-5"></i> Anterior
+                    </button>
+                    <button type="submit" class="gradient-bg text-white px-12 py-4 rounded-lg font-semibold flex items-center gap-2 hover:shadow-xl transition-all text-lg">
+                        <i data-lucide="send" class="w-6 h-6"></i>
+                        Enviar Cadastro Completo
+                    </button>
+                </div>
+            </div>
+        </form>
+    </main>
+
+    <footer class="bg-gray-900 text-gray-400 py-8 mt-16">
+        <div class="max-w-4xl mx-auto px-4 text-center">
+            <p class="text-sm">© {{ current_year }} Leguas Franzinas. Todos os direitos reservados.</p>
+        </div>
+    </footer>
+
+    <script>
+        lucide.createIcons();
+
+        let currentStep = 1;
+        const totalSteps = 4;
+
+        function updateProgress() {
+            const progressBar = document.getElementById('progress-bar');
+            const progressText = document.getElementById('progress-text');
+            const percentage = (currentStep / totalSteps) * 100;
+            
+            progressBar.style.width = percentage + '%';
+            progressText.textContent = `Passo ${currentStep} de ${totalSteps}`;
+        }
+
+        function showStep(step) {
+            document.querySelectorAll('.step-section').forEach(section => {
+                section.classList.remove('active');
+            });
+            
+            const targetSection = document.querySelector(`.step-section[data-step="${step}"]`);
+            if (targetSection) {
+                targetSection.classList.add('active');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+            
+            updateProgress();
+            lucide.createIcons();
+        }
+
+        function nextStep() {
+            if (validateCurrentStep()) {
+                currentStep = Math.min(currentStep + 1, totalSteps);
+                showStep(currentStep);
+            }
+        }
+
+        function prevStep() {
+            currentStep = Math.max(currentStep - 1, 1);
+            showStep(currentStep);
+        }
+
+        function validateCurrentStep() {
+            const currentSection = document.querySelector(`.step-section[data-step="${currentStep}"]`);
+            const requiredInputs = currentSection.querySelectorAll('[required]');
+            
+            for (let input of requiredInputs) {
+                if (!input.value && input.style.display !== 'none') {
+                    if (input.type === 'radio') {
+                        const name = input.name;
+                        const radioChecked = currentSection.querySelector(`[name="${name}"]:checked`);
+                        if (!radioChecked) {
+                            alert('Por favor, preencha todos os campos obrigatorios (*)');
+                            input.focus();
+                            return false;
+                        }
+                    } else {
+                        alert('Por favor, preencha todos os campos obrigatorios (*)');
+                        input.focus();
+                        return false;
+                    }
+                }
+            }
+            
+            return true;
+        }
+
+        function showFileName(input, targetId) {
+            const target = document.getElementById(targetId);
+            if (input.files && input.files[0]) {
+                target.textContent = '✓ ' + input.files[0].name;
+            }
+        }
+
+        // Toggle Frota field
+        document.querySelectorAll('[name="tipo_vinculo"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                const frotaField = document.getElementById('frota-field');
+                const declaracaoField = document.getElementById('declaracao-field');
+                const declaracaoInput = declaracaoField.querySelector('input[type="file"]');
+                
+                if (this.value === 'PARCEIRO') {
+                    frotaField.style.display = 'block';
+                    frotaField.querySelector('input').required = true;
+                    declaracaoField.style.display = 'none';
+                    declaracaoInput.required = false;
+                } else {
+                    frotaField.style.display = 'none';
+                    frotaField.querySelector('input').required = false;
+                    declaracaoField.style.display = 'block';
+                    declaracaoInput.required = true;
+                }
+                lucide.createIcons();
+            });
+        });
+
+        // Auto-format NIF
+        document.getElementById('nif').addEventListener('input', function(e) {
+            this.value = this.value.replace(/\D/g, '').slice(0, 9);
+        });
+
+        // Auto-format NISS
+        document.querySelector('[name="niss"]').addEventListener('input', function(e) {
+            this.value = this.value.replace(/\D/g, '').slice(0, 11);
+        });
+
+        // Uppercase matricula
+        document.querySelector('[name="matricula"]').addEventListener('input', function(e) {
+            this.value = this.value.toUpperCase();
+        });
+    </script>
+</body>
+</html>

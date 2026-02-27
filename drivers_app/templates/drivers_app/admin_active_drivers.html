@@ -1,0 +1,1058 @@
+﻿{% extends 'paack_dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Motoristas Ativos{% endblock %}
+{% block sidebar_title %}Motoristas{% endblock %}
+
+{% block content %}
+<div class="p-6" x-data="{}" x-id="['modal']">
+    <!-- Header -->
+    <div class="mb-8">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center">
+                    <i data-lucide="users-round" class="w-6 h-6 text-white"></i>
+                </div>
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Motoristas Ativos</h1>
+                    <p class="text-gray-600 dark:text-gray-400">Gerencie motoristas aprovados e ativos no sistema</p>
+                </div>
+            </div>
+            
+            <a href="{% url 'drivers_app:admin_create_driver' %}"
+               class="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all flex items-center gap-2">
+                <i data-lucide="user-plus" class="w-5 h-5"></i>
+                Cadastrar Motorista
+            </a>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-3 gap-6 mb-8">
+        <div class="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 border border-green-200 dark:border-green-700 p-6 rounded-xl">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-sm font-medium text-green-600 dark:text-green-400">Total Ativos</span>
+                <i data-lucide="users" class="w-5 h-5 text-green-500"></i>
+            </div>
+            <div class="text-3xl font-bold text-green-700 dark:text-green-300">{{ total_ativos }}</div>
+        </div>
+        
+        <div class="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 border border-blue-200 dark:border-blue-700 p-6 rounded-xl">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-sm font-medium text-blue-600 dark:text-blue-400">Diretos</span>
+                <i data-lucide="user" class="w-5 h-5 text-blue-500"></i>
+            </div>
+            <div class="text-3xl font-bold text-blue-700 dark:text-blue-300">{{ total_diretos }}</div>
+            <div class="text-xs text-blue-600 dark:text-blue-400 mt-1">Recibos Verdes</div>
+        </div>
+        
+        <div class="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 border border-purple-200 dark:border-purple-700 p-6 rounded-xl">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-sm font-medium text-purple-600 dark:text-purple-400">Parceiros</span>
+                <i data-lucide="building" class="w-5 h-5 text-purple-500"></i>
+            </div>
+            <div class="text-3xl font-bold text-purple-700 dark:text-purple-300">{{ total_parceiros }}</div>
+            <div class="text-xs text-purple-600 dark:text-purple-400 mt-1">Frotas</div>
+        </div>
+    </div>
+
+    <!-- Expiring Documents Alert -->
+    {% if drivers_with_expiring_docs %}
+    <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 p-4 rounded-lg mb-6">
+        <div class="flex items-start gap-3">
+            <i data-lucide="alert-triangle" class="w-5 h-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5"></i>
+            <div class="flex-1">
+                <h3 class="font-semibold text-yellow-800 dark:text-yellow-300 mb-2">Documentos Proximos a Vencer</h3>
+                <div class="space-y-1">
+                    {% for item in drivers_with_expiring_docs %}
+                    <div class="text-sm text-yellow-700 dark:text-yellow-400">
+                        <strong>{{ item.driver.nome_completo }}</strong>: {{ item.docs.count }} documento(s)
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Filters -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-4 mb-6">
+        <form method="GET" class="flex gap-4">
+            <select name="status_filter" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+                <option value="">Todos os Status</option>
+                <option value="ATIVO" {% if status_filter == 'ATIVO' %}selected{% endif %}>✅ Ativos</option>
+                <option value="BLOQUEADO" {% if status_filter == 'BLOQUEADO' %}selected{% endif %}>🔒 Bloqueados</option>
+                <option value="IRREGULAR" {% if status_filter == 'IRREGULAR' %}selected{% endif %}>⚠️ Irregulares</option>
+            </select>
+            
+            <select name="tipo_vinculo" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+                <option value="">Todos os Tipos</option>
+                <option value="DIRETO" {% if tipo_vinculo == 'DIRETO' %}selected{% endif %}>Direto</option>
+                <option value="PARCEIRO" {% if tipo_vinculo == 'PARCEIRO' %}selected{% endif %}>Parceiro</option>
+            </select>
+            
+            <input type="text" name="q" value="{{ search_query }}" placeholder="Buscar NIF, nome, email, telefone..."
+                   class="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+            
+            <button type="submit" class="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2">
+                <i data-lucide="search" class="w-4 h-4"></i>
+                Buscar
+            </button>
+        </form>
+    </div>
+
+    <!-- Table -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <table class="w-full">
+            <thead class="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
+                <tr>
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Motorista</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">NIF</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Contato</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Tipo</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Status</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Aprovado</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Acoes</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                {% for driver in page_obj %}
+                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                    <td class="px-6 py-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center text-white font-semibold">
+                                {{ driver.nome_completo|slice:":1" }}
+                            </div>
+                            <div>
+                                <div class="font-medium text-gray-900 dark:text-white">{{ driver.nome_completo }}</div>
+                                {% if driver.nome_frota %}
+                                <div class="text-xs text-gray-500 dark:text-gray-400">Frota: {{ driver.nome_frota }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 text-sm font-mono text-gray-700 dark:text-gray-300">{{ driver.nif }}</td>
+                    <td class="px-6 py-4">
+                        <div class="text-sm">
+                            <div class="text-gray-900 dark:text-white">{{ driver.email }}</div>
+                            <div class="text-gray-500 dark:text-gray-400">{{ driver.telefone }}</div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="px-3 py-1 rounded-full text-xs font-medium {% if driver.tipo_vinculo == 'DIRETO' %}bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400{% else %}bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400{% endif %}">
+                            {{ driver.get_tipo_vinculo_display }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4">
+                        {% if driver.status == 'ATIVO' %}
+                        <span class="px-3 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400">
+                            ✅ Ativo
+                        </span>
+                        {% elif driver.status == 'BLOQUEADO' %}
+                        <span class="px-3 py-1 rounded-full text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400">
+                            🔒 Bloqueado
+                        </span>
+                        {% elif driver.status == 'IRREGULAR' %}
+                        <span class="px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400">
+                            ⚠️ Irregular
+                        </span>
+                        {% else %}
+                        <span class="px-3 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-900/30 text-gray-700 dark:text-gray-400">
+                            {{ driver.get_status_display }}
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="text-sm">
+                            <div class="text-gray-900 dark:text-white">{{ driver.approved_at|date:"d/m/Y" }}</div>
+                            <div class="text-gray-500 dark:text-gray-400">por {{ driver.approved_by }}</div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <button @click="openModal({{ driver.id }})"
+                           class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium flex items-center gap-1">
+                            <i data-lucide="eye" class="w-4 h-4"></i>
+                            Ver Detalhes
+                        </button>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="px-6 py-12 text-center">
+                        <i data-lucide="inbox" class="w-16 h-16 mx-auto text-gray-400 mb-4"></i>
+                        <p class="text-gray-600 dark:text-gray-400">Nenhum motorista encontrado</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <div class="mt-6 flex justify-center">
+        <nav class="flex gap-2">
+            {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}&status_filter={{ status_filter }}&tipo_vinculo={{ tipo_vinculo }}&q={{ search_query }}"
+               class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-white">
+                Anterior
+            </a>
+            {% endif %}
+            
+            <span class="px-4 py-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg text-blue-700 dark:text-blue-300">
+                Pagina {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+            </span>
+            
+            {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}&status_filter={{ status_filter }}&tipo_vinculo={{ tipo_vinculo }}&q={{ search_query }}"
+               class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-white">
+                Proximo
+            </a>
+            {% endif %}
+        </nav>
+    </div>
+    {% endif %}
+
+    <!-- Modal de Gestão Completo -->
+    <div x-show="$store.modal.isOpen" 
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 z-50 overflow-y-auto" 
+         style="display: none;">
+        
+        <!-- Overlay -->
+        <div class="fixed inset-0 bg-black bg-opacity-50" @click="$store.modal.isOpen = false"></div>
+        
+        <!-- Modal Content -->
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div x-transition:enter="transition ease-out duration-300"
+                 x-transition:enter-start="opacity-0 transform scale-95"
+                 x-transition:enter-end="opacity-100 transform scale-100"
+                 x-transition:leave="transition ease-in duration-200"
+                 x-transition:leave-start="opacity-100 transform scale-100"
+                 x-transition:leave-end="opacity-0 transform scale-95"
+                 class="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-5xl w-full max-h-[95vh] overflow-hidden flex flex-col">
+                
+                <!-- Modal Header -->
+                <div class="sticky top-0 bg-gradient-to-r from-green-600 to-green-700 text-white p-6 flex items-center justify-between z-10">
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
+                            <i data-lucide="user" class="w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-2xl font-bold" x-text="$store.modal.currentDriver?.nome_completo"></h2>
+                            <p class="text-green-100">Gestão Completa do Motorista</p>
+                        </div>
+                    </div>
+                    <button @click="$store.modal.isOpen = false; $store.modal.editMode = false; $store.modal.activeTab = 'info'" class="text-white hover:bg-white/20 rounded-lg p-2 transition-colors">
+                        <i data-lucide="x" class="w-6 h-6"></i>
+                    </button>
+                </div>
+
+                <!-- Action Buttons Bar -->
+                <div class="bg-gray-100 dark:bg-gray-700 px-6 py-3 flex items-center justify-between border-b border-gray-200 dark:border-gray-600">
+                    <div class="flex gap-2">
+                        <button @click="$store.modal.activeTab = 'info'" :class="$store.modal.activeTab === 'info' ? 'bg-white dark:bg-gray-600 shadow' : 'hover:bg-white/50 dark:hover:bg-gray-600/50'" class="px-4 py-2 rounded-lg transition-all flex items-center gap-2">
+                            <i data-lucide="info" class="w-4 h-4"></i>
+                            <span class="dark:text-white">Informações</span>
+                        </button>
+                        <button @click="$store.modal.activeTab = 'documents'" :class="$store.modal.activeTab === 'documents' ? 'bg-white dark:bg-gray-600 shadow' : 'hover:bg-white/50 dark:hover:bg-gray-600/50'" class="px-4 py-2 rounded-lg transition-all flex items-center gap-2">
+                            <i data-lucide="file-text" class="w-4 h-4"></i>
+                            <span class="dark:text-white">Documentos</span>
+                            <span class="px-2 py-0.5 bg-blue-500 text-white text-xs rounded-full" x-text="$store.modal.currentDriver?.documents?.length || 0"></span>
+                        </button>
+                        <button @click="$store.modal.activeTab = 'vehicles'" :class="$store.modal.activeTab === 'vehicles' ? 'bg-white dark:bg-gray-600 shadow' : 'hover:bg-white/50 dark:hover:bg-gray-600/50'" class="px-4 py-2 rounded-lg transition-all flex items-center gap-2">
+                            <i data-lucide="truck" class="w-4 h-4"></i>
+                            <span class="dark:text-white">Veículos</span>
+                            <span class="px-2 py-0.5 bg-blue-500 text-white text-xs rounded-full" x-text="$store.modal.currentDriver?.vehicles?.length || 0"></span>
+                        </button>
+                    </div>
+                    <div class="flex gap-2">
+                        <button @click="$store.modal.editMode = !$store.modal.editMode" :class="$store.modal.editMode ? 'bg-blue-600 text-white' : 'bg-white dark:bg-gray-600 dark:text-white'" class="px-4 py-2 rounded-lg hover:shadow transition-all flex items-center gap-2">
+                            <i data-lucide="edit" class="w-4 h-4"></i>
+                            <span x-text="$store.modal.editMode ? 'Cancelar Edição' : 'Editar Dados'"></span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Modal Body (Scrollable) -->
+                <div class="flex-1 overflow-y-auto p-6">
+                    
+                    <!-- Tab: Informações -->
+                    <div x-show="$store.modal.activeTab === 'info'" class="space-y-6">
+                        
+                        <!-- Dados Pessoais -->
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                                <i data-lucide="user-circle" class="w-5 h-5 text-green-500"></i>
+                                Dados Pessoais
+                            </h3>
+                            <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
+                                <form :id="'form-pessoal-' + $store.modal.currentDriver?.id" method="POST" :action="'/driversapp/admin/editar/' + $store.modal.currentDriver?.id + '/pessoal/'" class="grid grid-cols-2 gap-4">
+                                    {% csrf_token %}
+                                    <div>
+                                        <label class="text-xs text-gray-500 dark:text-gray-400 block mb-1">NIF</label>
+                                        <input x-show="$store.modal.editMode" type="text" name="nif" :value="$store.modal.currentDriver?.nif" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800 dark:text-white" pattern="[0-9]{9}" required>
+                                        <p x-show="!$store.modal.editMode" class="font-mono font-medium dark:text-white" x-text="$store.modal.currentDriver?.nif"></p>
+                                    </div>
+                                    <div>
+                                        <label class="text-xs text-gray-500 dark:text-gray-400 block mb-1">NISS</label>
+                                        <input x-show="$store.modal.editMode" type="text" name="niss" :value="$store.modal.currentDriver?.niss" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800 dark:text-white" pattern="[0-9]{11}">
+                                        <p x-show="!$store.modal.editMode" class="font-mono font-medium dark:text-white" x-text="$store.modal.currentDriver?.niss || 'N/A'"></p>
+                                    </div>
+                                    <div>
+                                        <label class="text-xs text-gray-500 dark:text-gray-400 block mb-1">Nome Completo</label>
+                                        <input x-show="$store.modal.editMode" type="text" name="nome_completo" :value="$store.modal.currentDriver?.nome_completo" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800 dark:text-white" required>
+                                        <p x-show="!$store.modal.editMode" class="font-medium dark:text-white" x-text="$store.modal.currentDriver?.nome_completo"></p>
+                                    </div>
+                                    <div>
+                                        <label class="text-xs text-gray-500 dark:text-gray-400 block mb-1">Data de Nascimento</label>
+                                        <input x-show="$store.modal.editMode" type="date" name="data_nascimento" :value="$store.modal.currentDriver?.data_nascimento_iso" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800 dark:text-white">
+                                        <p x-show="!$store.modal.editMode" class="font-medium dark:text-white" x-text="$store.modal.currentDriver?.data_nascimento || 'N/A'"></p>
+                                    </div>
+                                    <div>
+                                        <label class="text-xs text-gray-500 dark:text-gray-400 block mb-1">Nacionalidade</label>
+                                        <input x-show="$store.modal.editMode" type="text" name="nacionalidade" :value="$store.modal.currentDriver?.nacionalidade" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800 dark:text-white">
+                                        <p x-show="!$store.modal.editMode" class="font-medium dark:text-white" x-text="$store.modal.currentDriver?.nacionalidade || 'N/A'"></p>
+                                    </div>
+                                    <div>
+                                        <label class="text-xs text-gray-500 dark:text-gray-400 block mb-1">Email</label>
+                                        <input x-show="$store.modal.editMode" type="email" name="email" :value="$store.modal.currentDriver?.email" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800 dark:text-white" required>
+                                        <p x-show="!$store.modal.editMode" class="font-medium dark:text-white" x-text="$store.modal.currentDriver?.email"></p>
+                                    </div>
+                                    <div>
+                                        <label class="text-xs text-gray-500 dark:text-gray-400 block mb-1">Telefone</label>
+                                        <input x-show="$store.modal.editMode" type="tel" name="telefone" :value="$store.modal.currentDriver?.telefone" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800 dark:text-white">
+                                        <p x-show="!$store.modal.editMode" class="font-medium dark:text-white" x-text="$store.modal.currentDriver?.telefone || 'N/A'"></p>
+                                    </div>
+                                    <div class="col-span-2">
+                                        <label class="text-xs text-gray-500 dark:text-gray-400 block mb-1">Endereço</label>
+                                        <input x-show="$store.modal.editMode" type="text" name="endereco" :value="$store.modal.currentDriver?.endereco_completo" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800 dark:text-white">
+                                        <p x-show="!$store.modal.editMode" class="font-medium dark:text-white" x-text="$store.modal.currentDriver?.endereco_completo || 'N/A'"></p>
+                                    </div>
+                                    <div x-show="$store.modal.editMode" class="col-span-2">
+                                        <button type="submit" class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors flex items-center gap-2">
+                                            <i data-lucide="save" class="w-4 h-4"></i>
+                                            Salvar Dados Pessoais
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
+                        <!-- Informações Profissionais -->
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                                <i data-lucide="briefcase" class="w-5 h-5 text-green-500"></i>
+                                Informações Profissionais
+                            </h3>
+                            <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
+                                <form :id="'form-profissional-' + $store.modal.currentDriver?.id" method="POST" :action="'/driversapp/admin/editar/' + $store.modal.currentDriver?.id + '/profissional/'" class="grid grid-cols-2 gap-4">
+                                    {% csrf_token %}
+                                    <div>
+                                        <label class="text-xs text-gray-500 dark:text-gray-400 block mb-1">Tipo de Vínculo</label>
+                                        <select x-show="$store.modal.editMode" name="tipo_vinculo" :value="$store.modal.currentDriver?.tipo_vinculo" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800 dark:text-white">
+                                            <option value="DIRETO">Direto - Recibos Verdes</option>
+                                            <option value="PARCEIRO">Parceiro - Frota</option>
+                                        </select>
+                                        <p x-show="!$store.modal.editMode">
+                                            <span x-show="$store.modal.currentDriver?.tipo_vinculo === 'DIRETO'" class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">Direto - Recibos Verdes</span>
+                                            <span x-show="$store.modal.currentDriver?.tipo_vinculo === 'PARCEIRO'" class="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm">Parceiro - Frota</span>
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <label class="text-xs text-gray-500 dark:text-gray-400 block mb-1">Nome da Frota</label>
+                                        <input x-show="$store.modal.editMode" type="text" name="nome_frota" :value="$store.modal.currentDriver?.nome_frota" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800 dark:text-white">
+                                        <p x-show="!$store.modal.editMode" class="font-medium dark:text-white" x-text="$store.modal.currentDriver?.nome_frota || 'N/A'"></p>
+                                    </div>
+                                    <div>
+                                        <label class="text-xs text-gray-500 dark:text-gray-400 block mb-1">Status</label>
+                                        <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">Ativo</span>
+                                    </div>
+                                    <div>
+                                        <label class="text-xs text-gray-500 dark:text-gray-400 block mb-1">Aprovado em</label>
+                                        <p class="font-medium dark:text-white" x-text="$store.modal.currentDriver?.approved_at"></p>
+                                        <p class="text-xs text-gray-500" x-text="'por ' + ($store.modal.currentDriver?.approved_by || 'Sistema')"></p>
+                                    </div>
+                                    <div x-show="$store.modal.editMode" class="col-span-2">
+                                        <button type="submit" class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors flex items-center gap-2">
+                                            <i data-lucide="save" class="w-4 h-4"></i>
+                                            Salvar Dados Profissionais
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Tab: Documentos -->
+                    <div x-show="$store.modal.activeTab === 'documents'" class="space-y-6">
+                        
+                        <!-- Upload Form -->
+                        <div class="bg-blue-50 dark:bg-blue-900/20 border-2 border-dashed border-blue-300 dark:border-blue-700 rounded-lg p-6">
+                            <h3 class="text-lg font-semibold text-blue-900 dark:text-blue-300 mb-4 flex items-center gap-2">
+                                <i data-lucide="upload" class="w-5 h-5"></i>
+                                Anexar Novo Documento
+                            </h3>
+                            <form :id="'form-upload-doc-' + $store.modal.currentDriver?.id" method="POST" enctype="multipart/form-data" :action="'/driversapp/admin/anexar-documento/' + $store.modal.currentDriver?.id + '/'" class="space-y-4">
+                                {% csrf_token %}
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Tipo de Documento</label>
+                                        <select name="tipo_documento" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800 dark:text-white">
+                                            <option value="">Selecione...</option>
+                                            <option value="CC">Cartão de Cidadão</option>
+                                            <option value="TR">Título de Residência</option>
+                                            <option value="PP">Passaporte</option>
+                                            <option value="CNH_FRENTE">Carta de Condução - Frente</option>
+                                            <option value="CNH_VERSO">Carta de Condução - Verso</option>
+                                            <option value="ADR">Certificado ADR</option>
+                                            <option value="RC">Registo Criminal</option>
+                                            <option value="DECLARACAO_ATIVIDADE">Declaração de Atividade</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Data de Validade (opcional)</label>
+                                        <input type="date" name="data_validade" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800 dark:text-white">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Arquivo</label>
+                                    <input type="file" name="arquivo" accept=".pdf,.jpg,.jpeg,.png" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800 dark:text-white">
+                                </div>
+                                <button type="submit" class="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2">
+                                    <i data-lucide="upload-cloud" class="w-4 h-4"></i>
+                                    Fazer Upload
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- Documents List -->
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Documentos Anexados</h3>
+                            <div class="space-y-2">
+                                <template x-for="doc in $store.modal.currentDriver?.documents || []" :key="doc.id">
+                                    <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 flex items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                                        <div class="flex items-center gap-3 flex-1">
+                                            <div class="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
+                                                <i data-lucide="file" class="w-5 h-5 text-blue-600 dark:text-blue-400"></i>
+                                            </div>
+                                            <div class="flex-1">
+                                                <p class="font-medium dark:text-white" x-text="doc.tipo_display"></p>
+                                                <div class="flex gap-4 text-xs text-gray-500">
+                                                    <span x-text="doc.validade ? 'Validade: ' + doc.validade : 'Sem validade'"></span>
+                                                    <span x-show="doc.is_expired" class="text-red-600 font-semibold">⚠️ EXPIRADO</span>
+                                                    <span x-show="doc.expiring_soon && !doc.is_expired" class="text-yellow-600 font-semibold">⚠️ Expira em breve</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="flex gap-2">
+                                            <button @click="$store.modal.viewerUrl = doc.url; $store.modal.viewerType = doc.file_extension; $store.modal.viewerOpen = true" class="px-3 py-1 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm flex items-center gap-2">
+                                                <i data-lucide="eye" class="w-4 h-4"></i>
+                                                Visualizar
+                                            </button>
+                                            <a :href="doc.url" target="_blank" class="px-3 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm flex items-center gap-2">
+                                                <i data-lucide="download" class="w-4 h-4"></i>
+                                                Download
+                                            </a>
+                                            <form :action="'/driversapp/admin/deletar-documento/' + doc.id + '/'" method="POST" 
+                                                  data-confirm-message="Deletar este documento?"
+                                                  data-confirm-title="Confirmar exclusão"
+                                                  data-confirm-type="danger">
+                                                {% csrf_token %}
+                                                <button type="submit" class="px-3 py-1 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm flex items-center gap-2">
+                                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                                    Deletar
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </template>
+                                <div x-show="!$store.modal.currentDriver?.documents || $store.modal.currentDriver.documents.length === 0" class="text-center py-8 text-gray-500">
+                                    <i data-lucide="inbox" class="w-12 h-12 mx-auto mb-2 text-gray-400"></i>
+                                    <p>Nenhum documento anexado</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab: Veículos -->
+                    <div x-show="$store.modal.activeTab === 'vehicles'" class="space-y-6">
+                        
+                        <!-- Add Vehicle Form -->
+                        <div class="bg-purple-50 dark:bg-purple-900/20 border-2 border-dashed border-purple-300 dark:border-purple-700 rounded-lg p-6">
+                            <h3 class="text-lg font-semibold text-purple-900 dark:text-purple-300 mb-4 flex items-center gap-2">
+                                <i data-lucide="truck" class="w-5 h-5"></i>
+                                Adicionar Novo Veículo
+                            </h3>
+                            <form :id="'form-add-vehicle-' + $store.modal.currentDriver?.id" method="POST" :action="'/driversapp/admin/adicionar-veiculo/' + $store.modal.currentDriver?.id + '/'" class="space-y-4">
+                                {% csrf_token %}
+                                <div class="grid grid-cols-3 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Matrícula</label>
+                                        <input type="text" name="matricula" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800 dark:text-white uppercase">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Marca</label>
+                                        <input type="text" name="marca" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800 dark:text-white">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Modelo</label>
+                                        <input type="text" name="modelo" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800 dark:text-white">
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Tipo de Veículo</label>
+                                        <select name="tipo_veiculo" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800 dark:text-white">
+                                            <option value="MOTA">Mota</option>
+                                            <option value="LIGEIRO">Ligeiro de Mercadorias</option>
+                                            <option value="CARRINHA_35T">Carrinha até 3.5t</option>
+                                            <option value="CARRINHA_GRANDE">Carrinha acima 3.5t</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Ano (opcional)</label>
+                                        <input type="number" name="ano" min="1900" max="2100" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-800 dark:text-white">
+                                    </div>
+                                </div>
+                                <button type="submit" class="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center justify-center gap-2">
+                                    <i data-lucide="plus" class="w-4 h-4"></i>
+                                    Adicionar Veículo
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- Vehicles List -->
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Veículos Cadastrados</h3>
+                            <div class="space-y-4">
+                                <template x-for="vehicle in $store.modal.currentDriver?.vehicles || []" :key="vehicle.id">
+                                    <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
+                                        <div class="flex items-start justify-between mb-3">
+                                            <div class="grid grid-cols-3 gap-4 flex-1">
+                                                <div>
+                                                    <label class="text-xs text-gray-500 dark:text-gray-400">Matrícula</label>
+                                                    <p class="font-mono font-bold text-lg dark:text-white" x-text="vehicle.matricula"></p>
+                                                </div>
+                                                <div>
+                                                    <label class="text-xs text-gray-500 dark:text-gray-400">Marca/Modelo</label>
+                                                    <p class="font-medium dark:text-white" x-text="vehicle.marca + ' ' + vehicle.modelo"></p>
+                                                </div>
+                                                <div>
+                                                    <label class="text-xs text-gray-500 dark:text-gray-400">Tipo</label>
+                                                    <p class="font-medium dark:text-white" x-text="vehicle.tipo_display"></p>
+                                                </div>
+                                            </div>
+                                            <form :action="'/driversapp/admin/deletar-veiculo/' + vehicle.id + '/'" method="POST"
+                                                  data-confirm-message="Deletar este veículo?"
+                                                  data-confirm-title="Confirmar exclusão"
+                                                  data-confirm-type="danger">
+                                                {% csrf_token %}
+                                                <button type="submit" class="text-red-600 hover:text-red-700 dark:text-red-400">
+                                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                        
+                                        <!-- Vehicle Documents -->
+                                        <div x-show="vehicle.documents && vehicle.documents.length > 0" class="border-t border-gray-200 dark:border-gray-600 pt-3 mt-3">
+                                            <p class="text-xs text-gray-500 dark:text-gray-400 mb-2 font-semibold">Documentos do Veículo</p>
+                                            <div class="space-y-2">
+                                                <template x-for="vdoc in vehicle.documents" :key="vdoc.id">
+                                                    <div class="flex items-center justify-between text-sm bg-white dark:bg-gray-800 p-2 rounded">
+                                                        <div>
+                                                            <span class="font-medium dark:text-white" x-text="vdoc.tipo_display"></span>
+                                                            <span class="text-xs text-gray-500 ml-2" x-text="vdoc.validade ? '(Val: ' + vdoc.validade + ')' : ''"></span>
+                                                        </div>
+                                                        <div class="flex gap-2">
+                                                            <button @click="$store.modal.viewerUrl = vdoc.url; $store.modal.viewerType = vdoc.file_extension; $store.modal.viewerOpen = true" class="text-green-500 hover:text-green-600 flex items-center gap-1">
+                                                                <i data-lucide="eye" class="w-3 h-3"></i>
+                                                                Ver
+                                                            </button>
+                                                            <a :href="vdoc.url" target="_blank" class="text-blue-500 hover:text-blue-600 flex items-center gap-1">
+                                                                <i data-lucide="download" class="w-3 h-3"></i>
+                                                                Download
+                                                            </a>
+                                                            <form :action="'/driversapp/admin/deletar-documento-veiculo/' + vdoc.id + '/'" method="POST"
+                                                                  data-confirm-message="Deletar este documento do veículo?"
+                                                                  data-confirm-title="Confirmar exclusão"
+                                                                  data-confirm-type="danger">
+                                                                {% csrf_token %}
+                                                                <button type="submit" class="text-red-500 hover:text-red-600">
+                                                                    <i data-lucide="trash-2" class="w-3 h-3"></i>
+                                                                </button>
+                                                            </form>
+                                                        </div>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+                                <div x-show="!$store.modal.currentDriver?.vehicles || $store.modal.currentDriver.vehicles.length === 0" class="text-center py-8 text-gray-500">
+                                    <i data-lucide="truck" class="w-12 h-12 mx-auto mb-2 text-gray-400"></i>
+                                    <p>Nenhum veículo cadastrado</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="sticky bottom-0 bg-gray-50 dark:bg-gray-700 p-6 rounded-b-xl border-t border-gray-200 dark:border-gray-600 flex justify-between items-center">
+                    <div class="flex gap-2">
+                        <!-- Botão Ativar (apenas se status != ATIVO) -->
+                        <template x-if="$store.modal.currentDriver?.status !== 'ATIVO'">
+                            <form :action="'/driversapp/admin/ativar/' + $store.modal.currentDriver?.id + '/'" method="POST"
+                                  data-confirm-message="Ativar este motorista? Ele voltará a ter acesso ao sistema."
+                                  data-confirm-title="Confirmar ativação"
+                                  data-confirm-type="info">
+                                {% csrf_token %}
+                                <button type="submit" class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors flex items-center gap-2">
+                                    <i data-lucide="user-check" class="w-4 h-4"></i>
+                                    Ativar
+                                </button>
+                            </form>
+                        </template>
+                        
+                        <!-- Botão Desativar (apenas se status == ATIVO) -->
+                        <template x-if="$store.modal.currentDriver?.status === 'ATIVO'">
+                            <form :action="'/driversapp/admin/desativar/' + $store.modal.currentDriver?.id + '/'" method="POST"
+                                  data-confirm-message="Desativar este motorista? Ele não poderá mais acessar o sistema."
+                                  data-confirm-title="Confirmar desativação"
+                                  data-confirm-type="warning">
+                                {% csrf_token %}
+                                <button type="submit" class="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors flex items-center gap-2">
+                                    <i data-lucide="user-x" class="w-4 h-4"></i>
+                                    Desativar
+                                </button>
+                            </form>
+                        </template>
+                        <form :action="'/driversapp/admin/excluir/' + $store.modal.currentDriver?.id + '/'" method="POST"
+                              data-confirm-message="ATENÇÃO: Esta ação é IRREVERSÍVEL! Deseja realmente EXCLUIR permanentemente este motorista e todos os seus dados?"
+                              data-confirm-title="⚠️ EXCLUSÃO PERMANENTE"
+                              data-confirm-type="danger">
+                            {% csrf_token %}
+                            <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                Excluir Permanentemente
+                            </button>
+                        </form>
+                    </div>
+                    <div class="flex gap-2">
+                        <a :href="'/admin/drivers_app/driverprofile/' + $store.modal.currentDriver?.id + '/change/'" target="_blank"
+                           class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors flex items-center gap-2 dark:text-white">
+                            <i data-lucide="external-link" class="w-4 h-4"></i>
+                            Admin Django
+                        </a>
+                        <button @click="$store.modal.isOpen = false; $store.modal.editMode = false; $store.modal.activeTab = 'info'" class="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors">
+                            Fechar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Visualizador de Documentos -->
+    <div x-show="$store.modal.viewerOpen" 
+         x-cloak
+         @click.self="$store.modal.viewerOpen = false; setTimeout(() => { lucide.createIcons(); }, 100)"
+         class="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0">
+        
+        <div class="relative w-full max-w-7xl h-[90vh] bg-white dark:bg-gray-800 rounded-xl shadow-2xl flex flex-col"
+             @click.stop>
+            
+            <!-- Header do Visualizador -->
+            <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                    <i data-lucide="file-text" class="w-5 h-5"></i>
+                    Visualizador de Documento
+                </h3>
+                <button @click="$store.modal.viewerOpen = false; setTimeout(() => { lucide.createIcons(); }, 100)" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+            
+            <!-- Conteúdo do Visualizador -->
+            <div class="flex-1 overflow-hidden p-4">
+                <!-- PDF Viewer -->
+                <template x-if="$store.modal.viewerType === '.pdf' || $store.modal.viewerType === 'pdf'">
+                    <embed :src="$store.modal.viewerUrl + '#toolbar=0&navpanes=0&scrollbar=1'" 
+                           type="application/pdf" 
+                           class="w-full h-full rounded-lg border-2 border-gray-300 dark:border-gray-600">
+                </template>
+                
+                <!-- Image Viewer -->
+                <template x-if="$store.modal.viewerType === '.jpg' || $store.modal.viewerType === '.jpeg' || $store.modal.viewerType === '.png' || $store.modal.viewerType === 'jpg' || $store.modal.viewerType === 'jpeg' || $store.modal.viewerType === 'png'">
+                    <div class="w-full h-full flex items-center justify-center bg-gray-100 dark:bg-gray-900 rounded-lg">
+                        <img :src="$store.modal.viewerUrl" class="max-w-full max-h-full object-contain" alt="Documento">
+                    </div>
+                </template>
+                
+                <!-- Unsupported Type -->
+                <template x-if="$store.modal.viewerType !== '.pdf' && $store.modal.viewerType !== 'pdf' && $store.modal.viewerType !== '.jpg' && $store.modal.viewerType !== '.jpeg' && $store.modal.viewerType !== '.png' && $store.modal.viewerType !== 'jpg' && $store.modal.viewerType !== 'jpeg' && $store.modal.viewerType !== 'png'">
+                    <div class="w-full h-full flex items-center justify-center">
+                        <div class="text-center">
+                            <i data-lucide="file-warning" class="w-16 h-16 mx-auto mb-4 text-gray-400"></i>
+                            <p class="text-gray-600 dark:text-gray-400 mb-4">Tipo de arquivo não suportado para visualização</p>
+                            <a :href="$store.modal.viewerUrl" target="_blank" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 inline-flex items-center gap-2">
+                                <i data-lucide="download" class="w-4 h-4"></i>
+                                Fazer Download
+                            </a>
+                        </div>
+                    </div>
+                </template>
+            </div>
+            
+            <!-- Footer do Visualizador -->
+            <div class="p-4 border-t border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                <a :href="$store.modal.viewerUrl" target="_blank" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2">
+                    <i data-lucide="download" class="w-4 h-4"></i>
+                    Fazer Download
+                </a>
+                <button @click="$store.modal.viewerOpen = false; setTimeout(() => { lucide.createIcons(); }, 100)" class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors">
+                    Fechar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Confirmação -->
+    <div x-show="$store.modal.confirmOpen" 
+         x-cloak
+         class="fixed inset-0 bg-black bg-opacity-50 z-[200] flex items-center justify-center p-4"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0">
+        
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full"
+             @click.stop
+             x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="opacity-0 transform scale-95"
+             x-transition:enter-end="opacity-100 transform scale-100"
+             x-transition:leave="transition ease-in duration-200"
+             x-transition:leave-start="opacity-100 transform scale-100"
+             x-transition:leave-end="opacity-0 transform scale-95">
+            
+            <!-- Header com ícone -->
+            <div class="p-6 flex items-start gap-4">
+                <div :class="{
+                    'bg-red-100 dark:bg-red-900/30': $store.modal.confirmType === 'danger',
+                    'bg-yellow-100 dark:bg-yellow-900/30': $store.modal.confirmType === 'warning',
+                    'bg-blue-100 dark:bg-blue-900/30': $store.modal.confirmType === 'info'
+                }" class="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0">
+                    <i :class="{
+                        'text-red-600 dark:text-red-400': $store.modal.confirmType === 'danger',
+                        'text-yellow-600 dark:text-yellow-400': $store.modal.confirmType === 'warning',
+                        'text-blue-600 dark:text-blue-400': $store.modal.confirmType === 'info'
+                    }" data-lucide="alert-triangle" class="w-6 h-6"></i>
+                </div>
+                <div class="flex-1">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2" x-text="$store.modal.confirmTitle"></h3>
+                    <p class="text-gray-600 dark:text-gray-300 text-sm" x-text="$store.modal.confirmMessage"></p>
+                </div>
+            </div>
+            
+            <!-- Botões -->
+            <div class="px-6 pb-6 flex gap-3 justify-end">
+                <button @click="$store.modal.confirmReject()" 
+                        class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-medium">
+                    Cancelar
+                </button>
+                <button @click="$store.modal.confirmResolve()" 
+                        :class="{
+                            'bg-red-600 hover:bg-red-700': $store.modal.confirmType === 'danger',
+                            'bg-yellow-600 hover:bg-yellow-700': $store.modal.confirmType === 'warning',
+                            'bg-blue-600 hover:bg-blue-700': $store.modal.confirmType === 'info'
+                        }"
+                        class="px-4 py-2 text-white rounded-lg transition-colors font-medium">
+                    Confirmar
+                </button>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+// Dados dos motoristas para o modal
+const driversData = {
+    {% for driver in page_obj %}
+    {{ driver.id }}: {
+        id: {{ driver.id }},
+        nome_completo: "{{ driver.nome_completo }}",
+        nif: "{{ driver.nif }}",
+        niss: "{{ driver.niss|default:'' }}",
+        data_nascimento: "{{ driver.data_nascimento|date:'d/m/Y'|default:'' }}",
+        data_nascimento_iso: "{{ driver.data_nascimento|date:'Y-m-d'|default:'' }}",
+        nacionalidade: "{{ driver.nacionalidade|default:'' }}",
+        email: "{{ driver.email }}",
+        telefone: "{{ driver.telefone|default:'' }}",
+        endereco_completo: "{% if driver.endereco_residencia %}{{ driver.endereco_residencia }}, {{ driver.codigo_postal|default:'' }} {{ driver.cidade|default:'' }}{% endif %}",
+        tipo_vinculo: "{{ driver.tipo_vinculo }}",
+        nome_frota: "{{ driver.nome_frota|default:'' }}",
+        status: "{{ driver.status }}",
+        approved_at: "{{ driver.approved_at|date:'d/m/Y H:i' }}",
+        approved_by: "{{ driver.approved_by|default:'' }}",
+        documents: [
+            {% for doc in driver.documents.all %}
+            {
+                id: {{ doc.id }},
+                tipo_display: "{{ doc.get_tipo_documento_display }}",
+                validade: "{% if doc.data_validade %}{{ doc.data_validade|date:'d/m/Y' }}{% endif %}",
+                url: "{{ doc.arquivo.url }}",
+                file_extension: "{{ doc.file_extension }}",
+                is_expired: {{ doc.is_expired|yesno:"true,false" }},
+                expiring_soon: {{ doc.days_until_expiration|default:999 }} <= 30 && {{ doc.days_until_expiration|default:999 }} > 0
+            }{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ],
+        vehicles: [
+            {% for vehicle in driver.vehicles.all %}
+            {
+                id: {{ vehicle.id }},
+                matricula: "{{ vehicle.matricula }}",
+                marca: "{{ vehicle.marca }}",
+                modelo: "{{ vehicle.modelo }}",
+                tipo_display: "{{ vehicle.get_tipo_veiculo_display }}",
+                documents: [
+                    {% for vdoc in vehicle.vehicle_documents.all %}
+                    {
+                        id: {{ vdoc.id }},
+                        tipo_display: "{{ vdoc.get_tipo_documento_display }}",
+                        validade: "{% if vdoc.data_validade %}{{ vdoc.data_validade|date:'d/m/Y' }}{% endif %}",
+                        url: "{{ vdoc.arquivo.url }}",
+                        file_extension: "{{ vdoc.file_extension }}"
+                    }{% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                ]
+            }{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ]
+    }{% if not forloop.last %},{% endif %}
+    {% endfor %}
+};
+
+// Configurar Alpine.js Store para gerenciar estado do modal
+document.addEventListener('alpine:init', () => {
+    Alpine.store('modal', {
+        isOpen: false,
+        currentDriver: null,
+        editMode: false,
+        activeTab: 'info',
+        viewerOpen: false,
+        viewerUrl: '',
+        viewerType: '',
+        
+        // Modal de confirmação
+        confirmOpen: false,
+        confirmTitle: '',
+        confirmMessage: '',
+        confirmType: 'warning', // 'danger', 'warning', 'info'
+        confirmResolve: null,
+        confirmReject: null,
+        
+        // Métodos do modal principal
+        open(driverId) {
+            this.currentDriver = driversData[driverId];
+            this.isOpen = true;
+            this.editMode = false;
+            this.activeTab = 'info';
+            setTimeout(() => lucide.createIcons(), 100);
+        },
+        
+        close() {
+            this.isOpen = false;
+            this.currentDriver = null;
+            this.editMode = false;
+            this.activeTab = 'info';
+        },
+        
+        updateDriver(driverData) {
+            console.log('🔄 Store updateDriver called with:', driverData.id, 'Documents:', driverData.documents.length, 'Vehicles:', driverData.vehicles.length);
+            
+            // Atualizar cache
+            driversData[driverData.id] = driverData;
+            
+            // Se este motorista está aberto no modal, atualizar
+            if (this.currentDriver && this.currentDriver.id === driverData.id) {
+                console.log('✅ Updating modal with new data');
+                this.currentDriver = driverData;
+                setTimeout(() => lucide.createIcons(), 50);
+            }
+        },
+        
+        openViewer(url, type) {
+            this.viewerUrl = url;
+            this.viewerType = type;
+            this.viewerOpen = true;
+        },
+        
+        closeViewer() {
+            this.viewerOpen = false;
+            this.viewerUrl = '';
+            this.viewerType = '';
+        },
+        
+        // Método de confirmação (retorna Promise)
+        confirm(title, message, type = 'warning') {
+            return new Promise((resolve, reject) => {
+                this.confirmTitle = title;
+                this.confirmMessage = message;
+                this.confirmType = type;
+                this.confirmOpen = true;
+                
+                this.confirmResolve = () => {
+                    this.confirmOpen = false;
+                    resolve(true);
+                    setTimeout(() => lucide.createIcons(), 100);
+                };
+                
+                this.confirmReject = () => {
+                    this.confirmOpen = false;
+                    reject(false);
+                    setTimeout(() => lucide.createIcons(), 100);
+                };
+            });
+        }
+    });
+});
+
+// Função auxiliar para abrir modal (mantida por compatibilidade)
+function openModal(driverId) {
+    Alpine.store('modal').open(driverId);
+}
+
+// ===== AJAX FUNCTIONS =====
+
+// Função para mostrar notificações toast
+function showToast(message, type = 'success') {
+    const colors = {
+        success: 'bg-green-500',
+        error: 'bg-red-500',
+        warning: 'bg-yellow-500',
+        info: 'bg-blue-500'
+    };
+    
+    const toast = document.createElement('div');
+    toast.className = `fixed top-4 right-4 ${colors[type]} text-white px-6 py-3 rounded-lg shadow-lg z-[200] transition-all transform`;
+    toast.innerHTML = message;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => toast.remove(), 3000);
+}
+
+// Função para recarregar dados do motorista via API
+async function reloadDriverData(driverId) {
+    try {
+        const response = await fetch(`/driversapp/admin/get-driver-data/${driverId}/`);
+        if (response.ok) {
+            const data = await response.json();
+            
+            // Atualizar via Alpine Store
+            Alpine.store('modal').updateDriver(data);
+            
+            return true;
+        }
+        return false;
+    } catch (error) {
+        console.error('Error reloading driver data:', error);
+        return false;
+    }
+}
+
+// Função genérica para fazer POST via AJAX
+async function ajaxPost(url, formData) {
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+        
+        const result = await response.json();
+        
+        console.log('📥 AJAX Response:', result);
+        
+        if (result.success) {
+            showToast(result.message || 'Operação realizada com sucesso!', 'success');
+            
+            // Atualizar dados se fornecidos na resposta
+            if (result.driver_data && result.driver_id) {
+                const data = result.driver_data;
+                
+                console.log('💾 Updating driver data:', data.id, 'Docs:', data.documents.length, 'Vehicles:', data.vehicles.length);
+                
+                // Atualizar via Alpine Store (garante reatividade)
+                Alpine.store('modal').updateDriver(data);
+            }
+            
+            return true;
+        } else {
+            showToast(result.message || 'Erro ao realizar operação', 'error');
+            return false;
+        }
+    } catch (error) {
+        console.error('❌ AJAX Error:', error);
+        showToast('Erro de conexão', 'error');
+        return false;
+    }
+}
+
+// Interceptar todos os forms do modal para AJAX
+document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('submit', async function(e) {
+        const form = e.target;
+        
+        // Verificar se é um form do modal (contém '/driversapp/admin/')
+        if (form.action && form.action.includes('/driversapp/admin/') && !form.action.includes('/aprovar/')) {
+            e.preventDefault();
+            
+            // Verificar se o form tem confirmação (atributo data-confirm ou onsubmit com confirm)
+            const confirmMessage = form.getAttribute('data-confirm-message');
+            const confirmTitle = form.getAttribute('data-confirm-title') || 'Confirmação';
+            const confirmType = form.getAttribute('data-confirm-type') || 'warning';
+            
+            // Se tem mensagem de confirmação, mostrar modal
+            if (confirmMessage) {
+                try {
+                    await Alpine.store('modal').confirm(confirmTitle, confirmMessage, confirmType);
+                } catch {
+                    // Usuário cancelou
+                    return;
+                }
+            }
+            
+            const formData = new FormData(form);
+            const success = await ajaxPost(form.action, formData);
+            
+            if (success) {
+                // Limpar form se for de upload
+                if (form.querySelector('input[type="file"]')) {
+                    form.reset();
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

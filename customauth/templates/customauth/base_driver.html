@@ -1,0 +1,118 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Painel do Motorista{% endblock %}</title>
+    
+    <!-- Tailwind CSS -->
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            fontFamily: {
+              'sans': ['Inter', 'Segoe UI', 'Arial', 'sans-serif'],
+            },
+            colors: {
+              primary: '#6366f1',
+              secondary: '#a21caf',
+            },
+          },
+        },
+      }
+    </script>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Icons -->
+    <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+    
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="h-full font-sans bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white antialiased">
+    <!-- Navbar superior -->
+    <header class="bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <!-- Logo e título -->
+                <div class="flex items-center flex-shrink-0">
+                    <img src="{% static 'img/logo.png' %}" alt="Logo" class="h-8 w-auto"/>
+                    <span class="ml-2 font-semibold text-lg text-indigo-600 dark:text-indigo-400">Leguas Monitoring</span>
+                </div>
+                
+                <!-- Menu direito -->
+                <div class="flex items-center">
+                    <!-- Toggle dark mode -->
+                    <button 
+                        id="theme-toggle" 
+                        type="button" 
+                        class="text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 rounded-lg text-sm p-2.5 mr-2"
+                    >
+                        <i id="theme-toggle-dark-icon" class='hidden bx bx-moon bx-sm'></i>
+                        <i id="theme-toggle-light-icon" class='hidden bx bx-sun bx-sm'></i>
+                    </button>
+                    
+                    <!-- Navegação -->
+                    <div class="ml-4">
+                        {% block nav %}{% endblock %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+    
+    <!-- Conteúdo principal -->
+    <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        {% block content %}{% endblock %}
+    </main>
+    
+    <!-- Rodapé -->
+    <footer class="bg-white dark:bg-gray-800 shadow-inner mt-auto">
+        <div class="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
+            <p class="text-center text-sm text-gray-500 dark:text-gray-400">
+                &copy; {{ year|default:2025 }} Leguas Monitoring. Todos os direitos reservados.
+            </p>
+        </div>
+    </footer>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Toggle dark mode
+            const themeToggleBtn = document.getElementById('theme-toggle');
+            const themeToggleDarkIcon = document.getElementById('theme-toggle-dark-icon');
+            const themeToggleLightIcon = document.getElementById('theme-toggle-light-icon');
+
+            // Verifique se o modo escuro está habilitado
+            if (localStorage.getItem('color-theme') === 'dark' || 
+                (!('color-theme' in localStorage) && 
+                window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+              document.documentElement.classList.add('dark');
+              themeToggleLightIcon.classList.remove('hidden');
+            } else {
+              document.documentElement.classList.remove('dark');
+              themeToggleDarkIcon.classList.remove('hidden');
+            }
+
+            // Função toggle
+            themeToggleBtn.addEventListener('click', function() {
+              // Toggle icons
+              themeToggleDarkIcon.classList.toggle('hidden');
+              themeToggleLightIcon.classList.toggle('hidden');
+              
+              // Toggle dark mode
+              if (document.documentElement.classList.contains('dark')) {
+                document.documentElement.classList.remove('dark');
+                localStorage.setItem('color-theme', 'light');
+              } else {
+                document.documentElement.classList.add('dark');
+                localStorage.setItem('color-theme', 'dark');
+              }
+            });
+        });
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

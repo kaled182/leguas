@@ -1,0 +1,17 @@
+<!-- Loader (overlay na tela toda) -->
+<div id="loader"
+     class="fixed inset-0 bg-white/80 dark:bg-gray-900/80 flex flex-col items-center justify-center z-50 hidden">
+  <div class="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+  <p class="text-emerald-600 dark:text-emerald-300 font-medium mb-6">Sincronizando dados...</p>
+
+  <!-- Caixa de log em tempo real -->
+  <div class="bg-black text-green-400 font-mono text-sm p-4 rounded-lg h-96 w-3/4 max-w-4xl overflow-y-auto whitespace-pre-wrap border-2 border-emerald-500">
+    <div id="logBox" class="h-full"></div>
+  </div>
+  
+  <!-- Instruções para o usuário -->
+  <div class="mt-4 text-center text-sm text-gray-600 dark:text-gray-300">
+    <p>📡 Acompanhe o progresso da sincronização em tempo real</p>
+    <p class="text-xs mt-1">A página será recarregada automaticamente ao finalizar</p>
+  </div>
+</div>

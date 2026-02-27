@@ -1,0 +1,201 @@
+{% extends 'paack_dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Debug Eficiência Semanal{% endblock %}
+{% block sidebar_title %}Debug{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-8">
+  <!-- Header -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 fade-in">
+    <div class="flex items-center gap-4">
+      <div class="p-3 bg-gradient-to-br from-warning-500 to-warning-600 rounded-xl shadow-sm">
+        <i data-lucide="bug" class="w-6 h-6 text-white"></i>
+      </div>
+      <div>
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-gray-100">
+          🔍 Debug Eficiência Semanal
+        </h1>
+        <p class="text-gray-600 dark:text-gray-400 mt-1">
+          Ferramenta para verificar cálculos da eficiência semanal
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Informações básicas -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 slide-in">
+    <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
+      Informações da Consulta
+    </h2>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div class="bg-primary-50 dark:bg-primary-900/20 p-4 rounded-lg">
+        <h3 class="text-sm font-medium text-primary-700 dark:text-primary-300">Data Alvo</h3>
+        <p class="text-lg font-bold text-primary-900 dark:text-primary-100">{{ target_date }} ({{ target_date|date:"l" }})</p>
+      </div>
+      <div class="bg-success-50 dark:bg-success-900/20 p-4 rounded-lg">
+        <h3 class="text-sm font-medium text-success-700 dark:text-success-300">Início da Semana</h3>
+        <p class="text-lg font-bold text-success-900 dark:text-success-100">{{ week_start }} ({{ week_start|date:"l" }})</p>
+      </div>
+      <div class="bg-warning-50 dark:bg-warning-900/20 p-4 rounded-lg">
+        <h3 class="text-sm font-medium text-warning-700 dark:text-warning-300">Fim da Semana</h3>
+        <p class="text-lg font-bold text-warning-900 dark:text-warning-100">{{ week_end }} ({{ week_end|date:"l" }})</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Formulário para testar outras datas -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 scale-in">
+    <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
+      🔧 Testar com outras datas
+    </h2>
+    <form method="get" class="flex items-center gap-4">
+      <div class="flex-1">
+        <label for="date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          Data (YYYY-MM-DD):
+        </label>
+        <input type="date" name="date" id="date" value="{{ target_date|date:'Y-m-d' }}"
+          class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all">
+      </div>
+      <div class="pt-6">
+        <button type="submit" 
+          class="px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors font-medium shadow-sm hover:shadow">
+          Testar
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Dados por dia -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 overflow-hidden slide-in">
+    <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+      <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-100">
+        📊 Dados por Dia
+      </h2>
+    </div>
+    
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <thead class="bg-gray-50 dark:bg-gray-700/50">
+          <tr>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Data</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Dia da Semana</th>
+            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Entregas</th>
+            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Falhas</th>
+            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Total</th>
+            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Taxa de Sucesso</th>
+            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+          {% for day_data in week_data %}
+          <tr class="{% if day_data.is_today %}bg-primary-50 dark:bg-primary-900/20{% else %}hover:bg-gray-50 dark:hover:bg-gray-700/50{% endif %} transition-colors">
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
+              {{ day_data.date }}
+              {% if day_data.is_today %}
+                <span class="ml-2 inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300">
+                  HOJE
+                </span>
+              {% endif %}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+              {{ day_data.weekday }}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-success-600 dark:text-success-400 font-medium">
+              {{ day_data.deliveries }}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-danger-600 dark:text-danger-400 font-medium">
+              {{ day_data.fails }}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900 dark:text-gray-100 font-medium">
+              {{ day_data.total }}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-right font-bold">
+              {% if day_data.total > 0 %}
+                <span class="{% if day_data.success_rate >= 90 %}text-success-600 dark:text-success-400{% elif day_data.success_rate >= 70 %}text-warning-600 dark:text-warning-400{% else %}text-danger-600 dark:text-danger-400{% endif %}">
+                  {{ day_data.success_rate|floatformat:1 }}%
+                </span>
+              {% else %}
+                <span class="text-gray-400 dark:text-gray-500">—</span>
+              {% endif %}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-center">
+              {% if day_data.total > 0 %}
+                <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-success-100 dark:bg-success-900/20 text-success-800 dark:text-success-300">
+                  ✅ Incluído
+                </span>
+              {% else %}
+                <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 dark:bg-gray-900/20 text-gray-600 dark:text-gray-400">
+                  ⚠️ Ignorado
+                </span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Cálculo da média -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 scale-in">
+    <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
+      🧮 Cálculo da Média
+    </h2>
+    
+    {% if valid_rates %}
+    <div class="space-y-4">
+      <div class="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg">
+        <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Taxas válidas:</h3>
+        <div class="flex flex-wrap gap-2">
+          {% for rate in valid_rates %}
+            <span class="inline-flex px-3 py-1 text-sm font-medium rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300">
+              {{ rate|floatformat:1 }}%
+            </span>
+          {% endfor %}
+        </div>
+      </div>
+      
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="bg-primary-50 dark:bg-primary-900/20 p-4 rounded-lg">
+          <h3 class="text-sm font-medium text-primary-700 dark:text-primary-300">Soma</h3>
+          <p class="text-2xl font-bold text-primary-900 dark:text-primary-100">{{ sum_rates|floatformat:1 }}</p>
+        </div>
+        <div class="bg-success-50 dark:bg-success-900/20 p-4 rounded-lg">
+          <h3 class="text-sm font-medium text-success-700 dark:text-success-300">Quantidade de dias</h3>
+          <p class="text-2xl font-bold text-success-900 dark:text-success-100">{{ count_days }}</p>
+        </div>
+        <div class="bg-warning-50 dark:bg-warning-900/20 p-4 rounded-lg">
+          <h3 class="text-sm font-medium text-warning-700 dark:text-warning-300">Fórmula</h3>
+          <p class="text-lg font-bold text-warning-900 dark:text-warning-100">{{ sum_rates|floatformat:1 }} ÷ {{ count_days }} = {{ week_efficiency|floatformat:1 }}%</p>
+        </div>
+      </div>
+      
+      <div class="bg-gradient-to-r from-success-500 to-success-600 p-6 rounded-lg text-white">
+        <h3 class="text-lg font-semibold mb-2">🎯 RESULTADO FINAL</h3>
+        <p class="text-3xl font-bold">{{ week_efficiency|floatformat:1 }}%</p>
+      </div>
+    </div>
+    {% else %}
+    <div class="bg-danger-50 dark:bg-danger-900/20 p-6 rounded-lg border border-danger-200 dark:border-danger-800">
+      <div class="flex items-center gap-3">
+        <i data-lucide="alert-circle" class="w-6 h-6 text-danger-600 dark:text-danger-400"></i>
+        <div>
+          <h3 class="text-lg font-semibold text-danger-800 dark:text-danger-200">❌ Nenhum dia com tentativas</h3>
+          <p class="text-danger-700 dark:text-danger-300">Eficiência = 0.0%</p>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Link para dashboard -->
+  <div class="text-center">
+    <a href="{% url 'paack_dashboard:dashboard_paack' %}" 
+      class="inline-flex items-center gap-2 px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors font-medium shadow-sm hover:shadow">
+      <i data-lucide="arrow-left" class="w-4 h-4"></i>
+      Voltar ao Dashboard
+    </a>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,456 @@
+{% extends 'paack_dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Aprovar Motoristas{% endblock %}
+{% block sidebar_title %}Motoristas{% endblock %}
+
+{% block content %}
+<div class="p-6" x-data="{ modalOpen: false, currentDriver: null }">
+    <!-- Header -->
+    <div class="mb-8">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-xl flex items-center justify-center">
+                    <i data-lucide="user-check" class="w-6 h-6 text-white"></i>
+                </div>
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Aprovar Cadastros</h1>
+                    <p class="text-gray-600 dark:text-gray-400">Analise e aprove motoristas pendentes</p>
+                </div>
+            </div>
+            
+            <!-- Stats -->
+            <div class="flex gap-4">
+                <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 px-6 py-3 rounded-lg">
+                    <div class="text-sm text-yellow-600 dark:text-yellow-400">Pendentes</div>
+                    <div class="text-2xl font-bold text-yellow-700 dark:text-yellow-300">{{ total_pendentes }}</div>
+                </div>
+                <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 px-6 py-3 rounded-lg">
+                    <div class="text-sm text-blue-600 dark:text-blue-400">Em Analise</div>
+                    <div class="text-2xl font-bold text-blue-700 dark:text-blue-300">{{ total_em_analise }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Messages -->
+    {% if messages %}
+    <div class="mb-6 space-y-3">
+        {% for message in messages %}
+        <div class="{% if message.tags == 'success' %}bg-green-50 border-green-200 text-green-800{% elif message.tags == 'warning' %}bg-yellow-50 border-yellow-200 text-yellow-800{% else %}bg-red-50 border-red-200 text-red-800{% endif %} border-l-4 p-4 rounded-lg flex items-center gap-3">
+            <i data-lucide="{% if message.tags == 'success' %}check-circle{% elif message.tags == 'warning' %}alert-triangle{% else %}alert-circle{% endif %}" class="w-5 h-5"></i>
+            <span>{{ message }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Filters -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-4 mb-6">
+        <form method="GET" class="flex gap-4">
+            <select name="status" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+                <option value="">Todos os Status</option>
+                <option value="PENDENTE" {% if status_filter == 'PENDENTE' %}selected{% endif %}>Pendente</option>
+                <option value="EM_ANALISE" {% if status_filter == 'EM_ANALISE' %}selected{% endif %}>Em Analise</option>
+            </select>
+            
+            <input type="text" name="q" value="{{ search_query }}" placeholder="Buscar NIF, nome, email..."
+                   class="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+            
+            <button type="submit" class="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2">
+                <i data-lucide="search" class="w-4 h-4"></i>
+                Filtrar
+            </button>
+        </form>
+    </div>
+
+    <!-- List -->
+    <div class="space-y-4">
+        {% for driver in page_obj %}
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-6">
+            <div class="flex items-start justify-between">
+                <div class="flex-1">
+                    <div class="flex items-center gap-3 mb-3">
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ driver.nome_completo }}</h3>
+                        <span class="px-3 py-1 rounded-full text-xs font-medium {% if driver.status == 'PENDENTE' %}bg-yellow-100 text-yellow-700{% else %}bg-blue-100 text-blue-700{% endif %}">
+                            {{ driver.get_status_display }}
+                        </span>
+                        <span class="px-3 py-1 rounded-full text-xs font-medium {% if driver.tipo_vinculo == 'DIRETO' %}bg-green-100 text-green-700{% else %}bg-purple-100 text-purple-700{% endif %}">
+                            {{ driver.get_tipo_vinculo_display }}
+                        </span>
+                    </div>
+                    
+                    <div class="grid grid-cols-3 gap-4 text-sm">
+                        <div>
+                            <span class="text-gray-500 dark:text-gray-400">NIF:</span>
+                            <span class="font-medium dark:text-white">{{ driver.nif }}</span>
+                        </div>
+                        <div>
+                            <span class="text-gray-500 dark:text-gray-400">Email:</span>
+                            <span class="font-medium dark:text-white">{{ driver.email }}</span>
+                        </div>
+                        <div>
+                            <span class="text-gray-500 dark:text-gray-400">Telefone:</span>
+                            <span class="font-medium dark:text-white">{{ driver.telefone }}</span>
+                        </div>
+                        {% if driver.tipo_vinculo == 'PARCEIRO' and driver.nome_frota %}
+                        <div>
+                            <span class="text-gray-500 dark:text-gray-400">Frota:</span>
+                            <span class="font-medium dark:text-white">{{ driver.nome_frota }}</span>
+                        </div>
+                        {% endif %}
+                        <div>
+                            <span class="text-gray-500 dark:text-gray-400">Documentos:</span>
+                            <span class="font-medium dark:text-white">{{ driver.documents.count }}</span>
+                        </div>
+                        <div>
+                            <span class="text-gray-500 dark:text-gray-400">Cadastrado:</span>
+                            <span class="font-medium dark:text-white">{{ driver.created_at|date:"d/m/Y H:i" }}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Actions -->
+                <div class="flex gap-2 ml-6">
+                    <form method="POST" action="{% url 'drivers_app:admin_approve_driver_action' driver.id %}" onsubmit="return confirm('Aprovar este motorista?')">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="approve">
+                        <button type="submit" class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors flex items-center gap-2">
+                            <i data-lucide="check" class="w-4 h-4"></i>
+                            Aprovar
+                        </button>
+                    </form>
+                    
+                    <form method="POST" action="{% url 'drivers_app:admin_approve_driver_action' driver.id %}" onsubmit="return confirm('Rejeitar este motorista?')">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="reject">
+                        <input type="hidden" name="observacao" value="Cadastro rejeitado pela equipe">
+                        <button type="submit" class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors flex items-center gap-2">
+                            <i data-lucide="x" class="w-4 h-4"></i>
+                            Rejeitar
+                        </button>
+                    </form>
+                    
+                    <button @click="openModal({{ driver.id }})"
+                       class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2 dark:text-white">
+                        <i data-lucide="eye" class="w-4 h-4"></i>
+                        Ver Detalhes
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="bg-gray-50 dark:bg-gray-800 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 p-12 text-center">
+            <i data-lucide="inbox" class="w-16 h-16 mx-auto text-gray-400 mb-4"></i>
+            <p class="text-gray-600 dark:text-gray-400">Nenhum motorista pendente de aprovacao</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <div class="mt-6 flex justify-center">
+        <nav class="flex gap-2">
+            {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}&status={{ status_filter }}&q={{ search_query }}"
+               class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-white">
+                Anterior
+            </a>
+            {% endif %}
+            
+            <span class="px-4 py-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg text-blue-700 dark:text-blue-300">
+                Pagina {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+            </span>
+            
+            {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}&status={{ status_filter }}&q={{ search_query }}"
+               class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-white">
+                Proximo
+            </a>
+            {% endif %}
+        </nav>
+    </div>
+    {% endif %}
+
+    <!-- Modal de Detalhes -->
+    <div x-show="modalOpen" 
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 z-50 overflow-y-auto" 
+         style="display: none;">
+        
+        <!-- Overlay -->
+        <div class="fixed inset-0 bg-black bg-opacity-50" @click="modalOpen = false"></div>
+        
+        <!-- Modal Content -->
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div x-transition:enter="transition ease-out duration-300"
+                 x-transition:enter-start="opacity-0 transform scale-95"
+                 x-transition:enter-end="opacity-100 transform scale-100"
+                 x-transition:leave="transition ease-in duration-200"
+                 x-transition:leave-start="opacity-100 transform scale-100"
+                 x-transition:leave-end="opacity-0 transform scale-95"
+                 class="relative bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+                
+                <!-- Modal Header -->
+                <div class="sticky top-0 bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6 rounded-t-xl flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
+                            <i data-lucide="user" class="w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-2xl font-bold" x-text="currentDriver?.nome_completo"></h2>
+                            <p class="text-blue-100">Detalhes do Cadastro</p>
+                        </div>
+                    </div>
+                    <button @click="modalOpen = false" class="text-white hover:bg-white/20 rounded-lg p-2 transition-colors">
+                        <i data-lucide="x" class="w-6 h-6"></i>
+                    </button>
+                </div>
+
+                <!-- Modal Body -->
+                <div class="p-6 space-y-6">
+                    
+                    <!-- Dados Pessoais -->
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                            <i data-lucide="user-circle" class="w-5 h-5 text-blue-500"></i>
+                            Dados Pessoais
+                        </h3>
+                        <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="text-xs text-gray-500 dark:text-gray-400">NIF</label>
+                                <p class="font-mono font-medium dark:text-white" x-text="currentDriver?.nif"></p>
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-500 dark:text-gray-400">NISS</label>
+                                <p class="font-mono font-medium dark:text-white" x-text="currentDriver?.niss || 'N/A'"></p>
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-500 dark:text-gray-400">Data de Nascimento</label>
+                                <p class="font-medium dark:text-white" x-text="currentDriver?.data_nascimento || 'N/A'"></p>
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-500 dark:text-gray-400">Nacionalidade</label>
+                                <p class="font-medium dark:text-white" x-text="currentDriver?.nacionalidade || 'N/A'"></p>
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-500 dark:text-gray-400">Email</label>
+                                <p class="font-medium dark:text-white" x-text="currentDriver?.email"></p>
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-500 dark:text-gray-400">Telefone</label>
+                                <p class="font-medium dark:text-white" x-text="currentDriver?.telefone || 'N/A'"></p>
+                            </div>
+                            <div class="col-span-2">
+                                <label class="text-xs text-gray-500 dark:text-gray-400">Endereço</label>
+                                <p class="font-medium dark:text-white" x-text="currentDriver?.endereco_completo || 'N/A'"></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Informações Profissionais -->
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                            <i data-lucide="briefcase" class="w-5 h-5 text-blue-500"></i>
+                            Informações Profissionais
+                        </h3>
+                        <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="text-xs text-gray-500 dark:text-gray-400">Tipo de Vínculo</label>
+                                <p class="font-medium dark:text-white">
+                                    <span x-show="currentDriver?.tipo_vinculo === 'DIRETO'" class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">Direto - Recibos Verdes</span>
+                                    <span x-show="currentDriver?.tipo_vinculo === 'PARCEIRO'" class="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm">Parceiro - Frota</span>
+                                    <span x-show="!currentDriver?.tipo_vinculo" class="text-gray-400">N/A</span>
+                                </p>
+                            </div>
+                            <div x-show="currentDriver?.tipo_vinculo === 'PARCEIRO'">
+                                <label class="text-xs text-gray-500 dark:text-gray-400">Nome da Frota</label>
+                                <p class="font-medium dark:text-white" x-text="currentDriver?.nome_frota || 'N/A'"></p>
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-500 dark:text-gray-400">Status</label>
+                                <p>
+                                    <span x-show="currentDriver?.status === 'PENDENTE'" class="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm">Pendente</span>
+                                    <span x-show="currentDriver?.status === 'EM_ANALISE'" class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm">Em Análise</span>
+                                    <span x-show="currentDriver?.status === 'ATIVO'" class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">Ativo</span>
+                                </p>
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-500 dark:text-gray-400">Data de Cadastro</label>
+                                <p class="font-medium dark:text-white" x-text="currentDriver?.created_at"></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Documentos -->
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                            <i data-lucide="file-text" class="w-5 h-5 text-blue-500"></i>
+                            Documentos
+                            <span class="text-sm font-normal text-gray-500" x-text="'(' + (currentDriver?.documents?.length || 0) + ')'"></span>
+                        </h3>
+                        <div class="space-y-2">
+                            <template x-for="doc in currentDriver?.documents || []" :key="doc.id">
+                                <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 flex items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
+                                            <i data-lucide="file" class="w-5 h-5 text-blue-600 dark:text-blue-400"></i>
+                                        </div>
+                                        <div>
+                                            <p class="font-medium dark:text-white" x-text="doc.tipo_display"></p>
+                                            <p class="text-xs text-gray-500" x-text="doc.validade ? 'Validade: ' + doc.validade : 'Sem validade'"></p>
+                                        </div>
+                                    </div>
+                                    <a :href="doc.url" target="_blank" class="px-3 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm flex items-center gap-2">
+                                        <i data-lucide="download" class="w-4 h-4"></i>
+                                        Download
+                                    </a>
+                                </div>
+                            </template>
+                            <div x-show="!currentDriver?.documents || currentDriver.documents.length === 0" class="text-center py-8 text-gray-500">
+                                <i data-lucide="inbox" class="w-12 h-12 mx-auto mb-2 text-gray-400"></i>
+                                <p>Nenhum documento enviado</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Veículos -->
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                            <i data-lucide="truck" class="w-5 h-5 text-blue-500"></i>
+                            Veículos
+                            <span class="text-sm font-normal text-gray-500" x-text="'(' + (currentDriver?.vehicles?.length || 0) + ')'"></span>
+                        </h3>
+                        <div class="space-y-4">
+                            <template x-for="vehicle in currentDriver?.vehicles || []" :key="vehicle.id">
+                                <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
+                                    <div class="grid grid-cols-3 gap-4 mb-3">
+                                        <div>
+                                            <label class="text-xs text-gray-500 dark:text-gray-400">Matrícula</label>
+                                            <p class="font-mono font-bold text-lg dark:text-white" x-text="vehicle.matricula"></p>
+                                        </div>
+                                        <div>
+                                            <label class="text-xs text-gray-500 dark:text-gray-400">Marca/Modelo</label>
+                                            <p class="font-medium dark:text-white" x-text="vehicle.marca + ' ' + vehicle.modelo"></p>
+                                        </div>
+                                        <div>
+                                            <label class="text-xs text-gray-500 dark:text-gray-400">Tipo</label>
+                                            <p class="font-medium dark:text-white" x-text="vehicle.tipo_display"></p>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Documentos do Veículo -->
+                                    <div x-show="vehicle.documents && vehicle.documents.length > 0" class="border-t border-gray-200 dark:border-gray-600 pt-3 mt-3">
+                                        <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">Documentos do Veículo</p>
+                                        <div class="space-y-2">
+                                            <template x-for="vdoc in vehicle.documents" :key="vdoc.id">
+                                                <div class="flex items-center justify-between text-sm">
+                                                    <span class="dark:text-white" x-text="vdoc.tipo_display"></span>
+                                                    <a :href="vdoc.url" target="_blank" class="text-blue-500 hover:text-blue-600 flex items-center gap-1">
+                                                        <i data-lucide="download" class="w-3 h-3"></i>
+                                                        Download
+                                                    </a>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                            <div x-show="!currentDriver?.vehicles || currentDriver.vehicles.length === 0" class="text-center py-8 text-gray-500">
+                                <i data-lucide="truck" class="w-12 h-12 mx-auto mb-2 text-gray-400"></i>
+                                <p>Nenhum veículo cadastrado</p>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="sticky bottom-0 bg-gray-50 dark:bg-gray-700 p-6 rounded-b-xl border-t border-gray-200 dark:border-gray-600 flex justify-between items-center">
+                    <a :href="'/admin/drivers_app/driverprofile/' + currentDriver?.id + '/change/'" target="_blank"
+                       class="text-blue-500 hover:text-blue-600 flex items-center gap-2">
+                        <i data-lucide="external-link" class="w-4 h-4"></i>
+                        Abrir no Admin Django
+                    </a>
+                    <button @click="modalOpen = false" class="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors">
+                        Fechar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+// Dados dos motoristas para o modal
+const driversData = {
+    {% for driver in page_obj %}
+    {{ driver.id }}: {
+        id: {{ driver.id }},
+        nome_completo: "{{ driver.nome_completo }}",
+        nif: "{{ driver.nif }}",
+        niss: "{{ driver.niss|default:'' }}",
+        data_nascimento: "{{ driver.data_nascimento|date:'d/m/Y'|default:'' }}",
+        nacionalidade: "{{ driver.nacionalidade|default:'' }}",
+        email: "{{ driver.email }}",
+        telefone: "{{ driver.telefone|default:'' }}",
+        endereco_completo: "{% if driver.endereco_residencia %}{{ driver.endereco_residencia }}, {{ driver.codigo_postal|default:'' }} {{ driver.cidade|default:'' }}{% endif %}",
+        tipo_vinculo: "{{ driver.tipo_vinculo }}",
+        nome_frota: "{{ driver.nome_frota|default:'' }}",
+        status: "{{ driver.status }}",
+        created_at: "{{ driver.created_at|date:'d/m/Y H:i' }}",
+        documents: [
+            {% for doc in driver.documents.all %}
+            {
+                id: {{ doc.id }},
+                tipo_display: "{{ doc.get_tipo_documento_display }}",
+                validade: "{% if doc.data_validade %}{{ doc.data_validade|date:'d/m/Y' }}{% endif %}",
+                url: "{{ doc.arquivo.url }}"
+            }{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ],
+        vehicles: [
+            {% for vehicle in driver.vehicles.all %}
+            {
+                id: {{ vehicle.id }},
+                matricula: "{{ vehicle.matricula }}",
+                marca: "{{ vehicle.marca }}",
+                modelo: "{{ vehicle.modelo }}",
+                tipo_display: "{{ vehicle.get_tipo_veiculo_display }}",
+                documents: [
+                    {% for vdoc in vehicle.vehicle_documents.all %}
+                    {
+                        id: {{ vdoc.id }},
+                        tipo_display: "{{ vdoc.get_tipo_documento_display }}",
+                        url: "{{ vdoc.arquivo.url }}"
+                    }{% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                ]
+            }{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ]
+    }{% if not forloop.last %},{% endif %}
+    {% endfor %}
+};
+
+function openModal(driverId) {
+    const modalContainer = document.querySelector('[x-data*="modalOpen"]');
+    const alpineData = Alpine.$data(modalContainer);
+    alpineData.currentDriver = driversData[driverId];
+    alpineData.modalOpen = true;
+    
+    // Reinicializar ícones Lucide após renderização
+    setTimeout(() => {
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+    }, 100);
+}
+</script>
+{% endblock %}

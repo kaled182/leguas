@@ -1,0 +1,270 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Dashboard - {{ welcome_name }}{% endblock %}
+{% block sidebar_title %}Dashboard Motorista{% endblock %}
+
+{% block extra_head %}
+<!-- Removido CSS antigo, pois o novo padrão já cobre o visual -->
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+  <!-- Header com boas-vindas -->
+  <header class="bg-white rounded-2xl shadow p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">
+        Bem-vindo, {{ welcome_name }}!
+      </h1>
+      <p class="text-gray-600 text-sm mt-1">
+        Dashboard de entregas - {{ selected_date|date:"d/m/Y" }}
+      </p>
+    </div>
+    <div class="flex flex-col sm:flex-row gap-3">
+      <!-- Filtro de Data -->
+      <input 
+        type="date" 
+        id="date-filter"
+        value="{{ selected_date|date:'Y-m-d' }}"
+        class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+        onchange="filterByDate(this.value)"
+      >
+      <!-- Botão Exportar -->
+      <a 
+        href="{% url 'drivers_app:driver_export_xlsx' %}?date={{ selected_date|date:'Y-m-d' }}"
+        class="btn flex items-center gap-2"
+      >
+        <i data-lucide="download"></i> Exportar
+      </a>
+    </div>
+  </header>
+
+  <!-- Cards de Estatísticas -->
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <!-- Total -->
+    <div class="bg-white rounded-xl shadow-sm p-6 border-l-4 border-blue-500">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm font-medium text-gray-600">Total de Pedidos</p>
+          <p class="text-3xl font-bold text-gray-900">{{ stats.total }}</p>
+        </div>
+        <div class="p-3 bg-blue-100 rounded-full">
+          <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pendentes -->
+    <div class="bg-white rounded-xl shadow-sm p-6 border-l-4 border-yellow-500">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm font-medium text-gray-600">Pendentes</p>
+          <p class="text-3xl font-bold text-gray-900">{{ stats.to_attempt }}</p>
+        </div>
+        <div class="p-3 bg-yellow-100 rounded-full">
+          <svg class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- Entregues -->
+    <div class="bg-white rounded-xl shadow-sm p-6 border-l-4 border-green-500">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm font-medium text-gray-600">Entregues</p>
+          <p class="text-3xl font-bold text-gray-900">{{ stats.delivered }}</p>
+        </div>
+        <div class="p-3 bg-green-100 rounded-full">
+          <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- Falhados -->
+    <div class="bg-white rounded-xl shadow-sm p-6 border-l-4 border-red-500">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm font-medium text-gray-600">Falhados</p>
+          <p class="text-3xl font-bold text-gray-900">{{ stats.failed }}</p>
+        </div>
+        <div class="p-3 bg-red-100 rounded-full">
+          <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filtros -->
+  <div class="bg-white rounded-xl shadow-sm p-6">
+    <div class="flex flex-wrap items-center gap-3">
+      <span class="text-sm font-medium text-gray-700">Filtrar por status:</span>
+      
+      <a href="?date={{ selected_date|date:'Y-m-d' }}" 
+         class="px-3 py-1 rounded-full text-xs font-medium {% if not selected_status %}bg-blue-100 text-blue-800{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %} transition-colors">
+        Todos
+      </a>
+      
+      <a href="?status=to_attempt&date={{ selected_date|date:'Y-m-d' }}" 
+         class="px-3 py-1 rounded-full text-xs font-medium {% if selected_status == 'to_attempt' %}bg-yellow-100 text-yellow-800{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %} transition-colors">
+        Pendentes
+      </a>
+      
+      <a href="?status=delivered&date={{ selected_date|date:'Y-m-d' }}" 
+         class="px-3 py-1 rounded-full text-xs font-medium {% if selected_status == 'delivered' %}bg-green-100 text-green-800{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %} transition-colors">
+        Entregues
+      </a>
+      
+      <a href="?status=failed&date={{ selected_date|date:'Y-m-d' }}" 
+         class="px-3 py-1 rounded-full text-xs font-medium {% if selected_status == 'failed' %}bg-red-100 text-red-800{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %} transition-colors">
+        Falhados
+      </a>
+    </div>
+  </div>
+
+  <!-- Lista de Pedidos -->
+  <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-200">
+      <h3 class="text-lg font-semibold text-gray-900">Seus Pedidos</h3>
+      <p class="text-sm text-gray-600 mt-1">
+        {{ page_obj.paginator.count }} pedido{{ page_obj.paginator.count|pluralize }} encontrado{{ page_obj.paginator.count|pluralize }}
+      </p>
+    </div>
+
+    {% if orders %}
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID Pedido</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Varejista</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Endereço</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200">
+            {% for order in orders %}
+              <tr class="hover:bg-gray-50">
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                  {{ order.order_id }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {{ order.retailer }}
+                </td>
+                <td class="px-6 py-4 text-sm text-gray-500">
+                  <div class="max-w-xs truncate">{{ order.client_address }}</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  {% if order.is_delivered %}
+                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                      Entregue
+                    </span>
+                  {% elif order.is_failed %}
+                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+                      Falhado
+                    </span>
+                  {% else %}
+                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                      Pendente
+                    </span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Paginação -->
+      {% if page_obj.has_other_pages %}
+        <div class="px-6 py-4 border-t border-gray-200">
+          <nav class="flex items-center justify-between">
+            <div class="flex-1 flex justify-between sm:hidden">
+              {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}{% if selected_status %}&status={{ selected_status }}{% endif %}&date={{ selected_date|date:'Y-m-d' }}" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                  Anterior
+                </a>
+              {% endif %}
+              {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}{% if selected_status %}&status={{ selected_status }}{% endif %}&date={{ selected_date|date:'Y-m-d' }}" class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                  Próximo
+                </a>
+              {% endif %}
+            </div>
+            <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+              <div>
+                <p class="text-sm text-gray-700">
+                  Mostrando
+                  <span class="font-medium">{{ page_obj.start_index }}</span>
+                  até
+                  <span class="font-medium">{{ page_obj.end_index }}</span>
+                  de
+                  <span class="font-medium">{{ page_obj.paginator.count }}</span>
+                  resultados
+                </p>
+              </div>
+              <div>
+                <span class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+                  {% if page_obj.has_previous %}
+                    <a href="?page={{ page_obj.previous_page_number }}{% if selected_status %}&status={{ selected_status }}{% endif %}&date={{ selected_date|date:'Y-m-d' }}" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                      <span class="sr-only">Anterior</span>
+                      <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                      </svg>
+                    </a>
+                  {% endif %}
+                  
+                  {% for page_num in page_obj.paginator.page_range %}
+                    {% if page_num == page_obj.number %}
+                      <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-blue-50 text-sm font-medium text-blue-600">
+                        {{ page_num }}
+                      </span>
+                    {% elif page_num > page_obj.number|add:-3 and page_num < page_obj.number|add:3 %}
+                      <a href="?page={{ page_num }}{% if selected_status %}&status={{ selected_status }}{% endif %}&date={{ selected_date|date:'Y-m-d' }}" class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        {{ page_num }}
+                      </a>
+                    {% endif %}
+                  {% endfor %}
+                  
+                  {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}{% if selected_status %}&status={{ selected_status }}{% endif %}&date={{ selected_date|date:'Y-m-d' }}" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                      <span class="sr-only">Próximo</span>
+                      <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+                      </svg>
+                    </a>
+                  {% endif %}
+                </span>
+              </div>
+            </div>
+          </nav>
+        </div>
+      {% endif %}
+    {% else %}
+      <div class="text-center py-12">
+        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
+        </svg>
+        <h3 class="mt-2 text-sm font-medium text-gray-900">Nenhum pedido encontrado</h3>
+        <p class="mt-1 text-sm text-gray-500">Não há pedidos para a data e filtros selecionados.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+function filterByDate(date) {
+    const url = new URL(window.location);
+    url.searchParams.set('date', date);
+    url.searchParams.delete('page'); // Reset pagination
+    window.location.href = url.toString();
+}
+</script>
+{% endblock %}

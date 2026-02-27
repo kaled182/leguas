@@ -1,0 +1,343 @@
+<section class="mt-8" aria-label="Gráfico de performance">
+  <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow p-6">
+    <header class="flex items-center gap-3 mb-4">
+      <div class="bg-yellow-900 text-yellow-300 rounded-lg p-3">
+        <i data-lucide="chart-line" class="w-6 h-6"></i>
+      </div>
+      <div>
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+          Taxa de Sucesso por Driver
+        </h2>
+        <p class="text-sm text-gray-500 dark:text-gray-400">
+          {% if is_today %}Performance em tempo real - Hoje{% else %}Dados de {{ current_date|date:"d/m/Y" }}{% endif %}
+        </p>
+      </div>
+    </header>
+
+    <!-- Debug info -->
+    <div class="bg-gray-100 dark:bg-gray-700 p-4 mb-4 rounded-lg">
+      <h3 class="font-bold mb-2">Debug Info:</h3>
+      <p>driver_success_chart: {{ driver_success_chart|length }} items</p>
+      <p>top_drivers_today: {{ top_drivers_today|length }} items</p>
+      <hr class="my-2">
+      <p>Chart.js disponível: <span id="chartjs-check">Verificando...</span></p>
+      <p>Canvas disponível: <span id="canvas-check">Verificando...</span></p>
+    </div>
+
+    {% if driver_success_chart and driver_success_chart|length > 0 %}
+      <div class="mb-6 h-64">
+        <canvas id="driversSuccessChart"></canvas>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+          <thead>
+            <tr>
+              <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Driver</th>
+              <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Sucesso</th>
+              <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Entregas</th>
+              <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Falhas</th>
+              <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Tentativas</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+            {% for d in driver_success_chart %}
+            <tr>
+              <td class="px-4 py-2 font-semibold text-gray-900 dark:text-gray-100">{{ d.name }}</td>
+              <td class="px-4 py-2 text-green-600 dark:text-green-400 font-bold">{{ d.success_rate_display }}</td>
+              <td class="px-4 py-2 text-gray-700 dark:text-gray-300">{{ d.deliveries }}</td>
+              <td class="px-4 py-2 text-gray-700 dark:text-gray-300">{{ d.fails }}</td>
+              <td class="px-4 py-2 text-gray-700 dark:text-gray-300">{{ d.total_attempts }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+    {% elif top_drivers_today and top_drivers_today|length > 0 %}
+      <div class="mb-6 h-64">
+        <canvas id="driversSuccessChart"></canvas>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+          <thead>
+            <tr>
+              <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Driver</th>
+              <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Entregas</th>
+              <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Falhas</th>
+              <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Pendentes</th>
+              <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Taxa</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+            {% for driver in top_drivers_today %}
+            <tr>
+              <td class="px-4 py-2 font-semibold text-gray-900 dark:text-gray-100">{{ driver.name }}</td>
+              <td class="px-4 py-2 text-gray-700 dark:text-gray-300">{{ driver.deliveries_count }}</td>
+              <td class="px-4 py-2 text-gray-700 dark:text-gray-300">{{ driver.fails_count }}</td>
+              <td class="px-4 py-2 text-gray-700 dark:text-gray-300">{{ driver.pending_count|default:0 }}</td>
+              <td class="px-4 py-2 text-green-600 dark:text-green-400 font-bold">
+                {% if driver.deliveries_count or driver.fails_count %}
+                  {% widthratio driver.deliveries_count driver.deliveries_count|add:driver.fails_count 100 %}%
+                {% else %}
+                  0%
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="flex flex-col items-center justify-center py-8 text-gray-400 dark:text-gray-500">
+        <i data-lucide="chart-area" class="w-10 h-10 mb-3"></i>
+        <p class="text-center">Nenhum motorista com entregas nesta data</p>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Script para renderizar o gráfico de desempenho dos motoristas -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Check if Chart.js is available
+      document.getElementById('chartjs-check').textContent = typeof Chart !== 'undefined' ? 'Sim ✓' : 'Não ✗';
+
+      // Verificar se o elemento do gráfico existe
+      const chartElement = document.getElementById('driversSuccessChart');
+      document.getElementById('canvas-check').textContent = chartElement ? 'Sim ✓' : 'Não ✗';
+      
+      if (!chartElement) return;
+      console.log("Elemento do gráfico encontrado");
+      
+      try {
+        {% if driver_success_chart and driver_success_chart|length > 0 %}
+        // Preparar dados para o gráfico
+        const driverNames = [{% for driver in driver_success_chart %}"{{ driver.name }}"{% if not forloop.last %},{% endif %}{% endfor %}];
+        const successRates = [{% for driver in driver_success_chart %}{{ driver.success_rate|floatformat:1 }}{% if not forloop.last %},{% endif %}{% endfor %}];
+        const deliveryCounts = [{% for driver in driver_success_chart %}{{ driver.deliveries }}{% if not forloop.last %},{% endif %}{% endfor %}];
+        const failCounts = [{% for driver in driver_success_chart %}{{ driver.fails }}{% if not forloop.last %},{% endif %}{% endfor %}];
+        
+        // Limitar a 10 motoristas para melhor visualização
+        const top10Names = driverNames.slice(0, 10);
+        const top10Rates = successRates.slice(0, 10);
+        const top10Deliveries = deliveryCounts.slice(0, 10);
+        const top10Fails = failCounts.slice(0, 10);
+
+        console.log("Dados prontos para o gráfico:", {top10Names, top10Rates});
+        
+        // Criar o gráfico usando Chart.js
+        const ctx = chartElement.getContext('2d');
+        try {
+          console.log("Inicializando Chart.js");
+          new Chart(ctx, {
+            type: 'bar',
+            data: {
+              labels: top10Names,
+              datasets: [
+                {
+                  label: 'Taxa de Sucesso (%)',
+                  data: top10Rates,
+                  backgroundColor: 'rgba(52, 211, 153, 0.7)',
+                  borderColor: 'rgb(16, 185, 129)',
+                  borderWidth: 1,
+                  borderRadius: 4,
+                  yAxisID: 'y'
+                },
+                {
+                  label: 'Entregas',
+                  data: top10Deliveries,
+                  backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                  borderColor: 'rgb(37, 99, 235)',
+                  borderWidth: 1,
+                  borderRadius: 4,
+                  yAxisID: 'y1'
+                },
+                {
+                  label: 'Falhas',
+                  data: top10Fails,
+                  backgroundColor: 'rgba(239, 68, 68, 0.5)',
+                  borderColor: 'rgb(220, 38, 38)',
+                  borderWidth: 1,
+                  borderRadius: 4,
+                  yAxisID: 'y1'
+                }
+              ]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: {
+                  position: 'top',
+                  labels: {
+                    usePointStyle: true,
+                    boxWidth: 8,
+                    font: {
+                      family: "'Inter', sans-serif"
+                    }
+                  }
+                },
+                tooltip: {
+                  mode: 'index',
+                  intersect: false
+                }
+              },
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  position: 'left',
+                  title: {
+                    display: true,
+                    text: 'Taxa de Sucesso (%)'
+                  },
+                  max: 100,
+                  ticks: {
+                    callback: function(value) {
+                      return value + '%';
+                    }
+                  }
+                },
+                y1: {
+                  beginAtZero: true,
+                  position: 'right',
+                  title: {
+                    display: true,
+                    text: 'Número de entregas'
+                  },
+                  grid: {
+                    drawOnChartArea: false
+                  }
+                },
+                x: {
+                  ticks: {
+                    maxRotation: 45,
+                    minRotation: 45
+                  }
+                }
+              }
+            }
+          });
+          console.log("Chart.js inicializado com sucesso");
+        } catch (error) {
+          console.error("Erro ao criar o gráfico:", error);
+        }
+        {% elif top_drivers_today and top_drivers_today|length > 0 %}
+        // Código alternativo para top_drivers_today
+        const driverNames = [{% for driver in top_drivers_today %}"{{ driver.name }}"{% if not forloop.last %},{% endif %}{% endfor %}];
+        const deliveryCounts = [{% for driver in top_drivers_today %}{{ driver.deliveries_count }}{% if not forloop.last %},{% endif %}{% endfor %}];
+        const failCounts = [{% for driver in top_drivers_today %}{{ driver.fails_count }}{% if not forloop.last %},{% endif %}{% endfor %}];
+        
+        // Calcular taxas de sucesso
+        const successRates = [];
+        {% for driver in top_drivers_today %}
+          const total = {{ driver.deliveries_count|add:driver.fails_count }};
+          const rate = total > 0 ? ({{ driver.deliveries_count }} / total * 100).toFixed(1) : 0;
+          successRates.push(rate);
+        {% endfor %}
+
+        console.log("Dados prontos para o gráfico (alternativo):", {driverNames, successRates});
+
+        // Criar o gráfico usando Chart.js
+        const ctx = chartElement.getContext('2d');
+        try {
+          console.log("Inicializando Chart.js (alternativo)");
+          new Chart(ctx, {
+            type: 'bar',
+            data: {
+              labels: driverNames,
+              datasets: [
+                {
+                  label: 'Taxa de Sucesso (%)',
+                  data: successRates,
+                  backgroundColor: 'rgba(52, 211, 153, 0.7)',
+                  borderColor: 'rgb(16, 185, 129)',
+                  borderWidth: 1,
+                  borderRadius: 4,
+                  yAxisID: 'y'
+                },
+                {
+                  label: 'Entregas',
+                  data: deliveryCounts,
+                  backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                  borderColor: 'rgb(37, 99, 235)',
+                  borderWidth: 1,
+                  borderRadius: 4,
+                  yAxisID: 'y1'
+                },
+                {
+                  label: 'Falhas',
+                  data: failCounts,
+                  backgroundColor: 'rgba(239, 68, 68, 0.5)',
+                  borderColor: 'rgb(220, 38, 38)',
+                  borderWidth: 1,
+                  borderRadius: 4,
+                  yAxisID: 'y1'
+                }
+              ]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: {
+                  position: 'top',
+                  labels: {
+                    usePointStyle: true,
+                    boxWidth: 8,
+                    font: {
+                      family: "'Inter', sans-serif"
+                    }
+                  }
+                },
+                tooltip: {
+                  mode: 'index',
+                  intersect: false
+                }
+              },
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  position: 'left',
+                  title: {
+                    display: true,
+                    text: 'Taxa de Sucesso (%)'
+                  },
+                  max: 100,
+                  ticks: {
+                    callback: function(value) {
+                      return value + '%';
+                    }
+                  }
+                },
+                y1: {
+                  beginAtZero: true,
+                  position: 'right',
+                  title: {
+                    display: true,
+                    text: 'Número de entregas'
+                  },
+                  grid: {
+                    drawOnChartArea: false
+                  }
+                },
+                x: {
+                  ticks: {
+                    maxRotation: 45,
+                    minRotation: 45
+                  }
+                }
+              }
+            }
+          });
+          console.log("Chart.js (alternativo) inicializado com sucesso");
+        } catch (error) {
+          console.error("Erro ao criar o gráfico (alternativo):", error);
+        }
+        {% endif %}
+      } catch (error) {
+        console.error("Erro ao renderizar o gráfico:", error);
+      }
+    });
+  </script>
+</section>

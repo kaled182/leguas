@@ -1,0 +1,421 @@
+version: '3.9'
+
+services:
+  # Base de dados MySQL
+  db:
+    image: mysql:8.0
+    container_name: leguas_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: leguas_db
+      MYSQL_ROOT_PASSWORD: root_password_dev
+      MYSQL_USER: leguas_user
+      MYSQL_PASSWORD: leguas_password_dev
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    command: --default-authentication-plugin=mysql_native_password --sql-mode=STRICT_TRANS_TABLES --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+    networks:
+      - leguas_network
+
+  # Redis (para cache e sessões)
+  redis:
+    image: redis:7-alpine
+    container_name: leguas_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      timeout: 5s
+      retries: 5
+    networks:
+      - leguas_network
+
+  # Aplicação Django
+  web:
+    build: .
+    container_name: leguas_web
+    restart: unless-stopped
+    command: gunicorn my_project.wsgi:application --bind 0.0.0.0:8000 --workers 3 --reload
+    volumes:
+      - .:/app
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env.docker
+    environment:
+      - DEBUG=True
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_NAME=leguas_db
+      - DB_USER=leguas_user
+      - DB_PASSWORD=leguas_password_dev
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - leguas_network
+
+  # Tailwind CSS (desenvolvimento)
+  tailwind:
+    build: .
+    container_name: leguas_tailwind
+    restart: unless-stopped
+    command: python manage.py tailwind start
+    volumes:
+      - .:/app
+    env_file:
+      - .env.docker
+    environment:
+      - DEBUG=True
+    depends_on:
+      - web
+    networks:
+      - leguas_network
+
+  # WPPConnect Server (WhatsApp Integration)
+  wppconnect:
+    image: wppconnect/server-cli:latest
+    container_name: leguas_wppconnect
+    restart: unless-stopped
+    ports:
+      - "21465:21465"
+    environment:
+      SERVER_PORT: 21465
+      SECRET_KEY: "THISISMYSECURETOKEN"
+      TOKEN: "VwfSzDglRI5jVAQTmmh5hZ8YZh_qsmqCcldJ3tBLA9g"
+      DEBUG: "false"
+      DEL_INSTANCE: "false"
+      AUTO_CLOSE_INTERVAL: "300000"  # 5 minutos (em ms) para dar tempo de autenticar
+      CONFIG_SESSION_PHONE_CLIENT: "Chrome"
+      CONFIG_SESSION_PHONE_NAME: "Leguas"
+      WEBHOOK_GLOBAL_ENABLED: "true"
+      WEBHOOK_GLOBAL_URL: "http://leguas_wppconnect_bridge:3500/webhook/wppconnect"
+      WEBHOOK_GLOBAL_WEBHOOK_BY_EVENTS: "true"
+      WEBHOOK_GLOBAL_EVENTS: "onMessage,onAnyMessage"
+      CHATWOOT_ENABLED: "false"
+      LOG_LEVEL: "debug"
+      LOG_COLOR: "true"
+      LOG_BAILEYS: "error"
+      STORE_MESSAGES: "true"
+      STORE_CONTACTS: "true"
+      STORE_CHATS: "true"
+      CLEAN_STORE_CLEANING_INTERVAL: "7200"
+      CLEAN_STORE_MESSAGES: "true"
+      CLEAN_STORE_MESSAGE_UP_TO: "false"
+      CLEAN_STORE_CONTACTS: "true"
+      CLEAN_STORE_CHATS: "true"
+    volumes:
+      - wppconnect_store:/usr/src/app/wppconnect_store
+    networks:
+      - leguas_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:21465/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+  # ========================================
+  # OMNICHANNEL - CHATWOOT + TYPEBOT
+  # ========================================
+
+  # Chatwoot - PostgreSQL Database
+  chatwoot_db:
+    image: pgvector/pgvector:pg15
+    container_name: leguas_chatwoot_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: chatwoot
+      POSTGRES_USER: chatwoot_user
+      POSTGRES_PASSWORD: chatwoot_pass_2026_secure
+    volumes:
+      - chatwoot_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U chatwoot_user -d chatwoot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - leguas_network
+
+  # Chatwoot - Redis Cache
+  chatwoot_redis:
+    image: redis:7-alpine
+    container_name: leguas_chatwoot_redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - chatwoot_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - leguas_network
+
+  # Chatwoot - Web Application
+  chatwoot_web:
+    image: chatwoot/chatwoot:latest
+    container_name: leguas_chatwoot_web
+    restart: unless-stopped
+    command: bundle exec rails s -p 3000 -b 0.0.0.0
+    depends_on:
+      chatwoot_db:
+        condition: service_healthy
+      chatwoot_redis:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    environment:
+      # URLs
+      - FRONTEND_URL=http://localhost:3000
+      - FORCE_SSL=false
+      
+      # Rails/Node
+      - NODE_ENV=production
+      - RAILS_ENV=production
+      - RAILS_LOG_TO_STDOUT=true
+      
+      # Installation
+      - INSTALLATION_NAME=Leguas Franzinas
+      - INSTALLATION_ENV=production
+      
+      # Database
+      - POSTGRES_DATABASE=chatwoot
+      - POSTGRES_HOST=chatwoot_db
+      - POSTGRES_USERNAME=chatwoot_user
+      - POSTGRES_PASSWORD=chatwoot_pass_2026_secure
+      
+      # Redis
+      - REDIS_URL=redis://chatwoot_redis:6379
+      - REDIS_PASSWORD=
+      
+      # Security
+      - SECRET_KEY_BASE=947fc343a0c5e8382b5d8a65b1da87e8219b4ff8d1a1fb4a57b1a9978956a64f
+      
+      # Features
+      - ENABLE_ACCOUNT_SIGNUP=true
+      - USE_INBOX_AVATAR_FOR_BOT=true
+      
+      # Logs
+      - LOG_LEVEL=info
+      - LOG_SIZE=500
+    networks:
+      - leguas_network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Chatwoot - Sidekiq Worker
+  chatwoot_worker:
+    image: chatwoot/chatwoot:latest
+    container_name: leguas_chatwoot_worker
+    restart: unless-stopped
+    command: bundle exec sidekiq -C config/sidekiq.yml
+    depends_on:
+      chatwoot_db:
+        condition: service_healthy
+      chatwoot_redis:
+        condition: service_healthy
+    environment:
+      - NODE_ENV=production
+      - RAILS_ENV=production
+      - POSTGRES_DATABASE=chatwoot
+      - POSTGRES_HOST=chatwoot_db
+      - POSTGRES_USERNAME=chatwoot_user
+      - POSTGRES_PASSWORD=chatwoot_pass_2026_secure
+      - REDIS_URL=redis://chatwoot_redis:6379
+      - SECRET_KEY_BASE=947fc343a0c5e8382b5d8a65b1da87e8219b4ff8d1a1fb4a57b1a9978956a64f
+      - INSTALLATION_ENV=production
+    networks:
+      - leguas_network
+
+  # Typebot - PostgreSQL Database
+  typebot_db:
+    image: postgres:15-alpine
+    container_name: leguas_typebot_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: typebot
+      POSTGRES_USER: typebot_user
+      POSTGRES_PASSWORD: typebot_pass_2026_secure
+    volumes:
+      - typebot_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U typebot_user -d typebot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - leguas_network
+
+  # Typebot - Builder (Interface de Criação de Fluxos)
+  typebot_builder:
+    image: baptistearno/typebot-builder:latest
+    container_name: leguas_typebot_builder
+    restart: unless-stopped
+    depends_on:
+      typebot_db:
+        condition: service_healthy
+    ports:
+      - "8081:3000"
+    environment:
+      # Database
+      - DATABASE_URL=postgresql://typebot_user:typebot_pass_2026_secure@typebot_db:5432/typebot
+      
+      # URLs
+      - NEXTAUTH_URL=http://localhost:8081
+      - NEXT_PUBLIC_VIEWER_URL=http://localhost:8082
+      
+      # Security
+      - ENCRYPTION_SECRET=UDNRHCFUVAJKQJGYKKLTHKHRFSGVCEIY
+      - NEXTAUTH_SECRET=UDNRHCFUVAJKQJGYKKLTHKHRFSGVCEIY
+      
+      # Admin
+      - ADMIN_EMAIL=admin@leguasfranzinas.pt
+      
+      # Email Authentication (usando Mailhog para dev)
+      - SMTP_HOST=mailhog
+      - SMTP_PORT=1025
+      - SMTP_USERNAME=mailhog
+      - SMTP_PASSWORD=mailhog
+      - SMTP_SECURE=false
+      - SMTP_FROM=noreply@leguasfranzinas.pt
+      - NEXT_PUBLIC_SMTP_FROM=noreply@leguasfranzinas.pt
+      
+      # Features
+      - DISABLE_SIGNUP=false
+      
+      # Google OAuth (fake para desenvolvimento)
+      - GOOGLE_CLIENT_ID=fake-client-id-development
+      - GOOGLE_CLIENT_SECRET=fake-client-secret-development
+      
+      # Debug mode (para ver erros de autenticação)
+      - DEBUG=true
+      
+      # Trust Proxy (para CSRF funcionar)
+      - NEXTAUTH_URL_INTERNAL=http://localhost:3000
+    networks:
+      - leguas_network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Typebot - Viewer (Engine de Execução dos Bots)
+  typebot_viewer:
+    image: baptistearno/typebot-viewer:latest
+    container_name: leguas_typebot_viewer
+    restart: unless-stopped
+    depends_on:
+      typebot_db:
+        condition: service_healthy
+    ports:
+      - "8082:3000"
+    environment:
+      # Database
+      - DATABASE_URL=postgresql://typebot_user:typebot_pass_2026_secure@typebot_db:5432/typebot
+      
+      # URLs
+      - NEXT_PUBLIC_VIEWER_URL=http://localhost:8082
+      
+      # Security
+      - ENCRYPTION_SECRET=UDNRHCFUVAJKQJGYKKLTHKHRFSGVCEIY
+    networks:
+      - leguas_network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # WPPConnect <-> Chatwoot Bridge (Middleware)
+  wppconnect_bridge:
+    build: ./wppconnect-chatwoot-bridge
+    container_name: leguas_wppconnect_bridge
+    restart: unless-stopped
+    depends_on:
+      wppconnect:
+        condition: service_started
+      chatwoot_web:
+        condition: service_healthy
+    ports:
+      - "3500:3500"
+    environment:
+      # WPPConnect
+      - WPPCONNECT_URL=http://leguas_wppconnect:21465
+      - WPPCONNECT_SESSION=leguas_wppconnect
+      - WPPCONNECT_TOKEN=$$2b$$10$$QaQSGFS8eSdOe.X9S5Lovu63lX0d24LuKdCHVRqNEyKyvbvXGNcLy
+      
+      # Chatwoot
+      - CHATWOOT_URL=http://leguas_chatwoot_web:3000
+      - CHATWOOT_ACCOUNT_ID=1
+      - CHATWOOT_INBOX_ID=1
+      - CHATWOOT_API_TOKEN=w2w8N98Pv8yqazrHPyqAuwkR
+      
+      # Server
+      - PORT=3500
+      - NODE_ENV=production
+      - LOG_LEVEL=debug
+    networks:
+      - leguas_network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3500/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # Mailhog - Servidor SMTP fake para desenvolvimento
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: leguas_mailhog
+    restart: unless-stopped
+    ports:
+      - "8025:8025"  # Interface Web
+      - "1025:1025"  # SMTP Server
+    networks:
+      - leguas_network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8025/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  leguas_network:
+    driver: bridge
+
+volumes:
+  mysql_data:
+  redis_data:
+  static_volume:
+  media_volume:
+  wppconnect_store:
+  chatwoot_db_data:
+  chatwoot_redis_data:
+  typebot_db_data:

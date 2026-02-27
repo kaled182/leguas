@@ -1,0 +1,55 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br" class="h-full">
+
+<head>
+  <meta charset="UTF-8">
+  <title>{% block title %}Login - Sistema de Monitoramento{% endblock %}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Tailwind CSS -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            'sans': ['Inter', 'Segoe UI', 'Arial', 'sans-serif'],
+          },
+          colors: {
+            primary: '#6366f1',
+            secondary: '#a21caf',
+          },
+        },
+      },
+    }
+  </script>
+  <!-- Favicon -->
+  <link rel="icon"
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚚</text></svg>">
+  <link rel="stylesheet" href="{% static 'css/base.css' %}" />
+  {% block extra_head %}{% endblock %}
+</head>
+
+<body class="h-full bg-gray-50 text-gray-900 font-sans flex items-center justify-center min-h-screen">
+  {% if messages %}
+    <div class="fixed top-4 right-4 z-50 max-w-sm">
+      {% for message in messages %}
+        <div class="p-4 mb-4 rounded shadow-lg
+          {% if message.tags == 'success' %}bg-green-500
+          {% elif message.tags == 'error' %}bg-red-500
+          {% elif message.tags == 'warning' %}bg-yellow-500
+          {% else %}bg-blue-500{% endif %}">
+          {{ message }}
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <div class="w-full max-w-md p-8 bg-white rounded-2xl shadow-lg">
+    {% block content %}{% endblock %}
+  </div>
+  <!-- Scripts -->
+  <script src="{% static 'customauth/js/auth.js' %}"></script>
+  {% block extra_js %}{% endblock %}
+</body>
+
+</html>

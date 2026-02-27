@@ -1,0 +1,181 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3">{{ title }}</h1>
+                <a href="{% if expense %}{% url 'accounting:expense_detail' expense.pk %}{% else %}{% url 'accounting:expense_list' %}{% endif %}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Voltar
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.natureza.id_for_label }}" class="form-label">{{ form.natureza.label }}</label>
+                                {{ form.natureza }}
+                                {% if form.natureza.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.natureza.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.fonte.id_for_label }}" class="form-label">{{ form.fonte.label }}</label>
+                                {{ form.fonte }}
+                                {% if form.fonte.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.fonte.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.valor_sem_iva.id_for_label }}" class="form-label">{{ form.valor_sem_iva.label }}</label>
+                                {{ form.valor_sem_iva }}
+                                {% if form.valor_sem_iva.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.valor_sem_iva.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.valor_com_iva.id_for_label }}" class="form-label">{{ form.valor_com_iva.label }}</label>
+                                {{ form.valor_com_iva }}
+                                {% if form.valor_com_iva.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.valor_com_iva.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.data_entrada.id_for_label }}" class="form-label">{{ form.data_entrada.label }}</label>
+                                {{ form.data_entrada }}
+                                {% if form.data_entrada.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.data_entrada.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.referencia.id_for_label }}" class="form-label">{{ form.referencia.label }}</label>
+                                {{ form.referencia }}
+                                {% if form.referencia.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.referencia.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.documento.id_for_label }}" class="form-label">{{ form.documento.label }}</label>
+                                {{ form.documento }}
+                                {% if form.documento.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.documento.errors.0 }}</div>
+                                {% endif %}
+                                <div class="form-text">Formatos aceitos: PDF, JPG, PNG, XLSX, XLS, DOC, DOCX</div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <div class="form-check">
+                                    {{ form.pago }}
+                                    <label class="form-check-label" for="{{ form.pago.id_for_label }}">
+                                        {{ form.pago.label }}
+                                    </label>
+                                </div>
+                                {% if form.pago.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.pago.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.data_pagamento.id_for_label }}" class="form-label">{{ form.data_pagamento.label }}</label>
+                                {{ form.data_pagamento }}
+                                {% if form.data_pagamento.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.data_pagamento.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.descricao.id_for_label }}" class="form-label">{{ form.descricao.label }}</label>
+                            {{ form.descricao }}
+                            {% if form.descricao.errors %}
+                                <div class="invalid-feedback d-block">{{ form.descricao.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger">
+                                {{ form.non_field_errors }}
+                            </div>
+                        {% endif %}
+                        
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-save"></i> Salvar
+                            </button>
+                            <a href="{% if expense %}{% url 'accounting:expense_detail' expense.pk %}{% else %}{% url 'accounting:expense_list' %}{% endif %}" class="btn btn-secondary">
+                                Cancelar
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Dicas</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li><i class="fas fa-check text-success"></i> Preencha todos os campos obrigatórios</li>
+                        <li><i class="fas fa-check text-success"></i> O valor com IVA deve ser maior que sem IVA</li>
+                        <li><i class="fas fa-check text-success"></i> Anexe documentos comprovativos</li>
+                        <li><i class="fas fa-check text-success"></i> Marque como pago quando apropriado</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Habilitar/desabilitar campo de data de pagamento baseado no checkbox
+document.getElementById('id_pago').addEventListener('change', function() {
+    const dataPagamento = document.getElementById('id_data_pagamento');
+    if (this.checked) {
+        dataPagamento.disabled = false;
+        if (!dataPagamento.value) {
+            dataPagamento.value = new Date().toISOString().split('T')[0];
+        }
+    } else {
+        dataPagamento.disabled = true;
+        dataPagamento.value = '';
+    }
+});
+
+// Inicializar estado do campo
+document.addEventListener('DOMContentLoaded', function() {
+    const pagoCheckbox = document.getElementById('id_pago');
+    const dataPagamento = document.getElementById('id_data_pagamento');
+    
+    if (!pagoCheckbox.checked) {
+        dataPagamento.disabled = true;
+    }
+});
+</script>
+{% endblock %}

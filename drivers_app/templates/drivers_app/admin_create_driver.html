@@ -1,0 +1,154 @@
+{% extends 'paack_dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Cadastrar Motorista{% endblock %}
+{% block sidebar_title %}Motoristas{% endblock %}
+
+{% block content %}
+<div class="p-6 max-w-4xl mx-auto">
+    <!-- Header -->
+    <div class="mb-8">
+        <div class="flex items-center gap-3 mb-2">
+            <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
+                <i data-lucide="user-plus" class="w-6 h-6 text-white"></i>
+            </div>
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Cadastrar Motorista/Frota</h1>
+                <p class="text-gray-600 dark:text-gray-400">Criacao rapida de motorista ou frota diretamente no sistema</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Messages -->
+    {% if messages %}
+    <div class="mb-6 space-y-3">
+        {% for message in messages %}
+        <div class="{% if message.tags == 'success' %}bg-green-50 border-green-200 text-green-800{% else %}bg-red-50 border-red-200 text-red-800{% endif %} border-l-4 p-4 rounded-lg flex items-center gap-3">
+            <i data-lucide="{% if message.tags == 'success' %}check-circle{% else %}alert-circle{% endif %}" class="w-5 h-5"></i>
+            <span>{{ message }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Form Card -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-8">
+        <form method="POST" class="space-y-6">
+            {% csrf_token %}
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- NIF -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        NIF <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" name="nif" required maxlength="9" pattern="[0-9]{9}" 
+                           placeholder="123456789"
+                           class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+                </div>
+
+                <!-- Nome Completo -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Nome Completo <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" name="nome_completo" required minlength="3"
+                           placeholder="Joao Silva Santos"
+                           class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+                </div>
+
+                <!-- Email -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Email <span class="text-red-500">*</span>
+                    </label>
+                    <input type="email" name="email" required
+                           placeholder="joao.silva@example.com"
+                           class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+                </div>
+
+                <!-- Telefone -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Telefone <span class="text-red-500">*</span>
+                    </label>
+                    <input type="tel" name="telefone" required pattern="^\+?[0-9]{9,15}$"
+                           placeholder="+351911111111"
+                           class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+                </div>
+
+                <!-- Tipo Vinculo -->
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Tipo de Vinculo <span class="text-red-500">*</span>
+                    </label>
+                    <div class="grid grid-cols-2 gap-4">
+                        <label class="flex items-center p-4 border-2 border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:border-blue-500 transition-all">
+                            <input type="radio" name="tipo_vinculo" value="DIRETO" checked class="mr-3 text-blue-600">
+                            <div>
+                                <div class="font-medium dark:text-white">Direto</div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400">Recibos Verdes</div>
+                            </div>
+                        </label>
+                        <label class="flex items-center p-4 border-2 border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:border-blue-500 transition-all">
+                            <input type="radio" name="tipo_vinculo" value="PARCEIRO" class="mr-3 text-blue-600">
+                            <div>
+                                <div class="font-medium dark:text-white">Parceiro</div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400">Frota</div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Nome Frota (condicional) -->
+                <div id="frota-field" class="md:col-span-2" style="display: none;">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Nome da Frota
+                    </label>
+                    <input type="text" name="nome_frota" placeholder="Nome da empresa parceira"
+                           class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+                </div>
+            </div>
+
+            <!-- Info Box -->
+            <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 p-4 rounded-lg">
+                <p class="text-sm text-blue-800 dark:text-blue-300 flex items-start gap-2">
+                    <i data-lucide="info" class="w-5 h-5 flex-shrink-0"></i>
+                    <span>Motorista criado internamente sera ativado imediatamente com status ATIVO. Documentos podem ser adicionados posteriormente pelo admin Django.</span>
+                </p>
+            </div>
+
+            <!-- Buttons -->
+            <div class="flex gap-4 pt-4">
+                <button type="submit" 
+                        class="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 text-white px-8 py-4 rounded-lg font-semibold flex items-center justify-center gap-2 hover:shadow-lg transition-all">
+                    <i data-lucide="save" class="w-5 h-5"></i>
+                    Criar Motorista
+                </button>
+                <a href="{% url 'drivers_app:admin_active_drivers' %}"
+                   class="px-8 py-4 border-2 border-gray-300 dark:border-gray-600 rounded-lg font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 transition-all dark:text-white">
+                    Cancelar
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Toggle Frota field
+    document.querySelectorAll('[name="tipo_vinculo"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            const frotaField = document.getElementById('frota-field');
+            const frotaInput = frotaField.querySelector('input');
+            
+            if (this.value === 'PARCEIRO') {
+                frotaField.style.display = 'block';
+                frotaInput.required = true;
+            } else {
+                frotaField.style.display = 'none';
+                frotaInput.required = false;
+            }
+        });
+    });
+</script>
+{% endblock %}

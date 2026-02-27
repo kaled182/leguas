@@ -1,0 +1,40 @@
+<!--
+  - Cabeçalho do Dashboard
+  - Título, subtítulo e controles de data
+  - Design moderno e responsivo
+-->
+<header class="dashboard-header">
+  <div class="dashboard-header-content flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+    <div class="flex items-center gap-4">
+      <div class="dashboard-icon-container p-4 bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-600 rounded-2xl shadow-lg border border-blue-400/20">
+        <div class="relative">
+          <i data-lucide="activity" class="w-12 h-12 text-white drop-shadow-sm"></i>
+          <div class="absolute -top-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-white animate-pulse"></div>
+        </div>
+      </div>
+      <div>
+        <h1 class="dashboard-title text-3xl font-bold text-gray-900 dark:text-gray-100">
+          Dashboard de Monitoramento
+        </h1>
+        <p class="dashboard-subtitle text-gray-600 dark:text-gray-400 flex items-center gap-2 mt-2">
+          {% if date_range_mode %}
+            <span class="flex items-center gap-1">
+              <span class="status-range w-2 h-2 bg-purple-500 rounded-full"></span>
+              Dados do período de <strong class="text-purple-600 dark:text-purple-400">{{ start_date_formatted }}</strong> até <strong class="text-purple-600 dark:text-purple-400">{{ end_date_formatted }}</strong>
+            </span>
+          {% elif is_today %}
+            <span class="flex items-center gap-1">
+              <span class="status-live w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+              Visão geral em tempo real - <strong class="text-green-600 dark:text-green-400">Hoje</strong>
+            </span>
+          {% else %}
+            <span class="flex items-center gap-1">
+              <span class="status-historical w-2 h-2 bg-blue-500 rounded-full"></span>
+              Dados históricos de <strong class="text-blue-600 dark:text-blue-400">{{ current_date }}</strong>
+            </span>
+          {% endif %}
+        </p>
+      </div>
+    </div>
+    {% include 'paack_dashboard/partials/date_updates_controls.html' %}
+</header>

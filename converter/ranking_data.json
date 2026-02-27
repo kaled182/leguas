@@ -1,0 +1,144 @@
+{
+  "patterns": {
+    "endereco": [
+      {
+        "pattern": ".*\\d{4}-\\d{3}.*",
+        "score": 10,
+        "usage_count": 2,
+        "created": "2025-08-20 00:07:32",
+        "last_used": "2025-08-20 00:08:37",
+        "example": "rua da aldeia 261a, 4910-316, riba de ancora"
+      }
+    ],
+    "codigo_id": [
+      {
+        "pattern": "^#[EUJUW][a-zA-Z0-9]+_\\d+",
+        "score": 10,
+        "usage_count": 2,
+        "created": "2025-08-20 00:07:32",
+        "last_used": "2025-08-20 00:08:37",
+        "example": "#UwhHmvZhh_1"
+      }
+    ],
+    "data": [
+      {
+        "pattern": "^today$",
+        "score": 10,
+        "usage_count": 1,
+        "created": "2025-08-20 00:07:32",
+        "last_used": "2025-08-20 00:07:32",
+        "example": "Today"
+      },
+      {
+        "pattern": "^\\d{1,2}/\\d{1,2}/\\d{2,4}$",
+        "score": 9,
+        "usage_count": 1,
+        "created": "2025-08-20 00:08:37",
+        "last_used": "2025-08-20 00:08:37",
+        "example": "15/08/2025"
+      }
+    ],
+    "horario": [
+      {
+        "pattern": "^\\d{1,2}:\\d{2}\\s*-\\s*\\d{1,2}:\\d{2}$",
+        "score": 9.5,
+        "usage_count": 2,
+        "created": "2025-08-20 00:07:32",
+        "last_used": "2025-08-20 00:08:37",
+        "example": "09:00 - 17:00"
+      }
+    ],
+    "litros": [
+      {
+        "pattern": "^\\d+(\\.\\d+)?\\s*L$",
+        "score": 9.5,
+        "usage_count": 2,
+        "created": "2025-08-20 00:07:32",
+        "last_used": "2025-08-20 00:08:37",
+        "example": "150L"
+      }
+    ],
+    "hora": [
+      {
+        "pattern": "^\\d{1,2}:\\d{2}$",
+        "score": 9.5,
+        "usage_count": 2,
+        "created": "2025-08-20 00:07:32",
+        "last_used": "2025-08-20 00:08:37",
+        "example": "09:00"
+      }
+    ],
+    "quantidade": [
+      {
+        "pattern": "^\\d+$",
+        "score": 8.5,
+        "usage_count": 2,
+        "created": "2025-08-20 00:07:33",
+        "last_used": "2025-08-20 00:08:37",
+        "example": "1"
+      }
+    ]
+  },
+  "examples": {
+    "endereco": [
+      "rua da aldeia 261a, 4910-316, riba de ancora",
+      "avenida central 123, 1200-001, lisboa"
+    ],
+    "codigo_id": [
+      "#UwhHmvZhh_1",
+      "#E12345_2"
+    ],
+    "data": [
+      "Today",
+      "15/08/2025"
+    ],
+    "horario": [
+      "09:00 - 17:00",
+      "10:30 - 18:00"
+    ],
+    "litros": [
+      "150L",
+      "75L"
+    ],
+    "hora": [
+      "09:00",
+      "10:30"
+    ],
+    "quantidade": [
+      "1",
+      "2"
+    ]
+  },
+  "corrections": [
+    {
+      "timestamp": "2025-08-20 00:07:32",
+      "corrections": [],
+      "fields_changed": {
+        "endereco": 1,
+        "codigo_id": 1,
+        "data": 1,
+        "horario": 1,
+        "litros": 1,
+        "hora": 1,
+        "quantidade": 1
+      }
+    },
+    {
+      "timestamp": "2025-08-20 00:08:37",
+      "corrections": [],
+      "fields_changed": {
+        "endereco": 1,
+        "codigo_id": 1,
+        "data": 1,
+        "horario": 1,
+        "litros": 1,
+        "hora": 1,
+        "quantidade": 1
+      }
+    }
+  ],
+  "stats": {
+    "accuracy": 100,
+    "processed": 1
+  }
+}

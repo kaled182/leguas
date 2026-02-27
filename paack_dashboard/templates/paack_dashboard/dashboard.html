@@ -1,0 +1,54 @@
+{% extends 'paack_dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Dashboard - Monitoramento de Drivers{% endblock %}
+{% block sidebar_title %}Dashboard{% endblock %}
+
+{% block content %}
+<!-- Loading overlay -->
+<div id="dashboard-loading" class="fixed inset-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+  <div class="text-center">
+    <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mb-4"></div>
+    <p class="text-gray-600 dark:text-gray-400 font-medium">Carregando dados...</p>
+  </div>
+</div>
+
+<div class="max-w-7xl mx-auto space-y-8">
+  <!-- Header do Dashboard -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 fade-in">
+    {% include 'paack_dashboard/partials/dashboard_header.html' %}
+    {% include 'paack_dashboard/partials/dashboard_status_indicator.html' %}
+  </div>
+  
+  <!-- Cards de Métricas -->
+  <div class="slide-in">
+    {% include 'paack_dashboard/partials/dashboard_cards.html' %}
+  </div>
+  
+  <!-- Gráfico e Top Drivers -->
+  <div class="grid grid-cols-1 xl:grid-cols-2 gap-8">
+    <!-- Gráfico de Performance -->
+    <div class="xl:col-span-1 scale-in">
+      {% include 'paack_dashboard/partials/dashboard_success_chart.html' %}
+    </div>
+    
+    <!-- Top Drivers -->
+    <div class="xl:col-span-1 scale-in">
+      {% include 'paack_dashboard/partials/dashboard_top_drivers.html' %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Dados JSON para o gráfico -->
+<script id="chart-data" type="application/json">
+{"driver_success_chart":{% if driver_success_chart_json %}{{ driver_success_chart_json|safe }}{% else %}[]{% endif %}}
+</script>
+
+<!--<script src="{% static 'paack_dashboard/js/main.js' %}"></script>--> 
+
+<script src="{% static 'paack_dashboard/js/dashboard.js' %}"></script>
+<script src="{% static 'paack_dashboard/js/driver_sucess_chart.js' %}"></script>
+
+{% endblock %}

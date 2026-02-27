@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastro de Motoristas - Léguas Franzinas</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .input-field {
+            transition: all 0.3s ease;
+        }
+        
+        .input-field:focus {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.1);
+        }
+        
+        .btn-submit {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Header -->
+    <header class="gradient-bg text-white py-6 shadow-lg">
+        <div class="max-w-4xl mx-auto px-4">
+            <div class="flex items-center gap-3">
+                <i data-lucide="truck" class="w-10 h-10"></i>
+                <div>
+                    <h1 class="text-2xl font-bold">Léguas Franzinas</h1>
+                    <p class="text-sm opacity-90">Cadastro de Motoristas</p>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-4xl mx-auto px-4 py-12">
+        <!-- Success/Error Messages -->
+        {% if messages %}
+        <div class="mb-8 space-y-4">
+            {% for message in messages %}
+            <div class="{% if message.tags == 'success' %}bg-green-50 border-green-200 text-green-800{% elif message.tags == 'error' %}bg-red-50 border-red-200 text-red-800{% else %}bg-blue-50 border-blue-200 text-blue-800{% endif %} border-l-4 p-4 rounded-lg flex items-center gap-3 shadow-sm">
+                <i data-lucide="{% if message.tags == 'success' %}check-circle{% elif message.tags == 'error' %}alert-circle{% else %}info{% endif %}" class="w-5 h-5"></i>
+                <span>{{ message }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Info Card -->
+        <div class="bg-white rounded-2xl shadow-lg p-8 mb-8 border border-gray-100">
+            <div class="flex items-start gap-4">
+                <div class="p-3 bg-blue-100 rounded-full flex-shrink-0">
+                    <i data-lucide="info" class="w-6 h-6 text-blue-600"></i>
+                </div>
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-900 mb-2">Bem-vindo ao Processo de Cadastro</h2>
+                    <p class="text-gray-600 leading-relaxed">
+                        Preencha o formulário abaixo para se candidatar como motorista da Léguas Franzinas. 
+                        Após o envio, nossa equipe analisará sua solicitação e entrará em contato em até <strong>48 horas úteis</strong>.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Registration Form -->
+        <div class="bg-white rounded-2xl shadow-lg p-8 border border-gray-100">
+            <form method="POST" id="registration-form" class="space-y-6">
+                {% csrf_token %}
+                
+                <!-- NIF -->
+                <div>
+                    <label for="nif" class="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                        <i data-lucide="hash" class="w-4 h-4"></i>
+                        NIF (Número de Identificação Fiscal)
+                    </label>
+                    <input 
+                        type="text" 
+                        id="nif" 
+                        name="nif" 
+                        required
+                        maxlength="9"
+                        pattern="[0-9]{9}"
+                        placeholder="123456789"
+                        class="input-field w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                    >
+                    <p class="mt-1 text-xs text-gray-500">Digite exatamente 9 dígitos numéricos</p>
+                </div>
+
+                <!-- Nome Completo -->
+                <div>
+                    <label for="nome" class="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                        <i data-lucide="user" class="w-4 h-4"></i>
+                        Nome Completo
+                    </label>
+                    <input 
+                        type="text" 
+                        id="nome" 
+                        name="nome" 
+                        required
+                        minlength="3"
+                        placeholder="João Silva Santos"
+                        class="input-field w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                    >
+                </div>
+
+                <!-- Telefone -->
+                <div>
+                    <label for="telefone" class="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                        <i data-lucide="phone" class="w-4 h-4"></i>
+                        Telefone
+                    </label>
+                    <input 
+                        type="tel" 
+                        id="telefone" 
+                        name="telefone" 
+                        required
+                        placeholder="+351911111111"
+                        pattern="^\+?[0-9]{9,15}$"
+                        class="input-field w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                    >
+                    <p class="mt-1 text-xs text-gray-500">Formato: +351911111111 (com código do país)</p>
+                </div>
+
+                <!-- Email -->
+                <div>
+                    <label for="email" class="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                        <i data-lucide="mail" class="w-4 h-4"></i>
+                        Email
+                    </label>
+                    <input 
+                        type="email" 
+                        id="email" 
+                        name="email" 
+                        required
+                        placeholder="joao.silva@example.com"
+                        class="input-field w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                    >
+                </div>
+
+                <!-- Divider -->
+                <div class="border-t border-gray-200 my-6"></div>
+
+                <!-- Termos e Condições -->
+                <div class="flex items-start gap-3">
+                    <input 
+                        type="checkbox" 
+                        id="terms" 
+                        name="terms" 
+                        required
+                        class="mt-1 w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                    >
+                    <label for="terms" class="text-sm text-gray-600">
+                        Concordo com o processamento dos meus dados pessoais para fins de análise de candidatura. 
+                        Todos os dados serão tratados conforme a <strong>Lei de Proteção de Dados (RGPD)</strong>.
+                    </label>
+                </div>
+
+                <!-- Submit Button -->
+                <button 
+                    type="submit" 
+                    class="btn-submit w-full text-white font-semibold py-4 px-6 rounded-lg flex items-center justify-center gap-2 shadow-lg"
+                >
+                    <i data-lucide="send" class="w-5 h-5"></i>
+                    <span>Enviar Candidatura</span>
+                </button>
+
+                <!-- Help Text -->
+                <p class="text-center text-sm text-gray-500">
+                    Dúvidas? Entre em contato: 
+                    <a href="mailto:rh@leguasfranzinas.pt" class="text-purple-600 hover:underline font-medium">
+                        rh@leguasfranzinas.pt
+                    </a>
+                </p>
+            </form>
+        </div>
+
+        <!-- What Happens Next -->
+        <div class="mt-8 bg-gradient-to-r from-purple-50 to-blue-50 rounded-2xl p-8 border border-purple-100">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <i data-lucide="clock" class="w-5 h-5 text-purple-600"></i>
+                O que acontece agora?
+            </h3>
+            <div class="space-y-3">
+                <div class="flex items-start gap-3">
+                    <div class="flex-shrink-0 w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+                        <span class="text-sm font-bold text-purple-600">1</span>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-900">Análise do Cadastro</p>
+                        <p class="text-sm text-gray-600">Nossa equipe verificará seus dados e documentação.</p>
+                    </div>
+                </div>
+                <div class="flex items-start gap-3">
+                    <div class="flex-shrink-0 w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+                        <span class="text-sm font-bold text-purple-600">2</span>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-900">Contato por Email</p>
+                        <p class="text-sm text-gray-600">Você receberá um email com os próximos passos em até 48h úteis.</p>
+                    </div>
+                </div>
+                <div class="flex items-start gap-3">
+                    <div class="flex-shrink-0 w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+                        <span class="text-sm font-bold text-purple-600">3</span>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-900">Ativação da Conta</p>
+                        <p class="text-sm text-gray-600">Após aprovação, você receberá suas credenciais de acesso.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-gray-400 py-8 mt-16">
+        <div class="max-w-4xl mx-auto px-4 text-center">
+            <p class="text-sm">
+                © {{ current_year }} Léguas Franzinas. Todos os direitos reservados.
+            </p>
+            <p class="text-xs mt-2">
+                Sistema de Gestão de Entregas
+            </p>
+        </div>
+    </footer>
+
+    <!-- Initialize Lucide Icons -->
+    <script>
+        lucide.createIcons();
+        
+        // Form validation and UX improvements
+        document.getElementById('registration-form').addEventListener('submit', function(e) {
+            const nif = document.getElementById('nif').value;
+            const telefone = document.getElementById('telefone').value;
+            
+            // Validate NIF
+            if (!/^\d{9}$/.test(nif)) {
+                e.preventDefault();
+                alert('NIF inválido! Digite exatamente 9 dígitos numéricos.');
+                document.getElementById('nif').focus();
+                return;
+            }
+            
+            // Validate phone
+            if (!/^\+?[0-9]{9,15}$/.test(telefone)) {
+                e.preventDefault();
+                alert('Telefone inválido! Use formato internacional com código do país (ex: +351911111111)');
+                document.getElementById('telefone').focus();
+                return;
+            }
+        });
+        
+        // Auto-format NIF (only numbers)
+        document.getElementById('nif').addEventListener('input', function(e) {
+            this.value = this.value.replace(/\D/g, '').slice(0, 9);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,158 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Dashboard - Contabilidade{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="h3 mb-4">Dashboard Contabilidade</h1>
+        </div>
+    </div>
+    
+    <!-- Cards de Resumo -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-white bg-success">
+                <div class="card-header">Receitas Totais</div>
+                <div class="card-body">
+                    <h5 class="card-title">€{{ total_revenues|floatformat:2 }}</h5>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card text-white bg-danger">
+                <div class="card-header">Despesas Totais</div>
+                <div class="card-body">
+                    <h5 class="card-title">€{{ total_expenses|floatformat:2 }}</h5>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card text-white {% if balance >= 0 %}bg-info{% else %}bg-warning{% endif %}">
+                <div class="card-header">Saldo</div>
+                <div class="card-body">
+                    <h5 class="card-title">€{{ balance|floatformat:2 }}</h5>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card text-white bg-warning">
+                <div class="card-header">Despesas Pendentes</div>
+                <div class="card-body">
+                    <h5 class="card-title">{{ pending_expenses }}</h5>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Ações Rápidas -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">Ações Rápidas</div>
+                <div class="card-body">
+                    <a href="{% url 'accounting:revenue_create' %}" class="btn btn-success me-2">
+                        <i class="fas fa-plus"></i> Nova Receita
+                    </a>
+                    <a href="{% url 'accounting:expense_create' %}" class="btn btn-danger me-2">
+                        <i class="fas fa-plus"></i> Nova Despesa
+                    </a>
+                    <a href="{% url 'accounting:revenue_list' %}" class="btn btn-outline-primary me-2">
+                        <i class="fas fa-list"></i> Ver Receitas
+                    </a>
+                    <a href="{% url 'accounting:expense_list' %}" class="btn btn-outline-primary me-2">
+                        <i class="fas fa-list"></i> Ver Despesas
+                    </a>
+                    <a href="{% url 'accounting:reports' %}" class="btn btn-outline-info">
+                        <i class="fas fa-chart-bar"></i> Relatórios
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Receitas e Despesas Recentes -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Receitas Recentes</h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_revenues %}
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Data</th>
+                                        <th>Natureza</th>
+                                        <th>Valor</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for revenue in recent_revenues %}
+                                    <tr>
+                                        <td>{{ revenue.data_entrada }}</td>
+                                        <td>{{ revenue.get_natureza_display }}</td>
+                                        <td>€{{ revenue.valor_com_iva|floatformat:2 }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted">Nenhuma receita registrada ainda.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Despesas Recentes</h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_expenses %}
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Data</th>
+                                        <th>Natureza</th>
+                                        <th>Valor</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for expense in recent_expenses %}
+                                    <tr>
+                                        <td>{{ expense.data_entrada }}</td>
+                                        <td>{{ expense.get_natureza_display }}</td>
+                                        <td>€{{ expense.valor_com_iva|floatformat:2 }}</td>
+                                        <td>
+                                            {% if expense.pago %}
+                                                <span class="badge bg-success">Pago</span>
+                                            {% else %}
+                                                <span class="badge bg-warning">Pendente</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted">Nenhuma despesa registrada ainda.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

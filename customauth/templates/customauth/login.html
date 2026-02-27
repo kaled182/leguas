@@ -1,0 +1,203 @@
+{% extends 'base-login.html' %}
+{% load static %}
+
+{#
+  Template de Login - 100% Tailwind, clean, profissional e responsivo
+  - Layout de duas colunas responsivo
+  - Slider de imagens com SwiperJS
+  - Support ao modo escuro
+#}
+
+{% block title %}Login - Leguas Monitoring{% endblock %}
+
+{% block extra_head %}
+<style>
+  .swiper-pagination-bullet {
+    background-color: white;
+    opacity: 0.6;
+  }
+  .swiper-pagination-bullet-active {
+    opacity: 1;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Container principal com 2 colunas -->
+<div class="flex md:flex-row h-screen w-full">
+  <!-- Coluna esquerda: formulário -->
+  <div class="w-full md:w-1/2 flex items-center justify-center p-6 md:p-12 bg-white dark:bg-gray-900">
+    <div class="max-w-md w-full space-y-8">
+      <!-- Logo para mobile -->
+      <div class="text-center md:hidden">
+        <img src="{% static 'img/logo.png' %}" alt="Logo Leguas" class="h-40 w-auto mx-auto"/>
+      </div>
+      
+      <!-- Cabeçalho -->
+      <div>
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Bem-vindo de volta!</h1>
+        <p class="mt-2 text-gray-600 dark:text-gray-400">Acesse sua conta para continuar</p>
+      </div>
+      
+      <!-- Formulário -->
+      <form method="post" class="space-y-6">
+        {% csrf_token %}
+        
+        <!-- Email/NIF -->
+        <div>
+          <label for="email_or_nif" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Email ou NIF</label>
+          <div class="mt-1">
+            <input 
+              id="email_or_nif" 
+              name="email_or_nif" 
+              type="text" 
+              autocomplete="username" 
+              required 
+              class="appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:text-white text-sm"
+              placeholder="Digite seu email ou NIF"
+            >
+          </div>
+        </div>
+        
+        <!-- Senha -->
+        <div>
+          <label for="password" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Senha</label>
+          <div class="mt-1">
+            <input 
+              id="password" 
+              name="password" 
+              type="password" 
+              autocomplete="current-password" 
+              required 
+              class="appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-800 dark:text-white text-sm"
+              placeholder="Digite sua senha"
+            >
+          </div>
+        </div>
+        
+        <!-- Esqueceu a senha -->
+        <div class="flex items-center justify-end">
+          <a href="#" class="text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300">
+            Esqueceu sua senha?
+          </a>
+        </div>
+        
+        <!-- Botão Login -->
+        <div>
+          <button 
+            type="submit" 
+            class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-900 transition"
+          >
+            Entrar
+          </button>
+        </div>
+      </form>
+      
+      <!-- Toggle dark mode -->
+      <div class="pt-4 flex justify-center">
+        <button 
+          id="theme-toggle" 
+          type="button" 
+          class="text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 rounded-lg text-sm p-2.5"
+        >
+          <svg id="theme-toggle-dark-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path>
+          </svg>
+          <svg id="theme-toggle-light-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" fill-rule="evenodd" clip-rule="evenodd"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Coluna direita: background com slider -->
+  <div class="hidden md:block md:w-1/2 bg-indigo-600 overflow-hidden relative">
+    <!-- Swiper slider -->
+    <div class="swiper mySwiper absolute inset-0">
+      <div class="swiper-wrapper">
+        <!-- Slides -->
+        <div class="swiper-slide flex flex-col items-center justify-center text-white p-12">
+          <img src="{% static 'customauth/img/bg-slide-1.svg' %}" alt="Background" class="absolute inset-0 w-full h-full object-cover" />
+          <div class="relative z-10 text-center">
+            <img src="{% static 'img/logo.png' %}" alt="Logo Leguas" class="h-64 w-auto mx-auto mb-6"/>
+            <h2 class="text-3xl font-bold mb-2">Não tem uma conta?</h2>
+            <p class="text-lg text-white text-opacity-80 mb-6">Inicie sua jornada em apenas um clique</p>
+            <button class="px-6 py-2 bg-white text-indigo-600 rounded-full font-medium hover:bg-opacity-90 transition">
+              Solicitar Acesso
+            </button>
+          </div>
+        </div>
+        <div class="swiper-slide flex flex-col items-center justify-center text-white p-12">
+          <img src="{% static 'customauth/img/bg-slide-2.svg' %}" alt="Background" class="absolute inset-0 w-full h-full object-cover" />
+          <div class="relative z-10 text-center">
+            <h2 class="text-3xl font-bold mb-3">Monitore suas entregas</h2>
+            <p class="text-lg text-white text-opacity-80 max-w-md">Sistema completo de monitoramento e gestão logística para otimizar suas operações</p>
+          </div>
+        </div>
+        <div class="swiper-slide flex flex-col items-center justify-center text-white p-12">
+          <img src="{% static 'customauth/img/bg-slide-3.svg' %}" alt="Background" class="absolute inset-0 w-full h-full object-cover" />
+          <div class="relative z-10 text-center">
+            <h2 class="text-3xl font-bold mb-3">Potencialize sua equipe</h2>
+            <p class="text-lg text-white text-opacity-80 max-w-md">Acompanhe o desempenho em tempo real e tome decisões baseadas em dados</p>
+          </div>
+        </div>
+      </div>
+      <!-- Pagination -->
+      <div class="swiper-pagination"></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Inicializa Swiper
+    const swiper = new Swiper(".mySwiper", {
+      effect: "fade",
+      speed: 1000,
+      autoplay: {
+        delay: 5000,
+      },
+      pagination: {
+        el: ".swiper-pagination",
+        clickable: true
+      },
+      loop: true
+    });
+    
+    // Toggle dark mode
+    const themeToggleBtn = document.getElementById('theme-toggle');
+    const themeToggleDarkIcon = document.getElementById('theme-toggle-dark-icon');
+    const themeToggleLightIcon = document.getElementById('theme-toggle-light-icon');
+
+    // Verifique se o modo escuro está habilitado
+    if (localStorage.getItem('color-theme') === 'dark' || 
+        (!('color-theme' in localStorage) && 
+        window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      document.documentElement.classList.add('dark');
+      themeToggleLightIcon.classList.remove('hidden');
+    } else {
+      document.documentElement.classList.remove('dark');
+      themeToggleDarkIcon.classList.remove('hidden');
+    }
+
+    // Função toggle
+    themeToggleBtn.addEventListener('click', function() {
+      // Toggle icons
+      themeToggleDarkIcon.classList.toggle('hidden');
+      themeToggleLightIcon.classList.toggle('hidden');
+      
+      // Toggle dark mode
+      if (document.documentElement.classList.contains('dark')) {
+        document.documentElement.classList.remove('dark');
+        localStorage.setItem('color-theme', 'light');
+      } else {
+        document.documentElement.classList.add('dark');
+        localStorage.setItem('color-theme', 'dark');
+      }
+    });
+  });
+</script>
+{% endblock %}

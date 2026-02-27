@@ -1,0 +1,344 @@
+{% extends 'customauth/base_driver.html' %}
+{% load static %}
+
+{# 
+  Dashboard do Motorista - 100% Tailwind, moderno e responsivo
+  - Cards de indicadores
+  - Tabela de entregas com design moderno
+  - Suporte a dark mode
+#}
+
+{% block title %}Dashboard do Motorista{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block nav %}
+<a 
+  href="/logout/" 
+  class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-900 transition"
+>
+  <i class='bx bx-log-out mr-2'></i>
+  Sair
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+  <!-- Cabeçalho -->
+  <div class="md:flex md:items-center md:justify-between">
+    <div class="flex-1 min-w-0">
+      <h1 class="text-2xl font-bold leading-7 text-gray-900 dark:text-white sm:text-3xl">
+        Bem-vindo, {{ user.get_full_name|default:user.username }}
+      </h1>
+      <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+        Acompanhe suas entregas e desempenho
+      </p>
+    </div>
+    <div class="mt-4 flex md:mt-0 md:ml-4">
+      <span class="relative inline-flex shadow-sm rounded-md">
+        <span class="inline-flex items-center px-4 py-2 rounded-l-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-300">
+          <i class='bx bx-calendar mr-1'></i>
+          Hoje
+        </span>
+        <button type="button" class="relative -ml-px inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+          <i class='bx bx-chevron-down'></i>
+        </button>
+      </span>
+    </div>
+  </div>
+  
+  <!-- Stats Cards -->
+  <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+    <!-- Entregas de Hoje -->
+    <div class="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
+      <div class="p-5">
+        <div class="flex items-center">
+          <div class="flex-shrink-0 bg-indigo-500 rounded-md p-3">
+            <i class='bx bx-package text-white text-xl'></i>
+          </div>
+          <div class="ml-5 w-0 flex-1">
+            <dl>
+              <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Entregas de Hoje</dt>
+              <dd>
+                <div class="text-lg font-bold text-gray-900 dark:text-white">{{ deliveries_today|default:0 }}</div>
+              </dd>
+            </dl>
+          </div>
+        </div>
+      </div>
+      <div class="bg-gray-50 dark:bg-gray-700 px-5 py-3">
+        <div class="text-sm">
+          <a href="#" class="font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-300">Ver detalhes</a>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Próxima Entrega -->
+    <div class="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
+      <div class="p-5">
+        <div class="flex items-center">
+          <div class="flex-shrink-0 bg-green-500 rounded-md p-3">
+            <i class='bx bx-timer text-white text-xl'></i>
+          </div>
+          <div class="ml-5 w-0 flex-1">
+            <dl>
+              <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Próxima Entrega</dt>
+              <dd>
+                <div class="text-lg font-bold text-gray-900 dark:text-white">{{ next_delivery|default:'Nenhuma' }}</div>
+              </dd>
+            </dl>
+          </div>
+        </div>
+      </div>
+      <div class="bg-gray-50 dark:bg-gray-700 px-5 py-3">
+        <div class="text-sm">
+          <a href="#" class="font-medium text-green-600 dark:text-green-400 hover:text-green-900 dark:hover:text-green-300">Ver rota</a>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Taxa de Sucesso -->
+    <div class="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
+      <div class="p-5">
+        <div class="flex items-center">
+          <div class="flex-shrink-0 bg-blue-500 rounded-md p-3">
+            <i class='bx bx-check-circle text-white text-xl'></i>
+          </div>
+          <div class="ml-5 w-0 flex-1">
+            <dl>
+              <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Taxa de Sucesso</dt>
+              <dd>
+                <div class="text-lg font-bold text-gray-900 dark:text-white">92%</div>
+              </dd>
+            </dl>
+          </div>
+        </div>
+      </div>
+      <div class="bg-gray-50 dark:bg-gray-700 px-5 py-3">
+        <div class="text-sm">
+          <a href="#" class="font-medium text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300">Ver histórico</a>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Satisfação do Cliente -->
+    <div class="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
+      <div class="p-5">
+        <div class="flex items-center">
+          <div class="flex-shrink-0 bg-yellow-500 rounded-md p-3">
+            <i class='bx bx-star text-white text-xl'></i>
+          </div>
+          <div class="ml-5 w-0 flex-1">
+            <dl>
+              <dt class="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Satisfação</dt>
+              <dd>
+                <div class="text-lg font-bold text-gray-900 dark:text-white">4.8/5</div>
+              </dd>
+            </dl>
+          </div>
+        </div>
+      </div>
+      <div class="bg-gray-50 dark:bg-gray-700 px-5 py-3">
+        <div class="text-sm">
+          <a href="#" class="font-medium text-yellow-600 dark:text-yellow-400 hover:text-yellow-900 dark:hover:text-yellow-300">Ver avaliações</a>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Gráfico de Desempenho -->
+  <div class="bg-white dark:bg-gray-800 shadow rounded-lg">
+    <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700">
+      <h3 class="text-lg font-medium leading-6 text-gray-900 dark:text-white">
+        Desempenho de Entregas
+      </h3>
+      <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+        Últimos 7 dias
+      </p>
+    </div>
+    <div class="p-5">
+      <div class="h-64">
+        <canvas id="performanceChart"></canvas>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Histórico de Entregas -->
+  <div class="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-lg">
+    <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700 sm:px-6 flex items-center justify-between">
+      <h3 class="text-lg font-medium leading-6 text-gray-900 dark:text-white">
+        Histórico de Entregas
+      </h3>
+      <div>
+        <select class="mt-1 block pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+          <option>Hoje</option>
+          <option>Esta semana</option>
+          <option>Este mês</option>
+        </select>
+      </div>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <thead class="bg-gray-50 dark:bg-gray-700">
+          <tr>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              Data
+            </th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              Destino
+            </th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              Status
+            </th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              Cliente
+            </th>
+            <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              Ações
+            </th>
+          </tr>
+        </thead>
+        <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+          {% for delivery in deliveries %}
+          <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+              {{ delivery.date }}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+              {{ delivery.destination }}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {% if delivery.status == 'Entregue' %}bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100{% else %}bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100{% endif %}">
+                {{ delivery.status }}
+              </span>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+              {{ delivery.client|default:"Cliente" }}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+              <a href="#" class="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300">Detalhes</a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="5" class="px-6 py-10 text-center text-sm text-gray-500 dark:text-gray-400">
+              Nenhuma entrega encontrada
+              <p class="mt-2">
+                <button type="button" class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-full shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                  <i class='bx bx-refresh mr-1'></i> Atualizar
+                </button>
+              </p>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if deliveries %}
+    <div class="bg-white dark:bg-gray-800 px-4 py-3 border-t border-gray-200 dark:border-gray-700 sm:px-6">
+      <nav class="flex items-center justify-between">
+        <div class="hidden sm:block">
+          <p class="text-sm text-gray-700 dark:text-gray-300">
+            Mostrando <span class="font-medium">1</span> a <span class="font-medium">10</span> de <span class="font-medium">20</span> resultados
+          </p>
+        </div>
+        <div class="flex-1 flex justify-between sm:justify-end">
+          <a href="#" class="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-700 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700">
+            Anterior
+          </a>
+          <a href="#" class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-700 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700">
+            Próximo
+          </a>
+        </div>
+      </nav>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Inicializar gráfico de desempenho
+    const ctx = document.getElementById('performanceChart').getContext('2d');
+    
+    // Detectar dark mode
+    const isDarkMode = document.documentElement.classList.contains('dark');
+    const textColor = isDarkMode ? '#e5e7eb' : '#374151';
+    const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+    
+    const chart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'],
+        datasets: [
+          {
+            label: 'Entregas',
+            data: [12, 19, 15, 17, 21, 18, 10],
+            borderColor: '#6366f1',
+            backgroundColor: 'rgba(99, 102, 241, 0.1)',
+            tension: 0.4,
+            fill: true
+          },
+          {
+            label: 'Meta',
+            data: [15, 15, 15, 15, 15, 15, 15],
+            borderColor: '#ef4444',
+            borderDash: [5, 5],
+            fill: false
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            labels: {
+              color: textColor
+            }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            grid: {
+              color: gridColor
+            },
+            ticks: {
+              color: textColor
+            }
+          },
+          x: {
+            grid: {
+              color: gridColor
+            },
+            ticks: {
+              color: textColor
+            }
+          }
+        }
+      }
+    });
+    
+    // Atualizar cores ao mudar tema
+    document.getElementById('theme-toggle').addEventListener('click', function() {
+      setTimeout(() => {
+        const isDarkMode = document.documentElement.classList.contains('dark');
+        const textColor = isDarkMode ? '#e5e7eb' : '#374151';
+        const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+        
+        chart.options.scales.x.ticks.color = textColor;
+        chart.options.scales.y.ticks.color = textColor;
+        chart.options.scales.x.grid.color = gridColor;
+        chart.options.scales.y.grid.color = gridColor;
+        chart.options.plugins.legend.labels.color = textColor;
+        chart.update();
+      }, 100);
+    });
+  });
+</script>
+{% endblock %}

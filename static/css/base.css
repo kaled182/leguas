@@ -1,0 +1,174 @@
+/* ========== VARIÁVEIS CSS ========== */
+:root {
+    --transition-speed: 300ms;
+    --sidebar-width: 16rem;
+    --sidebar-collapsed-width: 4rem;
+}
+
+/* ========== TRANSITIONS ========== */
+* {
+    transition-property: color, background-color, border-color, opacity, box-shadow, transform;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 150ms;
+}
+
+/* ========== SIDEBAR MODERNA ========== */
+#sidebar {
+    transition: width var(--transition-speed) ease-in-out;
+    background: #fff;
+    border-right: 1px solid #e5e7eb;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+#sidebar .sidebar-label {
+    font-weight: 500;
+    color: #374151;
+}
+#sidebar .nav-link {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    border-radius: 0.75rem;
+    transition: background 0.2s, color 0.2s;
+}
+#sidebar .nav-link:hover {
+    background: #eef2ff;
+    color: #4f46e5;
+}
+#sidebar .nav-link i {
+    color: #6366f1;
+    transition: color 0.2s;
+}
+#sidebar .nav-link:hover i {
+    color: #4f46e5;
+}
+#sidebar .nav-link.text-red-600:hover {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+/* ========== DARK MODE CLEAN ========== */
+body.dark-mode {
+    background: #18181b;
+    color: #e5e7eb;
+}
+body.dark-mode #sidebar {
+    background: #18181b;
+    border-color: #27272a;
+}
+body.dark-mode #sidebar .sidebar-label {
+    color: #e0e7ff;
+}
+body.dark-mode #sidebar .nav-link {
+    color: #e0e7ff;
+}
+body.dark-mode #sidebar .nav-link:hover {
+    background: #312e81;
+    color: #a5b4fc;
+}
+body.dark-mode #sidebar .nav-link i {
+    color: #a5b4fc;
+}
+body.dark-mode #sidebar .nav-link:hover i {
+    color: #818cf8;
+}
+body.dark-mode .user-info {
+    background: #312e81;
+    color: #e0e7ff;
+}
+
+/* ========== BOTÃO SYNC ========== */
+#syncButton:hover, #syncButtonMobile:hover {
+    background: linear-gradient(90deg, #4f46e5 0%, #7c3aed 100%);
+    color: #fff;
+}
+#syncButton:disabled, #syncButtonMobile:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+#syncButton .sidebar-label, #syncButtonMobile .sidebar-label {
+    color: #fff;
+}
+
+/* ========== CARDS E CONTEÚDO ========== */
+.card {
+    background: #fff;
+    border-radius: 1rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    padding: 2rem;
+    margin-bottom: 2rem;
+    transition: box-shadow 0.2s;
+}
+.card:hover {
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+}
+body.dark-mode .card {
+    background: #232136;
+    color: #e0e7ff;
+}
+
+/* ========== INPUTS E BOTÕES ========== */
+input, select, textarea {
+    border-radius: 0.5rem;
+    border: 1px solid #e5e7eb;
+    padding: 0.75rem 1rem;
+    background: #f1f5f9;
+    color: #22223b;
+    font-size: 1rem;
+    margin-bottom: 1rem;
+    transition: border 0.2s;
+}
+input:focus, select:focus, textarea:focus {
+    border-color: #6366f1;
+    outline: none;
+    background: #fff;
+}
+body.dark-mode input, body.dark-mode select, body.dark-mode textarea {
+    background: #232136;
+    color: #e0e7ff;
+    border-color: #27272a;
+}
+body.dark-mode input:focus, body.dark-mode select:focus, body.dark-mode textarea:focus {
+    background: #18181b;
+    border-color: #6366f1;
+}
+
+/* ========== NOTIFICAÇÕES ========== */
+.notification-enter, .animate-fade-in {
+    animation: fadeIn 0.3s;
+}
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* ========== SCROLLBAR ========== */
+.overflow-y-auto::-webkit-scrollbar {
+    width: 6px;
+}
+.overflow-y-auto::-webkit-scrollbar-thumb {
+    background: rgba(156, 163, 175, 0.5);
+    border-radius: 3px;
+}
+
+/* ========== UTILITIES ========== */
+.shadow-modern {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+.hover-scale:hover {
+    transform: scale(1.02);
+}
+
+body, html {
+    font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+    background: #f8fafc;
+    color: #22223b;
+    font-size: 1rem;
+    line-height: 1.6;
+}
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+    font-weight: 700;
+    color: #1a1a2e;
+    margin-bottom: 0.5em;
+}

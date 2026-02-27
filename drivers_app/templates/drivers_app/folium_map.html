@@ -1,0 +1,26 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Mapa Interativo - {{ driver_name }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{% static 'css/base.css' %}">
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans min-h-screen flex flex-col">
+    <div class="header bg-white shadow rounded-b-2xl p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-bold">Mapa de Entregas - {{ driver_name }}</h1>
+            <p class="text-gray-500 text-sm">Data: {{ date }}</p>
+        </div>
+        <a href="{% url 'driversmanager_manager' %}" class="btn">Voltar para pedidos</a>
+    </div>
+    <div class="map-container flex-1 p-4">
+        <div id="map">
+            {{ map_html|safe }}
+        </div>
+    </div>
+    <script src="{% static 'driversmanager/js/driver_location.js' %}"></script>
+</body>
+</html>

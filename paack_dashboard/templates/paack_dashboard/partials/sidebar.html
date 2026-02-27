@@ -162,8 +162,52 @@
               reportsChevron.classList.toggle('rotate-180');
             });
           }
+
+          const financialToggle = document.getElementById('financialToggle');
+          const financialSubmenu = document.getElementById('financialSubmenu');
+          const financialChevron = document.getElementById('financialChevron');
+          
+          if (financialToggle) {
+            financialToggle.addEventListener('click', function(e) {
+              e.preventDefault();
+              financialSubmenu.classList.toggle('hidden');
+              financialChevron.classList.toggle('rotate-180');
+            });
+          }
         });
       </script>
+
+      <!-- Financeiro com submenu -->
+      <div class="financial-menu">
+        <button id="financialToggle" class="nav-link flex items-center gap-3 p-3 rounded-lg transition-all duration-200 group w-full text-left text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:text-primary-600 dark:hover:text-primary-400">
+          <i data-lucide="banknote" class="w-5 h-5 text-current group-hover:scale-110 transition-transform flex-shrink-0"></i>
+          <span class="sidebar-text font-medium">Financeiro</span>
+          <i data-lucide="chevron-down" id="financialChevron" class="w-4 h-4 ml-auto transition-transform"></i>
+        </button>
+        
+        <!-- Submenu de Financeiro -->
+        <div id="financialSubmenu" class="ml-8 mt-1 space-y-1 hidden">
+          <a href="{% url 'settlements:financial-dashboard' %}" class="flex items-center gap-2 p-2 text-sm rounded-lg transition-colors text-gray-600 dark:text-gray-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-600 dark:hover:text-primary-400">
+            <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+            <span>Dashboard Financeiro</span>
+          </a>
+          
+          <a href="{% url 'settlements:invoice-list' %}" class="flex items-center gap-2 p-2 text-sm rounded-lg transition-colors text-gray-600 dark:text-gray-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-600 dark:hover:text-primary-400">
+            <i data-lucide="file-text" class="w-4 h-4"></i>
+            <span>Faturas Parceiros</span>
+          </a>
+          
+          <a href="{% url 'settlements:settlement-list' %}" class="flex items-center gap-2 p-2 text-sm rounded-lg transition-colors text-gray-600 dark:text-gray-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-600 dark:hover:text-primary-400">
+            <i data-lucide="wallet" class="w-4 h-4"></i>
+            <span>Acertos Motoristas</span>
+          </a>
+          
+          <a href="{% url 'settlements:claim-list' %}" class="flex items-center gap-2 p-2 text-sm rounded-lg transition-colors text-gray-600 dark:text-gray-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-600 dark:hover:text-primary-400">
+            <i data-lucide="alert-circle" class="w-4 h-4"></i>
+            <span>Reclamações</span>
+          </a>
+        </div>
+      </div>
 
       <a href="{% url 'system_config:index' %}" class="nav-link flex items-center gap-3 p-3 rounded-lg transition-all duration-200 group text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-100">
         <i data-lucide="settings" class="w-5 h-5 text-current group-hover:scale-110 transition-transform flex-shrink-0"></i>

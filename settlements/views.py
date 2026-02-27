@@ -167,11 +167,11 @@ def financial_dashboard(request):
     
     # KPIs - Invoices
     invoices_stats = PartnerInvoice.objects.aggregate(
-        pending_count=Count('id', filter=Q(status__in=['DRAFT', 'GENERATED', 'SENT'])),
-        pending_amount=Sum('net_amount', filter=Q(status__in=['DRAFT', 'GENERATED', 'SENT'])),
+        pending_count=Count('id', filter=Q(status__in=['DRAFT', 'PENDING'])),
+        pending_amount=Sum('net_amount', filter=Q(status__in=['DRAFT', 'PENDING'])),
         overdue_count=Count('id', filter=Q(status='OVERDUE')),
         overdue_amount=Sum('net_amount', filter=Q(status='OVERDUE')),
-        paid_this_month=Sum('net_amount', filter=Q(status='PAID', paid_at__gte=first_day_month)),
+        paid_this_month=Sum('net_amount', filter=Q(status='PAID', paid_date__gte=first_day_month)),
     )
     
     # KPIs - Settlements
@@ -311,10 +311,16 @@ def settlement_list(request):
     # Ordenação
     settlements = settlements.order_by('-year', '-week_number', '-month_number')
     
+    # Period choices inline
+    period_choices = [
+        ('WEEKLY', 'Semanal'),
+        ('MONTHLY', 'Mensal'),
+    ]
+    
     context = {
         'settlements': settlements,
         'status_choices': DriverSettlement.STATUS_CHOICES,
-        'period_choices': DriverSettlement.PERIOD_CHOICES,
+        'period_choices': period_choices,
     }
     
     return render(request, 'settlements/settlement_list.html', context)
@@ -399,7 +405,7 @@ def claim_list(request):
     context = {
         'claims': claims,
         'status_choices': DriverClaim.STATUS_CHOICES,
-        'type_choices': DriverClaim.CLAIM_TYPE_CHOICES,
+        'type_choices': DriverClaim.CLAIM_TYPES,
     }
     
     return render(request, 'settlements/claim_list.html', context)

@@ -214,7 +214,7 @@ Transformar o sistema atual focado em Paack numa **plataforma multi-partner de g
 **Objetivo**: Automatizar cálculos de recebíveis e descontos
 
 #### 6.A - Evolução do App `settlements`
-**Status**: 🟡 Parcial (existe básico)  
+**Status**: ✅ Concluído (27/02/2026)  
 **Prazo estimado**: 2 semanas  
 
 **Entregáveis**:
@@ -224,9 +224,28 @@ Transformar o sistema atual focado em Paack numa **plataforma multi-partner de g
 - ✅ Cálculo automático baseado em `Order` + `Tariff`
 - ✅ Reconciliação automática (Delivered x Paid)
 - ✅ Geração de PDF de extrato
-- ✅ Envio automático via WhatsApp
+- ✅ Calculators: SettlementCalculator, ClaimProcessor, InvoiceCalculator
+- ✅ Management commands (calculate_weekly_settlements, calculate_monthly_invoices, process_pending_claims)
+- ✅ Admin interfaces com badges coloridos e ações em massa
+- ⚪ Envio automático via WhatsApp (Fase 7)
 
 **Impacto**: Alto - Core financeiro
+
+**Detalhes de Implementação**:
+- **Models**: 3 novos models com 15+ campos cada, total de ~800 linhas
+- **Calculators**: 3 engines (SettlementCalculator, ClaimProcessor, InvoiceCalculator) com ~900 linhas
+- **Admin**: Interfaces completas com color-coding, badges, e 10+ ações customizadas
+- **PDFs**: Gerador baseado em reportlab para extratos e faturas
+- **Commands**: 3 management commands para automação
+- **Features**:
+  * Cálculo automático baseado em tarifas por zona postal
+  * Bônus por performance (5-10% para taxa 85-95%+)
+  * Workflow de aprovação de claims (PENDING → APPROVED/REJECTED)
+  * Auto-criação de claims para pedidos falhados e incidentes
+  * Tracking de invoices atrasados
+  * Reconciliação financeira automática
+
+**Migração**: Migration 0002 aplicada com sucesso (27/02/2026)
 
 ---
 

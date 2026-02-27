@@ -101,6 +101,9 @@
   <!-- Navigation -->
   <div class="settlements-nav rounded-lg p-4 mb-6">
     <nav class="flex flex-wrap gap-2">
+      <a href="{% url 'financial-dashboard' %}" class="nav-link {% if '/settlements/financial' in request.path %}active{% endif %}">
+        💰 Financial System
+      </a>
       <a href="{% url 'settlements-summary' %}" class="nav-link {% if '/settlements/summary' in request.path %}active{% endif %}">
         📊 Resumo
       </a>
@@ -111,7 +114,7 @@
         📋 Corridas
       </a>
       <a href="{% url 'settlements-payouts' %}" class="nav-link {% if '/settlements/payouts' in request.path %}active{% endif %}">
-        💰 Pagamentos
+        💵 Pagamentos
       </a>
       <a href="{% url 'plans-list' %}" class="nav-link {% if '/settlements/plans' in request.path %}active{% endif %}">
         📋 Planos

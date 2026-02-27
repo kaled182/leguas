@@ -1,12 +1,15 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from django.http import JsonResponse, HttpResponse
-from django.db.models import Sum
+from django.db.models import Sum, Count, Q, Avg
 from django.utils.dateparse import parse_date
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.utils import timezone
 import csv
 
-from .models import SettlementRun
+from .models import SettlementRun, PartnerInvoice, DriverSettlement, DriverClaim
 from .services import compute_payouts
+from .reports.pdf_generator import PDFGenerator
 
 def _parse_dates(request):
     dfrom = parse_date(request.GET.get("date_from")) if request.GET.get("date_from") else None
@@ -150,3 +153,268 @@ def payouts_csv(request):
     for r in data:
         w.writerow([r["driver"], r["period_from"], r["period_to"], r["entregues"], r["bruto_pkg"], r["bonus"], r["fixo"], r["bruto_total"], r["descontos"], r["liquido"], r["media_liq_por_pacote"]])
     return resp
+
+
+# ==========================================
+# FINANCIAL SYSTEM VIEWS (Fase 6)
+# ==========================================
+
+@login_required
+def financial_dashboard(request):
+    """Dashboard principal do sistema financeiro"""
+    today = timezone.now().date()
+    first_day_month = today.replace(day=1)
+    
+    # KPIs - Invoices
+    invoices_stats = PartnerInvoice.objects.aggregate(
+        pending_count=Count('id', filter=Q(status__in=['DRAFT', 'GENERATED', 'SENT'])),
+        pending_amount=Sum('net_amount', filter=Q(status__in=['DRAFT', 'GENERATED', 'SENT'])),
+        overdue_count=Count('id', filter=Q(status='OVERDUE')),
+        overdue_amount=Sum('net_amount', filter=Q(status='OVERDUE')),
+        paid_this_month=Sum('net_amount', filter=Q(status='PAID', paid_date__gte=first_day_month)),
+    )
+    
+    # KPIs - Settlements
+    settlements_stats = DriverSettlement.objects.aggregate(
+        pending_count=Count('id', filter=Q(status__in=['DRAFT', 'CALCULATED', 'APPROVED'])),
+        pending_amount=Sum('net_amount', filter=Q(status__in=['DRAFT', 'CALCULATED', 'APPROVED'])),
+        paid_this_month=Sum('net_amount', filter=Q(status='PAID', paid_date__gte=first_day_month)),
+        avg_success_rate=Avg('success_rate', filter=Q(created_at__gte=first_day_month)),
+    )
+    
+    # KPIs - Claims
+    claims_stats = DriverClaim.objects.aggregate(
+        pending_count=Count('id', filter=Q(status='PENDING')),
+        pending_amount=Sum('amount', filter=Q(status='PENDING')),
+        approved_this_month=Count('id', filter=Q(status='APPROVED', approved_date__gte=first_day_month)),
+        approved_amount_this_month=Sum('amount', filter=Q(status='APPROVED', approved_date__gte=first_day_month)),
+    )
+    
+    # Recent invoices
+    recent_invoices = PartnerInvoice.objects.select_related('partner').order_by('-created_at')[:5]
+    
+    # Recent settlements
+    recent_settlements = DriverSettlement.objects.select_related('driver', 'partner').order_by('-created_at')[:5]
+    
+    # Pending claims
+    pending_claims = DriverClaim.objects.select_related('driver').filter(status='PENDING').order_by('-created_at')[:5]
+    
+    context = {
+        'invoices_stats': invoices_stats,
+        'settlements_stats': settlements_stats,
+        'claims_stats': claims_stats,
+        'recent_invoices': recent_invoices,
+        'recent_settlements': recent_settlements,
+        'pending_claims': pending_claims,
+    }
+    
+    return render(request, 'settlements/financial_dashboard.html', context)
+
+
+@login_required
+def invoice_list(request):
+    """Lista de invoices de partners"""
+    invoices = PartnerInvoice.objects.select_related('partner').all()
+    
+    # Filtros
+    status = request.GET.get('status')
+    if status:
+        invoices = invoices.filter(status=status)
+    
+    partner_id = request.GET.get('partner')
+    if partner_id:
+        invoices = invoices.filter(partner_id=partner_id)
+    
+    # Busca
+    search = request.GET.get('search')
+    if search:
+        invoices = invoices.filter(
+            Q(invoice_number__icontains=search) |
+            Q(external_reference__icontains=search) |
+            Q(partner__name__icontains=search)
+        )
+    
+    # Ordenação
+    invoices = invoices.order_by('-created_at')
+    
+    context = {
+        'invoices': invoices,
+        'status_choices': PartnerInvoice.STATUS_CHOICES,
+    }
+    
+    return render(request, 'settlements/invoice_list.html', context)
+
+
+@login_required
+def invoice_detail(request, invoice_id):
+    """Detalhes de uma invoice"""
+    invoice = get_object_or_404(PartnerInvoice.objects.select_related('partner'), id=invoice_id)
+    
+    # Pedidos relacionados (sample - pode precisar de ajuste conforme seu modelo Order)
+    from orders_manager.models import Order
+    related_orders = Order.objects.filter(
+        partner=invoice.partner,
+        created_at__gte=invoice.period_start,
+        created_at__lte=invoice.period_end,
+        status='DELIVERED'
+    ).select_related('assigned_driver')[:50]
+    
+    context = {
+        'invoice': invoice,
+        'related_orders': related_orders,
+    }
+    
+    return render(request, 'settlements/invoice_detail.html', context)
+
+
+@login_required
+def invoice_download_pdf(request, invoice_id):
+    """Download do PDF da invoice"""
+    invoice = get_object_or_404(PartnerInvoice, id=invoice_id)
+    
+    pdf_gen = PDFGenerator()
+    pdf_file = pdf_gen.generate_invoice_pdf(invoice.id)
+    
+    response = HttpResponse(pdf_file.read(), content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="invoice_{invoice.invoice_number}.pdf"'
+    
+    return response
+
+
+@login_required
+def settlement_list(request):
+    """Lista de settlements de motoristas"""
+    settlements = DriverSettlement.objects.select_related('driver', 'partner').all()
+    
+    # Filtros
+    status = request.GET.get('status')
+    if status:
+        settlements = settlements.filter(status=status)
+    
+    period_type = request.GET.get('period_type')
+    if period_type:
+        settlements = settlements.filter(period_type=period_type)
+    
+    driver_id = request.GET.get('driver')
+    if driver_id:
+        settlements = settlements.filter(driver_id=driver_id)
+    
+    # Busca
+    search = request.GET.get('search')
+    if search:
+        settlements = settlements.filter(
+            Q(driver__user__first_name__icontains=search) |
+            Q(driver__user__last_name__icontains=search) |
+            Q(partner__name__icontains=search)
+        )
+    
+    # Ordenação
+    settlements = settlements.order_by('-year', '-week_number', '-month_number')
+    
+    context = {
+        'settlements': settlements,
+        'status_choices': DriverSettlement.STATUS_CHOICES,
+        'period_choices': DriverSettlement.PERIOD_CHOICES,
+    }
+    
+    return render(request, 'settlements/settlement_list.html', context)
+
+
+@login_required
+def settlement_detail(request, settlement_id):
+    """Detalhes de um settlement"""
+    settlement = get_object_or_404(
+        DriverSettlement.objects.select_related('driver', 'partner').prefetch_related('claims'),
+        id=settlement_id
+    )
+    
+    # Pedidos relacionados
+    from orders_manager.models import Order
+    related_orders = Order.objects.filter(
+        assigned_driver=settlement.driver,
+        created_at__gte=settlement.period_start,
+        created_at__lte=settlement.period_end
+    ).select_related('partner')
+    
+    # Estatísticas de orders
+    orders_stats = related_orders.aggregate(
+        total=Count('id'),
+        delivered=Count('id', filter=Q(status='DELIVERED')),
+        failed=Count('id', filter=Q(status__in=['CANCELLED', 'FAILED'])),
+    )
+    
+    context = {
+        'settlement': settlement,
+        'related_orders': related_orders[:50],
+        'orders_stats': orders_stats,
+    }
+    
+    return render(request, 'settlements/settlement_detail.html', context)
+
+
+@login_required
+def settlement_download_pdf(request, settlement_id):
+    """Download do PDF do settlement"""
+    settlement = get_object_or_404(DriverSettlement, id=settlement_id)
+    
+    pdf_gen = PDFGenerator()
+    pdf_file = pdf_gen.generate_settlement_pdf(settlement.id)
+    
+    response = HttpResponse(pdf_file.read(), content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="settlement_{settlement.id}.pdf"'
+    
+    return response
+
+
+@login_required
+def claim_list(request):
+    """Lista de claims de motoristas"""
+    claims = DriverClaim.objects.select_related('driver', 'settlement', 'order', 'vehicle_incident').all()
+    
+    # Filtros
+    status = request.GET.get('status')
+    if status:
+        claims = claims.filter(status=status)
+    
+    claim_type = request.GET.get('claim_type')
+    if claim_type:
+        claims = claims.filter(claim_type=claim_type)
+    
+    driver_id = request.GET.get('driver')
+    if driver_id:
+        claims = claims.filter(driver_id=driver_id)
+    
+    # Busca
+    search = request.GET.get('search')
+    if search:
+        claims = claims.filter(
+            Q(driver__user__first_name__icontains=search) |
+            Q(driver__user__last_name__icontains=search) |
+            Q(description__icontains=search)
+        )
+    
+    # Ordenação
+    claims = claims.order_by('-created_at')
+    
+    context = {
+        'claims': claims,
+        'status_choices': DriverClaim.STATUS_CHOICES,
+        'type_choices': DriverClaim.CLAIM_TYPE_CHOICES,
+    }
+    
+    return render(request, 'settlements/claim_list.html', context)
+
+
+@login_required
+def claim_detail(request, claim_id):
+    """Detalhes de um claim"""
+    claim = get_object_or_404(
+        DriverClaim.objects.select_related('driver', 'settlement', 'order', 'vehicle_incident'),
+        id=claim_id
+    )
+    
+    context = {
+        'claim': claim,
+    }
+    
+    return render(request, 'settlements/claim_detail.html', context)

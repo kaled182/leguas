@@ -1,0 +1,84 @@
+{% extends "settlements/base.html" %}
+{% load static %}
+
+{% block subtitle %}Claim #{{ claim.id }}{% endblock %}
+
+{% block settlements_content %}
+<div class="mb-6">
+  <a href="{% url 'claim-list' %}" class="text-blue-600 hover:text-blue-900 text-sm mb-2 inline-block">← Voltar</a>
+  <div class="flex justify-between items-center">
+    <div>
+      <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Claim #{{ claim.id }}</h1>
+      <p class="mt-2 text-gray-600 dark:text-gray-400">{{ claim.driver.user.get_full_name }}</p>
+    </div>
+    <a href="/admin/settlements/driverclaim/{{ claim.id }}/change/" class="btn btn-secondary">Editar</a>
+  </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+  <div class="card">
+    <div class="card-header"><h3 class="card-title">Informações</h3></div>
+    <div class="card-body space-y-3">
+      <div><p class="text-xs text-gray-500">Tipo</p><p class="font-medium">{{ claim.get_claim_type_display }}</p></div>
+      <div><p class="text-xs text-gray-500">Valor</p><p class="font-bold text-red-600 text-2xl">€{{ claim.amount|floatformat:2 }}</p></div>
+      <div><p class="text-xs text-gray-500">Data</p><p class="font-medium">{{ claim.created_at|date:"d/m/Y H:i" }}</p></div>
+      <div><p class="text-xs text-gray-500">Status</p>
+        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full 
+          {% if claim.status == 'DEDUCTED' %}bg-green-100 text-green-800
+          {% elif claim.status == 'APPROVED' %}bg-blue-100 text-blue-800
+          {% elif claim.status == 'REJECTED' %}bg-red-100 text-red-800
+          {% else %}bg-yellow-100 text-yellow-800{% endif %}">
+          {{ claim.get_status_display }}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><h3 class="card-title">Detalhes</h3></div>
+    <div class="card-body space-y-3">
+      {% if claim.order %}
+      <div><p class="text-xs text-gray-500">Pedido Relacionado</p>
+        <a href="/admin/orders_manager/order/{{ claim.order.id }}/change/" class="text-blue-600 hover:text-blue-900">
+          {{ claim.order.tracking_code }}
+        </a>
+      </div>
+      {% endif %}
+      {% if claim.vehicle_incident %}
+      <div><p class="text-xs text-gray-500">Incidente de Veículo</p><p class="font-medium">#{{ claim.vehicle_incident.id }}</p></div>
+      {% endif %}
+      {% if claim.settlement %}
+      <div><p class="text-xs text-gray-500">Settlement Aplicado</p>
+        <a href="{% url 'settlement-detail' claim.settlement.id %}" class="text-blue-600 hover:text-blue-900">
+          #{{ claim.settlement.id }}
+        </a>
+      </div>
+      {% endif %}
+      {% if claim.approved_by %}
+      <div><p class="text-xs text-gray-500">Aprovado Por</p><p class="font-medium">{{ claim.approved_by.get_full_name }}</p></div>
+      <div><p class="text-xs text-gray-500">Data Aprovação</p><p class="font-medium">{{ claim.approved_date|date:"d/m/Y H:i" }}</p></div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="card mt-6">
+  <div class="card-header"><h3 class="card-title">Descrição</h3></div>
+  <div class="card-body">
+    <p class="text-gray-700 dark:text-gray-300">{{ claim.description }}</p>
+    {% if claim.justification %}
+    <div class="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded">
+      <p class="text-xs text-yellow-800 dark:text-yellow-200 font-semibold mb-1">Justificação</p>
+      <p class="text-sm text-yellow-700 dark:text-yellow-300">{{ claim.justification }}</p>
+    </div>
+    {% endif %}
+    {% if claim.evidence_file %}
+    <div class="mt-4">
+      <a href="{{ claim.evidence_file.url }}" target="_blank" class="text-blue-600 hover:text-blue-900 text-sm">
+        📎 Ver evidência anexada
+      </a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

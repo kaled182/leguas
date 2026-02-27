@@ -1,0 +1,25 @@
+{
+  "name": "wppconnect-chatwoot-bridge",
+  "version": "1.0.0",
+  "description": "Bridge between WPPConnect and Chatwoot for Leguas Franzinas",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js"
+  },
+  "keywords": ["wppconnect", "chatwoot", "whatsapp", "bridge"],
+  "author": "Leguas Franzinas",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "axios": "^1.6.0",
+    "body-parser": "^1.20.2",
+    "dotenv": "^16.3.1",
+    "form-data": "^4.0.0",
+    "mime-types": "^2.1.35",
+    "winston": "^3.11.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}

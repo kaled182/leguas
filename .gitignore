@@ -23,6 +23,7 @@ staticfiles/
 # Environment variables
 .env
 .env.local
+.env.docker
 
 # IDE
 .vscode/
@@ -44,6 +45,9 @@ Thumbs.db
 
 # Debug files
 debug_files/
+
+# Files directory (dumps, old versions)
+files/
 
 # Node modules (se houver)
 node_modules/

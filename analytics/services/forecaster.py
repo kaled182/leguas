@@ -19,75 +19,93 @@ class VolumeForecaster:
     Prevê volume de pedidos usando diferentes métodos estatísticos.
     """
     
-    def __init__(self, partner):
+    def __init__(self, partner=None):
         self.partner = partner
     
-    def forecast_next_days(self, days=7, method='MA7'):
+    def forecast_next_days(self, days=7, method='MA7', partner=None):
         """
         Gera previsões para os próximos N dias.
         
         Args:
             days: Número de dias para prever
-            method: Método de previsão (MA7, MA30, EMA, TREND, SEASONAL)
+            method: Método de forecasting (MA7, MA30, EMA, TREND, SEASONAL)
+            partner: Partner para prever (usa self.partner se não informado)
         
         Returns:
             Lista de VolumeForecast objects
         """
+        target_partner = partner or self.partner
+        if not target_partner:
+            raise ValueError("Partner must be provided either in __init__ or as argument")
+        
         forecasts = []
         
         for i in range(1, days + 1):
             forecast_date = (timezone.now() + timedelta(days=i)).date()
-            forecast = self.create_forecast(forecast_date, method)
+            forecast = self.create_forecast(forecast_date, method, target_partner)
             if forecast:
                 forecasts.append(forecast)
         
         return forecasts
     
-    def create_forecast(self, forecast_date, method='MA7'):
+    def create_forecast(self, forecast_date, method='MA7', partner=None):
         """
         Cria previsão para uma data específica.
         
         Args:
             forecast_date: Data da previsão
             method: Método de cálculo
+            partner: Partner para prever (usa self.partner se não informado)
         
         Returns:
             VolumeForecast object
         """
-        # Selecionar calculador baseado no método
-        if method == 'MA7':
-            predicted, confidence, lower, upper = self._moving_average_7()
-            historical_days = 7
-        elif method == 'MA30':
-            predicted, confidence, lower, upper = self._moving_average_30()
-            historical_days = 30
-        elif method == 'EMA':
-            predicted, confidence, lower, upper = self._exponential_moving_average()
-            historical_days = 14
-        elif method == 'TREND':
-            predicted, confidence, lower, upper = self._trend_analysis()
-            historical_days = 30
-        elif method == 'SEASONAL':
-            predicted, confidence, lower, upper = self._seasonal_analysis()
-            historical_days = 90
-        else:
-            raise ValueError(f"Método desconhecido: {method}")
+        target_partner = partner or self.partner
+        if not target_partner:
+            raise ValueError("Partner must be provided either in __init__ or as argument")
         
-        # Criar ou atualizar forecast
-        forecast, created = VolumeForecast.objects.update_or_create(
-            partner=self.partner,
-            forecast_date=forecast_date,
-            method=method,
-            defaults={
-                'predicted_volume': predicted,
-                'confidence_level': confidence,
-                'lower_bound': lower,
-                'upper_bound': upper,
-                'historical_days': historical_days,
-            }
-        )
+        # Temporarily set partner for internal methods
+        original_partner = self.partner
+        self.partner = target_partner
         
-        return forecast
+        try:
+            # Selecionar calculador baseado no método
+            if method == 'MA7':
+                predicted, confidence, lower, upper = self._moving_average_7()
+                historical_days = 7
+            elif method == 'MA30':
+                predicted, confidence, lower, upper = self._moving_average_30()
+                historical_days = 30
+            elif method == 'EMA':
+                predicted, confidence, lower, upper = self._exponential_moving_average()
+                historical_days = 14
+            elif method == 'TREND':
+                predicted, confidence, lower, upper = self._trend_analysis()
+                historical_days = 30
+            elif method == 'SEASONAL':
+                predicted, confidence, lower, upper = self._seasonal_analysis()
+                historical_days = 90
+            else:
+                raise ValueError(f"Método desconhecido: {method}")
+            
+            # Criar ou atualizar forecast
+            forecast, created = VolumeForecast.objects.update_or_create(
+                partner=self.partner,
+                forecast_date=forecast_date,
+                method=method,
+                defaults={
+                    'predicted_volume': predicted,
+                    'confidence_level': confidence,
+                    'lower_bound': lower,
+                    'upper_bound': upper,
+                    'historical_days': historical_days,
+                }
+            )
+            
+            return forecast
+        finally:
+            # Restore original partner
+            self.partner = original_partner
     
     def _moving_average_7(self):
         """Média móvel de 7 dias"""

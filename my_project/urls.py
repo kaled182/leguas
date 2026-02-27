@@ -44,6 +44,7 @@ urlpatterns = [
     path('settlements/', include('settlements.urls')),  # APP para gestão de settlements
     path('accounting/', include('accounting.urls')),
     path('system/', include('system_config.urls')),  # Configurações do Sistema
+    path('analytics/', include('analytics.urls')),  # Dashboards de Analytics e Relatórios
 ]
 
 # Servir arquivos estáticos

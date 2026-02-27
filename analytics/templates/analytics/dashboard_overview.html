@@ -1,0 +1,301 @@
+{% extends 'paack_dashboard/base.html' %}
+
+{% block title %}Dashboard Analytics - Visão Geral{% endblock %}
+{% block sidebar_title %}Analytics{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-6">
+    <!-- Header -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6">
+        <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-4">
+                <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-sm">
+                    <i data-lucide="bar-chart-3" class="w-6 h-6 text-white"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Dashboard Analytics</h1>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Visão Consolidada Multi-Partner</p>
+                </div>
+            </div>
+            
+            <!-- Filtros -->
+            <form method="get" class="flex gap-3">
+                <input type="date" name="start_date" value="{{ start_date|date:'Y-m-d' }}"
+                       class="px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm dark:text-white">
+                <input type="date" name="end_date" value="{{ end_date|date:'Y-m-d' }}"
+                       class="px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm dark:text-white">
+                <select name="partner" class="px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm dark:text-white">
+                    <option value="">Todos os Partners</option>
+                    {% for partner in all_partners %}
+                        <option value="{{ partner.id }}" {% if partner.id|stringformat:"s" == selected_partner %}selected{% endif %}>
+                            {{ partner.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                    <i data-lucide="filter" class="w-4 h-4"></i>
+                    Filtrar
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- KPIs Principais -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- Total Pedidos -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-sm font-medium text-gray-600 dark:text-gray-400">Total Pedidos</span>
+                <div class="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
+                    <i data-lucide="package" class="w-5 h-5 text-blue-600 dark:text-blue-400"></i>
+                </div>
+            </div>
+            <div class="text-3xl font-bold text-gray-900 dark:text-white">
+                {{ totals.total_orders|default:0|floatformat:0 }}
+            </div>
+            <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                {{ date_range_days }} dias
+            </div>
+        </div>
+
+        <!-- Pedidos Entregues -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-sm font-medium text-gray-600 dark:text-gray-400">Entregues</span>
+                <div class="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
+                    <i data-lucide="check-circle" class="w-5 h-5 text-green-600 dark:text-green-400"></i>
+                </div>
+            </div>
+            <div class="text-3xl font-bold text-gray-900 dark:text-white">
+                {{ totals.delivered_orders|default:0|floatformat:0 }}
+            </div>
+            <div class="text-xs text-green-600 dark:text-green-400 mt-1">
+                {{ totals.avg_success_rate|default:0|floatformat:1 }}% taxa de sucesso
+            </div>
+        </div>
+
+        <!-- Pedidos Falhados -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-sm font-medium text-gray-600 dark:text-gray-400">Falhados</span>
+                <div class="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center">
+                    <i data-lucide="x-circle" class="w-5 h-5 text-red-600 dark:text-red-400"></i>
+                </div>
+            </div>
+            <div class="text-3xl font-bold text-gray-900 dark:text-white">
+                {{ totals.failed_orders|default:0|floatformat:0 }}
+            </div>
+            <div class="text-xs text-red-600 dark:text-red-400 mt-1">
+                {% widthratio totals.failed_orders totals.total_orders 100 %}% do total
+            </div>
+        </div>
+
+        <!-- Receita Total -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-sm font-medium text-gray-600 dark:text-gray-400">Receita Total</span>
+                <div class="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
+                    <i data-lucide="euro" class="w-5 h-5 text-purple-600 dark:text-purple-400"></i>
+                </div>
+            </div>
+            <div class="text-3xl font-bold text-gray-900 dark:text-white">
+                {{ totals.total_revenue|default:0|floatformat:0 }}€
+            </div>
+            <div class="text-xs text-purple-600 dark:text-purple-400 mt-1">
+                Bónus: {{ totals.total_bonuses|default:0|floatformat:0 }}€ | Penalidades: {{ totals.total_penalties|default:0|floatformat:0 }}€
+            </div>
+        </div>
+    </div>
+
+    <!-- Performance por Partner -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6">
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+            <i data-lucide="users" class="w-5 h-5"></i>
+            Performance por Partner
+        </h2>
+        <div class="overflow-x-auto">
+            <table class="min-w-full">
+                <thead>
+                    <tr class="border-b border-gray-200 dark:border-gray-700">
+                        <th class="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">Partner</th>
+                        <th class="text-right py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">Pedidos</th>
+                        <th class="text-right py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">Entregues</th>
+                        <th class="text-right py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">Falhados</th>
+                        <th class="text-right py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">Taxa Sucesso</th>
+                        <th class="text-right py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">Receita</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for stat in partner_stats %}
+                    <tr class="border-b border-gray-100 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                        <td class="py-3 px-4 text-sm font-medium text-gray-900 dark:text-white">{{ stat.partner__name }}</td>
+                        <td class="py-3 px-4 text-sm text-gray-700 dark:text-gray-300 text-right">{{ stat.total_orders|default:0 }}</td>
+                        <td class="py-3 px-4 text-sm text-green-600 dark:text-green-400 text-right">{{ stat.delivered|default:0 }}</td>
+                        <td class="py-3 px-4 text-sm text-red-600 dark:text-red-400 text-right">{{ stat.failed|default:0 }}</td>
+                        <td class="py-3 px-4 text-sm text-right">
+                            <span class="px-2 py-1 rounded text-xs font-medium {% if stat.avg_success_rate >= 90 %}bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400{% elif stat.avg_success_rate >= 80 %}bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400{% else %}bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400{% endif %}">
+                                {{ stat.avg_success_rate|default:0|floatformat:1 }}%
+                            </span>
+                        </td>
+                        <td class="py-3 px-4 text-sm text-gray-700 dark:text-gray-300 text-right font-medium">{{ stat.revenue|default:0|floatformat:0 }}€</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="py-8 text-center text-gray-500 dark:text-gray-400">
+                            <i data-lucide="inbox" class="w-12 h-12 mx-auto mb-2 opacity-50"></i>
+                            <div>Nenhum dado disponível para o período selecionado</div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Grid: Alertas + Top Motoristas -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Alertas Ativos -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                    <i data-lucide="bell" class="w-5 h-5"></i>
+                    Alertas Ativos
+                </h2>
+                <a href="{% url 'analytics:alerts_dashboard' %}" class="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400">
+                    Ver todos →
+                </a>
+            </div>
+            <div class="space-y-2">
+                {% for alert in active_alerts %}
+                <div class="p-3 rounded-lg border {% if alert.severity == 'CRITICAL' %}border-red-300 bg-red-50 dark:border-red-700 dark:bg-red-900/20{% elif alert.severity == 'WARNING' %}border-yellow-300 bg-yellow-50 dark:border-yellow-700 dark:bg-yellow-900/20{% else %}border-blue-300 bg-blue-50 dark:border-blue-700 dark:bg-blue-900/20{% endif %}">
+                    <div class="flex items-start gap-2">
+                        <i data-lucide="alert-circle" class="w-4 h-4 mt-0.5 {% if alert.severity == 'CRITICAL' %}text-red-600{% elif alert.severity == 'WARNING' %}text-yellow-600{% else %}text-blue-600{% endif %}"></i>
+                        <div class="flex-1">
+                            <div class="text-sm font-medium {% if alert.severity == 'CRITICAL' %}text-red-900 dark:text-red-200{% elif alert.severity == 'WARNING' %}text-yellow-900 dark:text-yellow-200{% else %}text-blue-900 dark:text-blue-200{% endif %}">
+                                {{ alert.get_alert_type_display }}
+                            </div>
+                            <div class="text-xs {% if alert.severity == 'CRITICAL' %}text-red-700 dark:text-red-300{% elif alert.severity == 'WARNING' %}text-yellow-700 dark:text-yellow-300{% else %}text-blue-700 dark:text-blue-300{% endif %} mt-1">
+                                {{ alert.message }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center py-8 text-gray-500 dark:text-gray-400">
+                    <i data-lucide="check-circle" class="w-10 h-10 mx-auto mb-2 text-green-500"></i>
+                    <div class="text-sm">Nenhum alerta ativo</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Top 5 Motoristas -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                    <i data-lucide="trophy" class="w-5 h-5"></i>
+                    Top 5 Motoristas
+                </h2>
+                <a href="{% url 'analytics:drivers_dashboard' %}" class="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400">
+                    Ver todos →
+                </a>
+            </div>
+            <div class="space-y-3">
+                {% for driver in top_drivers %}
+                <div class="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                    <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                        {{ forloop.counter }}
+                    </div>
+                    <div class="flex-1">
+                        <div class="text-sm font-medium text-gray-900 dark:text-white">
+                            {{ driver.driver__user__first_name }} {{ driver.driver__user__last_name }}
+                        </div>
+                        <div class="text-xs text-gray-500 dark:text-gray-400">
+                            {{ driver.total_deliveries }} entregas
+                        </div>
+                    </div>
+                    <div class="text-sm font-medium {% if driver.success_rate >= 95 %}text-green-600 dark:text-green-400{% elif driver.success_rate >= 85 %}text-yellow-600 dark:text-yellow-400{% else %}text-red-600 dark:text-red-400{% endif %}">
+                        {{ driver.success_rate|default:0|floatformat:1 }}%
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center py-8 text-gray-500 dark:text-gray-400 text-sm">
+                    Nenhum dado de motoristas disponível
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Previsão 7 Dias -->
+    {% if forecast_7d %}
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                <i data-lucide="trending-up" class="w-5 h-5"></i>
+                Previsão Próximos 7 Dias
+            </h2>
+            <a href="{% url 'analytics:forecasts_dashboard' %}" class="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400">
+                Ver detalhes →
+            </a>
+        </div>
+        <div class="grid grid-cols-7 gap-2">
+            {% for forecast in forecast_7d %}
+            <div class="text-center p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50">
+                <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                    {{ forecast.forecast_date|date:"d/m" }}
+                </div>
+                <div class="text-lg font-bold text-gray-900 dark:text-white">
+                    {{ forecast.predicted_volume|floatformat:0 }}
+                </div>
+                <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    pedidos
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Links Rápidos -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <a href="{% url 'analytics:metrics_dashboard' %}" class="block p-6 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-sm hover:shadow-md transition-shadow">
+            <div class="flex items-center gap-3 text-white">
+                <i data-lucide="line-chart" class="w-8 h-8"></i>
+                <div>
+                    <div class="font-semibold">Métricas Detalhadas</div>
+                    <div class="text-sm opacity-90">Gráficos de evolução temporal</div>
+                </div>
+            </div>
+        </a>
+        
+        <a href="{% url 'analytics:incidents_report' %}" class="block p-6 bg-gradient-to-br from-red-500 to-red-600 rounded-xl shadow-sm hover:shadow-md transition-shadow">
+            <div class="flex items-center gap-3 text-white">
+                <i data-lucide="alert-triangle" class="w-8 h-8"></i>
+                <div>
+                    <div class="font-semibold">Relatório de Incidências</div>
+                    <div class="text-sm opacity-90">Top motivos de falha</div>
+                </div>
+            </div>
+        </a>
+        
+        <a href="{% url 'analytics:vehicles_report' %}" class="block p-6 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl shadow-sm hover:shadow-md transition-shadow">
+            <div class="flex items-center gap-3 text-white">
+                <i data-lucide="truck" class="w-8 h-8"></i>
+                <div>
+                    <div class="font-semibold">Performance de Veículos</div>
+                    <div class="text-sm opacity-90">Custo × Entregas</div>
+                </div>
+            </div>
+        </a>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+});
+</script>
+{% endblock %}

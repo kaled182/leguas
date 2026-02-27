@@ -22,7 +22,7 @@ USE_GENERIC_ORDERS_READ = False   # False = Lê de ordersmanager_paack
                                    # True = Lê de orders_manager
 
 # Modo dual write: escrever nos dois sistemas simultaneamente
-DUAL_WRITE_ORDERS = False  # True = Escreve em ambos os sistemas (útil para validação)
+DUAL_WRITE_ORDERS = True  # 🟢 ATIVADO - Escreve em ambos os sistemas (validação)
 
 
 # --- FLEET MANAGEMENT (Frota) ---

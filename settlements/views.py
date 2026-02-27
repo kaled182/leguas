@@ -186,8 +186,8 @@ def financial_dashboard(request):
     claims_stats = DriverClaim.objects.aggregate(
         pending_count=Count('id', filter=Q(status='PENDING')),
         pending_amount=Sum('amount', filter=Q(status='PENDING')),
-        approved_this_month=Count('id', filter=Q(status='APPROVED', approved_date__gte=first_day_month)),
-        approved_amount_this_month=Sum('amount', filter=Q(status='APPROVED', approved_date__gte=first_day_month)),
+        approved_this_month=Count('id', filter=Q(status='APPROVED', reviewed_at__gte=first_day_month)),
+        approved_amount_this_month=Sum('amount', filter=Q(status='APPROVED', reviewed_at__gte=first_day_month)),
     )
     
     # Recent invoices

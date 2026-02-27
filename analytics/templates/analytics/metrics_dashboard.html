@@ -1,0 +1,97 @@
+{% extends 'paack_dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Métricas Detalhadas - Analytics{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 space-y-6">
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Métricas Detalhadas</h1>
+            <p class="text-gray-600 dark:text-gray-400 mt-1">Evolução temporal das métricas principais</p>
+        </div>
+        <a href="{% url 'analytics:dashboard' %}" class="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+            ← Voltar ao Dashboard
+        </a>
+    </div>
+
+    <!-- Filtros -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6">
+        <form method="get" class="flex flex-wrap gap-4 items-end">
+            <div class="flex-1 min-w-[200px]">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Data Inicial</label>
+                <input type="date" name="start_date" value="{{ start_date|date:'Y-m-d' }}" class="w-full px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:text-white">
+            </div>
+            <div class="flex-1 min-w-[200px]">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Data Final</label>
+                <input type="date" name="end_date" value="{{ end_date|date:'Y-m-d' }}" class="w-full px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:text-white">
+            </div>
+            <div class="flex-1 min-w-[200px]">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Partner</label>
+                <select name="partner_id" class="w-full px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:text-white">
+                    <option value="">Todos</option>
+                    {% for partner in all_partners %}
+                    <option value="{{ partner.id }}" {% if selected_partner == partner.id|stringformat:"s" %}selected{% endif %}>{{ partner.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                Filtrar
+            </button>
+        </form>
+    </div>
+
+    <!-- Cards de Estatísticas -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6">
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400">Total Pedidos</h3>
+                <i data-lucide="package" class="w-5 h-5 text-blue-600"></i>
+            </div>
+            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ daily_stats.total_orders|default:0 }}</p>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6">
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400">Taxa Média de Sucesso</h3>
+                <i data-lucide="check-circle" class="w-5 h-5 text-green-600"></i>
+            </div>
+            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ daily_stats.avg_success_rate|default:0|floatformat:1 }}%</p>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6">
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400">Pico de Motoristas</h3>
+                <i data-lucide="users" class="w-5 h-5 text-purple-600"></i>
+            </div>
+            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ daily_stats.peak_drivers|default:0 }}</p>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6">
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400">Receita Total</h3>
+                <i data-lucide="euro" class="w-5 h-5 text-yellow-600"></i>
+            </div>
+            <p class="text-2xl font-bold text-gray-900 dark:text-white">€{{ daily_stats.total_revenue|default:0|floatformat:2 }}</p>
+        </div>
+    </div>
+
+    <!-- Dados Diários (Simplificado) -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6">
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Evolução Diária</h2>
+        <p class="text-gray-600 dark:text-gray-400 text-center py-12">
+            <i data-lucide="bar-chart-3" class="w-16 h-16 mx-auto mb-4 text-gray-400"></i>
+            Gráficos interativos em desenvolvimento
+        </p>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+});
+</script>
+{% endblock %}

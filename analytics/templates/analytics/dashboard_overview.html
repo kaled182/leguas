@@ -208,14 +208,14 @@
                     </div>
                     <div class="flex-1">
                         <div class="text-sm font-medium text-gray-900 dark:text-white">
-                            {{ driver.driver__user__first_name }} {{ driver.driver__user__last_name }}
+                            {{ driver.driver.nome_completo }}
                         </div>
                         <div class="text-xs text-gray-500 dark:text-gray-400">
-                            {{ driver.total_deliveries }} entregas
+                            {{ driver.total_deliveries_sum|default:0 }} entregas
                         </div>
                     </div>
-                    <div class="text-sm font-medium {% if driver.success_rate >= 95 %}text-green-600 dark:text-green-400{% elif driver.success_rate >= 85 %}text-yellow-600 dark:text-yellow-400{% else %}text-red-600 dark:text-red-400{% endif %}">
-                        {{ driver.success_rate|default:0|floatformat:1 }}%
+                    <div class="text-sm font-medium {% if driver.success_rate_avg >= 95 %}text-green-600 dark:text-green-400{% elif driver.success_rate_avg >= 85 %}text-yellow-600 dark:text-yellow-400{% else %}text-red-600 dark:text-red-400{% endif %}">
+                        {{ driver.success_rate_avg|default:0|floatformat:1 }}%
                     </div>
                 </div>
                 {% empty %}

@@ -1,0 +1,127 @@
+{% extends 'paack_dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Alertas de Performance - Analytics{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 space-y-6">
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Alertas de Performance</h1>
+            <p class="text-gray-600 dark:text-gray-400 mt-1">Monitoramento automático de métricas críticas</p>
+        </div>
+        <a href="{% url 'analytics:dashboard' %}" class="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+            ← Voltar ao Dashboard
+        </a>
+    </div>
+
+    <!-- Filtros -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6">
+        <form method="get" class="flex flex-wrap gap-4 items-end">
+            <div class="flex-1 min-w-[200px]">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Severidade</label>
+                <select name="severity" class="w-full px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:text-white">
+                    <option value="">Todas</option>
+                    <option value="CRITICAL" {% if selected_severity == 'CRITICAL' %}selected{% endif %}>Crítico</option>
+                    <option value="WARNING" {% if selected_severity == 'WARNING' %}selected{% endif %}>Aviso</option>
+                    <option value="INFO" {% if selected_severity == 'INFO' %}selected{% endif %}>Informativo</option>
+                </select>
+            </div>
+            <div class="flex-1 min-w-[200px]">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Partner</label>
+                <select name="partner_id" class="w-full px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:text-white">
+                    <option value="">Todos</option>
+                    {% for partner in all_partners %}
+                    <option value="{{ partner.id }}" {% if selected_partner == partner.id|stringformat:"s" %}selected{% endif %}>{{ partner.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                Filtrar
+            </button>
+        </form>
+    </div>
+
+    <!-- Estatísticas -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6">
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400">Alertas Ativos</h3>
+                <i data-lucide="alert-circle" class="w-5 h-5 text-red-600"></i>
+            </div>
+            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ stats.active_alerts|default:0 }}</p>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6">
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400">Resolvidos (7 dias)</h3>
+                <i data-lucide="check-circle" class="w-5 h-5 text-green-600"></i>
+            </div>
+            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ stats.resolved_alerts|default:0 }}</p>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6">
+            <div class="flex items-center justify-between mb-2">
+                <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400">Críticos</h3>
+                <i data-lucide="alert-triangle" class="w-5 h-5 text-orange-600"></i>
+            </div>
+            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ stats.critical_alerts|default:0 }}</p>
+        </div>
+    </div>
+
+    <!-- Lista de Alertas -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6">
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Alertas Recentes</h2>
+        
+        {% if active_alerts %}
+        <div class="space-y-3">
+            {% for alert in active_alerts %}
+            <div class="flex items-start gap-4 p-4 rounded-lg border {% if alert.severity == 'CRITICAL' %}border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20{% elif alert.severity == 'WARNING' %}border-yellow-200 dark:border-yellow-800 bg-yellow-50 dark:bg-yellow-900/20{% else %}border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20{% endif %}">
+                <div class="flex-shrink-0">
+                    {% if alert.severity == 'CRITICAL' %}
+                    <i data-lucide="alert-circle" class="w-5 h-5 text-red-600"></i>
+                    {% elif alert.severity == 'WARNING' %}
+                    <i data-lucide="alert-triangle" class="w-5 h-5 text-yellow-600"></i>
+                    {% else %}
+                    <i data-lucide="info" class="w-5 h-5 text-blue-600"></i>
+                    {% endif %}
+                </div>
+                <div class="flex-1">
+                    <div class="flex items-start justify-between">
+                        <div>
+                            <h3 class="font-semibold text-gray-900 dark:text-white">{{ alert.get_alert_type_display }}</h3>
+                            <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">{{ alert.description }}</p>
+                        </div>
+                        <span class="px-2 py-1 text-xs rounded {% if alert.severity == 'CRITICAL' %}bg-red-200 dark:bg-red-800 text-red-800 dark:text-red-200{% elif alert.severity == 'WARNING' %}bg-yellow-200 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-200{% else %}bg-blue-200 dark:bg-blue-800 text-blue-800 dark:text-blue-200{% endif %}">
+                            {{ alert.get_severity_display }}
+                        </span>
+                    </div>
+                    <div class="flex items-center gap-4 mt-2 text-xs text-gray-500 dark:text-gray-400">
+                        <span>Partner: {{ alert.partner.name }}</span>
+                        <span>•</span>
+                        <span>{{ alert.date|date:"d/m/Y" }}</span>
+                        <span>•</span>
+                        <span>Métrica: {{ alert.metric_value }} / Limite: {{ alert.threshold_value }}</span>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-12">
+            <i data-lucide="check-circle-2" class="w-16 h-16 mx-auto mb-4 text-green-600"></i>
+            <p class="text-gray-600 dark:text-gray-400">Nenhum alerta ativo</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+});
+</script>
+{% endblock %}

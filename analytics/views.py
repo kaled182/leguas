@@ -73,10 +73,10 @@ def dashboard_overview(request):
     top_drivers = DriverPerformance.objects.filter(
         month__gte=start_date.replace(day=1),
         month__lte=end_date.replace(day=1)
-    ).values('driver__user__first_name', 'driver__user__last_name').annotate(
-        total_deliveries=Sum('total_deliveries'),
-        success_rate=Avg('success_rate')
-    ).order_by('-total_deliveries')[:5]
+    ).select_related('driver').annotate(
+        total_deliveries_sum=Sum('total_deliveries'),
+        success_rate_avg=Avg('success_rate')
+    ).order_by('-total_deliveries_sum')[:5]
     
     # Previsão próximos 7 dias (método MA7)
     forecast_7d = VolumeForecast.objects.filter(
@@ -295,7 +295,7 @@ def drivers_performance_dashboard(request):
     # Performance do mês selecionado
     month_performance = DriverPerformance.objects.filter(
         month=current_month
-    ).select_related('driver__user').order_by('-rank_in_team')
+    ).select_related('driver').order_by('-rank_in_team')
     
     # Top 10 por sucesso
     top_by_success = month_performance.order_by('-success_rate')[:10]
@@ -591,14 +591,13 @@ def api_drivers_data(request):
     
     drivers = DriverPerformance.objects.filter(
         month=current_month
-    ).values(
-        'driver__user__first_name',
-        'driver__user__last_name',
+    ).select_related('driver').values(
+        'driver__nome_completo',
         'total_deliveries',
         'success_rate',
         'total_earnings',
-        'ranking'
-    ).order_by('-ranking')
+        'rank_in_team'
+    ).order_by('-rank_in_team')
     
     data = list(drivers)
     
@@ -708,7 +707,7 @@ def export_drivers_excel(request):
     
     drivers = DriverPerformance.objects.filter(
         month=current_month
-    ).select_related('driver__user').order_by('-ranking')
+    ).select_related('driver').order_by('-rank_in_team')
     
     # Criar workbook
     wb = openpyxl.Workbook()

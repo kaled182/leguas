@@ -1,0 +1,98 @@
+{% extends 'paack_dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Previsões de Volume - Analytics{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 space-y-6">
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Previsões de Volume</h1>
+            <p class="text-gray-600 dark:text-gray-400 mt-1">Análise preditiva de demanda</p>
+        </div>
+        <a href="{% url 'analytics:dashboard' %}" class="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+            ← Voltar ao Dashboard
+        </a>
+    </div>
+
+    <!-- Filtros -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6">
+        <form method="get" class="flex flex-wrap gap-4 items-end">
+            <div class="flex-1 min-w-[200px]">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Dias à Frente</label>
+                <input type="number" name="days_ahead" value="{{ days_ahead|default:7 }}" min="1" max="30" class="w-full px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:text-white">
+            </div>
+            <div class="flex-1 min-w-[200px]">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Partner</label>
+                <select name="partner_id" class="w-full px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:text-white">
+                    <option value="">Todos</option>
+                    {% for partner in all_partners %}
+                    <option value="{{ partner.id }}" {% if selected_partner == partner.id|stringformat:"s" %}selected{% endif %}>{{ partner.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                Filtrar
+            </button>
+        </form>
+    </div>
+
+    <!-- Métodos de Previsão -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {% for method_code, method_name in forecast_methods %}
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6">
+            <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">{{ method_name }}</h3>
+            <p class="text-2xl font-bold text-gray-900 dark:text-white">
+                {% with forecasts_by_method|get_item:method_code as method_forecasts %}
+                    {% if method_forecasts|length > 0 %}
+                        {{ method_forecasts.0.predicted_volume|floatformat:0 }}
+                    {% else %}
+                        -
+                    {% endif %}
+                {% endwith %}
+            </p>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">pedidos (próximo dia)</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Previsões Próximos Dias -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6">
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Previsão (Método MA7)</h2>
+        
+        {% if best_forecasts %}
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead>
+                    <tr class="border-b dark:border-gray-700">
+                        <th class="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">Data</th>
+                        <th class="text-right py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">Volume Previsto</th>
+                        <th class="text-right py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">Intervalo</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for forecast in best_forecasts %}
+                    <tr class="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                        <td class="py-3 px-4 text-sm text-gray-900 dark:text-white">{{ forecast.forecast_date|date:"d/m/Y (D)" }}</td>
+                        <td class="py-3 px-4 text-sm text-right font-semibold text-gray-900 dark:text-white">{{ forecast.predicted_volume|floatformat:0 }}</td>
+                        <td class="py-3 px-4 text-sm text-right text-gray-600 dark:text-gray-400">{{ forecast.lower_bound|floatformat:0 }} - {{ forecast.upper_bound|floatformat:0 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-center text-gray-500 dark:text-gray-400 py-12">Nenhuma previsão disponível</p>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+});
+</script>
+{% endblock %}

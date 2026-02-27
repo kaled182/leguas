@@ -171,14 +171,14 @@ def financial_dashboard(request):
         pending_amount=Sum('net_amount', filter=Q(status__in=['DRAFT', 'GENERATED', 'SENT'])),
         overdue_count=Count('id', filter=Q(status='OVERDUE')),
         overdue_amount=Sum('net_amount', filter=Q(status='OVERDUE')),
-        paid_this_month=Sum('net_amount', filter=Q(status='PAID', paid_date__gte=first_day_month)),
+        paid_this_month=Sum('net_amount', filter=Q(status='PAID', paid_at__gte=first_day_month)),
     )
     
     # KPIs - Settlements
     settlements_stats = DriverSettlement.objects.aggregate(
         pending_count=Count('id', filter=Q(status__in=['DRAFT', 'CALCULATED', 'APPROVED'])),
         pending_amount=Sum('net_amount', filter=Q(status__in=['DRAFT', 'CALCULATED', 'APPROVED'])),
-        paid_this_month=Sum('net_amount', filter=Q(status='PAID', paid_date__gte=first_day_month)),
+        paid_this_month=Sum('net_amount', filter=Q(status='PAID', paid_at__gte=first_day_month)),
         avg_success_rate=Avg('success_rate', filter=Q(created_at__gte=first_day_month)),
     )
     

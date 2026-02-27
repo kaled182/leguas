@@ -68,9 +68,71 @@
 
       <a href="{% url 'paack_dashboard:dashboard_paack' %}" class="nav-link flex items-center gap-3 p-3 rounded-lg transition-all duration-200 group text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-100">
         <i data-lucide="file-text" class="w-5 h-5 text-current group-hover:scale-110 transition-transform flex-shrink-0"></i>
-        <span class="sidebar-text font-medium">Relatórios</span>
-        <span class="ml-auto text-xs bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 px-2 py-1 rounded-full">Em breve</span>
+        <span class="sidebar-text font-medium">Correção Manual</span>
       </a>
+
+      <!-- Relatórios com submenu -->
+      <div class="reports-menu">
+        <button id="reportsToggle" class="nav-link flex items-center gap-3 p-3 rounded-lg transition-all duration-200 group w-full text-left text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:text-primary-600 dark:hover:text-primary-400">
+          <i data-lucide="bar-chart-3" class="w-5 h-5 text-current group-hover:scale-110 transition-transform flex-shrink-0"></i>
+          <span class="sidebar-text font-medium">Relatórios & Analytics</span>
+          <i data-lucide="chevron-down" id="reportsChevron" class="w-4 h-4 ml-auto transition-transform"></i>
+        </button>
+        
+        <!-- Submenu de Relatórios -->
+        <div id="reportsSubmenu" class="ml-8 mt-1 space-y-1 hidden">
+          <a href="{% url 'analytics:dashboard' %}" class="flex items-center gap-2 p-2 text-sm rounded-lg transition-colors text-gray-600 dark:text-gray-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-600 dark:hover:text-primary-400">
+            <i data-lucide="layout" class="w-4 h-4"></i>
+            <span>Dashboard Geral</span>
+          </a>
+          
+          <a href="{% url 'analytics:metrics_dashboard' %}" class="flex items-center gap-2 p-2 text-sm rounded-lg transition-colors text-gray-600 dark:text-gray-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-600 dark:hover:text-primary-400">
+            <i data-lucide="trending-up" class="w-4 h-4"></i>
+            <span>Métricas Detalhadas</span>
+          </a>
+          
+          <a href="{% url 'analytics:drivers_dashboard' %}" class="flex items-center gap-2 p-2 text-sm rounded-lg transition-colors text-gray-600 dark:text-gray-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-600 dark:hover:text-primary-400">
+            <i data-lucide="user-check" class="w-4 h-4"></i>
+            <span>Performance Motoristas</span>
+          </a>
+          
+          <a href="{% url 'analytics:incidents_report' %}" class="flex items-center gap-2 p-2 text-sm rounded-lg transition-colors text-gray-600 dark:text-gray-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-600 dark:hover:text-primary-400">
+            <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+            <span>Incidências</span>
+          </a>
+          
+          <a href="{% url 'analytics:vehicles_report' %}" class="flex items-center gap-2 p-2 text-sm rounded-lg transition-colors text-gray-600 dark:text-gray-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-600 dark:hover:text-primary-400">
+            <i data-lucide="car" class="w-4 h-4"></i>
+            <span>Performance Veículos</span>
+          </a>
+
+          <a href="{% url 'analytics:forecasts_dashboard' %}" class="flex items-center gap-2 p-2 text-sm rounded-lg transition-colors text-gray-600 dark:text-gray-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-600 dark:hover:text-primary-400">
+            <i data-lucide="calendar-clock" class="w-4 h-4"></i>
+            <span>Previsões de Volume</span>
+          </a>
+
+          <a href="{% url 'analytics:alerts_dashboard' %}" class="flex items-center gap-2 p-2 text-sm rounded-lg transition-colors text-gray-600 dark:text-gray-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-600 dark:hover:text-primary-400">
+            <i data-lucide="bell" class="w-4 h-4"></i>
+            <span>Alertas de Performance</span>
+          </a>
+        </div>
+      </div>
+
+      <script>
+        document.addEventListener('DOMContentLoaded', function() {
+          const reportsToggle = document.getElementById('reportsToggle');
+          const reportsSubmenu = document.getElementById('reportsSubmenu');
+          const reportsChevron = document.getElementById('reportsChevron');
+          
+          if (reportsToggle) {
+            reportsToggle.addEventListener('click', function(e) {
+              e.preventDefault();
+              reportsSubmenu.classList.toggle('hidden');
+              reportsChevron.classList.toggle('rotate-180');
+            });
+          }
+        });
+      </script>
 
       <a href="{% url 'system_config:index' %}" class="nav-link flex items-center gap-3 p-3 rounded-lg transition-all duration-200 group text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-100">
         <i data-lucide="settings" class="w-5 h-5 text-current group-hover:scale-110 transition-transform flex-shrink-0"></i>

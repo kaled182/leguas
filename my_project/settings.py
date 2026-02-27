@@ -92,6 +92,9 @@ INSTALLED_APPS = [
     'fleet_management',  # Gestão de Frota
     'pricing',  # Tarifação e Zonas Postais
     'route_allocation',  # Atribuição de Rotas e Turnos
+    
+    # Analytics (Fase 2)
+    'analytics',  # Métricas, Forecasting e Dashboards
 ]
 
 # Middleware

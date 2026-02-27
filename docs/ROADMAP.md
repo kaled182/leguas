@@ -65,8 +65,7 @@ Transformar o sistema atual focado em Paack numa **plataforma multi-partner de g
 - 🟢 OrderAdapter implementado
 - 🟢 Validation automática ativada
 - 🟢 Logging de operações ativado
-- � Analytics app criada (forecasting e métricas)
-- �🟡 Monitoramento diário configurado (aguardando 1-2 semanas)
+- � Analytics app criada (forecasting e métricas)- 🟢 Dashboards de analytics completos (4 dashboards + exportações)- �🟡 Monitoramento diário configurado (aguardando 1-2 semanas)
 - ⚪ USE_GENERIC_ORDERS_READ = False (ainda lê do sistema antigo)
 
 **Próximo passo**: Monitorar consistência por 1-2 semanas antes de ativar leitura do novo sistema.

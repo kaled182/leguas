@@ -242,7 +242,11 @@ def alerts_dashboard(request):
     alerts_query = PerformanceAlert.objects.all()
     
     if status_filter:
-        alerts_query = alerts_query.filter(status=status_filter)
+        # Map status to is_acknowledged field
+        if status_filter == 'ACTIVE':
+            alerts_query = alerts_query.filter(is_acknowledged=False)
+        elif status_filter == 'RESOLVED':
+            alerts_query = alerts_query.filter(is_acknowledged=True)
     if severity_filter:
         alerts_query = alerts_query.filter(severity=severity_filter)
     if alert_type_filter:
@@ -252,11 +256,11 @@ def alerts_dashboard(request):
     
     # Estatísticas de alertas
     alert_stats = {
-        'total_active': PerformanceAlert.objects.filter(status='ACTIVE').count(),
-        'total_resolved': PerformanceAlert.objects.filter(status='RESOLVED').count(),
-        'critical': PerformanceAlert.objects.filter(severity='CRITICAL', status='ACTIVE').count(),
-        'warning': PerformanceAlert.objects.filter(severity='WARNING', status='ACTIVE').count(),
-        'info': PerformanceAlert.objects.filter(severity='INFO', status='ACTIVE').count(),
+        'total_active': PerformanceAlert.objects.filter(is_acknowledged=False).count(),
+        'total_resolved': PerformanceAlert.objects.filter(is_acknowledged=True).count(),
+        'critical': PerformanceAlert.objects.filter(severity='CRITICAL', is_acknowledged=False).count(),
+        'warning': PerformanceAlert.objects.filter(severity='WARNING', is_acknowledged=False).count(),
+        'info': PerformanceAlert.objects.filter(severity='INFO', is_acknowledged=False).count(),
     }
     
     # Alertas por tipo
@@ -419,8 +423,11 @@ def vehicles_performance_report(request):
     vehicles = Vehicle.objects.filter(
         status='ACTIVE'
     ).annotate(
-        # Contar entregas através de shifts
-        total_shifts=Count('assignments__shift', distinct=True),
+        # Contar atribuições (assignments)
+        total_shifts=Count('assignments', distinct=True, filter=Q(
+            assignments__date__gte=start_date,
+            assignments__date__lte=end_date
+        )),
         # Custo total de manutenções
         maintenance_cost=Sum(
             'maintenances__cost',
@@ -431,7 +438,7 @@ def vehicles_performance_report(request):
         ),
         # Custo de incidentes
         incident_cost=Sum(
-            'incidents__cost',
+            'incidents__fine_amount',
             filter=Q(
                 incidents__incident_date__gte=start_date,
                 incidents__incident_date__lte=end_date

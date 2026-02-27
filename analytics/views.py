@@ -15,7 +15,6 @@ from .models import DailyMetrics, VolumeForecast, PerformanceAlert, DriverPerfor
 from core.models import Partner
 from orders_manager.models import Order, OrderIncident
 from fleet_management.models import Vehicle, VehicleIncident
-from drivers_app.models import Driver
 
 
 @login_required

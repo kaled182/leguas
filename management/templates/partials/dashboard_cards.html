@@ -1,0 +1,23 @@
+<!--
+  Cards de métricas principais do dashboard
+  - Design moderno, clean e profissional
+  - Responsivo com grid flexível
+  - Cores otimizadas para modo claro/escuro
+-->
+<section class="dashboard-metrics" aria-label="Métricas principais">
+  <!-- Título da seção -->
+  <div class="mb-6">
+    <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Métricas do Dashboard</h2>
+  </div>
+  
+  <div class="dashboard-cards-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 transition-opacity duration-300" id="dashboard-grid">
+    {% include 'partials/dashboard_card.html' with card_id="total-orders" icon="package" color="blue" title="Total de Pedidos" value=total_orders description=total_orders_description %}
+    {% include 'partials/dashboard_card.html' with card_id="to-attempt" icon="clock" color="amber" title="Por Tentar" value=to_attempt description="Pendentes de entrega" %}
+    {% include 'partials/dashboard_card.html' with card_id="delivered" icon="check-circle" color="emerald" title="Entregues" value=delivered description="Pedidos concluídos" %}
+    {% include 'partials/dashboard_card.html' with card_id="failed" icon="x-circle" color="red" title="Falhadas" value=failed description="Pedidos com falha" %}
+    {% include 'partials/dashboard_card.html' with card_id="total-recovered" icon="refresh-cw" color="cyan" title="Recuperadas" value=total_recovered description="Pedidos recuperados" %}
+    {% include 'partials/dashboard_card.html' with card_id="success-rate" icon="trending-up" color="violet" title="Taxa de Sucesso" value=success_rate description="Performance do dia" %}
+    {% include 'partials/dashboard_card.html' with card_id="best-driver-today" icon="crown" color="yellow" title="Melhor Motorista" value=best_driver_today description=is_today|yesno:"Destaque de hoje,Destaque da data" %}
+    {% include 'partials/dashboard_card.html' with card_id="week-efficiency" icon="target" color="indigo" title="Eficiência Semanal" value=week_efficiency description="Média das taxas diárias" %}
+  </div>
+</section>

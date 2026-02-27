@@ -1,0 +1,111 @@
+/* 
+ * Arquivo CSS principal para o app Management
+ * Baseado em Tailwind CSS com estilos adicionais específicos 
+ */
+
+/* Estilos de transições para o sidebar */
+.sidebar-text {
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+/* Estilos para o modo escuro ao usar a classe dark */
+.dark body {
+  @apply bg-gray-900 text-gray-100;
+}
+
+/* Estilos para botões de filtro do gráfico */
+.chart-filter {
+  @apply transition-colors duration-200;
+}
+
+.chart-filter.active {
+  @apply bg-indigo-600 text-white dark:bg-indigo-500;
+}
+
+/* Estilos para barras de ações em lote */
+.bulk-action-btn {
+  @apply inline-flex items-center py-1.5 px-3 border border-transparent rounded-md text-sm font-medium text-white bg-indigo-700 hover:bg-indigo-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors;
+}
+
+.bulk-cancel-btn {
+  @apply py-1.5 px-3 text-sm text-white font-medium focus:outline-none hover:underline transition-colors;
+}
+
+/* Animações personalizadas */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-in-out forwards;
+}
+
+/* Tooltip customizado */
+.tooltip {
+  @apply invisible absolute z-10 py-1 px-2 bg-gray-900 text-white text-xs rounded-md opacity-0 transition-opacity duration-200;
+}
+
+.has-tooltip:hover .tooltip {
+  @apply visible opacity-100;
+}
+
+/* Melhorar spinner de loading */
+.loading-spinner {
+  @apply animate-spin h-5 w-5 text-white;
+}
+
+/* Melhorar checkbox estilizado */
+.checkbox-custom {
+  @apply h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700;
+}
+
+/* Estilos para indicadores de status */
+.status-pill {
+  @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+}
+
+.status-active {
+  @apply bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400;
+}
+
+.status-inactive {
+  @apply bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400;
+}
+
+.status-pending {
+  @apply bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400;
+}
+
+/* Customizar scrollbar para melhor aparência */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-gray-100 dark:bg-gray-800;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 dark:bg-gray-600 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-400 dark:bg-gray-500;
+}
+
+/* Estilos para modais */
+.modal-backdrop {
+  @apply fixed inset-0 bg-black bg-opacity-50 transition-opacity;
+}
+
+.modal-content {
+  @apply inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full;
+}

@@ -1,0 +1,202 @@
+{% extends 'management/base.html' %}
+{% load static %}
+
+{% block title %}Dashboard - Monitoramento de Drivers{% endblock %}
+{% block sidebar_title %}Dashboard{% endblock %}
+
+{% block content %}
+<!-- Loading overlay -->
+<div id="dashboard-loading" class="fixed inset-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+  <div class="text-center">
+    <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mb-4"></div>
+    <p class="text-gray-600 dark:text-gray-400 font-medium">Carregando dados...</p>
+  </div>
+</div>
+
+<div class="max-w-7xl mx-auto space-y-8">
+  <!-- Header do Dashboard -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 fade-in">
+    {% include 'partials/dashboard_header.html' %}
+    {% include 'partials/dashboard_status_indicator.html' %}
+  </div>
+  
+  <!-- Cards de Métricas -->
+  <div class="slide-in">
+    {% include 'partials/dashboard_cards.html' %}
+  </div>
+  
+  <!-- Gráfico e Top Drivers -->
+  <div class="grid grid-cols-1 xl:grid-cols-2 gap-8">
+    <!-- Gráfico de Performance -->
+    <div class="xl:col-span-1 scale-in">
+      {% include 'partials/dashboard_success_chart.html' %}
+    </div>
+    
+    <!-- Top Drivers -->
+    <div class="xl:col-span-1 scale-in">
+      {% include 'partials/dashboard_top_drivers.html' %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Dados JSON para o gráfico -->
+<script id="chart-data" type="application/json">
+{
+  "driver_success_chart": {% if driver_success_chart_json %}{{ driver_success_chart_json|safe }}{% else %}[]{% endif %}
+}
+</script>
+
+<script src="{% static 'management/js/main.js' %}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Ocultar loading após página carregar
+    const loadingOverlay = document.getElementById('dashboard-loading');
+    if (loadingOverlay) {
+        loadingOverlay.classList.add('hidden');
+    }
+    
+    // Inicializar dashboard
+    if (typeof initDashboard === 'function') {
+        initDashboard();
+    }
+    
+    // Garantir que os ícones estão atualizados
+    if (window.lucide) {
+        lucide.createIcons();
+    }
+    
+    // Criar gráfico de sucesso dos motoristas
+    setTimeout(() => {
+        createDriversSuccessChart();
+    }, 100);
+    
+    // Adicionar loading ao mudar data
+    const dateFilter = document.getElementById('date-filter');
+    if (dateFilter) {
+        dateFilter.addEventListener('change', function() {
+            if (loadingOverlay) {
+                loadingOverlay.classList.remove('hidden');
+            }
+        });
+    }
+    
+    // Mostrar notificação de boas-vindas apenas uma vez por sessão
+    if (!sessionStorage.getItem('dashboard-welcomed')) {
+        setTimeout(() => {
+            if (typeof showNotification === 'function') {
+                showNotification('Dashboard carregado com sucesso!', 'success');
+                sessionStorage.setItem('dashboard-welcomed', 'true');
+            }
+        }, 500);
+    }
+});
+
+function createDriversSuccessChart() {
+    const chartCanvas = document.getElementById('driversSuccessChart');
+    if (!chartCanvas) {
+        console.log('Canvas do gráfico não encontrado');
+        return;
+    }
+    
+    if (typeof Chart === 'undefined') {
+        console.log('Chart.js não disponível');
+        return;
+    }
+    
+    // Obter dados do JSON
+    const chartDataScript = document.getElementById('chart-data');
+    let chartData;
+    try {
+        chartData = JSON.parse(chartDataScript.textContent);
+    } catch (e) {
+        console.log('Erro ao parsear dados do gráfico:', e);
+        return;
+    }
+    
+    const driversData = chartData.driver_success_chart || [];
+    console.log('Dados do gráfico:', driversData);
+    
+    if (driversData.length === 0) {
+        console.log('Nenhum dado para o gráfico');
+        chartCanvas.style.display = 'none';
+        return;
+    }
+    
+    // Preparar dados para o gráfico
+    const labels = driversData.map(d => d.name);
+    const deliveriesData = driversData.map(d => d.deliveries);
+    const failsData = driversData.map(d => d.fails);
+    
+    console.log('Labels:', labels);
+    console.log('Entregas:', deliveriesData);
+    console.log('Falhas:', failsData);
+    
+    // Detectar tema atual
+    const isDark = document.documentElement.classList.contains('dark');
+    const textColor = isDark ? '#e5e7eb' : '#4b5563';
+    const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+    
+    // Configurar gráfico
+    try {
+        new Chart(chartCanvas, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Entregas',
+                        data: deliveriesData,
+                        backgroundColor: 'rgba(34, 197, 94, 0.8)',
+                        borderColor: 'rgba(34, 197, 94, 1)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Falhas',
+                        data: failsData,
+                        backgroundColor: 'rgba(239, 68, 68, 0.8)',
+                        borderColor: 'rgba(239, 68, 68, 1)',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: textColor
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        ticks: {
+                            color: textColor,
+                            maxRotation: 45
+                        },
+                        grid: {
+                            color: gridColor
+                        }
+                    },
+                    y: {
+                        ticks: {
+                            color: textColor
+                        },
+                        grid: {
+                            color: gridColor
+                        },
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+        console.log('Gráfico criado com sucesso!');
+    } catch (error) {
+        console.error('Erro ao criar gráfico:', error);
+    }
+}
+</script>
+{% endblock %}

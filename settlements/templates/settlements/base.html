@@ -1,0 +1,321 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Settlements - {% block subtitle %}{% endblock %}{% endblock %}
+
+{% block extra_css %}
+<style>
+  .settlements-nav {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  }
+  
+  .nav-link {
+    @apply px-4 py-2 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-all duration-200;
+  }
+  
+  .nav-link.active {
+    @apply bg-white/20 text-white font-medium;
+  }
+  
+  .card {
+    @apply bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700;
+  }
+  
+  .card-header {
+    @apply border-b border-gray-200 dark:border-gray-700 px-6 py-4;
+  }
+  
+  .card-body {
+    @apply p-6;
+  }
+  
+  .card-title {
+    @apply text-xl font-semibold text-gray-900 dark:text-white;
+  }
+  
+  .filters-section {
+    @apply bg-gray-50 dark:bg-gray-900 rounded-lg p-4 mb-6;
+  }
+  
+  .form-group {
+    @apply mb-4;
+  }
+  
+  .form-label {
+    @apply block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1;
+  }
+  
+  .form-control {
+    @apply w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white;
+  }
+  
+  .btn {
+    @apply inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors;
+  }
+  
+  .btn-secondary {
+    @apply bg-gray-600 hover:bg-gray-700;
+  }
+  
+  .summary-box {
+    @apply bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-700 rounded-lg p-4 border-l-4 border-blue-500;
+  }
+  
+  .summary-value {
+    @apply text-2xl font-bold text-gray-900 dark:text-white;
+  }
+  
+  .summary-label {
+    @apply text-sm text-gray-600 dark:text-gray-400 mt-1;
+  }
+  
+  .data-table {
+    @apply min-w-full divide-y divide-gray-200 dark:divide-gray-700;
+  }
+  
+  .data-table th {
+    @apply px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-700;
+  }
+  
+  .data-table td {
+    @apply px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100;
+  }
+  
+  .data-table tbody tr:hover {
+    @apply bg-gray-50 dark:bg-gray-700;
+  }
+  
+  .loading {
+    @apply animate-pulse;
+  }
+  
+  .grid-cols-stats {
+    @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <!-- Navigation -->
+  <div class="settlements-nav rounded-lg p-4 mb-6">
+    <nav class="flex flex-wrap gap-2">
+      <a href="{% url 'settlements-summary' %}" class="nav-link {% if '/settlements/summary' in request.path %}active{% endif %}">
+        📊 Resumo
+      </a>
+      <a href="{% url 'settlements-drivers-rank' %}" class="nav-link {% if '/settlements/drivers-rank' in request.path %}active{% endif %}">
+        🏆 Ranking
+      </a>
+      <a href="{% url 'settlements-runs' %}" class="nav-link {% if '/settlements/runs' in request.path %}active{% endif %}">
+        📋 Corridas
+      </a>
+      <a href="{% url 'settlements-payouts' %}" class="nav-link {% if '/settlements/payouts' in request.path %}active{% endif %}">
+        💰 Pagamentos
+      </a>
+      <a href="{% url 'plans-list' %}" class="nav-link {% if '/settlements/plans' in request.path %}active{% endif %}">
+        📋 Planos
+      </a>
+    </nav>
+  </div>
+  
+  <!-- Content -->
+  {% block settlements_content %}{% endblock %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Data de hoje formatada como YYYY-MM-DD
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    const formattedToday = `${year}-${month}-${day}`;
+    
+    // Data de 30 dias atrás formatada como YYYY-MM-DD
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(today.getDate() - 30);
+    const yearAgo = thirtyDaysAgo.getFullYear();
+    const monthAgo = String(thirtyDaysAgo.getMonth() + 1).padStart(2, '0');
+    const dayAgo = String(thirtyDaysAgo.getDate()).padStart(2, '0');
+    const formattedThirtyDaysAgo = `${yearAgo}-${monthAgo}-${dayAgo}`;
+    
+    // Configurar datas padrão nos filtros se estiverem vazios
+    const dateFromInput = document.getElementById('date-from');
+    const dateToInput = document.getElementById('date-to');
+    
+    if (dateFromInput && !dateFromInput.value) {
+      dateFromInput.value = formattedThirtyDaysAgo;
+    }
+    
+    if (dateToInput && !dateToInput.value) {
+      dateToInput.value = formattedToday;
+    }
+  });
+  
+  // Utilitários globais
+  function formatCurrency(value) {
+    return new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(value);
+  }
+  
+  function formatPercent(value) {
+    return `${value}%`;
+  }
+  
+  function formatDate(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('pt-PT');
+  }
+  
+  function showLoading() {
+    const loading = document.getElementById('loading-indicator');
+    if (loading) loading.classList.remove('hidden');
+  }
+  
+  function hideLoading() {
+    const loading = document.getElementById('loading-indicator');
+    if (loading) loading.classList.add('hidden');
+  }
+  
+  function applyFilters() {
+    const dateFrom = document.getElementById('date-from')?.value || '';
+    const dateTo = document.getElementById('date-to')?.value || '';
+    const driver = document.getElementById('driver')?.value || '';
+    const client = document.getElementById('client')?.value || '';
+    const area = document.getElementById('area')?.value || '';
+    
+    let url = window.location.pathname + '?';
+    if (dateFrom) url += `date_from=${dateFrom}&`;
+    if (dateTo) url += `date_to=${dateTo}&`;
+    if (driver) url += `driver=${encodeURIComponent(driver)}&`;
+    if (client) url += `client=${encodeURIComponent(client)}&`;
+    if (area) url += `area=${encodeURIComponent(area)}&`;
+    
+    window.location.href = url.slice(0, -1); // Remove o último & ou ?
+  }
+  
+  function downloadCSV() {
+    const dateFrom = document.getElementById('date-from')?.value || '';
+    const dateTo = document.getElementById('date-to')?.value || '';
+    const client = document.getElementById('client')?.value || '';
+    const area = document.getElementById('area')?.value || '';
+    
+    let url = '{% url "settlements-payouts-csv" %}?';
+    if (dateFrom) url += `date_from=${dateFrom}&`;
+    if (dateTo) url += `date_to=${dateTo}&`;
+    if (client) url += `client=${encodeURIComponent(client)}&`;
+    if (area) url += `area=${encodeURIComponent(area)}&`;
+    
+    window.location.href = url.slice(0, -1);
+  }
+  
+  // Função para carregar dados de resumo
+  function loadSummaryData() {
+    const dateFrom = document.getElementById('date-from')?.value || '';
+    const dateTo = document.getElementById('date-to')?.value || '';
+    const driver = document.getElementById('driver')?.value || '';
+    const client = document.getElementById('client')?.value || '';
+    
+    let url = '{% url "settlements-summary" %}?';
+    if (dateFrom) url += `date_from=${dateFrom}&`;
+    if (dateTo) url += `date_to=${dateTo}&`;
+    if (driver) url += `driver=${encodeURIComponent(driver)}&`;
+    if (client) url += `client=${encodeURIComponent(client)}&`;
+    
+    showLoading();
+    
+    fetch(url, {
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    })
+      .then(response => response.json())
+      .then(data => {
+        document.getElementById('runs').innerText = data.runs || 0;
+        document.getElementById('qtd_pact').innerText = data.qtd_pact || 0;
+        document.getElementById('qtd_entregue').innerText = data.qtd_entregue || 0;
+        document.getElementById('taxa_sucesso').innerText = formatPercent(data.taxa_sucesso_pct || 0);
+        document.getElementById('bruto').innerText = formatCurrency(data.bruto || 0);
+        
+        const descontos = (data.gasoleo || 0) + (data.desconto_tickets || 0) + (data.rec_liq_tickets || 0) + (data.outros || 0);
+        document.getElementById('descontos').innerText = formatCurrency(descontos);
+        
+        document.getElementById('liquido').innerText = formatCurrency(data.liquido || 0);
+        document.getElementById('avg_pct').innerText = formatCurrency(data.avg_liq_por_pacote || 0);
+      })
+      .catch(error => {
+        console.error('Erro ao carregar dados:', error);
+        // Mostrar valores em branco em caso de erro
+        document.getElementById('runs').innerText = '-';
+        document.getElementById('qtd_pact').innerText = '-';
+        document.getElementById('qtd_entregue').innerText = '-';
+        document.getElementById('taxa_sucesso').innerText = '-%';
+        document.getElementById('bruto').innerText = '€0,00';
+        document.getElementById('descontos').innerText = '€0,00';
+        document.getElementById('liquido').innerText = '€0,00';
+        document.getElementById('avg_pct').innerText = '€0,00';
+      })
+      .finally(() => {
+        hideLoading();
+      });
+  }
+  
+  // Função para carregar ranking
+  function loadRankingData() {
+    const dateFrom = document.getElementById('date-from')?.value || '';
+    const dateTo = document.getElementById('date-to')?.value || '';
+    
+    let url = '{% url "settlements-drivers-rank" %}?';
+    if (dateFrom) url += `date_from=${dateFrom}&`;
+    if (dateTo) url += `date_to=${dateTo}&`;
+    
+    const tbody = document.getElementById('ranking-tbody');
+    if (!tbody) return;
+    
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-8">Carregando dados...</td></tr>';
+    
+    fetch(url, {
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    })
+      .then(response => response.json())
+      .then(data => {
+        tbody.innerHTML = '';
+        
+        if (data.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" class="text-center py-8 text-gray-500">Nenhum dado encontrado</td></tr>';
+          return;
+        }
+        
+        data.forEach((driver, index) => {
+          const row = document.createElement('tr');
+          const position = index + 1;
+          let positionIcon = '🥉';
+          if (position === 1) positionIcon = '🥇';
+          else if (position === 2) positionIcon = '🥈';
+          
+          row.innerHTML = `
+            <td class="font-bold">${positionIcon} ${position}º</td>
+            <td class="font-medium">${driver.driver}</td>
+            <td>${driver.entregues}</td>
+            <td>${formatPercent(driver.taxa_media)}</td>
+            <td class="font-semibold text-green-600">${formatCurrency(driver.liquido)}</td>
+            <td>
+              <a href="{% url 'settlements-runs' %}?driver=${encodeURIComponent(driver.driver)}&date_from=${dateFrom}&date_to=${dateTo}" 
+                 class="text-blue-600 hover:text-blue-800 font-medium">Ver Corridas</a>
+            </td>
+          `;
+          
+          tbody.appendChild(row);
+        });
+      })
+      .catch(error => {
+        console.error('Erro ao carregar dados:', error);
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-8 text-red-500">Erro ao carregar dados</td></tr>';
+      });
+  }
+</script>
+{% endblock %}

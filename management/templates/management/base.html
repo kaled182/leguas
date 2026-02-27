@@ -1,0 +1,424 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <title>
+        {% block title %}Management Dashboard{% endblock %} - Leguas Franzinas
+    </title>
+
+    <!-- Inicialização do tema ANTES do Tailwind -->
+    <script>
+      // Aplicar tema imediatamente para evitar flash
+      const savedTheme = localStorage.getItem('management-theme');
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      
+      if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    </script>
+
+    <!-- Fontes modernas -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            fontFamily: {
+              'sans': ['Inter', 'Segoe UI', 'Arial', 'sans-serif'],
+            },
+            colors: {
+              primary: {
+                50: '#eff6ff',
+                100: '#dbeafe',
+                200: '#bfdbfe',
+                300: '#93c5fd',
+                400: '#60a5fa',
+                500: '#3b82f6',
+                600: '#2563eb',
+                700: '#1d4ed8',
+                800: '#1e40af',
+                900: '#1e3a8a',
+              },
+              success: {
+                50: '#ecfdf5',
+                100: '#d1fae5',
+                200: '#a7f3d0',
+                300: '#6ee7b7',
+                400: '#34d399',
+                500: '#10b981',
+                600: '#059669',
+                700: '#047857',
+                800: '#065f46',
+                900: '#064e3b',
+              },
+              warning: {
+                50: '#fffbeb',
+                100: '#fef3c7',
+                200: '#fde68a',
+                300: '#fcd34d',
+                400: '#fbbf24',
+                500: '#f59e0b',
+                600: '#d97706',
+                700: '#b45309',
+                800: '#92400e',
+                900: '#78350f',
+              },
+              danger: {
+                50: '#fef2f2',
+                100: '#fee2e2',
+                200: '#fecaca',
+                300: '#fca5a5',
+                400: '#f87171',
+                500: '#ef4444',
+                600: '#dc2626',
+                700: '#b91c1c',
+                800: '#991b1b',
+                900: '#7f1d1d',
+              }
+            },
+            animation: {
+              'slide-in': 'slideIn 0.3s ease-out',
+              'fade-in': 'fadeIn 0.2s ease-out',
+              'scale-in': 'scaleIn 0.2s ease-out',
+            },
+            transitionProperty: {
+              'sidebar': 'transform, opacity, visibility',
+            }
+          },
+        },
+      }
+    </script>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{% static 'management/css/management.css' %}" />
+    
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚚</text></svg>">
+
+    {% block extra_head %}
+    {% endblock %}
+</head>
+<body class="h-full bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-sans transition-colors duration-300 antialiased">
+    
+    <!-- Dark Mode Toggle -->
+    <div class="fixed top-4 right-4 z-50">
+        <button
+            id="darkModeToggle"
+            class="group relative w-12 h-12 bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full shadow-lg hover:shadow-xl border border-gray-200 dark:border-gray-700 transition-all duration-300 flex items-center justify-center"
+            title="Alternar tema"
+        >
+            <i data-lucide="sun" class="sun-icon w-5 h-5 text-amber-500 transition-all duration-300 absolute dark:opacity-0 dark:rotate-90"></i>
+            <i data-lucide="moon" class="moon-icon w-5 h-5 text-indigo-400 transition-all duration-300 absolute opacity-0 rotate-90 dark:opacity-100 dark:rotate-0"></i>
+        </button>
+    </div>
+    
+    <!-- Área de Notificações -->
+    <div id="notification-area" class="fixed top-4 right-20 z-40 space-y-3 max-w-sm"></div>
+
+    <div class="min-h-screen flex bg-gray-50 dark:bg-gray-900">
+      <!-- Overlay para mobile -->
+      <div id="sidebar-overlay" class="fixed inset-0 bg-black/50 dark:bg-black/70 z-30 lg:hidden hidden transition-opacity duration-300 backdrop-blur-sm"></div>
+      
+      <!-- Sidebar -->
+      {% include 'management/partials/sidebar.html' %}
+      
+      <!-- Botão de toggle da sidebar (mobile) -->
+      <button id="sidebar-toggle" class="fixed top-4 left-4 z-40 lg:hidden bg-primary-600 hover:bg-primary-700 text-white p-3 rounded-lg shadow-lg transition-colors duration-200">
+        <i data-lucide="menu" class="w-5 h-5"></i>
+      </button>
+
+      <!-- Conteúdo principal -->
+      <div class="flex-1 flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900">
+        <main class="flex-1 p-4 lg:p-8">
+          {% block content %}{% endblock %}
+        </main>
+        
+        <!-- Footer opcional -->
+        <footer class="mt-auto py-4 px-4 lg:px-8 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+          <div class="text-center text-sm text-gray-500 dark:text-gray-400">
+            © 2025 Leguas Franzinas - Sistema de Monitoramento
+          </div>
+        </footer>
+      </div>
+    </div>
+
+    <!-- Scripts -->
+    <script>
+      // Inicializar ícones
+      lucide.createIcons();
+      
+      // Sidebar toggle logic
+      const sidebar = document.getElementById('sidebar');
+      const sidebarToggle = document.getElementById('sidebar-toggle');
+      const sidebarClose = document.getElementById('sidebar-close');
+      const sidebarOverlay = document.getElementById('sidebar-overlay');
+      
+      function openSidebar() {
+      sidebar?.classList.remove('-translate-x-full');
+      sidebarOverlay?.classList.remove('hidden');
+      setTimeout(() => {
+        sidebarOverlay?.classList.remove('opacity-0');
+      }, 10);
+      }
+      
+      function closeSidebar() {
+      sidebar?.classList.add('-translate-x-full');
+      sidebarOverlay?.classList.add('opacity-0');
+      setTimeout(() => {
+        sidebarOverlay?.classList.add('hidden');
+      }, 300);
+      }
+
+      // ===================== SYNC BUTTON =====================
+      function getCookie(name) {
+        // Primeiro tenta pegar do meta tag
+        const metaToken = document.querySelector('meta[name="csrf-token"]');
+        if (metaToken && name === 'csrftoken') {
+          console.log('🔑 CSRF token obtido do meta tag');
+          return metaToken.getAttribute('content');
+        }
+        
+        // Se não encontrar, tenta pegar do cookie
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+          const cookies = document.cookie.split(';');
+          for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+              cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+              console.log('🔑 CSRF token obtido do cookie');
+              break;
+            }
+          }
+        }
+        
+        if (!cookieValue) {
+          console.warn('⚠️ CSRF token não encontrado!');
+        }
+        
+        return cookieValue;
+      }
+
+      function updateSyncButtonState(button, isLoading) {
+        if (!button) return;
+        
+        const icon = button.querySelector('[data-lucide]');
+        const text = button.querySelector('.sync-text');
+        
+        if (isLoading) {
+          button.disabled = true;
+          button.classList.add('opacity-75', 'cursor-not-allowed');
+          if (icon) {
+            icon.setAttribute('data-lucide', 'loader-2');
+            icon.classList.add('animate-spin');
+          }
+          if (text) text.textContent = 'Sincronizando...';
+        } else {
+          button.disabled = false;
+          button.classList.remove('opacity-75', 'cursor-not-allowed');
+          if (icon) {
+            icon.setAttribute('data-lucide', 'refresh-cw');
+            icon.classList.remove('animate-spin');
+          }
+          if (text) text.textContent = 'Sincronizar';
+          lucide.createIcons();
+        }
+      }
+
+      function performSync() {
+        console.log('🔄 Iniciando sincronização...');
+        
+        const syncBtn = document.getElementById('syncButton');
+        const syncBtnMobile = document.getElementById('syncButtonMobile');
+        
+        // Verificar se os botões existem
+        console.log('Botões encontrados:', { syncBtn: !!syncBtn, syncBtnMobile: !!syncBtnMobile });
+        
+        // Atualizar estado dos botões
+        updateSyncButtonState(syncBtn, true);
+        updateSyncButtonState(syncBtnMobile, true);
+        
+        showNotification('Iniciando sincronização...', 'info');
+        
+        fetch('/paack/sync/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+          },
+          body: JSON.stringify({ 
+            force_refresh: true,
+            timestamp: new Date().getTime()
+          })
+        })
+        .then(response => {
+          console.log('📡 Resposta recebida:', response.status, response.statusText);
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+          return response.json();
+        })
+        .then(result => {
+          console.log('✅ Resultado da sincronização:', result);
+          if (result.success) {
+            const message = result.message || `Sincronização concluída! ${result.new_orders || 0} novos pedidos processados.`;
+            showNotification(message, 'success');
+            
+            // Recarregar página após delay
+            setTimeout(() => {
+              console.log('🔄 Recarregando página...');
+              window.location.reload();
+            }, 2000);
+          } else {
+            throw new Error(result.error || result.message || 'Falha na sincronização');
+          }
+        })
+        .catch(error => {
+          console.error('❌ Erro na sincronização:', error);
+          showNotification(
+            `Erro na sincronização: ${error.message}`, 
+            'error',
+            8000
+          );
+        })
+        .finally(() => {
+          console.log('🔄 Restaurando estado dos botões...');
+          // Restaurar estado dos botões
+          updateSyncButtonState(syncBtn, false);
+          updateSyncButtonState(syncBtnMobile, false);
+        });
+      }
+
+      function initSyncButton() {
+        console.log('🚀 Inicializando botão de sincronização...');
+        
+        const syncBtn = document.getElementById('syncButton');
+        const syncBtnMobile = document.getElementById('syncButtonMobile');
+        
+        console.log('Botões encontrados na inicialização:', { 
+          syncBtn: !!syncBtn, 
+          syncBtnMobile: !!syncBtnMobile 
+        });
+        
+        if (syncBtn) {
+          console.log('✅ Adicionando event listener ao botão principal');
+          syncBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            console.log('🖱️ Botão de sincronização clicado!');
+            performSync();
+          });
+        } else {
+          console.warn('⚠️ Botão de sincronização principal não encontrado');
+        }
+        
+        if (syncBtnMobile) {
+          console.log('✅ Adicionando event listener ao botão mobile');
+          syncBtnMobile.addEventListener('click', function(e) {
+            e.preventDefault();
+            console.log('🖱️ Botão de sincronização mobile clicado!');
+            performSync();
+          });
+        } else {
+          console.log('ℹ️ Botão de sincronização mobile não encontrado (normal se não houver)');
+        }
+      }
+      
+      // Event listeners
+      sidebarToggle?.addEventListener('click', openSidebar);
+      sidebarClose?.addEventListener('click', closeSidebar);
+      sidebarOverlay?.addEventListener('click', closeSidebar);
+      
+      // Fechar sidebar ao redimensionar para desktop
+      window.addEventListener('resize', function() {
+      if (window.innerWidth >= 1024) {
+        closeSidebar();
+      }
+      });
+      
+      // Dark mode toggle
+      const darkModeToggle = document.getElementById('darkModeToggle');
+      const htmlEl = document.documentElement;
+      
+      if (darkModeToggle) {
+      darkModeToggle.addEventListener('click', function() {
+        htmlEl.classList.toggle('dark');
+        const isDark = htmlEl.classList.contains('dark');
+        localStorage.setItem('management-theme', isDark ? 'dark' : 'light');
+      });
+      }
+      
+      // Sistema de notificações
+      function showNotification(message, type = 'info', duration = 5000) {
+      const notificationArea = document.getElementById('notification-area');
+      if (!notificationArea) return;
+
+      const notification = document.createElement('div');
+      const colors = {
+        success: 'bg-success-50 dark:bg-success-900/20 border-success-200 dark:border-success-800 text-success-800 dark:text-success-200',
+        error: 'bg-danger-50 dark:bg-danger-900/20 border-danger-200 dark:border-danger-800 text-danger-800 dark:text-danger-200',
+        warning: 'bg-warning-50 dark:bg-warning-900/20 border-warning-200 dark:border-warning-800 text-warning-800 dark:text-warning-200',
+        info: 'bg-primary-50 dark:bg-primary-900/20 border-primary-200 dark:border-primary-800 text-primary-800 dark:text-primary-200'
+      };
+
+      notification.className = `notification p-4 rounded-lg border shadow-lg backdrop-blur-sm transform transition-all duration-300 translate-x-full ${colors[type] || colors.info}`;
+      notification.innerHTML = `
+        <div class="flex items-center justify-between">
+        <span class="text-sm font-medium">${message}</span>
+        <button onclick="this.parentElement.parentElement.remove()" class="ml-4 text-current opacity-70 hover:opacity-100">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+        </div>
+      `;
+
+      notificationArea.appendChild(notification);
+      lucide.createIcons();
+
+      // Animar entrada
+      setTimeout(() => {
+        notification.classList.remove('translate-x-full');
+      }, 10);
+
+      // Auto remover
+      if (duration > 0) {
+        setTimeout(() => {
+        notification.classList.add('translate-x-full');
+        setTimeout(() => {
+          notification.remove();
+        }, 300);
+        }, duration);
+      }
+      }
+
+      // Tornar funções globais
+      window.showNotification = showNotification;
+      
+      // Inicializar quando o DOM estiver pronto
+      document.addEventListener('DOMContentLoaded', function() {
+        console.log('🌟 DOM carregado, inicializando aplicação...');
+        lucide.createIcons();
+        console.log('🎨 Ícones Lucide inicializados');
+        initSyncButton();
+        console.log('✅ Inicialização completa!');
+      });
+    </script>
+
+    {% block extra_js %}
+    {% endblock %}
+</body>
+</html>

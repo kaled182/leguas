@@ -1,0 +1,578 @@
+{% load manualorders_filters %}
+<section class="mt-8" aria-label="Gráfico de performance">
+
+    <div class="mb-6">
+        <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Ações disponiveis:</h2>
+    </div>
+
+    <!-- Container flex para alinhar os botões lado a lado -->
+    <div class="flex justify-center gap-4">
+
+        <!-- Botão que abre o modal (adição) -->
+        <button id="openAddManualCorrectionModal" data-modal-target="addManualCorrectionModal"
+            data-modal-toggle="addManualCorrectionModal" type="button"
+            class="nav-link flex items-center gap-3 p-3 rounded-lg transition-all duration-200 group text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:text-emerald-700 dark:hover:text-emerald-300 disabled:opacity-50 disabled:cursor-not-allowed">
+            <i data-lucide="plus"
+                class="w-5 h-5 text-current group-hover:rotate-180 transition-transform duration-500 flex-shrink-0"></i>
+            <span class="sidebar-text font-medium sync-text">Executar Adição Manual</span>
+            <div class="ml-auto">
+                <div class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+            </div>
+        </button>
+
+        <!-- Botão que abre o modal (subtração) -->
+        <button id="openSubtractManualCorrectionModal" data-modal-target="subtractManualCorrectionModal"
+            data-modal-toggle="subtractManualCorrectionModal" type="button"
+            class="nav-link flex items-center gap-3 p-3 rounded-lg transition-all duration-200 group text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-700 dark:hover:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed">
+            <i data-lucide="minus"
+                class="w-5 h-5 text-current group-hover:rotate-180 transition-transform duration-500 flex-shrink-0"></i>
+            <span class="sidebar-text font-medium sync-text">Executar Subtração Manual</span>
+            <div class="ml-auto">
+                <div class="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+            </div>
+        </button>
+
+        <!-- Botão que abre o modal (edição) -->
+        <button id="openEditManualCorrectionModal" data-modal-target="editManualCorrectionModal"
+            data-modal-toggle="editManualCorrectionModal" type="button"
+            class="nav-link flex items-center gap-3 p-3 rounded-lg transition-all duration-200 group text-yellow-600 dark:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 hover:text-yellow-700 dark:hover:text-yellow-300 disabled:opacity-50 disabled:cursor-not-allowed">
+            <i data-lucide="edit"
+                class="w-5 h-5 text-current group-hover:rotate-180 transition-transform duration-500 flex-shrink-0"></i>
+            <span class="sidebar-text font-medium sync-text">Editar Registros Manuais</span>
+            <div class="ml-auto">
+                <div class="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
+            </div>
+        </button>
+
+    </div>
+
+    <!-- Modal: Adição Manual -->
+    <div id="addManualCorrectionModal" tabindex="-1" aria-hidden="true"
+        class="hidden fixed inset-0 z-50 flex items-center justify-center w-full h-full bg-black/50">
+
+        <div class="relative p-6 w-full max-w-md bg-white dark:bg-gray-800 rounded-2xl shadow-lg">
+
+            <!-- Cabeçalho -->
+            <div class="flex justify-between items-center border-b pb-3">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+                    Executar Adição Manual
+                </h3>
+                <button type="button" class="text-gray-400 hover:text-gray-600 dark:hover:text-white"
+                    data-modal-hide="addManualCorrectionModal">
+                    ✕
+                </button>
+            </div>
+
+            <!-- Corpo -->
+            <form method="post" action="{% url 'manualorders_paack:manual_correction' %}" class="mt-4">
+                {% csrf_token %}
+                <input type="hidden" name="is_addition" value="true">
+                {% if messages %}
+                {% for message in messages %}
+                <div
+                    class="mb-4 p-4 rounded-lg {% if message.tags == 'error' %}bg-red-100 text-red-700{% else %}bg-green-100 text-green-700{% endif %}">
+                    {{ message }}
+                </div>
+                {% endfor %}
+                {% endif %}
+                <div class="space-y-4">
+                    <div>
+                        <label for="add_driver_select"
+                            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Motorista
+                        </label>
+                        <select id="add_driver_select" name="driver_id" required
+                            class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 focus:ring-2 focus:ring-emerald-500">
+                            <option value="">Selecione um motorista</option>
+                            {% for driver in drivers %}
+                            <option value="{{ driver.driver_id }}">{{ driver.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="add_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Data
+                        </label>
+                        <input type="date" id="add_date" name="date" required
+                            class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 focus:ring-2 focus:ring-emerald-500">
+                    </div>
+
+                    <div>
+                        <label for="add_quantity"
+                            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Quantidade de Entregas
+                        </label>
+                        <input type="number" id="add_quantity" name="quantity" required min="1" max="100" value="1"
+                            class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 focus:ring-2 focus:ring-emerald-500">
+                    </div>
+
+                    <div>
+                        <label for="add_status_select"
+                            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Status
+                        </label>
+                        <select id="add_status_select" name="status" required
+                            class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 focus:ring-2 focus:ring-emerald-500">
+                            <option value="">Selecione um status</option>
+                            <option value="delivered">Entregue</option>
+                            <option value="on_course">Em Rota</option>
+                            <option value="picked_up">Coletado</option>
+                            <option value="reached_picked_up">Chegou ao Ponto de Coleta</option>
+                            <option value="return_in_progress">Retorno em Andamento</option>
+                            <option value="undelivered">Não Entregue</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="add_reason" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Motivo
+                        </label>
+                        <textarea id="add_reason" name="reason" required rows="3"
+                            placeholder="Descreva o motivo da adição manual"
+                            class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 focus:ring-2 focus:ring-emerald-500"></textarea>
+                    </div>
+                </div>
+
+                <!-- Mensagem de erro/sucesso -->
+                <div id="addFormMessage" class="mt-3 hidden">
+                    <p class="text-sm font-medium"></p>
+                </div>
+
+                <!-- Rodapé -->
+                <div class="mt-6 flex justify-end gap-3">
+                    <a href="{% url 'manualorders_paack:manual_management' %}"
+                        class="px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200">
+                        Cancelar
+                    </a>
+                    <button type="submit" class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white">
+                        Confirmar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Subtração Manual -->
+    <div id="subtractManualCorrectionModal" tabindex="-1" aria-hidden="true"
+        class="hidden fixed inset-0 z-50 flex items-center justify-center w-full h-full bg-black/50">
+
+        <div class="relative p-8 w-full max-w-3xl bg-white dark:bg-gray-800 rounded-2xl shadow-2xl">
+
+            <!-- Cabeçalho -->
+            <div class="flex justify-between items-center border-b pb-3">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+                    Executar Subtração Manual
+                </h3>
+                <button type="button" class="text-gray-400 hover:text-gray-600 dark:hover:text-white"
+                    data-modal-hide="subtractManualCorrectionModal">
+                    ✕
+                </button>
+            </div>
+
+            <!-- Corpo -->
+            <form id="deleteManualCorrectionForm" method="POST" action="{% url 'manualorders_paack:delete_manual_corrections' %}" class="mt-4">
+                {% csrf_token %}
+
+                <!-- Lista de Registros -->
+                <div id="correctionsListContainer" class="mt-4">
+                    <div class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+                        <!-- Cabeçalho da tabela -->
+                        <div
+                            class="bg-gray-50 dark:bg-gray-800 px-4 py-2 flex items-center border-b border-gray-200 dark:border-gray-700">
+                            <label class="inline-flex items-center">
+                                <input type="checkbox" id="selectAllCorrections"
+                                    class="form-checkbox h-4 w-4 text-red-600 rounded border-gray-300">
+                                <span class="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300">Selecionar
+                                    Todos</span>
+                            </label>
+                            <span class="ml-auto text-sm text-gray-500 dark:text-gray-400" id="selectedCount">0
+                                selecionados</span>
+                        </div>
+
+                        <!-- Tabela de registros -->
+                        <div class="max-h-64 overflow-y-auto">
+                            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                <thead class="bg-gray-50 dark:bg-gray-800">
+                                    <tr>
+                                        <th class="w-8"></th>
+                                        <th
+                                            class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">
+                                            Tipo de Correção</th>
+                                        <th
+                                            class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">
+                                            Driver</th>
+                                        <th
+                                            class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">
+                                            Status</th>
+                                        <th
+                                            class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">
+                                            Motivo</th>
+                                        <th
+                                            class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">
+                                            Created by</th>
+                                        <th
+                                            class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">
+                                            Criado em</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="correctionsList" class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                                {% for correction in manual_corrections %}
+                                <tr>
+                                    <td class="px-2">
+                                        <input type="checkbox" name="correction_ids" value="{{ correction.id }}"
+                                            class="form-checkbox h-4 w-4 text-red-600 rounded border-gray-300">
+                                    </td>
+                                    <td class="px-4 py-2 text-sm text-gray-700 dark:text-gray-300">
+                                        {{ correction.get_correction_type_display }}
+                                    </td>
+                                    <td class="px-4 py-2 text-sm text-gray-700 dark:text-gray-300">
+                                        {{ correction.temp_clean_driver_name|default:correction.driver.name }}
+                                    </td>
+                                    <td class="px-4 py-2 text-sm font-medium {{ correction.order.status|status_color }}">
+                                        {{ correction.order.status|format_status }}
+                                    </td>
+                                    <td class="px-4 py-2 text-sm text-gray-700 dark:text-gray-300">
+                                        {{ correction.reason }}
+                                    </td>
+                                    <td class="px-4 py-2 text-sm text-gray-700 dark:text-gray-300">
+                                        {{ correction.created_by }}
+                                    </td>
+                                    <td class="px-4 py-2 text-sm text-gray-700 dark:text-gray-300">
+                                        {{ correction.created_at|date:"j \d\e F \d\e Y \à\s H:i" }}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="7" class="px-4 py-3 text-center text-sm text-gray-500 dark:text-gray-400">
+                                        Nenhuma correção encontrada
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mensagem de erro/sucesso -->
+                <div id="deleteFormMessage" class="mt-3 hidden">
+                    <p class="text-sm font-medium"></p>
+                </div>
+
+                <!-- Rodapé -->
+                <div class="mt-6 flex justify-end gap-3">
+                    <button type="button" data-modal-hide="deleteManualCorrectionModal"
+                        class="px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200">
+                        Cancelar
+                    </button>
+                    <button type="submit"
+                        class="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white flex items-center gap-2">
+                        <span>Deletar Selecionados</span>
+                        <span id="deleteSubmitSpinner" class="hidden">
+                            <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none"
+                                viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                    stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor"
+                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                                </path>
+                            </svg>
+                        </span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Edição Manual -->
+    <div id="editManualCorrectionModal" tabindex="-1" aria-hidden="true"
+        class="hidden fixed inset-0 z-50 flex items-center justify-center w-full h-full bg-black/50">
+
+        <div class="relative p-8 w-full max-w-4xl bg-white dark:bg-gray-800 rounded-2xl shadow-2xl">
+
+            <!-- Cabeçalho -->
+            <div class="flex justify-between items-center border-b pb-3">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+                    Editar Registros Manuais
+                </h3>
+                <button type="button" class="text-gray-400 hover:text-gray-600 dark:hover:text-white"
+                    data-modal-hide="editManualCorrectionModal">
+                    ✕
+                </button>
+            </div>
+
+            <!-- Corpo -->
+            <div class="mt-4">
+                <!-- Lista de Registros para Editar -->
+                <div id="editCorrectionsListContainer" class="mt-4">
+                    <div class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+                        <!-- Cabeçalho da tabela -->
+                        <div class="bg-gray-50 dark:bg-gray-800 px-4 py-2 flex items-center border-b border-gray-200 dark:border-gray-700">
+                            <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">Selecione um registro para editar</h4>
+                        </div>
+
+                        <!-- Tabela de registros -->
+                        <div class="max-h-64 overflow-y-auto">
+                            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                <thead class="bg-gray-50 dark:bg-gray-800">
+                                    <tr>
+                                        <th class="w-8"></th>
+                                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">
+                                            Driver</th>
+                                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">
+                                            Status</th>
+                                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">
+                                            Motivo</th>
+                                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">
+                                            Data</th>
+                                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">
+                                            Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                                {% for correction in manual_corrections %}
+                                <tr id="edit-row-{{ correction.id }}">
+                                    <td class="px-2">
+                                        <input type="radio" name="edit_correction_id" value="{{ correction.id }}"
+                                            class="form-radio h-4 w-4 text-yellow-600 border-gray-300" 
+                                            onchange="selectEditCorrection({{ correction.id }})">
+                                    </td>
+                                    <td class="px-4 py-2 text-sm text-gray-700 dark:text-gray-300">
+                                        {{ correction.temp_clean_driver_name|default:correction.driver.name }}
+                                    </td>
+                                    <td class="px-4 py-2 text-sm font-medium {{ correction.order.status|status_color }}">
+                                        {{ correction.order.status|format_status }}
+                                    </td>
+                                    <td class="px-4 py-2 text-sm text-gray-700 dark:text-gray-300">
+                                        {{ correction.reason }}
+                                    </td>
+                                    <td class="px-4 py-2 text-sm text-gray-700 dark:text-gray-300">
+                                        {{ correction.correction_date|date:"j/m/Y" }}
+                                    </td>
+                                    <td class="px-4 py-2">
+                                        <button type="button" onclick="startEditCorrection({{ correction.id }})"
+                                            class="text-yellow-600 hover:text-yellow-700 text-sm font-medium">
+                                            Editar
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" class="px-4 py-3 text-center text-sm text-gray-500 dark:text-gray-400">
+                                        Nenhuma correção encontrada
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Formulário de Edição (inicialmente oculto) -->
+                <div id="editFormContainer" class="mt-6 hidden">
+                    <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg p-4">
+                        <h4 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Editar Registro</h4>
+                        
+                        <form id="editCorrectionForm" method="post" action="{% url 'manualorders_paack:edit_manual_correction' %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="correction_id" id="edit_correction_id">
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="edit_driver_select" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        Motorista
+                                    </label>
+                                    <select id="edit_driver_select" name="driver_id" required
+                                        class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 focus:ring-2 focus:ring-yellow-500">
+                                        <option value="">Selecione um motorista</option>
+                                        {% for driver in drivers %}
+                                        <option value="{{ driver.driver_id }}">{{ driver.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label for="edit_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        Data
+                                    </label>
+                                    <input type="date" id="edit_date" name="date" required
+                                        class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 focus:ring-2 focus:ring-yellow-500">
+                                </div>
+
+                                <div>
+                                    <label for="edit_status_select" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        Status
+                                    </label>
+                                    <select id="edit_status_select" name="status" required
+                                        class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 focus:ring-2 focus:ring-yellow-500">
+                                        <option value="">Selecione um status</option>
+                                        <option value="delivered">Entregue</option>
+                                        <option value="on_course">Em Rota</option>
+                                        <option value="picked_up">Coletado</option>
+                                        <option value="reached_picked_up">Chegou ao Ponto de Coleta</option>
+                                        <option value="return_in_progress">Retorno em Andamento</option>
+                                        <option value="undelivered">Não Entregue</option>
+                                        <option value="failed">Falhou</option>
+                                        <option value="cancelled">Cancelado</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="mt-4">
+                                <label for="edit_reason" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                    Motivo
+                                </label>
+                                <textarea id="edit_reason" name="reason" required rows="3"
+                                    placeholder="Descreva o motivo da edição"
+                                    class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white p-2 focus:ring-2 focus:ring-yellow-500"></textarea>
+                            </div>
+
+                            <!-- Rodapé do formulário -->
+                            <div class="mt-6 flex justify-end gap-3">
+                                <button type="button" onclick="cancelEdit()"
+                                    class="px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200">
+                                    Cancelar
+                                </button>
+                                <button type="submit"
+                                    class="px-4 py-2 rounded-lg bg-yellow-600 hover:bg-yellow-700 text-white">
+                                    Salvar Alterações
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Rodapé do modal -->
+                <div class="mt-6 flex justify-end" id="editModalFooter">
+                    <button type="button" data-modal-hide="editManualCorrectionModal"
+                        class="px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200">
+                        Fechar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</section>
+
+<script>
+// Funções para edição
+function selectEditCorrection(correctionId) {
+    // Destacar a linha selecionada
+    document.querySelectorAll('#editCorrectionsListContainer tr').forEach(row => {
+        row.classList.remove('bg-yellow-50', 'dark:bg-yellow-900/20');
+    });
+    document.getElementById(`edit-row-${correctionId}`).classList.add('bg-yellow-50', 'dark:bg-yellow-900/20');
+}
+
+function startEditCorrection(correctionId) {
+    // Buscar dados do registro via AJAX ou carregar do DOM
+    const row = document.getElementById(`edit-row-${correctionId}`);
+    if (!row) return;
+    
+    // Exibir formulário de edição
+    document.getElementById('editFormContainer').classList.remove('hidden');
+    document.getElementById('editModalFooter').classList.add('hidden');
+    
+    // Preencher o ID
+    document.getElementById('edit_correction_id').value = correctionId;
+    
+    // Aqui você pode implementar AJAX para buscar os dados completos
+    // Por enquanto, vamos usar dados básicos do DOM
+    loadCorrectionData(correctionId);
+}
+
+function loadCorrectionData(correctionId) {
+    // Fazer requisição AJAX para buscar dados completos
+    fetch(`{% url 'manualorders_paack:get_correction_data' 0 %}`.replace('0', correctionId))
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('edit_driver_select').value = data.driver_id;
+                document.getElementById('edit_date').value = data.target_date;
+                document.getElementById('edit_status_select').value = data.status;
+                document.getElementById('edit_reason').value = data.reason;
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao carregar dados:', error);
+        });
+}
+
+function cancelEdit() {
+    document.getElementById('editFormContainer').classList.add('hidden');
+    document.getElementById('editModalFooter').classList.remove('hidden');
+    
+    // Limpar seleção
+    document.querySelectorAll('input[name="edit_correction_id"]').forEach(radio => {
+        radio.checked = false;
+    });
+    document.querySelectorAll('#editCorrectionsListContainer tr').forEach(row => {
+        row.classList.remove('bg-yellow-50', 'dark:bg-yellow-900/20');
+    });
+}
+
+// Função para seleção múltipla na subtração
+document.addEventListener('DOMContentLoaded', function() {
+    // Modal de edição
+    const editModal = document.getElementById('editManualCorrectionModal');
+    const openEditBtn = document.getElementById('openEditManualCorrectionModal');
+    
+    // Event listener para abrir modal de edição
+    if (openEditBtn && editModal) {
+        openEditBtn.addEventListener('click', function() {
+            editModal.classList.remove('hidden');
+        });
+    }
+    
+    // Event listener para fechar modal de edição
+    const closeEditBtns = editModal?.querySelectorAll('[data-modal-hide="editManualCorrectionModal"]');
+    if (closeEditBtns) {
+        closeEditBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                editModal.classList.add('hidden');
+                // Reset do formulário
+                cancelEdit();
+            });
+        });
+    }
+
+    // Checkboxes para subtração
+    const selectAllCheckbox = document.getElementById('selectAllCorrections');
+    const correctionCheckboxes = document.querySelectorAll('input[name="correction_ids"]');
+    const selectedCount = document.getElementById('selectedCount');
+
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function() {
+            correctionCheckboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+            updateSelectedCount();
+        });
+    }
+
+    correctionCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            updateSelectedCount();
+            
+            // Atualizar estado do "Selecionar Todos"
+            const allChecked = Array.from(correctionCheckboxes).every(cb => cb.checked);
+            const noneChecked = Array.from(correctionCheckboxes).every(cb => !cb.checked);
+            
+            if (selectAllCheckbox) {
+                selectAllCheckbox.checked = allChecked;
+                selectAllCheckbox.indeterminate = !allChecked && !noneChecked;
+            }
+        });
+    });
+
+    function updateSelectedCount() {
+        const selected = document.querySelectorAll('input[name="correction_ids"]:checked').length;
+        if (selectedCount) {
+            selectedCount.textContent = `${selected} selecionados`;
+        }
+    }
+});
+</script>

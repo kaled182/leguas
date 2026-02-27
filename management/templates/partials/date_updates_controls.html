@@ -1,0 +1,34 @@
+{# Controles de Data e Atualização - Design moderno #}
+<div class="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full lg:w-auto">
+  {# Filtro de Data #}
+  <form method="get" class="flex items-center gap-3">
+    <div class="flex items-center gap-2">
+      <label for="date-filter" class="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">
+        <i data-lucide="calendar" class="w-4 h-4 inline mr-1"></i>
+        Data:
+      </label>
+      <input type="date" id="date-filter" name="date" value="{{ date_filter }}"
+        class="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
+        onchange="this.form.submit()" />
+    </div>
+
+    {# Botão Hoje #}
+    {% if not is_today %}
+      <button type="submit" name="date" value="{{ now|date:'Y-m-d' }}" 
+        class="px-4 py-2 text-sm bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors flex items-center gap-2 font-medium shadow-sm hover:shadow" 
+        title="Voltar para hoje">
+        <i data-lucide="calendar-clock" class="w-4 h-4"></i>
+        Hoje
+      </button>
+    {% endif %}
+  </form>
+
+  {# Informações de atualização #}
+  <div class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 border-l border-gray-200 dark:border-gray-700 pl-4">
+    <i data-lucide="clock" class="w-4 h-4"></i>
+    <span class="whitespace-nowrap">
+      Última atualização:
+      <time class="font-medium text-gray-700 dark:text-gray-300">{{ last_updated|default:'--:--:--' }}</time>
+    </span>
+  </div>
+</div>

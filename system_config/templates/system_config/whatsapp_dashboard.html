@@ -1,0 +1,1053 @@
+{% extends 'paack_dashboard/base.html' %}
+
+{% block title %}WhatsApp{% endblock %}
+{% block sidebar_title %}Configurações{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto space-y-6">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6">
+        <div class="flex items-center justify-between flex-wrap gap-4">
+            <div class="flex items-center gap-4">
+                <div class="w-12 h-12 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-sm">
+                    <i data-lucide="message-circle" class="w-6 h-6 text-white"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Conexão WhatsApp</h1>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Gerencie a sessão WPPConnect diretamente pelo sistema.</p>
+                </div>
+            </div>
+            <div id="statusBadge" class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-600">
+                <span class="w-2 h-2 rounded-full bg-gray-400"></span>
+                <span>Desconhecido</span>
+            </div>
+        </div>
+
+        <dl class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+            <div class="p-4 rounded-lg bg-gray-50 dark:bg-gray-900/40">
+                <dt class="text-gray-500 dark:text-gray-400 uppercase tracking-wide">Instância</dt>
+                <dd id="sessionNameDisplay" class="mt-1 font-semibold text-gray-900 dark:text-white">{{ session_name|default:'(não configurado)' }}</dd>
+            </div>
+            <div class="p-4 rounded-lg bg-gray-50 dark:bg-gray-900/40">
+                <dt class="text-gray-500 dark:text-gray-400 uppercase tracking-wide">API URL</dt>
+                <dd id="apiUrlDisplay" class="mt-1 font-semibold text-gray-900 dark:text-white truncate">{{ config.whatsapp_evolution_api_url|default:'(não definida)' }}</dd>
+            </div>
+            <div class="p-4 rounded-lg bg-gray-50 dark:bg-gray-900/40">
+                <dt class="text-gray-500 dark:text-gray-400 uppercase tracking-wide">Status atual</dt>
+                <dd id="statusSummary" class="mt-1 font-semibold text-gray-900 dark:text-white">Aguardando leitura</dd>
+            </div>
+        </dl>
+    </div>
+
+    {% if whatsapp_error %}
+            <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 flex gap-3" id="configError">
+                <i data-lucide="alert-triangle" class="w-5 h-5 text-amber-600 dark:text-amber-300 flex-shrink-0"></i>
+                <div class="text-sm text-amber-800 dark:text-amber-200">
+                    <p class="font-semibold">Configuração incompleta</p>
+                    <p>{{ whatsapp_error }}</p>
+                </div>
+            </div>
+            {% endif %}
+
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
+        <button type="button" id="toggleConfigSection" class="w-full p-6 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+            <div class="flex items-center gap-3">
+                <i data-lucide="settings" class="w-5 h-5 text-emerald-600"></i>
+                <div class="text-left">
+                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Configurações do serviço</h2>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Gerencie URL, instância, token e estado do serviço</p>
+                </div>
+            </div>
+            <i data-lucide="chevron-down" id="configChevron" class="w-5 h-5 text-gray-400 transition-transform"></i>
+        </button>
+        
+        <div id="configContent" class="border-t border-gray-200 dark:border-gray-700">
+            <form id="configForm" class="p-6 grid grid-cols-1 gap-4 md:grid-cols-2">
+            {% csrf_token %}
+            <div class="md:col-span-2">
+                <label for="configApiUrl" class="block text-sm font-medium text-gray-700 dark:text-gray-300">API URL</label>
+                <input type="url" id="configApiUrl" name="api_url" value="{{ config.whatsapp_evolution_api_url|default:'' }}"
+                    placeholder="http://wppconnect:21465" class="mt-1 w-full px-4 py-2 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-emerald-500 dark:text-white">
+            </div>
+            <div>
+                <label for="configInstance" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Nome da instância</label>
+                <input type="text" id="configInstance" name="instance_name" value="{{ config.whatsapp_instance_name|default:'' }}"
+                    placeholder="leguas" class="mt-1 w-full px-4 py-2 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-emerald-500 dark:text-white">
+            </div>
+            <div class="md:col-span-2">
+                <label for="configApiKey" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Token de autenticação</label>
+                <div class="mt-1 flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <input type="text" id="configApiKey" name="api_key" value="{{ config.whatsapp_evolution_api_key|default:'' }}"
+                        placeholder="Cole o token gerado no WPPConnect" autocomplete="new-password"
+                        class="w-full px-4 py-2 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-emerald-500 dark:text-white">
+                    <button type="button" id="generateTokenBtn" class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-emerald-600 text-white hover:bg-emerald-700">
+                        <i data-lucide="key-round" class="w-4 h-4"></i>
+                        Gerar novo token
+                    </button>
+                </div>
+                <div class="mt-2" id="tokenStatusContainer">
+                    <span id="tokenStatusBadge" class="inline-flex items-center gap-2 text-xs font-medium px-2.5 py-1.5 rounded-full bg-gray-100 text-gray-600"></span>
+                </div>
+                <div class="mt-2 flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                    <input type="checkbox" id="configClearApiKey" name="clear_api_key" class="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500">
+                    <label for="configClearApiKey">Marque para remover o token guardado.</label>
+                </div>
+                <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">Deixe o campo vazio para manter o token atual. Gere um novo token para substituir o valor guardado e lembre-se de atualizar o serviço WPPConnect.</p>
+            </div>
+            <div class="md:col-span-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                <button type="submit" class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-primary-600 text-white hover:bg-primary-700" id="configSubmit">
+                    <i data-lucide="save" class="w-4 h-4"></i>
+                    Guardar configurações
+                </button>
+                <div class="flex-1 flex items-center justify-between sm:justify-end gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-900/40 border border-gray-200 dark:border-gray-700">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="power" class="w-4 h-4 text-gray-500 dark:text-gray-400"></i>
+                        <span class="text-sm text-gray-700 dark:text-gray-300">Estado do serviço:</span>
+                    </div>
+                    <button type="button" id="toggleService" data-enabled="{% if is_enabled %}true{% else %}false{% endif %}"
+                        class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border transition-colors {% if is_enabled %}border-red-600 text-red-700 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20{% else %}border-emerald-600 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/20{% endif %}">
+                        <i data-lucide="{% if is_enabled %}power-off{% else %}power{% endif %}" class="w-4 h-4"></i>
+                        <span id="toggleServiceLabel">{% if is_enabled %}Desativar{% else %}Ativar{% endif %}</span>
+                    </button>
+                </div>
+            </div>
+        </form>
+        <div id="configFeedback" class="hidden text-sm rounded-lg px-4 py-3"></div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6" id="whatsappPanel"
+        data-disabled="{% if whatsapp_error or not is_enabled %}true{% else %}false{% endif %}"
+        data-has-instance="{% if session_name %}true{% else %}false{% endif %}"
+        data-has-api="{% if config.whatsapp_evolution_api_url %}true{% else %}false{% endif %}"
+        data-has-key="{% if config.whatsapp_evolution_api_key %}true{% else %}false{% endif %}">
+        <section class="lg:col-span-2 space-y-4">
+            <div id="qrCodeSection" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 {% if is_connected %}hidden{% endif %}">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white">QR Code / Código de pareamento</h2>
+                    <div class="flex gap-2">
+                        <button type="button" id="startButton" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed">
+                            <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                            Iniciar sessão
+                        </button>
+                        <button type="button" id="refreshQRCode" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-60">
+                            <i data-lucide="qr-code" class="w-4 h-4"></i>
+                            Atualizar QR
+                        </button>
+                    </div>
+                </div>
+                <div class="border border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-6 flex flex-col items-center justify-center text-center min-h-[320px]" id="qrContainer">
+                    <div id="qrPlaceholder" class="text-sm text-gray-500 dark:text-gray-400 space-y-2">
+                        <i data-lucide="smartphone" class="w-10 h-10 mx-auto text-gray-300"></i>
+                        <p id="qrPlaceholderText">Gerando QR Code automaticamente...</p>
+                    </div>
+                    <img id="qrImage" alt="QR Code WhatsApp" class="hidden max-w-xs rounded-lg shadow-lg border border-emerald-500">
+                    <div id="pairingCode" class="hidden text-3xl font-extrabold tracking-widest text-emerald-600"></div>
+                    <div id="qrLoading" class="hidden">
+                        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto"></div>
+                        <p class="mt-3 text-sm text-gray-500 dark:text-gray-400">Carregando...</p>
+                    </div>
+                </div>
+                <div class="mt-4 text-xs text-gray-500 dark:text-gray-400">
+                    <p>O QR Code expira rapidamente. Atualize sempre que necessário. Após ler com o aplicativo WhatsApp em "Aparelhos Conectados", o status será atualizado automaticamente.</p>
+                </div>
+            </div>
+
+            <!-- Informações da sessão conectada -->
+            <div id="sessionInfoCard" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 {% if not is_connected %}hidden{% endif %}">
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                    <i data-lucide="info" class="w-5 h-5 text-emerald-600"></i>
+                    Informações da Sessão
+                </h2>
+                <dl class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div class="p-4 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800">
+                        <dt class="text-emerald-700 dark:text-emerald-300 font-medium flex items-center gap-2">
+                            <i data-lucide="smartphone" class="w-4 h-4"></i>
+                            Identificação
+                        </dt>
+                        <dd id="connectedPhone" class="mt-1 font-bold text-lg text-emerald-900 dark:text-emerald-100">
+                            {% if phone_number %}{{ phone_number }}{% else %}{{ session_name }}{% endif %}
+                        </dd>
+                    </div>
+                    <div class="p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+                        <dt class="text-blue-700 dark:text-blue-300 font-medium flex items-center gap-2">
+                            <i data-lucide="check-circle" class="w-4 h-4"></i>
+                            Estado
+                        </dt>
+                        <dd id="connectedStatus" class="mt-1 font-semibold text-blue-900 dark:text-blue-100">
+                            {% if connection_status == 'connected' %}Ativo e operacional{% else %}{{ connection_status }}{% endif %}
+                        </dd>
+                    </div>
+                    <div id="deviceNameContainer" class="p-4 rounded-lg bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 {% if not device_info.pushname %}opacity-50{% endif %}">
+                        <dt class="text-purple-700 dark:text-purple-300 font-medium flex items-center gap-2">
+                            <i data-lucide="user" class="w-4 h-4"></i>
+                            Nome do dispositivo
+                        </dt>
+                        <dd id="deviceName" class="mt-1 font-semibold text-purple-900 dark:text-purple-100">
+                            {% if device_info.pushname %}{{ device_info.pushname }}{% else %}-{% endif %}
+                        </dd>
+                    </div>
+                    <div id="devicePlatformContainer" class="p-4 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 {% if not device_info.platform %}opacity-50{% endif %}">
+                        <dt class="text-indigo-700 dark:text-indigo-300 font-medium flex items-center gap-2">
+                            <i data-lucide="monitor" class="w-4 h-4"></i>
+                            Plataforma
+                        </dt>
+                        <dd id="devicePlatform" class="mt-1 font-semibold text-indigo-900 dark:text-indigo-100">
+                            {% if device_info.platform %}{{ device_info.platform }}{% else %}-{% endif %}
+                        </dd>
+                    </div>
+                </dl>
+                <div class="mt-4 p-3 bg-gray-50 dark:bg-gray-900/40 rounded-lg text-xs text-gray-600 dark:text-gray-400">
+                    <p class="flex items-center gap-2">
+                        <i data-lucide="info" class="w-3 h-3"></i>
+                        Algumas informações dependem da versão do WPPConnect e podem não estar disponíveis.
+                    </p>
+                </div>
+            </div>
+
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 space-y-4">
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Enviar mensagem de teste</h2>
+                <form id="testForm" class="space-y-4">
+                    {% csrf_token %}
+                    <div>
+                        <label for="testPhone" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Número do destinatário</label>
+                        <input type="text" id="testPhone" name="phone" placeholder="5511999999999" class="mt-1 w-full px-4 py-2 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-emerald-500 dark:text-white" required>
+                    </div>
+                    <div>
+                        <label for="testMessage" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Mensagem</label>
+                        <textarea id="testMessage" name="message" rows="3" class="mt-1 w-full px-4 py-2 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-emerald-500 dark:text-white">Teste WhatsApp WPPConnect</textarea>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60" id="testSubmit">
+                            <i data-lucide="send" class="w-4 h-4"></i>
+                            Enviar mensagem
+                        </button>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">O número será formatado automaticamente para o padrão internacional.</p>
+                    </div>
+                </form>
+                <div id="testFeedback" class="hidden text-sm rounded-lg px-4 py-3"></div>
+            </div>
+        </section>
+
+        <aside class="space-y-4">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 space-y-3">
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Ações rápidas</h2>
+                <button type="button" id="statusButton" class="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-60">
+                    <i data-lucide="activity" class="w-4 h-4"></i>
+                    Atualizar status
+                </button>
+                <button type="button" id="logoutButton" class="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-red-500 text-white hover:bg-red-600 disabled:opacity-60">
+                    <i data-lucide="log-out" class="w-4 h-4"></i>
+                    Desconectar sessão
+                </button>
+                <div class="text-xs text-gray-500 dark:text-gray-400">
+                    <p>Use "Desconectar" se desejar remover a sessão corrente do WhatsApp e iniciar uma nova leitura de QR.</p>
+                </div>
+            </div>
+
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 text-sm text-gray-600 dark:text-gray-300 space-y-2">
+                <h3 class="font-semibold text-gray-900 dark:text-white">Como funciona</h3>
+                <p>Este painel comunica com o container WPPConnect configurado no docker-compose. Garanta que a instância está em execução e que o URL/token/secret coincidem com o helper.</p>
+                <p>Os números devem incluir DDI + DDD (exemplo: 351911234567 ou 5511999999999).</p>
+                <p>O estado pode levar alguns segundos para refletir após a leitura do QR.</p>
+            </div>
+        </aside>
+    </div>
+</div>
+
+{{ session_info|json_script:"initial-status" }}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    const panel = document.getElementById('whatsappPanel');
+    const disabled = panel.dataset.disabled === 'true';
+    const statusBadge = document.getElementById('statusBadge');
+    const statusSummary = document.getElementById('statusSummary');
+    const qrImage = document.getElementById('qrImage');
+    const qrPlaceholder = document.getElementById('qrPlaceholder');
+    const pairingCode = document.getElementById('pairingCode');
+    const testForm = document.getElementById('testForm');
+    const testFeedback = document.getElementById('testFeedback');
+
+    const sessionDisplay = document.getElementById('sessionNameDisplay');
+    const apiDisplay = document.getElementById('apiUrlDisplay');
+    const configError = document.getElementById('configError');
+    const configApiUrlInput = document.getElementById('configApiUrl');
+    const configInstanceInput = document.getElementById('configInstance');
+    const configApiKey = document.getElementById('configApiKey');
+    const tokenStatusBadge = document.getElementById('tokenStatusBadge');
+
+    // Controle de colapso da seção de configurações
+    const toggleConfigBtn = document.getElementById('toggleConfigSection');
+    const configContent = document.getElementById('configContent');
+    const configChevron = document.getElementById('configChevron');
+    
+    if (toggleConfigBtn && configContent && configChevron) {
+        // Iniciar colapsado
+        configContent.style.maxHeight = '0';
+        configContent.style.overflow = 'hidden';
+        configContent.style.transition = 'max-height 0.3s ease-out';
+        
+        toggleConfigBtn.addEventListener('click', function() {
+            const isCollapsed = configContent.style.maxHeight === '0px' || configContent.style.maxHeight === '';
+            
+            if (isCollapsed) {
+                configContent.style.maxHeight = configContent.scrollHeight + 'px';
+                configChevron.style.transform = 'rotate(180deg)';
+            } else {
+                configContent.style.maxHeight = '0';
+                configChevron.style.transform = 'rotate(0deg)';
+            }
+        });
+    }
+
+    const buttons = {
+        start: document.getElementById('startButton'),
+        refreshQr: document.getElementById('refreshQRCode'),
+        status: document.getElementById('statusButton'),
+        logout: document.getElementById('logoutButton'),
+        test: document.getElementById('testSubmit'),
+        generateToken: document.getElementById('generateTokenBtn')
+    };
+
+    const alwaysEnabledButtons = new Set(['generateToken']);
+
+    function setPanelAvailability(flag) {
+        if (!panel) {
+            return;
+        }
+        panel.dataset.disabled = flag ? 'true' : 'false';
+        Object.entries(buttons).forEach(([key, btn]) => {
+            if (!btn) {
+                return;
+            }
+            if (alwaysEnabledButtons.has(key)) {
+                if (btn.dataset.panelDisabled === 'true') {
+                    delete btn.dataset.panelDisabled;
+                }
+                return;
+            }
+            if (flag) {
+                btn.dataset.panelDisabled = 'true';
+                btn.disabled = true;
+            } else if (btn.dataset.panelDisabled === 'true') {
+                btn.disabled = false;
+                delete btn.dataset.panelDisabled;
+            }
+        });
+    }
+
+    function formatPropagationFeedback(propagation) {
+        if (!propagation || typeof propagation !== 'object') {
+            return '';
+        }
+        const notes = [];
+        if (Array.isArray(propagation.updated_files) && propagation.updated_files.length) {
+            notes.push(`Ficheiros sincronizados: ${propagation.updated_files.join(', ')}.`);
+        }
+        if (propagation.restart_triggered) {
+            notes.push('Reinício automático dos serviços agendado.');
+        }
+        if (propagation.error) {
+            notes.push(`Aviso: ${propagation.error}`);
+        }
+        return notes.join(' ');
+    }
+
+    const endpoints = {
+        start: '{% url "system_config:whatsapp_start_session" %}',
+        status: '{% url "system_config:whatsapp_status" %}',
+        qrcode: '{% url "system_config:whatsapp_qrcode" %}',
+        logout: '{% url "system_config:whatsapp_logout" %}',
+        sendTest: '{% url "system_config:whatsapp_send_test" %}',
+        updateConfig: '{% url "system_config:whatsapp_update_config" %}',
+        generateToken: '{% url "system_config:whatsapp_generate_token" %}'
+    };
+
+    function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) {
+            return parts.pop().split(';').shift();
+        }
+        return '';
+    }
+
+    const csrfToken = getCookie('csrftoken');
+
+    function setButtonsLoading(flag, btnList) {
+        (btnList || Object.values(buttons)).forEach(btn => {
+            if (!btn) {
+                return;
+            }
+            btn.disabled = flag;
+        });
+    }
+
+    function renderStatus(status) {
+        const connected = status && (
+            status.connected === true || 
+            status.status === 'connected' ||
+            String(status.status).toUpperCase() === 'CONNECTED' || 
+            String(status.state).toUpperCase() === 'CONNECTED' || 
+            String(status.session).toUpperCase() === 'ISLOGGED' ||
+            String(status.message).toLowerCase() === 'connected'
+        );
+        const waiting = status && (String(status.status).toUpperCase() === 'QRCODE' || String(status.status).toUpperCase() === 'PAIRING');
+        const badge = statusBadge.querySelector('span:last-child');
+        const dot = statusBadge.querySelector('span:first-child');
+        
+        const qrCodeSection = document.getElementById('qrCodeSection');
+        const sessionInfoCard = document.getElementById('sessionInfoCard');
+
+        if (connected) {
+            statusBadge.className = 'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-emerald-100 text-emerald-700';
+            dot.className = 'w-2 h-2 rounded-full bg-emerald-500';
+            badge.textContent = 'Conectado';
+            statusSummary.textContent = status.phone ? `Conectado: ${status.phone}` : 'Sessão ativa';
+            
+            // Esconder QR Code quando conectado
+            if (qrCodeSection) qrCodeSection.classList.add('hidden');
+            if (sessionInfoCard) sessionInfoCard.classList.remove('hidden');
+            
+        } else if (waiting) {
+            statusBadge.className = 'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-amber-100 text-amber-700';
+            dot.className = 'w-2 h-2 rounded-full bg-amber-500';
+            badge.textContent = 'Aguardando conexão';
+            statusSummary.textContent = 'Aguardando leitura do QR';
+            
+            // Mostrar QR Code quando aguardando
+            if (qrCodeSection) qrCodeSection.classList.remove('hidden');
+            if (sessionInfoCard) sessionInfoCard.classList.add('hidden');
+            
+        } else {
+            statusBadge.className = 'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-600';
+            dot.className = 'w-2 h-2 rounded-full bg-gray-400';
+            badge.textContent = 'Desconectado';
+            statusSummary.textContent = 'Sessão não autenticada';
+            
+            // Mostrar QR Code quando desconectado
+            if (qrCodeSection) qrCodeSection.classList.remove('hidden');
+            if (sessionInfoCard) sessionInfoCard.classList.add('hidden');
+        }
+    }
+
+    function renderQr(payload) {
+        const base64 = payload && (payload.qrcode || payload.qrCode || payload.base64);
+        const code = payload && payload.pairingCode;
+
+        if (base64) {
+            qrImage.src = base64.startsWith('data:') ? base64 : `data:image/png;base64,${base64}`;
+            qrImage.classList.remove('hidden');
+            pairingCode.classList.add('hidden');
+            qrPlaceholder.classList.add('hidden');
+        } else if (code) {
+            pairingCode.textContent = code;
+            pairingCode.classList.remove('hidden');
+            qrImage.classList.add('hidden');
+            qrPlaceholder.classList.add('hidden');
+        } else {
+            qrImage.classList.add('hidden');
+            pairingCode.classList.add('hidden');
+            qrPlaceholder.classList.remove('hidden');
+        }
+    }
+
+    async function callEndpoint(url, options) {
+        console.log(`[WhatsApp] Chamando endpoint: ${url}`, options);
+        const response = await fetch(url, Object.assign({
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            credentials: 'same-origin'
+        }, options || {}));
+        
+        const data = await response.json();
+        console.log(`[WhatsApp] Resposta de ${url}:`, { status: response.status, ok: response.ok, data });
+        
+        if (!response.ok || data.success === false) {
+            const message = data && data.message ? data.message : 'Falha na operação.';
+            console.error(`[WhatsApp] Erro em ${url}:`, { status: response.status, message, data });
+            throw new Error(message);
+        }
+        return data;
+    }
+
+    async function startSession() {
+        setButtonsLoading(true, [buttons.start, buttons.refreshQr]);
+        try {
+            console.log('[WhatsApp] Iniciando sessão...');
+            const data = await callEndpoint(endpoints.start, { method: 'POST', body: '{}' });
+            console.log('[WhatsApp] Resposta do start:', data);
+            
+            if (data.qrcode || data.pairingCode) {
+                renderQr(data);
+                console.log('[WhatsApp] QR Code renderizado a partir do start');
+            } else {
+                // Se não retornou QR no start, tentar obter
+                console.log('[WhatsApp] Tentando obter QR Code...');
+                try {
+                    const qrData = await callEndpoint(endpoints.qrcode, { method: 'GET' });
+                    renderQr(qrData);
+                    console.log('[WhatsApp] QR Code obtido com sucesso');
+                } catch (qrError) {
+                    console.warn('[WhatsApp] Não foi possível obter QR Code:', qrError.message);
+                }
+            }
+            
+            if (data.status) {
+                renderStatus(data.status);
+            }
+        } catch (error) {
+            console.error('[WhatsApp] Erro ao iniciar sessão:', error);
+            alert(error.message);
+        } finally {
+            setButtonsLoading(false, [buttons.start, buttons.refreshQr]);
+        }
+    }
+
+    async function refreshQr() {
+        setButtonsLoading(true, [buttons.refreshQr]);
+        try {
+            const data = await callEndpoint(endpoints.qrcode, { method: 'GET' });
+            renderQr(data);
+        } catch (error) {
+            alert(error.message);
+        } finally {
+            setButtonsLoading(false, [buttons.refreshQr]);
+        }
+    }
+
+    async function refreshStatus() {
+        setButtonsLoading(true, [buttons.status]);
+        try {
+            const data = await callEndpoint(endpoints.status, { method: 'GET' });
+            if (data.session) {
+                renderStatus(data.session);
+                updateSessionInfo(data.session);
+            }
+        } catch (error) {
+            alert(error.message);
+        } finally {
+            setButtonsLoading(false, [buttons.status]);
+        }
+    }
+
+    function updateSessionInfo(session) {
+        const sessionInfoCard = document.getElementById('sessionInfoCard');
+        const qrCodeSection = document.getElementById('qrCodeSection');
+        const connectedPhone = document.getElementById('connectedPhone');
+        const connectedStatus = document.getElementById('connectedStatus');
+        const deviceName = document.getElementById('deviceName');
+        const devicePlatform = document.getElementById('devicePlatform');
+
+        if (!session || !session.connected) {
+            // Não conectado - esconder info e mostrar QR
+            if (sessionInfoCard) sessionInfoCard.classList.add('hidden');
+            if (qrCodeSection) qrCodeSection.classList.remove('hidden');
+            return;
+        }
+
+        // Conectado - mostrar info e esconder QR
+        if (sessionInfoCard) sessionInfoCard.classList.remove('hidden');
+        if (qrCodeSection) qrCodeSection.classList.add('hidden');
+
+        // Atualizar identificação (número ou sessão)
+        if (connectedPhone && session.phone) {
+            connectedPhone.textContent = session.phone;
+        } else if (connectedPhone && session.session_name) {
+            connectedPhone.textContent = session.session_name;
+        }
+
+        // Atualizar status
+        if (connectedStatus) {
+            connectedStatus.textContent = session.status === 'connected' ? 'Ativo e operacional' : session.status;
+        }
+
+        // Atualizar informações do dispositivo se disponíveis
+        if (session.device) {
+            if (deviceName && session.device.pushname) {
+                deviceName.textContent = session.device.pushname;
+                const container = document.getElementById('deviceNameContainer');
+                if (container) container.classList.remove('opacity-50');
+            }
+            if (devicePlatform && session.device.platform) {
+                devicePlatform.textContent = session.device.platform;
+                const container = document.getElementById('devicePlatformContainer');
+                if (container) container.classList.remove('opacity-50');
+            }
+        }
+    }
+
+    async function logoutSession() {
+        if (!confirm('Deseja desconectar a sessão atual?')) {
+            return;
+        }
+        setButtonsLoading(true, [buttons.logout]);
+        try {
+            await callEndpoint(endpoints.logout, { method: 'POST', body: '{}' });
+            renderStatus({});
+            renderQr({});
+        } catch (error) {
+            alert(error.message);
+        } finally {
+            setButtonsLoading(false, [buttons.logout]);
+        }
+    }
+
+    async function sendTest(event) {
+        event.preventDefault();
+        setButtonsLoading(true, [buttons.test]);
+        testFeedback.className = 'hidden';
+        try {
+            const formData = new FormData(testForm);
+            const payload = {
+                phone: formData.get('phone'),
+                message: formData.get('message')
+            };
+            const data = await callEndpoint(endpoints.sendTest, { method: 'POST', body: JSON.stringify(payload) });
+            testFeedback.className = 'block text-sm rounded-lg px-4 py-3 bg-emerald-100 text-emerald-700';
+            testFeedback.textContent = `Mensagem enviada para ${data.recipient}.`;
+        } catch (error) {
+            testFeedback.className = 'block text-sm rounded-lg px-4 py-3 bg-red-100 text-red-700';
+            testFeedback.textContent = error.message;
+        } finally {
+            setButtonsLoading(false, [buttons.test]);
+        }
+    }
+
+    async function toggleService() {
+        const button = document.getElementById('toggleService');
+        if (!button) {
+            return;
+        }
+        const label = document.getElementById('toggleServiceLabel');
+        const buttonIcon = button.querySelector('i[data-lucide]');
+        const enabled = button.dataset.enabled === 'true';
+        button.disabled = true;
+        try {
+            const formData = new URLSearchParams();
+            formData.set('action', 'toggle');
+            formData.set('enable', enabled ? 'false' : 'true');
+            const response = await fetch(window.location.href, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: formData,
+                credentials: 'same-origin'
+            });
+            const data = await response.json();
+            if (!data.success) {
+                throw new Error(data.message || 'Falha ao alternar serviço');
+            }
+            const newState = data.enabled === true;
+            button.dataset.enabled = newState ? 'true' : 'false';
+            label.textContent = newState ? 'Desativar' : 'Ativar';
+            
+            // Atualizar classes do botão
+            if (newState) {
+                button.className = 'inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border transition-colors border-red-600 text-red-700 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20';
+                if (buttonIcon) {
+                    buttonIcon.setAttribute('data-lucide', 'power-off');
+                    lucide.createIcons();
+                }
+            } else {
+                button.className = 'inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border transition-colors border-emerald-600 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/20';
+                if (buttonIcon) {
+                    buttonIcon.setAttribute('data-lucide', 'power');
+                    lucide.createIcons();
+                }
+            }
+            
+            const ready = panel && panel.dataset.hasInstance === 'true' && panel.dataset.hasApi === 'true' && panel.dataset.hasKey === 'true';
+            const shouldDisable = !newState || !ready;
+            setPanelAvailability(shouldDisable);
+            if (!ready && configError) {
+                configError.classList.remove('hidden');
+            }
+            alert(newState ? 'WhatsApp habilitado.' : 'WhatsApp desativado.');
+        } catch (error) {
+            alert(error.message);
+        } finally {
+            button.disabled = false;
+        }
+    }
+
+    function renderTokenStatus(hasKey) {
+        if (!tokenStatusBadge) {
+            return;
+        }
+        if (hasKey) {
+            tokenStatusBadge.textContent = 'Token guardado na configuração.';
+            tokenStatusBadge.className = 'inline-flex items-center gap-2 text-xs font-medium px-2.5 py-1.5 rounded-full bg-emerald-100 text-emerald-700';
+        } else {
+            tokenStatusBadge.textContent = 'Nenhum token guardado.';
+            tokenStatusBadge.className = 'inline-flex items-center gap-2 text-xs font-medium px-2.5 py-1.5 rounded-full bg-gray-100 text-gray-600';
+        }
+    }
+
+    function updateConfigSummary(instanceValue, apiValue, hasKeyFlag) {
+        const hasKey = typeof hasKeyFlag === 'boolean' ? hasKeyFlag : (panel && panel.dataset.hasKey === 'true');
+        if (sessionDisplay) {
+            sessionDisplay.textContent = instanceValue ? instanceValue : '(não configurado)';
+        }
+        if (apiDisplay) {
+            apiDisplay.textContent = apiValue ? apiValue : '(não definida)';
+        }
+        if (panel) {
+            panel.dataset.hasInstance = instanceValue ? 'true' : 'false';
+            panel.dataset.hasApi = apiValue ? 'true' : 'false';
+            panel.dataset.hasKey = hasKey ? 'true' : 'false';
+        }
+        renderTokenStatus(hasKey);
+        const ready = Boolean(instanceValue && apiValue && hasKey);
+        if (configError) {
+            if (ready) {
+                configError.classList.add('hidden');
+            } else {
+                configError.classList.remove('hidden');
+            }
+        }
+        const serviceButton = document.getElementById('toggleService');
+        const serviceEnabled = serviceButton && serviceButton.dataset.enabled === 'true';
+        setPanelAvailability(!serviceEnabled || !ready);
+    }
+
+    async function updateConfig(event) {
+        event.preventDefault();
+        const form = document.getElementById('configForm');
+        const feedback = document.getElementById('configFeedback');
+        const submit = document.getElementById('configSubmit');
+        const apiKeyInput = document.getElementById('configApiKey');
+        const clearCheckbox = document.getElementById('configClearApiKey');
+        feedback.className = 'hidden';
+        submit.disabled = true;
+        try {
+            const formData = new FormData(form);
+            const payload = {
+                api_url: (formData.get('api_url') || '').trim(),
+                instance_name: (formData.get('instance_name') || '').trim()
+            };
+            const apiKeyRaw = formData.get('api_key') || '';
+            const clearToken = formData.get('clear_api_key') === 'on';
+            const trimmedKey = apiKeyRaw.trim();
+            const tokenProvided = Boolean(trimmedKey) && !clearToken;
+            if (clearToken) {
+                payload.clear_api_key = true;
+            } else if (trimmedKey) {
+                payload.api_key = trimmedKey;
+            }
+            const response = await fetch(endpoints.updateConfig, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify(payload),
+                credentials: 'same-origin'
+            });
+            const data = await response.json();
+            if (!response.ok || data.success === false) {
+                throw new Error(data.message || 'Não foi possível guardar.');
+            }
+            feedback.className = 'block text-sm rounded-lg px-4 py-3 bg-emerald-100 text-emerald-700';
+            if (tokenProvided) {
+                feedback.textContent = 'Configurações guardadas. Token sincronizado com os serviços.';
+            } else if (clearToken) {
+                feedback.textContent = 'Token removido e configurações guardadas.';
+            } else {
+                feedback.textContent = 'Configurações guardadas com sucesso.';
+            }
+            const propagationNote = formatPropagationFeedback(data.propagation);
+            if (propagationNote) {
+                feedback.textContent += ` ${propagationNote}`;
+            }
+            const sanitizedApi = data.api_url || '';
+            const sanitizedInstance = data.instance_name || '';
+            if (form.querySelector('[name="api_url"]')) {
+                form.querySelector('[name="api_url"]').value = sanitizedApi;
+            }
+            if (form.querySelector('[name="instance_name"]')) {
+                form.querySelector('[name="instance_name"]').value = sanitizedInstance;
+            }
+            if (clearCheckbox) {
+                clearCheckbox.checked = false;
+            }
+            if (apiKeyInput) {
+                apiKeyInput.value = data.token_value || '';
+            }
+            updateConfigSummary(sanitizedInstance, sanitizedApi, data.has_api_key === true);
+        } catch (error) {
+            feedback.className = 'block text-sm rounded-lg px-4 py-3 bg-red-100 text-red-700';
+            feedback.textContent = error.message;
+        } finally {
+            submit.disabled = false;
+        }
+    }
+
+    async function generateToken() {
+        const button = buttons.generateToken;
+        const feedback = document.getElementById('configFeedback');
+        if (feedback) {
+            feedback.className = 'hidden';
+        }
+        if (button) {
+            button.disabled = true;
+        }
+        try {
+            const response = await fetch(endpoints.generateToken, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: '{}',
+                credentials: 'same-origin'
+            });
+            const data = await response.json();
+            if (!response.ok || data.success === false) {
+                throw new Error(data.message || 'Não foi possível gerar o token.');
+            }
+            const token = data.token || '';
+            if (configApiKey) {
+                configApiKey.value = token;
+                configApiKey.focus();
+                configApiKey.select();
+            }
+            const instanceValue = configInstanceInput ? configInstanceInput.value.trim() : (data.instance_name || '');
+            const apiValue = configApiUrlInput ? configApiUrlInput.value.trim() : (data.api_url || '');
+            updateConfigSummary(instanceValue, apiValue, true);
+            if (feedback) {
+                feedback.className = 'block text-sm rounded-lg px-4 py-3 bg-emerald-100 text-emerald-700';
+                feedback.textContent = token ? `Novo token gerado e sincronizado com os serviços: ${token}` : 'Novo token gerado e sincronizado com os serviços.';
+                const propagationNote = formatPropagationFeedback(data.propagation);
+                if (propagationNote) {
+                    feedback.textContent += ` ${propagationNote}`;
+                }
+            }
+        } catch (error) {
+            if (feedback) {
+                feedback.className = 'block text-sm rounded-lg px-4 py-3 bg-red-100 text-red-700';
+                feedback.textContent = error.message;
+            }
+        } finally {
+            if (button) {
+                button.disabled = false;
+            }
+        }
+    }
+
+    function bootstrap() {
+        const toggleButton = document.getElementById('toggleService');
+        const serviceEnabled = toggleButton && toggleButton.dataset.enabled === 'true';
+        const initialReady = panel && panel.dataset.hasInstance === 'true' && panel.dataset.hasApi === 'true' && panel.dataset.hasKey === 'true';
+        setPanelAvailability(disabled || !serviceEnabled || !initialReady);
+
+        if (buttons.start) {
+            buttons.start.addEventListener('click', startSession);
+        }
+        if (buttons.refreshQr) {
+            buttons.refreshQr.addEventListener('click', refreshQr);
+        }
+        if (buttons.status) {
+            buttons.status.addEventListener('click', refreshStatus);
+        }
+        if (buttons.logout) {
+            buttons.logout.addEventListener('click', logoutSession);
+        }
+        if (testForm) {
+            testForm.addEventListener('submit', sendTest);
+        }
+
+        if (toggleButton) {
+            toggleButton.addEventListener('click', toggleService);
+        }
+
+        const cfgForm = document.getElementById('configForm');
+        if (cfgForm) {
+            cfgForm.addEventListener('submit', updateConfig);
+        }
+
+        if (buttons.generateToken) {
+            buttons.generateToken.addEventListener('click', generateToken);
+        }
+
+        try {
+            const initialNode = document.getElementById('initial-status');
+            if (initialNode && initialNode.textContent) {
+                const initialStatus = JSON.parse(initialNode.textContent);
+                if (Object.keys(initialStatus || {}).length) {
+                    renderStatus(initialStatus);
+                    updateSessionInfo(initialStatus);
+                }
+            }
+        } catch (error) {
+            console.warn('Estado inicial indisponivel:', error);
+        }
+
+        // Carregar informações da sessão automaticamente se estiver configurado
+        if (serviceEnabled && initialReady) {
+            setTimeout(async () => {
+                try {
+                    console.log('[WhatsApp] Verificando status da sessão...');
+                    
+                    // Verificar se está desconectado e gerar QR automaticamente
+                    const data = await callEndpoint(endpoints.status, { method: 'GET' });
+                    console.log('[WhatsApp] Dados de status recebidos:', data);
+                    
+                    const isConnected = data.session && (
+                        data.session.connected === true || 
+                        data.session.status === 'connected' ||
+                        String(data.session.message || '').toLowerCase() === 'connected'
+                    );
+                    
+                    console.log('[WhatsApp] Status de conexão:', isConnected ? 'CONECTADO' : 'DESCONECTADO');
+                    
+                    if (!isConnected) {
+                        console.log('[WhatsApp] Sessão desconectada, gerando QR Code automaticamente...');
+                        const qrPlaceholderText = document.getElementById('qrPlaceholderText');
+                        const qrLoading = document.getElementById('qrLoading');
+                        const qrPlaceholder = document.getElementById('qrPlaceholder');
+                        
+                        // Mostrar loading
+                        if (qrPlaceholder) qrPlaceholder.classList.add('hidden');
+                        if (qrLoading) qrLoading.classList.remove('hidden');
+                        
+                        try {
+                            // Iniciar sessão automaticamente
+                            console.log('[WhatsApp] Chamando startSession()...');
+                            await startSession();
+                            console.log('[WhatsApp] QR Code gerado com sucesso!');
+                        } catch (err) {
+                            console.error('[WhatsApp] Erro ao gerar QR Code:', err);
+                            if (qrPlaceholder) {
+                                qrPlaceholder.classList.remove('hidden');
+                                if (qrPlaceholderText) {
+                                    qrPlaceholderText.textContent = 'Erro ao gerar QR Code. Clique em "Iniciar sessão".';
+                                }
+                            }
+                        } finally {
+                            // Esconder loading
+                            if (qrLoading) qrLoading.classList.add('hidden');
+                        }
+                    } else {
+                        console.log('[WhatsApp] Sessão conectada, QR Code não necessário');
+                        // Garantir que renderizou corretamente
+                        renderStatus(data.session);
+                        updateSessionInfo(data.session);
+                    }
+                } catch (err) {
+                    console.error('[WhatsApp] Erro ao verificar status inicial:', err);
+                }
+            }, 1000); // Aumentado para 1 segundo para dar tempo do DOM carregar
+        }
+
+        const currentInstance = configInstanceInput ? configInstanceInput.value.trim() : (sessionDisplay ? sessionDisplay.textContent.trim() : '');
+        const currentApi = configApiUrlInput ? configApiUrlInput.value.trim() : (apiDisplay ? apiDisplay.textContent.trim() : '');
+        updateConfigSummary(currentInstance, currentApi, panel && panel.dataset.hasKey === 'true');
+
+        // Polling para atualizar status automaticamente a cada 5 segundos (mais frequente para detectar conexão)
+        let lastStatus = null;
+        let consecutiveConnected = 0;
+        
+        if (serviceEnabled && initialReady) {
+            setInterval(async () => {
+                try {
+                    console.log('[WhatsApp] Atualizando status automaticamente...');
+                    const data = await callEndpoint(endpoints.status, { method: 'GET' });
+                    if (data.session) {
+                        const currentStatus = data.session.status || 'unknown';
+                        const isFullyConnected = data.session.connected === true || currentStatus === 'isLogged';
+                        const isConnecting = currentStatus === 'qrReadSuccess' || currentStatus === 'inChat';
+                        
+                        console.log('[WhatsApp] Status atual:', currentStatus, 'Connected:', data.session.connected, 'IsFullyConnected:', isFullyConnected);
+                        
+                        // Só recarrega se realmente conectou (não apenas "lendo QR")
+                        if (isFullyConnected && lastStatus !== 'isLogged' && lastStatus !== 'connected') {
+                            consecutiveConnected++;
+                            if (consecutiveConnected >= 2) {  // 2 verificações consecutivas = 10 segundos
+                                console.log('[WhatsApp] ✅ SESSÃO TOTALMENTE CONECTADA! Recarregando página...');
+                                setTimeout(() => window.location.reload(), 1500);
+                                return;
+                            }
+                        } else if (!isFullyConnected) {
+                            consecutiveConnected = 0;
+                        }
+                        
+                        lastStatus = currentStatus;
+                        renderStatus(data.session);
+                        updateSessionInfo(data.session);
+                    }
+                } catch (err) {
+                    console.debug('[WhatsApp] Erro no polling de status:', err);
+                }
+            }, 5000); // 5 segundos - polling mais frequente para detectar conexão rapidamente
+        }
+
+        // Funcionalidade de collapse para Configurações
+        const toggleConfigBtn = document.getElementById('toggleConfigSection');
+        const configContent = document.getElementById('configContent');
+        const configChevron = document.getElementById('configChevron');
+        
+        console.log('[WhatsApp] Inicializando collapse:', {
+            toggleConfigBtn: !!toggleConfigBtn,
+            configContent: !!configContent,
+            configChevron: !!configChevron
+        });
+        
+        if (toggleConfigBtn && configContent && configChevron) {
+            let isCollapsed = true;
+            
+            // Iniciar colapsado
+            configContent.style.maxHeight = '0';
+            configContent.style.overflow = 'hidden';
+            configContent.style.transition = 'max-height 0.3s ease-in-out';
+            configChevron.style.transition = 'transform 0.3s ease-in-out';
+            
+            console.log('[WhatsApp] Collapse configurado, estado inicial: colapsado');
+            
+            toggleConfigBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                console.log('[WhatsApp] Toggle clicado, isCollapsed:', isCollapsed);
+                
+                if (isCollapsed) {
+                    // Expandir
+                    const targetHeight = configContent.scrollHeight;
+                    console.log('[WhatsApp] Expandindo para:', targetHeight + 'px');
+                    configContent.style.maxHeight = targetHeight + 'px';
+                    configChevron.style.transform = 'rotate(180deg)';
+                    isCollapsed = false;
+                    
+                    // Após a animação, remover restrição de altura
+                    setTimeout(() => {
+                        if (!isCollapsed) {
+                            configContent.style.maxHeight = 'none';
+                        }
+                    }, 300);
+                } else {
+                    // Colapsar
+                    console.log('[WhatsApp] Colapsando');
+                    configContent.style.maxHeight = configContent.scrollHeight + 'px';
+                    // Forçar reflow
+                    setTimeout(() => {
+                        configContent.style.maxHeight = '0';
+                        configChevron.style.transform = 'rotate(0deg)';
+                        isCollapsed = true;
+                    }, 10);
+                }
+            });
+        } else {
+            console.error('[WhatsApp] Elementos do collapse não encontrados!');
+        }
+    }
+
+    bootstrap();
+})();
+</script>
+{% endblock %}

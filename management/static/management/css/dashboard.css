@@ -1,0 +1,93 @@
+/* CSS para management/dashboard.html */
+body {
+    background-color: #f4f7f6; /* Um cinza claro para o fundo da página */
+}
+
+#dashboard-data .grid > div {
+    transition: transform 0.2s ease-in-out;
+}
+
+#dashboard-data .grid > div:hover {
+    transform: translateY(-5px);
+}
+
+/* Estilização para o input de data para melhor integração visual */
+#date-filter-input {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #D1D5DB; /* cinza-300 do Tailwind */
+    border-radius: 0.375rem; /* rounded-md do Tailwind */
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); /* shadow-sm do Tailwind */
+    font-size: 0.875rem; /* text-sm do Tailwind */
+    line-height: 1.25rem;
+}
+
+#date-filter-input:focus {
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+    border-color: #4F46E5; /* indigo-500 do Tailwind */
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.3); /* Anel de foco similar ao Tailwind */
+}
+
+/* Melhorando a aparência dos cards de estatísticas */
+.bg-blue-500 { background-color: #3B82F6; }
+.bg-green-500 { background-color: #10B981; }
+.bg-red-500 { background-color: #EF4444; }
+.bg-yellow-500 { background-color: #F59E0B; }
+.bg-purple-500 { background-color: #8B5CF6; }
+
+/* Responsividade para os cards */
+@media (max-width: 768px) { /* md breakpoint */
+    #dashboard-data .grid {
+        grid-template-columns: repeat(1, minmax(0, 1fr)); /* Uma coluna em telas menores */
+    }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) { /* lg breakpoint */
+    #dashboard-data .grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)); /* Duas colunas em telas médias */
+    }
+}
+
+/* Estilo para a seção de detalhes da semana */
+.mt-8 {
+    margin-top: 2rem; /* 32px */
+}
+.text-xl {
+    font-size: 1.25rem; /* 20px */
+    line-height: 1.75rem; /* 28px */
+}
+.font-semibold {
+    font-weight: 600;
+}
+.text-gray-700 {
+    color: #374151;
+}
+.mb-4 {
+    margin-bottom: 1rem; /* 16px */
+}
+.bg-white {
+    background-color: #ffffff;
+}
+.p-6 {
+    padding: 1.5rem; /* 24px */
+}
+.rounded-lg {
+    border-radius: 0.5rem; /* 8px */
+}
+.shadow {
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+}
+.text-gray-600 {
+    color: #4B5563;
+}
+
+/* Adicionando um pouco mais de refinamento visual */
+h1.text-3xl {
+    color: #1F2937; /* Um cinza mais escuro para o título principal */
+}
+
+#dashboard-data h2.text-xl {
+    border-bottom: 1px solid #E5E7EB; /* Linha sutil abaixo do título do resumo */
+    padding-bottom: 0.5rem;
+    margin-bottom: 1rem;
+}

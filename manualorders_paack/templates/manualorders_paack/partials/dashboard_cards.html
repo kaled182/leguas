@@ -1,0 +1,28 @@
+<section class="dashboard-metrics" aria-label="Métricas principais">
+  <!-- Título da seção -->
+  <div class="mb-6">
+    <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Métricas do Dashboard</h2>
+  </div>
+  
+  <div class="dashboard-cards-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 transition-opacity duration-300" id="dashboard-grid">
+    {% include 'paack_dashboard/partials/dashboard_card.html' with card_id="total-orders" icon="package" color="blue" title="Total de Pedidos" value=dispatch_metrics.total description=total_orders_description %}
+    
+    {% include 'paack_dashboard/partials/dashboard_card.html' with card_id="to-attempt" icon="clock" color="amber" title="Por Tentar" value=dispatch_metrics.pending description="Pendentes de entrega" %}
+    
+    {% include 'paack_dashboard/partials/dashboard_card.html' with card_id="delivered" icon="check-circle" color="emerald" title="Entregues" value=dispatch_metrics.delivered description="Pedidos concluídos" %}
+    
+    {% include 'paack_dashboard/partials/dashboard_card.html' with card_id="failed" icon="x-circle" color="red" title="Falidos" value=dispatch_metrics.failed description="Pedidos com falha" %}
+    
+    {% include 'paack_dashboard/partials/dashboard_card.html' with card_id="total-recovered" icon="refresh-cw" color="cyan" title="Recuperadas" value=dispatch_metrics.recovered description="Pedidos recuperados" %}
+    
+    {% include 'paack_dashboard/partials/dashboard_card.html' with card_id="success-rate" icon="trending-up" color="violet" title="Taxa de Sucesso" value=dispatch_metrics.success_rate|floatformat:2 description="Performance do dia" suffix="%" %}
+    
+    {% if best_driver %}
+      {% include 'paack_dashboard/partials/dashboard_card.html' with card_id="best-driver-today" icon="crown" color="yellow" title="Melhor Motorista" value=best_driver.driver.name description=is_today|yesno:"Destaque de hoje,Destaque da data" custom_text_size="text-3xl" %}
+    {% else %}
+      {% include 'paack_dashboard/partials/dashboard_card.html' with card_id="best-driver-today" icon="crown" color="yellow" title="Melhor Motorista" value="N/A" description="Sem motoristas suficientes" custom_text_size="text-xl" %}
+    {% endif %}
+
+    {% include 'paack_dashboard/partials/dashboard_card.html' with card_id="week-efficiency" icon="target" color="indigo" title="Eficiência Semanal" value=week_efficiency|floatformat:2 description="Média das taxas diárias" suffix="%" %}
+  </div>
+</section>

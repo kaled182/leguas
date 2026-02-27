@@ -1,0 +1,203 @@
+{% extends 'management/base.html' %}
+{% load static %}
+
+{% block title %}Gestão de Motoristas{% endblock %}
+{% block sidebar_title %}Motoristas{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-8">
+  <!-- Header melhorado -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 fade-in">
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div class="flex items-center gap-4">
+        <div class="p-3 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl shadow-sm">
+          <i data-lucide="users" class="w-6 h-6 text-white"></i>
+        </div>
+        <div>
+          <h1 class="text-3xl font-bold text-gray-900 dark:text-gray-100">
+            Gestão de Motoristas
+          </h1>
+          <p class="text-gray-600 dark:text-gray-400 mt-1">
+            Crie, edite e gerencie acessos de motoristas
+          </p>
+        </div>
+      </div>
+      
+      <!-- Botões de ação -->
+      <div class="flex items-center gap-3">
+        <button id="add-driver-btn"
+          class="inline-flex items-center gap-2 px-4 py-3 bg-success-600 hover:bg-success-700 text-white rounded-lg transition-all duration-200 font-medium shadow-sm hover:shadow hover-lift">
+          <i data-lucide="user-plus" class="w-4 h-4"></i>
+          Novo Acesso
+        </button>
+        
+        <!-- Dropdown de exportação melhorado -->
+        <div class="relative">
+          <button id="exportDropdownBtn" 
+            class="inline-flex items-center gap-2 px-4 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-all duration-200 font-medium shadow-sm hover:shadow hover-lift">
+            <i data-lucide="download" class="w-4 h-4"></i>
+            Exportar
+            <i data-lucide="chevron-down" class="w-4 h-4 transition-transform duration-200" id="exportChevron"></i>
+          </button>
+          
+          <div id="exportDropdown" class="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-10 hidden transform scale-95 transition-all duration-200">
+            <div class="py-1">
+              <a href="?export=csv" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                <i data-lucide="file-text" class="w-4 h-4"></i>
+                Exportar CSV
+              </a>
+              <a href="?export=xlsx" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+                Exportar Excel
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+          <a href="?export=xlsx" class="block px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">Exportar XLSX</a>
+          <a href="?export=pdf" class="block px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">Exportar PDF</a>
+        </div>
+      </div>
+    </div>
+  </header>
+  <section class="bg-white dark:bg-gray-800 rounded-xl shadow p-6">
+    <h2 class="text-lg font-bold mb-4 text-gray-900 dark:text-white">Usuários Registrados</h2>
+    <div class="overflow-auto rounded-md">
+      <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+        <thead class="bg-gray-50 dark:bg-gray-700">
+          <tr>
+            <th class="px-3 py-2 text-left font-bold text-blue-700 dark:text-blue-300 uppercase">Nome</th>
+            <th class="px-3 py-2 text-left font-bold text-blue-700 dark:text-blue-300 uppercase">Email</th>
+            <th class="px-3 py-2 text-left font-bold text-blue-700 dark:text-blue-300 uppercase">Telefone</th>
+            <th class="px-3 py-2 text-left font-bold text-blue-700 dark:text-blue-300 uppercase">Motorista</th>
+            <th class="px-3 py-2 text-left font-bold text-blue-700 dark:text-blue-300 uppercase">Ações</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-100 dark:divide-gray-700">
+          {% for access in driver_accesses %}
+          <tr>
+            <td class="px-3 py-2 whitespace-nowrap text-gray-900 dark:text-gray-100">{{ access.first_name }} {{ access.last_name }}</td>
+            <td class="px-3 py-2 whitespace-nowrap text-gray-700 dark:text-gray-300">{{ access.email }}</td>
+            <td class="px-3 py-2 whitespace-nowrap text-gray-700 dark:text-gray-300">{{ access.phone }}</td>
+            <td class="px-3 py-2 whitespace-nowrap text-gray-700 dark:text-gray-300">{{ access.driver.name if access.driver else '' }}</td>
+            <td class="px-3 py-2 whitespace-nowrap">
+              <a href="{% url 'management:edit_driver_access' access.id %}" class="text-blue-600 dark:text-blue-400 hover:underline">Editar</a>
+              <form method="post" action="" class="inline">
+                {% csrf_token %}
+                <input type="hidden" name="access_id" value="{{ access.id }}">
+                <button type="submit" name="delete_access" class="text-red-600 dark:text-red-400 hover:underline ml-2">Remover</button>
+              </form>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="5" class="text-center text-gray-400 dark:text-gray-500 py-4">Nenhum acesso cadastrado.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Dropdown de exportação melhorado
+  const exportBtn = document.getElementById('exportDropdownBtn');
+  const exportDropdown = document.getElementById('exportDropdown');
+  const exportChevron = document.getElementById('exportChevron');
+  
+  let isDropdownOpen = false;
+  
+  function toggleDropdown() {
+    isDropdownOpen = !isDropdownOpen;
+    
+    if (isDropdownOpen) {
+      exportDropdown.classList.remove('hidden', 'scale-95');
+      exportDropdown.classList.add('scale-100');
+      exportChevron.style.transform = 'rotate(180deg)';
+    } else {
+      exportDropdown.classList.add('scale-95');
+      exportDropdown.classList.remove('scale-100');
+      exportChevron.style.transform = 'rotate(0deg)';
+      setTimeout(() => {
+        exportDropdown.classList.add('hidden');
+      }, 150);
+    }
+  }
+  
+  function closeDropdown() {
+    if (isDropdownOpen) {
+      toggleDropdown();
+    }
+  }
+  
+  // Event listeners
+  if (exportBtn) {
+    exportBtn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      toggleDropdown();
+    });
+  }
+  
+  // Fechar dropdown ao clicar fora
+  document.addEventListener('click', closeDropdown);
+  
+  // Prevenir fechamento ao clicar dentro do dropdown
+  if (exportDropdown) {
+    exportDropdown.addEventListener('click', function(e) {
+      e.stopPropagation();
+    });
+  }
+  
+  // Fechar dropdown ao pressionar ESC
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      closeDropdown();
+    }
+  });
+  
+  // Adicionar driver button
+  const addDriverBtn = document.getElementById('add-driver-btn');
+  if (addDriverBtn) {
+    addDriverBtn.addEventListener('click', function() {
+      // Aqui você pode adicionar a lógica para abrir modal ou redirecionar
+      if (typeof showNotification === 'function') {
+        showNotification('Funcionalidade em desenvolvimento', 'info');
+      }
+    });
+  }
+  
+  // Inicializar ícones
+  lucide.createIcons();
+});
+    const exportDropdown = document.getElementById('exportDropdown');
+    
+    if (exportBtn && exportDropdown) {
+      exportBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        exportDropdown.classList.toggle('hidden');
+      });
+      
+      // Fechar dropdown ao clicar fora
+      document.addEventListener('click', function(e) {
+        if (!exportBtn.contains(e.target) && !exportDropdown.contains(e.target)) {
+          exportDropdown.classList.add('hidden');
+        }
+      });
+    }
+    
+    // Garantir que os ícones estão atualizados
+    if (window.lucide) {
+      lucide.createIcons();
+    }
+    
+    // Inicializar gerenciamento de motoristas
+    if (typeof initDriversManagement === 'function') {
+      initDriversManagement();
+    }
+  });
+  </script>
+{% endblock %}

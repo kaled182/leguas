@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block title %}Envio de Relatórios{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="max-w-2xl mx-auto">
+        <h1 class="text-3xl font-bold text-gray-900 mb-8">📋 Envio de Relatórios</h1>
+        
+        <!-- Prévia do Relatório -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">📄 Prévia do Relatório</h2>
+            <div id="report-preview" class="bg-gray-50 p-4 rounded-lg font-mono text-sm whitespace-pre-line">
+                Carregando...
+            </div>
+            <button id="refresh-preview" class="mt-4 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors">
+                🔄 Atualizar Prévia
+            </button>
+        </div>
+        
+        <!-- Controles de Envio -->
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">📤 Enviar Relatório</h2>
+            
+            <div class="mb-4">
+                <label for="report-date" class="block text-sm font-medium text-gray-700 mb-2">
+                    📅 Data (opcional - deixe vazio para hoje):
+                </label>
+                <input 
+                    type="date" 
+                    id="report-date" 
+                    class="border border-gray-300 rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+            </div>
+            
+            <div class="flex gap-4">
+                <button id="send-report" class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg transition-colors">
+                    📤 Enviar Relatório
+                </button>
+                <button id="preview-with-date" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg transition-colors">
+                    👁️ Prévia com Data
+                </button>
+            </div>
+        </div>
+        
+        <!-- Status -->
+        <div id="status-message" class="mt-6 p-4 rounded-lg hidden">
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const reportPreview = document.getElementById('report-preview');
+    const refreshButton = document.getElementById('refresh-preview');
+    const sendButton = document.getElementById('send-report');
+    const previewWithDateButton = document.getElementById('preview-with-date');
+    const reportDateInput = document.getElementById('report-date');
+    const statusMessage = document.getElementById('status-message');
+    
+    function showStatus(message, type = 'info') {
+        statusMessage.textContent = message;
+        statusMessage.className = `mt-6 p-4 rounded-lg ${
+            type === 'success' ? 'bg-green-100 text-green-800' :
+            type === 'error' ? 'bg-red-100 text-red-800' :
+            'bg-blue-100 text-blue-800'
+        }`;
+        statusMessage.classList.remove('hidden');
+    }
+    
+    function loadPreview(date = '') {
+        const url = `/sendpaackreports/preview/${date ? `?date=${date}` : ''}`;
+        
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    reportPreview.textContent = data.report;
+                } else {
+                    reportPreview.textContent = `Erro: ${data.error}`;
+                }
+            })
+            .catch(error => {
+                reportPreview.textContent = `Erro ao carregar: ${error.message}`;
+            });
+    }
+    
+    function sendReport() {
+        if (!confirm('Confirma o envio do relatório via WhatsApp?')) {
+            return;
+        }
+        
+        showStatus('📤 Enviando relatório...', 'info');
+        sendButton.disabled = true;
+        
+        const date = reportDateInput.value;
+        const url = `/sendpaackreports/send/${date ? `?date=${date}` : ''}`;
+        
+        fetch(url, { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showStatus('✅ Relatório enviado com sucesso!', 'success');
+                } else {
+                    showStatus(`❌ Erro ao enviar: ${data.error}`, 'error');
+                }
+            })
+            .catch(error => {
+                showStatus(`❌ Erro de conexão: ${error.message}`, 'error');
+            })
+            .finally(() => {
+                sendButton.disabled = false;
+            });
+    }
+    
+    // Event listeners
+    refreshButton.addEventListener('click', () => loadPreview());
+    previewWithDateButton.addEventListener('click', () => loadPreview(reportDateInput.value));
+    sendButton.addEventListener('click', sendReport);
+    
+    // Carregar prévia inicial
+    loadPreview();
+});
+</script>
+{% endblock %}

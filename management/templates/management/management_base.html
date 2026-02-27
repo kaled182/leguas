@@ -1,0 +1,27 @@
+{% extends "base.html" %} {# Alterado para herdar da raiz do projeto #}
+{% load static %}
+
+{% block title %}
+  Management - {% block page_title %}Base{% endblock %}
+{% endblock %}
+
+{% block extra_head %}
+  {# Removido link para management_base.css - Usaremos Tailwind diretamente #}
+  {# O bloco page_css pode ser usado por templates filhos se houver CSS MUITO específico #}
+  {% block page_css %}{% endblock %}
+{% endblock %}
+
+{% block content %}
+  {# O base.html da raiz já deve ter a estrutura com sidebar e área de conteúdo principal #}
+  {# Este bloco page_content será inserido na área de conteúdo principal definida pelo base.html #}
+  <div class="p-4 sm:p-6 lg:p-8">
+    {% block page_content %}
+      {# Conteúdo específico da página do app management virá aqui #}
+    {% endblock %}
+  </div>
+{% endblock %}
+
+{% block extra_js %}
+  {# O bloco page_js pode ser usado por templates filhos se houver JS MUITO específico #}
+  {% block page_js %}{% endblock %}
+{% endblock %}

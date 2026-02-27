@@ -1,0 +1,974 @@
+{% extends 'paack_dashboard/base.html' %}
+
+{% block title %}Configurações do Sistema{% endblock %}
+{% block sidebar_title %}Configurações{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-4">
+    <!-- Header com Status -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6">
+        <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-4">
+                <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-sm">
+                    <i data-lucide="settings" class="w-6 h-6 text-white"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Configurações do Sistema</h1>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">80+ configurações disponíveis</p>
+                </div>
+            </div>
+            {% if config.configured %}
+            <div class="flex items-center gap-2 px-4 py-2 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 rounded-lg">
+                <i data-lucide="check-circle" class="w-5 h-5"></i>
+                <span class="text-sm font-medium">Sistema Configurado</span>
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Aviso sobre campos implementados -->
+        <div class="flex items-start gap-3 px-4 py-3 bg-amber-50 dark:bg-amber-900/20 border-l-4 border-amber-500 rounded">
+            <i data-lucide="info" class="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5"></i>
+            <div class="text-sm text-amber-800 dark:text-amber-200">
+                <p class="font-semibold mb-1">Interface em Desenvolvimento</p>
+                <p>Atualmente mostrando campos essenciais. Consulte o arquivo <code class="px-1.5 py-0.5 bg-amber-100 dark:bg-amber-900/30 rounded font-mono text-xs">system_config/CHECKLIST.md</code> para ver todos os 80+ campos disponíveis no modelo. Abas adicionais (SMS, WhatsApp, Database, Redis) serão implementadas em breve.</p>
+            </div>
+        </div>
+    </div>
+
+    <form method="post" action="{% url 'system_config:save' %}" enctype="multipart/form-data" class="space-y-4">
+        {% csrf_token %}
+
+        <!-- Empresa -->
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6">
+            <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                <i data-lucide="building" class="w-5 h-5"></i>
+                Informações da Empresa
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nome da Empresa</label>
+                    <input type="text" name="company_name" value="{{ config.company_name|default:'' }}"
+                           class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 dark:text-white">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Logotipo</label>
+                    {% if config.logo %}
+                        <img src="{{ config.logo.url }}" alt="Logo" class="h-12 mb-2 object-contain bg-gray-100 dark:bg-gray-700 p-2 rounded">
+                    {% endif %}
+                    <input type="file" name="logo" accept="image/*" class="w-full text-sm">
+                </div>
+            </div>
+        </div>
+
+        <!-- Mapas -->
+        <details class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 overflow-hidden" open>
+            <summary class="px-6 py-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 flex items-center gap-2 font-semibold">
+                <i data-lucide="map" class="w-5 h-5"></i>
+                Configurações de Mapas
+            </summary>
+            <div class="px-6 pb-6 space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Provedor</label>
+                        <select name="map_provider" class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border rounded-lg dark:text-white">
+                            <option value="google" {% if config.map_provider == 'google' %}selected{% endif %}>Google Maps</option>
+                            <option value="mapbox" {% if config.map_provider == 'mapbox' %}selected{% endif %}>Mapbox</option>
+                            <option value="osm" {% if config.map_provider == 'osm' %}selected{% endif %}>OpenStreetMap</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Tipo de Mapa</label>
+                        <select name="map_type" class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border rounded-lg dark:text-white">
+                            <option value="roadmap" {% if config.map_type == 'roadmap' %}selected{% endif %}>Roadmap</option>
+                            <option value="satellite" {% if config.map_type == 'satellite' %}selected{% endif %}>Satélite</option>
+                            <option value="hybrid" {% if config.map_type == 'hybrid' %}selected{% endif %}>Híbrido</option>
+                            <option value="terrain" {% if config.map_type == 'terrain' %}selected{% endif %}>Terreno</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Tema</label>
+                        <select name="map_theme" class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border rounded-lg dark:text-white">
+                            <option value="light" {% if config.map_theme == 'light' %}selected{% endif %}>Claro</option>
+                            <option value="dark" {% if config.map_theme == 'dark' %}selected{% endif %}>Escuro</option>
+                            <option value="auto" {% if config.map_theme == 'auto' %}selected{% endif %}>Automático</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Latitude</label>
+                        <input type="number" step="0.000001" name="map_default_lat" value="{{ config.map_default_lat|default:'41.69314' }}"
+                               class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border rounded-lg dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Longitude</label>
+                        <input type="number" step="0.000001" name="map_default_lng" value="{{ config.map_default_lng|default:'-8.83565' }}"
+                               class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border rounded-lg dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Zoom</label>
+                        <input type="number" name="map_default_zoom" value="{{ config.map_default_zoom|default:'12' }}"
+                               class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border rounded-lg dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Idioma</label>
+                        <input type="text" name="map_language" value="{{ config.map_language|default:'pt-PT' }}"
+                               placeholder="pt-PT"
+                               class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border rounded-lg dark:text-white">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium mb-2">Google Maps API Key</label>
+                        <input type="text" name="google_maps_api_key" value="{{ config.google_maps_api_key|default:'' }}"
+                               class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border rounded-lg dark:text-white font-mono text-sm">
+                    </div>
+                    <div class="md:col-span-3">
+                        <label class="block text-sm font-medium mb-2">Mapbox Access Token</label>
+                        <input type="text" name="mapbox_access_token" value="{{ config.mapbox_access_token|default:'' }}"
+                               class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border rounded-lg dark:text-white font-mono text-sm">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium mb-2">Mapbox Style URL</label>
+                        <input type="text" name="mapbox_style" value="{{ config.mapbox_style|default:'mapbox://styles/mapbox/streets-v12' }}"
+                               placeholder="mapbox://styles/mapbox/streets-v12"
+                               class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border rounded-lg dark:text-white font-mono text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Esri API Key</label>
+                        <input type="text" name="esri_api_key" value="{{ config.esri_api_key|default:'' }}"
+                               class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border rounded-lg dark:text-white font-mono text-sm">
+                    </div>
+                    <div class="md:col-span-3">
+                        <label class="block text-sm font-medium mb-2">OSM Tile Server (opcional)</label>
+                        <input type="text" name="osm_tile_server" value="{{ config.osm_tile_server|default:'' }}"
+                               placeholder="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                               class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border rounded-lg dark:text-white font-mono text-sm">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-5 gap-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded">
+                    <label class="flex items-center gap-2 text-sm">
+                        <input type="checkbox" name="enable_street_view" value="1" {% if config.enable_street_view %}checked{% endif %}
+                               class="w-4 h-4 text-primary-600 rounded">
+                        Street View
+                    </label>
+                    <label class="flex items-center gap-2 text-sm">
+                        <input type="checkbox" name="enable_traffic" value="1" {% if config.enable_traffic %}checked{% endif %}
+                               class="w-4 h-4 text-primary-600 rounded">
+                        Trânsito
+                    </label>
+                    <label class="flex items-center gap-2 text-sm">
+                        <input type="checkbox" name="enable_map_clustering" value="1" {% if config.enable_map_clustering %}checked{% endif %}
+                               class="w-4 h-4 text-primary-600 rounded">
+                        Clustering
+                    </label>
+                    <label class="flex items-center gap-2 text-sm">
+                        <input type="checkbox" name="enable_drawing_tools" value="1" {% if config.enable_drawing_tools %}checked{% endif %}
+                               class="w-4 h-4 text-primary-600 rounded">
+                        Desenho
+                    </label>
+                    <label class="flex items-center gap-2 text-sm">
+                        <input type="checkbox" name="enable_fullscreen" value="1" {% if config.enable_fullscreen %}checked{% endif %}
+                               class="w-4 h-4 text-primary-600 rounded">
+                        Fullscreen
+                    </label>
+                </div>
+            </div>
+        </details>
+
+        <!-- Google Drive -->
+        <details class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
+            <summary class="px-6 py-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 flex items-center gap-2 font-semibold">
+                <i data-lucide="cloud" class="w-5 h-5"></i>
+                Google Drive
+            </summary>
+            <div class="px-6 pb-6 space-y-4">
+                <div class="flex flex-wrap gap-2">
+                    <a href="{% url 'system_config:whatsapp_dashboard' %}" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-emerald-600 text-white hover:bg-emerald-700">
+                        <i data-lucide="monitor" class="w-4 h-4"></i>
+                        Abrir painel WPPConnect
+                    </a>
+                    <button type="button" id="whatsappToggle" data-enabled="{% if config.whatsapp_enabled %}true{% else %}false{% endif %}"
+                        class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border border-emerald-600 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/20">
+                        <i data-lucide="toggle-right" class="w-4 h-4"></i>
+                        <span id="whatsappToggleLabel">{% if config.whatsapp_enabled %}Desativar via painel{% else %}Ativar via painel{% endif %}</span>
+                    </button>
+                </div>
+                <div class="flex items-center gap-2 mb-4">
+                    <input type="checkbox" name="gdrive_enabled" value="1" {% if config.gdrive_enabled %}checked{% endif %} id="gdrive_enabled"
+                           class="w-4 h-4 text-primary-600 rounded">
+                    <label for="gdrive_enabled" class="text-sm font-medium">Ativar Google Drive</label>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Modo de Autenticação</label>
+                        <select name="gdrive_auth_mode" class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border rounded-lg dark:text-white">
+                            <option value="service_account" {% if config.gdrive_auth_mode == 'service_account' %}selected{% endif %}>Service Account</option>
+                            <option value="oauth" {% if config.gdrive_auth_mode == 'oauth' %}selected{% endif %}>OAuth</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Folder ID</label>
+                        <input type="text" name="gdrive_folder_id" value="{{ config.gdrive_folder_id|default:'' }}"
+                               class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border rounded-lg dark:text-white font-mono text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Shared Drive ID (opcional)</label>
+                        <input type="text" name="gdrive_shared_drive_id" value="{{ config.gdrive_shared_drive_id|default:'' }}"
+                               placeholder="0ABC...xyz"
+                               class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border rounded-lg dark:text-white font-mono text-sm">
+                        <small class="text-gray-500 text-xs mt-1 block">Para usar Shared Drive ao invés de My Drive</small>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Email do Usuário (OAuth)</label>
+                        <input type="email" name="gdrive_oauth_user_email" value="{{ config.gdrive_oauth_user_email|default:'' }}"
+                               placeholder="usuario@dominio.com"
+                               class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border rounded-lg dark:text-white">
+                        <small class="text-gray-500 text-xs mt-1 block">Email da conta autorizada</small>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium mb-2">Credentials JSON (Service Account)</label>
+                        <textarea name="gdrive_credentials_json" rows="4"
+                                  class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border rounded-lg dark:text-white font-mono text-xs">{{ config.gdrive_credentials_json|default:'' }}</textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">OAuth Client ID</label>
+                        <input type="text" name="gdrive_oauth_client_id" value="{{ config.gdrive_oauth_client_id|default:'' }}"
+                               class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border rounded-lg dark:text-white font-mono text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">OAuth Client Secret</label>
+                        <input type="password" name="gdrive_oauth_client_secret" value="{{ config.gdrive_oauth_client_secret|default:'' }}"
+                               class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border rounded-lg dark:text-white font-mono text-sm">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium mb-2">OAuth Refresh Token</label>
+                        <input type="password" name="gdrive_oauth_refresh_token" value="{{ config.gdrive_oauth_refresh_token|default:'' }}"
+                               placeholder="1//0..."
+                               class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border rounded-lg dark:text-white font-mono text-sm">
+                        <small class="text-gray-500 text-xs mt-1 block">Token obtido após primeira autenticação OAuth</small>
+                    </div>
+                </div>
+            </div>
+        </details>
+
+        <!-- FTP -->
+        <details class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
+            <summary class="px-6 py-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 flex items-center gap-2 font-semibold">
+                <i data-lucide="server" class="w-5 h-5"></i>
+                FTP
+            </summary>
+            <div class="px-6 pb-6 space-y-4">
+                <div class="flex items-center gap-2 mb-4">
+                    <input type="checkbox" name="ftp_enabled" value="1" {% if config.ftp_enabled %}checked{% endif %} id="ftp_enabled"
+                           class="w-4 h-4 text-primary-600 rounded">
+                    <label for="ftp_enabled" class="text-sm font-medium">Ativar FTP</label>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Host</label>
+                        <input type="text" name="ftp_host" value="{{ config.ftp_host|default:'' }}"
+                               class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border rounded-lg dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Porta</label>
+                        <input type="number" name="ftp_port" value="{{ config.ftp_port|default:'21' }}"
+                               class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border rounded-lg dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Utilizador</label>
+                        <input type="text" name="ftp_user" value="{{ config.ftp_user|default:'' }}"
+                               class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border rounded-lg dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Senha</label>
+                        <input type="password" name="ftp_password" value="{{ config.ftp_password|default:'' }}"
+                               class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border rounded-lg dark:text-white">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium mb-2">Diretório</label>
+                        <input type="text" name="ftp_directory" value="{{ config.ftp_directory|default:'' }}"
+                               placeholder="/backups"
+                               class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border rounded-lg dark:text-white">
+                    </div>
+                </div>
+            </div>
+        </details>
+
+        <!-- SMTP -->
+        <details class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
+            <summary class="px-6 py-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 flex items-center gap-2 font-semibold">
+                <i data-lucide="mail" class="w-5 h-5"></i>
+                E-mail (SMTP)
+            </summary>
+            <div class="px-6 pb-6 space-y-4">
+                <div class="flex items-center gap-2 mb-4">
+                    <input type="checkbox" name="smtp_enabled" value="1" {% if config.smtp_enabled %}checked{% endif %} id="smtp_enabled"
+                           class="w-4 h-4 text-primary-600 rounded">
+                    <label for="smtp_enabled" class="text-sm font-medium">Ativar SMTP</label>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Host SMTP</label>
+                        <input type="text" name="smtp_host" value="{{ config.smtp_host|default:'' }}"
+                               placeholder="smtp.gmail.com"
+                               class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border rounded-lg dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Porta</label>
+                        <input type="text" name="smtp_port" value="{{ config.smtp_port|default:'587' }}"
+                               class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border rounded-lg dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Segurança</label>
+                        <select name="smtp_security" class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border rounded-lg dark:text-white">
+                            <option value="tls" {% if config.smtp_security == 'tls' %}selected{% endif %}>TLS/STARTTLS (porta 587)</option>
+                            <option value="ssl" {% if config.smtp_security == 'ssl' %}selected{% endif %}>SSL (porta 465)</option>
+                            <option value="none" {% if config.smtp_security == 'none' %}selected{% endif %}>Nenhuma (porta 25)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Modo de Autenticação</label>
+                        <select name="smtp_auth_mode" class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border rounded-lg dark:text-white">
+                            <option value="password" {% if config.smtp_auth_mode == 'password' %}selected{% endif %}>Usuário/Senha</option>
+                            <option value="oauth2" {% if config.smtp_auth_mode == 'oauth2' %}selected{% endif %}>OAuth 2.0</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Utilizador</label>
+                        <input type="text" name="smtp_user" value="{{ config.smtp_user|default:'' }}"
+                               class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border rounded-lg dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Senha</label>
+                        <input type="password" name="smtp_password" value="{{ config.smtp_password|default:'' }}"
+                               class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border rounded-lg dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">E-mail do Remetente</label>
+                        <input type="email" name="smtp_from_email" value="{{ config.smtp_from_email|default:'' }}"
+                               class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border rounded-lg dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Nome do Remetente</label>
+                        <input type="text" name="smtp_from_name" value="{{ config.smtp_from_name|default:'' }}"
+                               class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border rounded-lg dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Email para Testes</label>
+                        <input type="email" name="smtp_test_recipient" value="{{ config.smtp_test_recipient|default:'' }}"
+                               placeholder="teste@example.com"
+                               class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border rounded-lg dark:text-white">
+                        <small class="text-gray-500 text-xs mt-1 block">Email usado ao testar conexão SMTP</small>
+                    </div>
+                    <div class="md:col-span-2 flex items-center gap-2">
+                        <input type="checkbox" name="smtp_use_tls" value="1" {% if config.smtp_use_tls %}checked{% endif %} id="smtp_use_tls"
+                               class="w-4 h-4 text-primary-600 rounded">
+                        <label for="smtp_use_tls" class="text-sm font-medium">Usar TLS (compatibilidade)</label>
+                    </div>
+                </div>
+                
+                <!-- OAuth 2.0 Config (conditional) -->
+                <div class="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <h4 class="text-sm font-semibold mb-3 text-blue-900 dark:text-blue-100">Configuração OAuth 2.0 (Gmail, Office 365)</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium mb-2">OAuth Client ID</label>
+                            <input type="text" name="smtp_oauth_client_id" value="{{ config.smtp_oauth_client_id|default:'' }}"
+                                   placeholder="123456789012-abc...xyz.apps.googleusercontent.com"
+                                   class="w-full px-4 py-2 bg-white dark:bg-gray-700 border rounded-lg dark:text-white font-mono text-sm">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium mb-2">OAuth Client Secret</label>
+                            <input type="password" name="smtp_oauth_client_secret" value="{{ config.smtp_oauth_client_secret|default:'' }}"
+                                   placeholder="GOCSPX-..."
+                                   class="w-full px-4 py-2 bg-white dark:bg-gray-700 border rounded-lg dark:text-white font-mono text-sm">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium mb-2">OAuth Refresh Token</label>
+                            <input type="password" name="smtp_oauth_refresh_token" value="{{ config.smtp_oauth_refresh_token|default:'' }}"
+                                   placeholder="1//0..."
+                                   class="w-full px-4 py-2 bg-white dark:bg-gray-700 border rounded-lg dark:text-white font-mono text-sm">
+                            <small class="text-gray-600 dark:text-gray-400 text-xs mt-1 block">Token obtido após autorização OAuth</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </details>
+
+        <!-- WhatsApp -->
+        <details class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
+            <summary class="px-6 py-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 flex items-center gap-2 font-semibold">
+                <i data-lucide="message-circle" class="w-5 h-5"></i>
+                WhatsApp (WPPConnect)
+            </summary>
+            <div class="px-6 pb-6 space-y-4">
+                <div class="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg p-4 text-sm text-emerald-800 dark:text-emerald-200">
+                    <p class="font-semibold">Gestão centralizada</p>
+                    <p>As configurações do WhatsApp agora são feitas pelo painel dedicado. Utilize o botão abaixo para abrir o painel e gerir sessão, QR Code e parâmetros.</p>
+                </div>
+                <a href="{% url 'system_config:whatsapp_dashboard' %}" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-emerald-600 text-white hover:bg-emerald-700">
+                    <i data-lucide="monitor" class="w-4 h-4"></i>
+                    Abrir painel do WhatsApp
+                </a>
+            </div>
+        </details>
+
+        <!-- SMS -->
+        <details class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
+            <summary class="px-6 py-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 flex items-center gap-2 font-semibold">
+                <i data-lucide="message-square" class="w-5 h-5"></i>
+                SMS
+            </summary>
+            <div class="px-6 pb-6 space-y-4">
+                <div class="flex items-center gap-2 mb-4">
+                    <input type="checkbox" name="sms_enabled" value="1" {% if config.sms_enabled %}checked{% endif %} id="sms_enabled"
+                           class="w-4 h-4 text-primary-600 rounded">
+                    <label for="sms_enabled" class="text-sm font-medium">Ativar SMS</label>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Provedor SMS</label>
+                        <select name="sms_provider" class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border rounded-lg dark:text-white">
+                            <option value="twilio" {% if config.sms_provider == 'twilio' %}selected{% endif %}>Twilio</option>
+                            <option value="nexmo" {% if config.sms_provider == 'nexmo' %}selected{% endif %}>Nexmo</option>
+                            <option value="aws_sns" {% if config.sms_provider == 'aws_sns' %}selected{% endif %}>AWS SNS</option>
+                            <option value="infobip" {% if config.sms_provider == 'infobip' %}selected{% endif %}>Infobip</option>
+                            <option value="zenvia" {% if config.sms_provider == 'zenvia' %}selected{% endif %}>Zenvia</option>
+                            <option value="totalvoice" {% if config.sms_provider == 'totalvoice' %}selected{% endif %}>TotalVoice</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Account SID / Username</label>
+                        <input type="text" name="sms_account_sid" value="{{ config.sms_account_sid|default:'' }}"
+                               class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border rounded-lg dark:text-white font-mono text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Auth Token / Password</label>
+                        <input type="password" name="sms_auth_token" value="{{ config.sms_auth_token|default:'' }}"
+                               class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border rounded-lg dark:text-white font-mono text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">API Key</label>
+                        <input type="password" name="sms_api_key" value="{{ config.sms_api_key|default:'' }}"
+                               class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border rounded-lg dark:text-white font-mono text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Número de Envio</label>
+                        <input type="text" name="sms_from_number" value="{{ config.sms_from_number|default:'' }}"
+                               placeholder="+351912345678"
+                               class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border rounded-lg dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Número de Teste</label>
+                        <input type="text" name="sms_test_recipient" value="{{ config.sms_test_recipient|default:'' }}"
+                               placeholder="+351912345678"
+                               class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border rounded-lg dark:text-white">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium mb-2">API URL (opcional)</label>
+                        <input type="url" name="sms_api_url" value="{{ config.sms_api_url|default:'' }}"
+                               placeholder="https://api.provider.com/sms"
+                               class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border rounded-lg dark:text-white font-mono text-sm">
+                    </div>
+                </div>
+                
+                <!-- AWS SNS Specific -->
+                <div class="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg space-y-3">
+                    <h4 class="text-sm font-semibold text-blue-900 dark:text-blue-200">Configurações AWS SNS (opcional)</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium mb-1 text-blue-800 dark:text-blue-300">AWS Region</label>
+                            <input type="text" name="sms_aws_region" value="{{ config.sms_aws_region|default:'' }}"
+                                   placeholder="us-east-1"
+                                   class="w-full px-3 py-2 text-sm bg-white dark:bg-gray-700 border rounded dark:text-white">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium mb-1 text-blue-800 dark:text-blue-300">AWS Access Key ID</label>
+                            <input type="password" name="sms_aws_access_key_id" value="{{ config.sms_aws_access_key_id|default:'' }}"
+                                   class="w-full px-3 py-2 text-sm bg-white dark:bg-gray-700 border rounded dark:text-white font-mono">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium mb-1 text-blue-800 dark:text-blue-300">AWS Secret Access Key</label>
+                            <input type="password" name="sms_aws_secret_access_key" value="{{ config.sms_aws_secret_access_key|default:'' }}"
+                                   class="w-full px-3 py-2 text-sm bg-white dark:bg-gray-700 border rounded dark:text-white font-mono">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </details>
+
+        <!-- Database Configuration -->
+        <details class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
+            <summary class="px-6 py-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 flex items-center gap-2 font-semibold">
+                <i data-lucide="database" class="w-5 h-5"></i>
+                Database (para Backups)
+            </summary>
+            <div class="px-6 pb-6">
+                <div class="mb-3 px-4 py-2 bg-amber-50 dark:bg-amber-900/20 border-l-4 border-amber-500 rounded text-sm text-amber-800 dark:text-amber-200">
+                    <p class="font-semibold mb-1">⚠️ Apenas para Backups</p>
+                    <p>Estas credenciais são usadas pelos comandos de backup automático. A conexão principal está configurada no .env</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Host</label>
+                        <input type="text" name="db_host" value="{{ config.db_host|default:'' }}"
+                               placeholder="localhost"
+                               class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border rounded-lg dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Porta</label>
+                        <input type="text" name="db_port" value="{{ config.db_port|default:'' }}"
+                               placeholder="3306"
+                               class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border rounded-lg dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Nome da Base de Dados</label>
+                        <input type="text" name="db_name" value="{{ config.db_name|default:'' }}"
+                               class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border rounded-lg dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Utilizador</label>
+                        <input type="text" name="db_user" value="{{ config.db_user|default:'' }}"
+                               class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border rounded-lg dark:text-white">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium mb-2">Senha</label>
+                        <input type="password" name="db_password" value="{{ config.db_password|default:'' }}"
+                               class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border rounded-lg dark:text-white">
+                    </div>
+                </div>
+            </div>
+        </details>
+
+        <!-- Redis -->
+        <details class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
+            <summary class="px-6 py-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 flex items-center gap-2 font-semibold">
+                <i data-lucide="zap" class="w-5 h-5"></i>
+                Redis
+            </summary>
+            <div class="px-6 pb-6">
+                <div class="mb-3 px-4 py-2 bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 rounded text-sm text-blue-800 dark:text-blue-200">
+                    <p class="font-semibold mb-1">ℹ️ Cache e Sessões</p>
+                    <p>URL de conexão do Redis para cache, sessões e filas de tarefas</p>
+                </div>
+                <div class="mt-4">
+                    <label class="block text-sm font-medium mb-2">Redis URL</label>
+                    <input type="text" name="redis_url" value="{{ config.redis_url|default:'' }}"
+                           placeholder="redis://localhost:6379/0"
+                           class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border rounded-lg dark:text-white font-mono text-sm">
+                    <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">Formato: redis://[user:password@]host:port/database</p>
+                </div>
+            </div>
+        </details>
+
+        <!-- Typebot Configuration -->
+        <details class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 overflow-hidden" open>
+            <summary class="px-6 py-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 flex items-center gap-2 font-semibold">
+                <i data-lucide="bot" class="w-5 h-5"></i>
+                Typebot - Automação de Conversas
+            </summary>
+            <div class="px-6 pb-6">
+                <!-- Status e Ações Rápidas -->
+                <div class="mb-6 p-4 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 border border-purple-200 dark:border-purple-700 rounded-lg">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-500 rounded-xl flex items-center justify-center shadow-sm">
+                                <i data-lucide="bot" class="w-6 h-6 text-white"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-semibold text-gray-900 dark:text-white">Typebot Builder</h3>
+                                <p class="text-sm text-gray-600 dark:text-gray-400" id="typebot-status-text">Configure abaixo para testar</p>
+                            </div>
+                        </div>
+                        <div class="flex gap-2">
+                            <button type="button" onclick="testTypebotConnection()" 
+                                    class="px-4 py-2 bg-white dark:bg-gray-700 border border-purple-300 dark:border-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                                <i data-lucide="activity" class="w-4 h-4"></i>
+                                Testar Conexão
+                            </button>
+                            <a href="{% url 'system_config:typebot_auto_login' %}" target="_blank"
+                               class="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-lg text-sm font-medium transition-all flex items-center gap-2 shadow-sm hover:shadow-md">
+                                <i data-lucide="external-link" class="w-4 h-4"></i>
+                                Abrir Typebot
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Toggle Ativação -->
+                <div class="mb-6 flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
+                    <div class="flex items-center gap-3">
+                        <input type="checkbox" name="typebot_enabled" id="typebot_enabled" 
+                               {% if config.typebot_enabled %}checked{% endif %}
+                               class="w-5 h-5 text-purple-600 rounded focus:ring-2 focus:ring-purple-500">
+                        <label for="typebot_enabled" class="font-medium text-gray-900 dark:text-white cursor-pointer">Habilitar Typebot</label>
+                    </div>
+                    <span class="text-sm text-gray-500 dark:text-gray-400">Ative para usar automações de bots</span>
+                </div>
+
+                <!-- URLs de Acesso -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Typebot Builder URL</label>
+                        <input type="url" name="typebot_builder_url" value="{{ config.typebot_builder_url|default:'http://localhost:8081' }}"
+                               placeholder="http://localhost:8081"
+                               class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border rounded-lg dark:text-white font-mono text-sm">
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Interface de criação de bots</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Typebot Viewer URL</label>
+                        <input type="url" name="typebot_viewer_url" value="{{ config.typebot_viewer_url|default:'http://localhost:8082' }}"
+                               placeholder="http://localhost:8082"
+                               class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border rounded-lg dark:text-white font-mono text-sm">
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">URL pública para usuários finais</p>
+                    </div>
+                </div>
+
+                <!-- API Key (Recomendado) -->
+                <div class="mb-6 p-4 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border border-green-200 dark:border-green-700 rounded-lg">
+                    <h4 class="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                        <i data-lucide="key" class="w-4 h-4 text-green-600"></i>
+                        <span>API Key</span>
+                        <span class="ml-2 px-2 py-0.5 bg-green-600 text-white text-xs rounded-full">Recomendado</span>
+                    </h4>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Typebot API Key</label>
+                        <input type="password" name="typebot_api_key" id="typebot_api_key_input" value="{{ config.typebot_api_key|default:'' }}"
+                               placeholder="sk_..."
+                               class="w-full px-4 py-2 bg-white dark:bg-gray-700 border border-green-300 dark:border-green-600 rounded-lg dark:text-white font-mono text-sm focus:ring-2 focus:ring-green-500">
+                        <p class="mt-2 text-xs text-gray-600 dark:text-gray-400 flex items-start gap-1">
+                            <i data-lucide="info" class="w-3 h-3 mt-0.5 flex-shrink-0 text-green-600"></i>
+                            <span>Forma mais simples e segura de autenticar. Obtenha em 
+                                <a href="http://localhost:8081/typebots/settings/account" target="_blank" class="text-green-600 hover:text-green-700 underline">Settings → API Keys</a> no Typebot.
+                            </span>
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Credenciais Admin (Alternativa) -->
+                <div class="mb-6">
+                    <h4 class="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                        <i data-lucide="shield" class="w-4 h-4"></i>
+                        <span>Credenciais de Administrador</span>
+                        <span class="ml-2 px-2 py-0.5 bg-gray-400 text-white text-xs rounded-full">Alternativa</span>
+                    </h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Email Admin</label>
+                            <input type="email" name="typebot_admin_email" value="{{ config.typebot_admin_email|default:'' }}"
+                                   placeholder="admin@leguasfranzinas.pt"
+                                   class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border rounded-lg dark:text-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Password Admin</label>
+                            <div class="relative">
+                                <input type="password" name="typebot_admin_password" value="{{ config.typebot_admin_password|default:'' }}"
+                                       placeholder="••••••••"
+                                       class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border rounded-lg dark:text-white pr-24">
+                                <span class="absolute right-2 top-2 text-xs text-gray-400 dark:text-gray-500">Opcional</span>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="mt-2 text-xs text-gray-500 dark:text-gray-400 flex items-start gap-1">
+                        <i data-lucide="info" class="w-3 h-3 mt-0.5 flex-shrink-0"></i>
+                        <span>Use apenas se não tiver API Key. Email/senha são menos seguros que API Key.</span>
+                    </p>
+                </div>
+
+                <!-- Configurações de Segurança -->
+                <div class="mb-6">
+                    <h4 class="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                        <i data-lucide="key" class="w-4 h-4"></i>
+                        Segurança
+                    </h4>
+                    <div class="grid grid-cols-1 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Encryption Secret</label>
+                            <div class="flex gap-2">
+                                <input type="password" name="typebot_encryption_secret" 
+                                       value="{{ config.typebot_encryption_secret|default:'' }}"
+                                       placeholder="Será gerado automaticamente se vazio"
+                                       class="flex-1 px-4 py-2 bg-gray-50 dark:bg-gray-700 border rounded-lg dark:text-white font-mono text-sm"
+                                       id="typebot_encryption_secret_input">
+                                <button type="button" onclick="generateTypebotSecret()" 
+                                        class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                                    <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                                    Gerar
+                                </button>
+                            </div>
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Chave para criptografar dados sensíveis (64 caracteres hex)</p>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <input type="checkbox" name="typebot_disable_signup" id="typebot_disable_signup" 
+                                   {% if config.typebot_disable_signup %}checked{% endif %}
+                                   class="w-4 h-4 text-purple-600 rounded focus:ring-2 focus:ring-purple-500">
+                            <label for="typebot_disable_signup" class="text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+                                Desabilitar registro público (recomendado)
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Database -->
+                <div class="mb-6">
+                    <h4 class="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                        <i data-lucide="database" class="w-4 h-4"></i>
+                        Database PostgreSQL
+                    </h4>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Database URL</label>
+                        <input type="text" name="typebot_database_url" value="{{ config.typebot_database_url|default:'' }}"
+                               placeholder="postgresql://user:password@host:5432/typebot_db"
+                               class="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border rounded-lg dark:text-white font-mono text-sm">
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">URL de conexão completa do PostgreSQL para Typebot</p>
+                    </div>
+                </div>
+
+                <!-- S3 Storage (Opcional) -->
+                <details class="mb-6">
+                    <summary class="cursor-pointer text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2 hover:text-purple-600 dark:hover:text-purple-400">
+                        <i data-lucide="hard-drive" class="w-4 h-4"></i>
+                        S3 Storage (Opcional)
+                    </summary>
+                    <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 pl-6">
+                        <div>
+                            <label class="block text-xs font-medium mb-1">S3 Endpoint</label>
+                            <input type="url" name="typebot_s3_endpoint" value="{{ config.typebot_s3_endpoint|default:'' }}"
+                                   placeholder="https://s3.amazonaws.com"
+                                   class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border rounded dark:text-white font-mono">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium mb-1">S3 Bucket</label>
+                            <input type="text" name="typebot_s3_bucket" value="{{ config.typebot_s3_bucket|default:'' }}"
+                                   placeholder="typebot-uploads"
+                                   class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border rounded dark:text-white">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium mb-1">Access Key ID</label>
+                            <input type="password" name="typebot_s3_access_key" value="{{ config.typebot_s3_access_key|default:'' }}"
+                                   class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border rounded dark:text-white font-mono">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium mb-1">Secret Access Key</label>
+                            <input type="password" name="typebot_s3_secret_key" value="{{ config.typebot_s3_secret_key|default:'' }}"
+                                   class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border rounded dark:text-white font-mono">
+                        </div>
+                    </div>
+                </details>
+
+                <!-- SMTP (Opcional) -->
+                <details class="mb-6">
+                    <summary class="cursor-pointer text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2 hover:text-purple-600 dark:hover:text-purple-400">
+                        <i data-lucide="mail" class="w-4 h-4"></i>
+                        SMTP para Emails (Opcional)
+                    </summary>
+                    <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 pl-6">
+                        <div>
+                            <label class="block text-xs font-medium mb-1">SMTP Host</label>
+                            <input type="text" name="typebot_smtp_host" value="{{ config.typebot_smtp_host|default:'' }}"
+                                   placeholder="smtp.gmail.com"
+                                   class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border rounded dark:text-white">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium mb-1">SMTP Port</label>
+                            <input type="number" name="typebot_smtp_port" value="{{ config.typebot_smtp_port|default:'587' }}"
+                                   placeholder="587"
+                                   class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border rounded dark:text-white">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium mb-1">SMTP Username</label>
+                            <input type="text" name="typebot_smtp_username" value="{{ config.typebot_smtp_username|default:'' }}"
+                                   class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border rounded dark:text-white">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium mb-1">SMTP Password</label>
+                            <input type="password" name="typebot_smtp_password" value="{{ config.typebot_smtp_password|default:'' }}"
+                                   class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border rounded dark:text-white">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-xs font-medium mb-1">From Email</label>
+                            <input type="email" name="typebot_smtp_from" value="{{ config.typebot_smtp_from|default:'' }}"
+                                   placeholder="noreply@leguasfranzinas.pt"
+                                   class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border rounded dark:text-white">
+                        </div>
+                    </div>
+                </details>
+
+                <!-- Google OAuth (Opcional) -->
+                <details>
+                    <summary class="cursor-pointer text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2 hover:text-purple-600 dark:hover:text-purple-400">
+                        <i data-lucide="key-round" class="w-4 h-4"></i>
+                        Google OAuth (Opcional)
+                    </summary>
+                    <div class="mt-4 grid grid-cols-1 gap-4 pl-6">
+                        <div>
+                            <label class="block text-xs font-medium mb-1">Google Client ID</label>
+                            <input type="password" name="typebot_google_client_id" value="{{ config.typebot_google_client_id|default:'' }}"
+                                   placeholder="xxxxx.apps.googleusercontent.com"
+                                   class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border rounded dark:text-white font-mono">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium mb-1">Google Client Secret</label>
+                            <input type="password" name="typebot_google_client_secret" value="{{ config.typebot_google_client_secret|default:'' }}"
+                                   class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border rounded dark:text-white font-mono">
+                        </div>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">
+                            Permite login com Google no Typebot
+                        </p>
+                    </div>
+                </details>
+
+                <!-- Workspace Plan -->
+                <div class="mt-6 p-4 bg-purple-50 dark:bg-purple-900/20 border-l-4 border-purple-500 rounded">
+                    <h4 class="text-sm font-semibold text-purple-900 dark:text-purple-200 mb-2">Plano Padrão de Workspace</h4>
+                    <select name="typebot_default_workspace_plan" 
+                            class="w-full md:w-1/2 px-4 py-2 bg-white dark:bg-gray-700 border rounded-lg dark:text-white">
+                        <option value="free" {% if config.typebot_default_workspace_plan == 'free' %}selected{% endif %}>Free</option>
+                        <option value="starter" {% if config.typebot_default_workspace_plan == 'starter' %}selected{% endif %}>Starter</option>
+                        <option value="pro" {% if config.typebot_default_workspace_plan == 'pro' %}selected{% endif %}>Pro</option>
+                        <option value="unlimited" {% if config.typebot_default_workspace_plan == 'unlimited' %}selected{% endif %}>Unlimited</option>
+                    </select>
+                    <p class="mt-2 text-xs text-purple-800 dark:text-purple-300">
+                        Define o plano padrão para novos workspaces criados no Typebot
+                    </p>
+                </div>
+
+                <!-- Documentação -->
+                <div class="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 rounded">
+                    <p class="text-sm text-blue-800 dark:text-blue-200 flex items-start gap-2">
+                        <i data-lucide="book-open" class="w-4 h-4 mt-0.5 flex-shrink-0"></i>
+                        <span>
+                            Consulte a <a href="https://docs.typebot.io/self-hosting/configuration" target="_blank" 
+                                          class="underline hover:text-blue-600 dark:hover:text-blue-400 font-medium">
+                                documentação oficial do Typebot
+                            </a> para variáveis de ambiente adicionais e configurações avançadas.
+                        </span>
+                    </p>
+                </div>
+            </div>
+        </details>
+
+        <!-- Botões de Ação -->
+        <div class="flex justify-end gap-4 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6">
+            <a href="{% url 'paack_dashboard:dashboard_paack' %}" 
+               class="px-6 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium">
+                Cancelar
+            </a>
+            <button type="submit" 
+                    class="px-6 py-2.5 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white rounded-lg transition-all duration-200 font-medium shadow-sm hover:shadow-md flex items-center gap-2">
+                <i data-lucide="save" class="w-4 h-4"></i>
+                Guardar Configurações
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+});
+
+// ============================================================================
+// TYPEBOT FUNCTIONS
+// ============================================================================
+
+async function testTypebotConnection() {
+    const button = event.target.closest('button');
+    const statusText = document.getElementById('typebot-status-text');
+    const originalHTML = button.innerHTML;
+    
+    // Disable button and show loading
+    button.disabled = true;
+    button.innerHTML = '<i data-lucide="loader" class="w-4 h-4 animate-spin"></i> Testando...';
+    lucide.createIcons();
+    
+    statusText.textContent = 'Testando conexão...';
+    statusText.className = 'text-sm text-blue-600 dark:text-blue-400';
+    
+    try {
+        const response = await fetch('{% url "system_config:typebot_test_connection" %}', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            statusText.textContent = `✓ ${data.message}`;
+            statusText.className = 'text-sm text-green-600 dark:text-green-400';
+            
+            // Show detailed status if available
+            if (data.auth_status === 'authenticated') {
+                statusText.textContent += ' | Login OK';
+            } else if (data.auth_status === 'not_configured') {
+                statusText.textContent += ' | Credenciais não configuradas';
+            } else if (data.auth_status === 'auth_failed') {
+                statusText.textContent += ' | Login falhou';
+            }
+        } else {
+            statusText.textContent = `✗ Erro: ${data.error}`;
+            statusText.className = 'text-sm text-red-600 dark:text-red-400';
+        }
+    } catch (error) {
+        statusText.textContent = `✗ Erro ao testar conexão: ${error.message}`;
+        statusText.className = 'text-sm text-red-600 dark:text-red-400';
+    } finally {
+        button.disabled = false;
+        button.innerHTML = originalHTML;
+        lucide.createIcons();
+    }
+}
+
+async function generateTypebotSecret() {
+    const button = event.target.closest('button');
+    const input = document.getElementById('typebot_encryption_secret_input');
+    const originalHTML = button.innerHTML;
+    
+    button.disabled = true;
+    button.innerHTML = '<i data-lucide="loader" class="w-4 h-4 animate-spin"></i>';
+    lucide.createIcons();
+    
+    try {
+        const response = await fetch('{% url "system_config:typebot_generate_secret" %}', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            input.value = data.secret;
+            input.type = 'text';
+            
+            // Flash animation
+            input.classList.add('ring-2', 'ring-purple-500');
+            setTimeout(() => {
+                input.classList.remove('ring-2', 'ring-purple-500');
+            }, 1000);
+            
+            // Show success message temporarily
+            const successMsg = document.createElement('span');
+            successMsg.className = 'text-xs text-green-600 dark:text-green-400 ml-2';
+            successMsg.textContent = '✓ Novo secret gerado!';
+            button.parentElement.appendChild(successMsg);
+            
+            setTimeout(() => {
+                successMsg.remove();
+                input.type = 'password';
+            }, 3000);
+        }
+    } catch (error) {
+        alert('Erro ao gerar secret: ' + error.message);
+    } finally {
+        button.disabled = false;
+        button.innerHTML = originalHTML;
+        lucide.createIcons();
+    }
+}
+</script>
+{% endblock %}

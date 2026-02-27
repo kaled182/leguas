@@ -1,0 +1,133 @@
+{% extends "settlements/base.html" %}
+
+{% block subtitle %}Lista de Corridas{% endblock %}
+
+{% block settlements_content %}
+<div class="card">
+  <div class="card-header">
+    <h1 class="card-title">Lista de Corridas</h1>
+  </div>
+  
+  <div class="filters">
+    <h3>Filtros</h3>
+    <div class="form-group">
+      <label for="date-from">Data Inicial:</label>
+      <input type="date" id="date-from" class="form-control" value="{{ request.GET.date_from }}">
+    </div>
+    <div class="form-group">
+      <label for="date-to">Data Final:</label>
+      <input type="date" id="date-to" class="form-control" value="{{ request.GET.date_to }}">
+    </div>
+    <div class="form-group">
+      <label for="driver">Motorista:</label>
+      <input type="text" id="driver" class="form-control" value="{{ request.GET.driver }}">
+    </div>
+    <div class="form-group">
+      <label for="client">Cliente:</label>
+      <select id="client" class="form-control">
+        <option value="">Todos</option>
+        <option value="Paack" {% if request.GET.client == 'Paack' %}selected{% endif %}>Paack</option>
+        <option value="Delnext" {% if request.GET.client == 'Delnext' %}selected{% endif %}>Delnext</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="area">Área:</label>
+      <input type="text" id="area" class="form-control" value="{{ request.GET.area }}">
+    </div>
+    <button class="btn" onclick="applyFilters()">Aplicar Filtros</button>
+  </div>
+  
+  <div class="table-responsive">
+    <table class="table" id="runs-table">
+      <thead>
+        <tr>
+          <th>Data</th>
+          <th>Cliente</th>
+          <th>Área</th>
+          <th>Motorista</th>
+          <th>Saída</th>
+          <th>Pacotes</th>
+          <th>Entregues</th>
+          <th>Valor/Pct</th>
+          <th>Total Pct</th>
+          <th>Gasóleo</th>
+          <th>Desc. Tickets</th>
+          <th>Rec. Líq.</th>
+          <th>Outros</th>
+          <th>Valor Final</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Os dados serão preenchidos via JavaScript -->
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+  // Função para formatar valores monetários
+  function formatCurrency(value) {
+    return new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(value);
+  }
+  
+  // Função para formatar datas
+  function formatDate(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('pt-PT');
+  }
+  
+  // Função para carregar os dados das corridas
+  function loadRunsData() {
+    const dateFrom = document.getElementById('date-from').value;
+    const dateTo = document.getElementById('date-to').value;
+    const driver = document.getElementById('driver')?.value || '';
+    const client = document.getElementById('client')?.value || '';
+    const area = document.getElementById('area')?.value || '';
+    
+    let url = '{% url "settlements-runs" %}?';
+    if (dateFrom) url += `date_from=${dateFrom}&`;
+    if (dateTo) url += `date_to=${dateTo}&`;
+    if (driver) url += `driver=${encodeURIComponent(driver)}&`;
+    if (client) url += `client=${encodeURIComponent(client)}&`;
+    if (area) url += `area=${encodeURIComponent(area)}&`;
+    
+    fetch(url)
+      .then(response => response.json())
+      .then(data => {
+        const tbody = document.querySelector('#runs-table tbody');
+        tbody.innerHTML = '';
+        
+        data.forEach(run => {
+          const row = document.createElement('tr');
+          
+          row.innerHTML = `
+            <td>${formatDate(run.run_date)}</td>
+            <td>${run.client}</td>
+            <td>${run.area_code || '-'}</td>
+            <td>${run.driver__name}</td>
+            <td>${run.qtd_saida}</td>
+            <td>${run.qtd_pact}</td>
+            <td>${run.qtd_entregue}</td>
+            <td>${formatCurrency(run.vl_pct)}</td>
+            <td>${formatCurrency(run.total_pct)}</td>
+            <td>${formatCurrency(run.gasoleo)}</td>
+            <td>${formatCurrency(run.desconto_tickets)}</td>
+            <td>${formatCurrency(run.rec_liq_tickets)}</td>
+            <td>${formatCurrency(run.outros)}</td>
+            <td>${formatCurrency(run.vl_final)}</td>
+          `;
+          
+          tbody.appendChild(row);
+        });
+      })
+      .catch(error => console.error('Erro ao carregar dados:', error));
+  }
+  
+  document.addEventListener('DOMContentLoaded', function() {
+    loadRunsData();
+  });
+</script>
+{% endblock %}

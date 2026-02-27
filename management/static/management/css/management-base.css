@@ -1,0 +1,320 @@
+/* CSS Customizado para Management App - Design Moderno e Limpo */
+
+/* Animações suaves */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(59, 130, 246, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.8);
+  }
+}
+
+/* Melhorias gerais */
+.antialiased {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Sidebar melhorada */
+#sidebar {
+  backdrop-filter: blur(10px);
+}
+
+#sidebar-overlay {
+  backdrop-filter: blur(4px);
+}
+
+/* Cards com animações */
+.dashboard-card, .management-card {
+  animation: slideIn 0.5s ease-out;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dashboard-card:hover, .management-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.dark .dashboard-card:hover, .dark .management-card:hover {
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+}
+
+/* Status indicators */
+.status-live {
+  animation: pulse-glow 2s infinite;
+}
+
+.status-dot {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Botões com micro-interações */
+button, .btn, .nav-link {
+  transform-origin: center;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+button:active, .btn:active {
+  transform: scale(0.98);
+}
+
+.nav-link:hover {
+  transform: translateX(2px);
+}
+
+/* Dark mode toggle melhorado */
+#darkModeToggle {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#darkModeToggle:hover {
+  transform: scale(1.05);
+}
+
+/* Formulários melhorados */
+input[type="date"], 
+input[type="text"], 
+input[type="email"], 
+input[type="password"], 
+select, 
+textarea {
+  transition: all 0.2s ease-in-out;
+}
+
+input:focus, 
+select:focus, 
+textarea:focus {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+}
+
+.dark input:focus, 
+.dark select:focus, 
+.dark textarea:focus {
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
+}
+
+/* Tabelas responsivas */
+.table-responsive {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 #f1f5f9;
+}
+
+.dark .table-responsive {
+  scrollbar-color: #475569 #1e293b;
+}
+
+.table-responsive::-webkit-scrollbar {
+  height: 6px;
+  width: 6px;
+}
+
+.table-responsive::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 3px;
+}
+
+.dark .table-responsive::-webkit-scrollbar-track {
+  background: #1e293b;
+}
+
+.table-responsive::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.dark .table-responsive::-webkit-scrollbar-thumb {
+  background: #475569;
+}
+
+.table-responsive::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.dark .table-responsive::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+/* Notificações melhoradas */
+.notification {
+  animation: slideIn 0.3s ease-out;
+  backdrop-filter: blur(10px);
+}
+
+/* Loading melhorado */
+.loading-spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Gráficos */
+canvas {
+  transition: all 0.3s ease;
+  border-radius: 8px;
+}
+
+canvas:hover {
+  filter: brightness(1.05);
+}
+
+/* Efeitos de profundidade */
+.shadow-depth {
+  box-shadow: 
+    0 1px 3px rgba(0, 0, 0, 0.12),
+    0 1px 2px rgba(0, 0, 0, 0.24);
+}
+
+.shadow-depth:hover {
+  box-shadow: 
+    0 14px 28px rgba(0, 0, 0, 0.25),
+    0 10px 10px rgba(0, 0, 0, 0.22);
+}
+
+.dark .shadow-depth {
+  box-shadow: 
+    0 1px 3px rgba(0, 0, 0, 0.5),
+    0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+.dark .shadow-depth:hover {
+  box-shadow: 
+    0 14px 28px rgba(0, 0, 0, 0.7),
+    0 10px 10px rgba(0, 0, 0, 0.6);
+}
+
+/* Responsividade melhorada */
+@media (max-width: 640px) {
+  .dashboard-card, .management-card {
+    margin-bottom: 1rem;
+  }
+  
+  .text-3xl {
+    font-size: 1.875rem;
+    line-height: 2.25rem;
+  }
+  
+  .p-6 {
+    padding: 1rem;
+  }
+  
+  .nav-link:hover {
+    transform: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .grid-responsive {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  .grid-responsive {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1025px) {
+  .grid-responsive {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Estados de interação melhorados */
+.interactive-element {
+  transition: all 0.2s ease;
+}
+
+.interactive-element:hover {
+  transform: translateY(-1px);
+}
+
+.interactive-element:active {
+  transform: translateY(0);
+}
+
+/* Gradientes customizados */
+.gradient-primary {
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+}
+
+.gradient-success {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
+.gradient-warning {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+}
+
+.gradient-danger {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+}
+
+/* Dark mode adjustments */
+.dark .gradient-primary {
+  background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%);
+}
+
+.dark .gradient-success {
+  background: linear-gradient(135deg, #047857 0%, #065f46 100%);
+}
+
+.dark .gradient-warning {
+  background: linear-gradient(135deg, #b45309 0%, #92400e 100%);
+}
+
+.dark .gradient-danger {
+  background: linear-gradient(135deg, #b91c1c 0%, #991b1b 100%);
+}
+
+/* Melhorias específicas do Management */
+.management-header {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(147, 197, 253, 0.05) 100%);
+}
+
+.dark .management-header {
+  background: linear-gradient(135deg, rgba(30, 64, 175, 0.1) 0%, rgba(30, 58, 138, 0.1) 100%);
+}
+
+.management-stats-grid {
+  display: grid;
+  gap: 1.5rem;
+}
+
+/* Utilities */
+.text-balance {
+  text-wrap: balance;
+}
+
+.transition-smooth {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}

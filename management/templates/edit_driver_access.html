@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Editar Acesso de Motorista{% endblock %}
+{% block sidebar_title %}Gestão Motoristas{% endblock %}
+
+{% block content %}
+<div class="max-w-xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow p-8">
+    <h1 class="text-2xl font-bold mb-2 text-gray-900 dark:text-white">Editar Acesso</h1>
+    <form method="post" class="space-y-5">
+      {% csrf_token %}
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Nome</label>
+          <input type="text" name="first_name" value="{{ access.first_name }}" required class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary focus:border-transparent" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Sobrenome</label>
+          <input type="text" name="last_name" value="{{ access.last_name }}" required class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary focus:border-transparent" />
+        </div>
+        <div class="sm:col-span-2">
+          <label class="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Email</label>
+          <input type="email" name="email" value="{{ access.email }}" required class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary focus:border-transparent" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Telefone</label>
+          <input type="text" name="phone" value="{{ access.phone }}" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary focus:border-transparent" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">NIF</label>
+          <input type="text" name="nif" value="{{ access.nif }}" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary focus:border-transparent" />
+        </div>
+        <div class="sm:col-span-2">
+          <label class="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Motorista</label>
+          <select name="driver" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary focus:border-transparent">
+            <option value="">—</option>
+            {% for driver in drivers %}
+              <option value="{{ driver.id }}" {% if access.driver and access.driver.id == driver.id %}selected{% endif %}>{{ driver.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="sm:col-span-2">
+          <label class="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Nova Senha <span class="text-xs text-gray-400 dark:text-gray-500">(deixe em branco para não alterar)</span></label>
+          <input type="password" name="password" class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary focus:border-transparent" />
+        </div>
+      </div>
+      <div class="flex justify-between mt-6">
+        <a href="{% url 'management:drivers_management' %}" class="text-gray-500 dark:text-gray-400 hover:underline">Cancelar</a>
+        <button type="submit" class="px-6 py-2 bg-primary hover:bg-indigo-700 text-white rounded-md font-semibold transition">Salvar Alterações</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

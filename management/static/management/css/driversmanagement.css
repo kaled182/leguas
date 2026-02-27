@@ -1,0 +1,224 @@
+/* CSS para management/driversmanagement.html e páginas relacionadas */
+
+/* Estilos gerais para os containers principais das páginas de gerenciamento */
+.management-container {
+    max-width: 800px; /* Limita a largura para melhor leitura em telas grandes */
+    margin: 2rem auto; /* Centraliza e adiciona margem superior/inferior */
+    padding: 1.5rem;
+    background-color: #ffffff;
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.management-title {
+    font-size: 1.75rem; /* Equivalente a text-2xl do Tailwind */
+    font-weight: 600;
+    color: #1F2937; /* gray-800 */
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid #E5E7EB; /* gray-200 */
+}
+
+/* Estilos para formulários */
+.management-form .form-group {
+    margin-bottom: 1rem;
+}
+
+.management-form label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: #374151; /* gray-700 */
+}
+
+.management-form input[type=\"text\"],
+.management-form input[type=\"email\"],
+.management-form input[type=\"password\"],
+.management-form select {
+    width: 100%;
+    padding: 0.65rem 0.75rem;
+    border: 1px solid #D1D5DB; /* gray-300 */
+    border-radius: 0.375rem; /* rounded-md */
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); /* shadow-sm */
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.management-form input[type=\"text\"]:focus,
+.management-form input[type=\"email\"]:focus,
+.management-form input[type=\"password\"]:focus,
+.management-form select:focus {
+    border-color: #4F46E5; /* indigo-600 */
+    outline: 0;
+    box-shadow: 0 0 0 0.2rem rgba(79, 70, 229, 0.25); /* Anel de foco indigo */
+}
+
+.management-form .btn {
+    display: inline-block;
+    padding: 0.75rem 1.5rem;
+    font-weight: 500;
+    text-align: center;
+    border-radius: 0.375rem;
+    transition: background-color 0.15s ease-in-out;
+    cursor: pointer;
+    border: 1px solid transparent;
+}
+
+.management-form .btn-primary {
+    background-color: #4F46E5; /* indigo-600 */
+    color: #ffffff;
+}
+
+.management-form .btn-primary:hover {
+    background-color: #4338CA; /* indigo-700 */
+}
+
+.management-form .btn-secondary {
+    background-color: #E5E7EB; /* gray-200 */
+    color: #1F2937; /* gray-800 */
+    border-color: #D1D5DB; /* gray-300 */
+}
+
+.management-form .btn-secondary:hover {
+    background-color: #D1D5DB; /* gray-300 */
+}
+
+.management-form .btn-full-width {
+    width: 100%;
+}
+
+/* Estilos para a tabela de gerenciamento de motoristas */
+.drivers-table-container {
+    overflow-x: auto; /* Permite rolagem horizontal em telas pequenas */
+    background-color: #ffffff;
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.drivers-table {
+    width: 100%;
+    min-width: 600px; /* Garante que a tabela tenha uma largura mínima */
+    border-collapse: collapse;
+}
+
+.drivers-table th,
+.drivers-table td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid #E5E7EB; /* gray-200 */
+    vertical-align: middle;
+}
+
+.drivers-table thead th {
+    background-color: #F9FAFB; /* gray-50 */
+    font-weight: 600;
+    color: #374151; /* gray-700 */
+    font-size: 0.875rem; /* text-sm */
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.drivers-table tbody tr:hover {
+    background-color: #F9FAFB; /* gray-50 */
+}
+
+.drivers-table .action-links a,
+.drivers-table .action-links button {
+    color: #4F46E5; /* indigo-600 */
+    text-decoration: none;
+    margin-right: 0.75rem;
+    font-weight: 500;
+}
+
+.drivers-table .action-links a:hover,
+.drivers-table .action-links button:hover {
+    color: #3730A3; /* indigo-800 */
+    text-decoration: underline;
+}
+
+.drivers-table .action-links button {
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+}
+
+.drivers-table .action-links button.text-red-600:hover {
+    color: #DC2626; /* red-600 */
+}
+
+.drivers-table .action-links button.text-red-600:hover {
+    color: #B91C1C; /* red-700 */
+}
+
+/* Links de exportação */
+.export-links a {
+    margin-left: 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-decoration: none;
+    padding: 0.3rem 0.6rem;
+    border-radius: 0.25rem;
+}
+
+.export-links a.export-xlsx {
+    color: #059669; /* green-600 */
+    background-color: #D1FAE5; /* green-100 */
+}
+.export-links a.export-xlsx:hover {
+    background-color: #A7F3D0; /* green-200 */
+}
+
+.export-links a.export-pdf {
+    color: #DC2626; /* red-600 */
+    background-color: #FEE2E2; /* red-100 */
+}
+.export-links a.export-pdf:hover {
+    background-color: #FECACA; /* red-200 */
+}
+
+/* Mensagens de feedback (já estilizadas pelo customauth, mas pode precisar de ajustes) */
+.messages .alert {
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border-radius: 0.375rem;
+    border: 1px solid transparent;
+}
+
+.messages .alert-success {
+    color: #0F5132; /* Cor de texto para sucesso */
+    background-color: #D1E7DD; /* Cor de fundo para sucesso */
+    border-color: #BADBCC; /* Cor da borda para sucesso */
+}
+
+.messages .alert-error {
+    color: #842029; /* Cor de texto para erro */
+    background-color: #F8D7DA; /* Cor de fundo para erro */
+    border-color: #F5C2C7; /* Cor da borda para erro */
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .management-container {
+        margin: 1rem;
+        padding: 1rem;
+    }
+
+    .management-form .btn-group {
+        display: flex;
+        flex-direction: column;
+    }
+    .management-form .btn-group .btn + .btn {
+        margin-top: 0.5rem;
+        margin-left: 0;
+    }
+
+    .export-links {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    .export-links a {
+      margin-left: 0;
+      margin-bottom: 0.5rem;
+    }
+}

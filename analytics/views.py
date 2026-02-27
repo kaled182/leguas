@@ -64,9 +64,9 @@ def dashboard_overview(request):
         avg_delivery_time=Avg('average_delivery_time_hours')
     )
     
-    # Alertas ativos
+    # Alertas ativos (não reconhecidos)
     active_alerts = PerformanceAlert.objects.filter(
-        status='ACTIVE'
+        is_acknowledged=False
     ).order_by('-severity', '-created_at')[:10]
     
     # Top 5 motoristas do período
@@ -78,11 +78,11 @@ def dashboard_overview(request):
         success_rate=Avg('success_rate')
     ).order_by('-total_deliveries')[:5]
     
-    # Previsão próximos 7 dias (melhor método)
+    # Previsão próximos 7 dias (método MA7)
     forecast_7d = VolumeForecast.objects.filter(
         forecast_date__gte=end_date,
         forecast_date__lte=end_date + timedelta(days=7),
-        is_best_method=True
+        method='MA7'
     ).order_by('forecast_date')
     
     # Lista de partners para filtro
@@ -187,14 +187,14 @@ def forecasts_dashboard(request):
     for method in ['MA7', 'MA30', 'EMA', 'TREND', 'SEASONAL']:
         forecasts_by_method[method] = list(
             forecasts_query.filter(method=method).values(
-                'forecast_date', 'predicted_volume', 'confidence_lower', 'confidence_upper'
+                'forecast_date', 'predicted_volume', 'lower_bound', 'upper_bound'
             ).order_by('forecast_date')
         )
     
-    # Melhor método (is_best_method=True)
+    # Melhor método (MA7 como padrão)
     best_forecasts = list(
-        forecasts_query.filter(is_best_method=True).values(
-            'forecast_date', 'predicted_volume', 'method', 'confidence_lower', 'confidence_upper'
+        forecasts_query.filter(method='MA7').values(
+            'forecast_date', 'predicted_volume', 'method', 'lower_bound', 'upper_bound'
         ).order_by('forecast_date')
     )
     
@@ -295,7 +295,7 @@ def drivers_performance_dashboard(request):
     # Performance do mês selecionado
     month_performance = DriverPerformance.objects.filter(
         month=current_month
-    ).select_related('driver__user').order_by('-ranking')
+    ).select_related('driver__user').order_by('-rank_in_team')
     
     # Top 10 por sucesso
     top_by_success = month_performance.order_by('-success_rate')[:10]
@@ -374,7 +374,7 @@ def incidents_report(request):
         incident_date__lte=end_date
     ).values('incident_type').annotate(
         count=Count('id'),
-        total_cost=Sum('cost')
+        total_cost=Sum('fine_amount')
     ).order_by('-count')
     
     # Estatísticas gerais
@@ -545,19 +545,19 @@ def api_forecasts_data(request):
         forecasts_query = forecasts_query.filter(partner_id=partner_id)
     
     if method == 'BEST':
-        forecasts_query = forecasts_query.filter(is_best_method=True)
+        forecasts_query = forecasts_query.filter(method='MA7')
     else:
         forecasts_query = forecasts_query.filter(method=method)
     
     data = list(forecasts_query.values(
-        'forecast_date', 'predicted_volume', 'confidence_lower', 'confidence_upper', 'method'
+        'forecast_date', 'predicted_volume', 'lower_bound', 'upper_bound', 'method'
     ).order_by('forecast_date'))
     
     for item in data:
         item['forecast_date'] = item['forecast_date'].isoformat()
         item['predicted_volume'] = float(item['predicted_volume'])
-        item['confidence_lower'] = float(item['confidence_lower'] or 0)
-        item['confidence_upper'] = float(item['confidence_upper'] or 0)
+        item['lower_bound'] = float(item['lower_bound'] or 0)
+        item['upper_bound'] = float(item['upper_bound'] or 0)
     
     return JsonResponse({'data': data})
 

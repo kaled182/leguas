@@ -65,7 +65,8 @@ Transformar o sistema atual focado em Paack numa **plataforma multi-partner de g
 - 🟢 OrderAdapter implementado
 - 🟢 Validation automática ativada
 - 🟢 Logging de operações ativado
-- 🟡 Monitoramento diário configurado (aguardando 1-2 semanas)
+- � Analytics app criada (forecasting e métricas)
+- �🟡 Monitoramento diário configurado (aguardando 1-2 semanas)
 - ⚪ USE_GENERIC_ORDERS_READ = False (ainda lê do sistema antigo)
 
 **Próximo passo**: Monitorar consistência por 1-2 semanas antes de ativar leitura do novo sistema.
@@ -169,25 +170,36 @@ Transformar o sistema atual focado em Paack numa **plataforma multi-partner de g
 **Prazo estimado**: 1.5 semanas  
 
 **Entregáveis**:
-- ✅ Dashboard consolidado multi-partner
-- ✅ Relatório de incidências (Top motivos de falha)
-- ✅ Performance por motorista (Taxa de sucesso)
-- ✅ Performance por veículo (Custo x Entregas)
-- ✅ Exportação de relatórios em Excel/PDF
+- 🟡 Dashboard consolidado multi-partner
+- 🟡 Relatório de incidências (Top motivos de falha)
+- 🟡 Performance por motorista (Taxa de sucesso)
+- 🟡 Performance por veículo (Custo x Entregas)
+- 🟡 Exportação de relatórios em Excel/PDF
 
 **Impacto**: Médio - Visibilidade de negócio
 
-#### 5.B - Forecasting de Volume
-**Status**: 🔴 Não iniciado  
+#### 5.B - Analytics e Forecasting
+**Status**: 🟢 Concluído (27/02/2026)  
 **Prazo estimado**: 1 semana  
 
 **Entregáveis**:
-- ✅ Análise de tendências (Médias móveis)
-- ✅ Previsão de volume por Partner/Dia da semana
-- ✅ Sugestão de FTE (Motoristas necessários)
-- ✅ Alertas de capacidade insuficiente
+- ✅ App `analytics` criada com 4 models (DailyMetrics, VolumeForecast, PerformanceAlert, DriverPerformance)
+- ✅ Forecasting com 5 métodos estatísticos (MA7, MA30, EMA, TREND, SEASONAL)
+- ✅ Cálculo de métricas diárias (pedidos, sucesso, receita, motoristas, veículos)
+- ✅ Sistema de alertas automáticos (6 tipos de alertas × 3 níveis de severidade)
+- ✅ Performance tracking mensal de motoristas com rankings
+- ✅ Confidence intervals e prediction bounds
+- ✅ Management commands (calculate_daily_metrics, generate_forecasts, check_performance_alerts)
+- ✅ Admin interface com color-coding e ações customizadas
+- ⚪ Visualizações dashboards (aguardando frontend)
 
-**Impacto**: Baixo-Médio - Planejamento estratégico
+**Impacto**: Médio-Alto - Forecasting permite planejamento estratégico de FTE
+
+**Detalhes Técnicos**:
+- **MetricsCalculator**: Agrega dados de pedidos em cache diário para performance
+- **VolumeForecaster**: 5 algoritmos de previsão com níveis de confiança
+- **PerformanceAlert**: Monitora thresholds (taxa sucesso < 80%, falhas > 15%, tempo entrega > 48h, etc.)
+- **DriverPerformance**: Rankings mensais e financial tracking
 
 ---
 

@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Acertos de Motoristas</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        .container { max-width: 1400px; margin: 0 auto; }
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .header h1 { color: #333; margin-bottom: 10px; }
+        .header p { color: #666; }
+        
+        .tabs {
+            background: white;
+            padding: 15px 30px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .tabs a {
+            display: inline-block;
+            padding: 10px 20px;
+            margin-right: 10px;
+            color: #666;
+            text-decoration: none;
+            border-bottom: 3px solid transparent;
+        }
+        .tabs a:hover { color: #333; }
+        .tabs a.active {
+            color: #2563eb;
+            border-bottom-color: #2563eb;
+            font-weight: 600;
+        }
+        
+        .panel {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .panel-header {
+            padding: 20px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .panel-header h2 {
+            color: #333;
+            font-size: 18px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th {
+            background: #f9fafb;
+            padding: 12px 20px;
+            text-align: left;
+            font-size: 12px;
+            font-weight: 600;
+            color: #6b7280;
+            text-transform: uppercase;
+        }
+        td {
+            padding: 16px 20px;
+            border-bottom: 1px solid #f3f4f6;
+            color: #374151;
+        }
+        tr:last-child td { border-bottom: none; }
+        tr:hover { background: #f9fafb; }
+        
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .badge.PAID { background: #d1fae5; color: #065f46; }
+        .badge.APPROVED { background: #dbeafe; color: #1e40af; }
+        .badge.DISPUTED { background: #fee2e2; color: #991b1b; }
+        .badge.DRAFT { background: #e5e7eb; color: #4b5563; }
+        .badge.CALCULATED { background: #fef3c7; color: #92400e; }
+        
+        .empty-state {
+            text-align: center;
+            padding: 80px 20px;
+            color: #9ca3af;
+        }
+        .empty-state h3 {
+            color: #374151;
+            font-size: 16px;
+            margin-bottom: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>💵 Acertos de Motoristas</h1>
+            <p>Gestão de settlements e pagamentos a motoristas</p>
+        </div>
+        
+        <div class="tabs">
+            <a href="/settlements/financial/">Dashboard</a>
+            <a href="/settlements/invoices/">Invoices</a>
+            <a href="/settlements/settlements/" class="active">Settlements</a>
+            <a href="/settlements/claims/">Claims</a>
+        </div>
+        
+        <div class="panel">
+            <div class="panel-header">
+                <h2>Lista de Settlements</h2>
+            </div>
+            
+            {% if settlements %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Motorista</th>
+                        <th>Período</th>
+                        <th>Valor Líquido</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for settlement in settlements %}
+                    <tr>
+                        <td><strong>#{{ settlement.id }}</strong></td>
+                        <td>{{ settlement.driver.user.get_full_name|default:settlement.driver.user.username }}</td>
+                        <td>{{ settlement.period_start|date:"d/m/Y" }} - {{ settlement.period_end|date:"d/m/Y" }}</td>
+                        <td><strong>€{{ settlement.net_amount|floatformat:2 }}</strong></td>
+                        <td><span class="badge {{ settlement.status }}">{{ settlement.get_status_display }}</span></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="empty-state">
+                <h3>Nenhum settlement encontrado</h3>
+                <p>Os settlements de motoristas aparecerão aqui.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <script>
+        console.log('✅ Settlement List carregado');
+        console.log('Total settlements:', {{ settlements.count|default:0 }});
+    </script>
+</body>
+</html>

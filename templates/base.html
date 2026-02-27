@@ -15,21 +15,22 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 
-    <!-- Inicialização do tema ANTES do Tailwind -->
+    <!-- Tailwind CSS - CARREGAR PRIMEIRO -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Inicialização do tema DEPOIS do Tailwind -->
     <script>
       // Aplicar tema imediatamente para evitar flash
       const savedTheme = localStorage.getItem('color-theme');
       const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
       
-      if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
-        document.documentElement.classList.add('dark');
-      } else {
+      // FORÇAR LIGHT MODE temporariamente para debug
+      // if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+      //   document.documentElement.classList.add('dark');
+      // } else {
         document.documentElement.classList.remove('dark');
-      }
+      // }
     </script>
-
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
         darkMode: 'class',

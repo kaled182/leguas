@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Test Ultra Simple</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 40px;
+            background: #f0f0f0;
+        }  
+        .box {
+            background: white;
+            padding: 20px;
+            border: 2px solid #333;
+            margin: 20px 0;
+        }
+        h1 { color: #333; }
+        .success { background: #90EE90; padding: 10px; }
+    </style>
+</head>
+<body>
+    <h1>🎯 TESTE ULTRA SIMPLES - Financial Dashboard</h1>
+    
+    <div class="success">
+        ✅ Se você está vendo isto, o Django está funcionando!
+    </div>
+    
+    <div class="box">
+        <h2>Estatísticas (do view):</h2>
+        <p><strong>Invoices Pendentes:</strong> {{ invoices_stats.pending_count|default:0 }}</p>
+        <p><strong>Valor Pendente:</strong> €{{ invoices_stats.pending_amount|default:0 }}</p>
+        <p><strong>Invoices Vencidos:</strong> {{ invoices_stats.overdue_count|default:0 }}</p>
+    </div>
+    
+    <div class="box">
+        <h2>Debug Info:</h2>
+        <p>User: {{ request.user.username }}</p>
+        <p>Authenticated: {{ request.user.is_authenticated }}</p>
+    </div>
+    
+    <div class="box">
+        <h3>Links:</h3>
+        <p><a href="/settlements/financial/" style="color: blue;">Dashboard Real</a></p>
+        <p><a href="/settlements/invoices/" style="color: blue;">Invoices</a></p>
+        <p><a href="/settlements/settlements/" style="color: blue;">Settlements</a></p>
+        <p><a href="/settlements/claims/" style="color: blue;">Claims</a></p>
+    </div>
+    
+    <script>
+        console.log('✅ JavaScript está funcionando!');
+        console.log('Dados:', {
+            pending: {{ invoices_stats.pending_count|default:0 }},
+            user: '{{ request.user.username }}'
+        });
+    </script>
+</body>
+</html>

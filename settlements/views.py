@@ -208,7 +208,7 @@ def financial_dashboard(request):
         'pending_claims': pending_claims,
     }
     
-    return render(request, 'settlements/financial_dashboard.html', context)
+    return render(request, 'settlements/test_simple.html', context)
 
 
 @login_required

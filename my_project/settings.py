@@ -71,16 +71,27 @@ INSTALLED_APPS = [
     'tailwind',
     'theme',
     'customauth',
+    
+    # Legacy Apps (Paack-only - serão descontinuados)
     'ordersmanager_paack',
-    'management',
-    'drivers_app',
     'send_paack_reports',
     'paack_dashboard',
-    'converter',
     'manualorders_paack',
+    
+    # Core Apps
+    'management',
+    'drivers_app',
+    'converter',
     'settlements',
     'accounting',
-    'system_config',  # Configurações do Sistema
+    'system_config',
+    
+    # New Multi-Partner Architecture (Fase 1)
+    'core',  # Gestão de Parceiros
+    'orders_manager',  # Gestão de Pedidos (genérico)
+    'fleet_management',  # Gestão de Frota
+    'pricing',  # Tarifação e Zonas Postais
+    'route_allocation',  # Atribuição de Rotas e Turnos
 ]
 
 # Middleware
@@ -282,3 +293,24 @@ MESSAGE_TAGS = {
     messages.WARNING: 'bg-yellow-500',
     messages.ERROR: 'bg-red-500',
 }
+
+# ============================================================================
+# FEATURE FLAGS - Multi-Partner Architecture
+# ============================================================================
+# Importa feature flags para controlar rollout gradual da nova arquitetura
+# Referência: system_config/feature_flags.py e docs/MIGRATION_GUIDE.md
+
+from system_config.feature_flags import (
+    USE_GENERIC_ORDERS_WRITE,
+    USE_GENERIC_ORDERS_READ,
+    DUAL_WRITE_ORDERS,
+    USE_FLEET_MANAGEMENT,
+    USE_POSTAL_ZONE_PRICING,
+    USE_AUTO_ROUTE_ALLOCATION,
+    USE_ANALYTICS_DASHBOARD,
+    USE_GENERIC_SETTLEMENTS,
+    USE_WHATSAPP_NOTIFICATIONS,
+    MIGRATION_RETENTION_DAYS,
+    ENABLE_MIGRATION_VALIDATION,
+    LOG_MIGRATION_OPERATIONS,
+)

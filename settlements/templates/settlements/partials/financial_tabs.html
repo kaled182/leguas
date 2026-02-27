@@ -1,9 +1,0 @@
-<!-- Tabs de navegação padronizadas -->
-<div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50">
-  <nav class="flex border-b border-gray-200 dark:border-gray-700">
-    <a href="{% url 'financial-dashboard' %}" class="px-6 py-4 text-sm font-medium border-b-2 {% if active == 'dashboard' %}border-blue-500 text-blue-600 dark:text-blue-400{% else %}border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 hover:border-gray-300{% endif %}">Dashboard</a>
-    <a href="{% url 'invoice-list' %}" class="px-6 py-4 text-sm font-medium border-b-2 {% if active == 'invoices' %}border-blue-500 text-blue-600 dark:text-blue-400{% else %}border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 hover:border-gray-300{% endif %}">Invoices</a>
-    <a href="{% url 'settlement-list' %}" class="px-6 py-4 text-sm font-medium border-b-2 {% if active == 'settlements' %}border-green-500 text-green-600 dark:text-green-400{% else %}border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 hover:border-gray-300{% endif %}">Settlements</a>
-    <a href="{% url 'claim-list' %}" class="px-6 py-4 text-sm font-medium border-b-2 {% if active == 'claims' %}border-yellow-500 text-yellow-600 dark:text-yellow-400{% else %}border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 hover:border-gray-300{% endif %}">Claims</a>
-  </nav>
-</div>

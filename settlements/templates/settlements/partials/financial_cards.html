@@ -1,0 +1,32 @@
+<section class="dashboard-metrics" aria-label="Métricas financeiras">
+  <!-- Título da seção -->
+  <div class="mb-6">
+    <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Métricas Financeiras</h2>
+  </div>
+  
+  <div class="dashboard-cards-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 transition-opacity duration-300" id="dashboard-grid">
+    <!-- Faturas Totais -->
+    {% include 'settlements/partials/financial_card.html' with card_id="total-invoices" icon="file-text" color="blue" title="Faturas Totais" value=invoices_stats.total description="Total de faturas emitidas" %}
+    
+    <!-- Faturas Pendentes -->
+    {% include 'settlements/partials/financial_card.html' with card_id="pending-invoices" icon="clock" color="amber" title="Faturas Pendentes" value=invoices_stats.pending description="Aguardando pagamento" %}
+    
+    <!-- Faturas Pagas -->
+    {% include 'settlements/partials/financial_card.html' with card_id="paid-invoices" icon="check-circle" color="emerald" title="Faturas Pagas" value=invoices_stats.paid description="Pagas com sucesso" trend="up" %}
+    
+    <!-- Faturas Vencidas -->
+    {% include 'settlements/partials/financial_card.html' with card_id="overdue-invoices" icon="alert-circle" color="red" title="Faturas Vencidas" value=invoices_stats.overdue description="Vencidas e não pagas" trend="down" %}
+    
+    <!-- Liquidações Totais -->
+    {% include 'settlements/partials/financial_card.html' with card_id="total-settlements" icon="dollar-sign" color="cyan" title="Liquidações Totais" value=settlements_stats.total description="Total de liquidações" %}
+    
+    <!-- Liquidações Pagas -->
+    {% include 'settlements/partials/financial_card.html' with card_id="paid-settlements" icon="check-square" color="violet" title="Liquidações Pagas" value=settlements_stats.paid description="Liquidações concluídas" %}
+    
+    <!-- Reclamações Ativas -->
+    {% include 'settlements/partials/financial_card.html' with card_id="active-claims" icon="alert-triangle" color="yellow" title="Reclamações Ativas" value=claims_stats.pending description="Aguardando análise" %}
+    
+    <!-- Reclamações Aprovadas -->
+    {% include 'settlements/partials/financial_card.html' with card_id="approved-claims" icon="thumbs-up" color="indigo" title="Reclamações Aprovadas" value=claims_stats.approved description="Aprovadas este mês" %}
+  </div>
+</section>

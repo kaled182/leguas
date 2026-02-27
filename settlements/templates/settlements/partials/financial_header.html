@@ -1,12 +1,28 @@
-<!-- Header financeiro padronizado -->
-<div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 fade-in">
-  <div class="flex items-center gap-3 mb-2">
-    <div class="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
-      <i data-lucide="wallet" class="w-7 h-7 text-white"></i>
-    </div>
-    <div>
-      <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{{ title }}</h1>
-      <p class="text-sm text-gray-600 dark:text-gray-400">{{ description }}</p>
+<!--
+  - Cabeçalho do Dashboard Financeiro
+  - Título, subtítulo e informações do sistema
+  - Design moderno e responsivo
+-->
+<header class="dashboard-header">
+  <div class="dashboard-header-content flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+    <div class="flex items-center gap-4">
+      <div class="dashboard-icon-container p-4 bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-600 rounded-2xl shadow-lg border border-emerald-400/20">
+        <div class="relative">
+          <i data-lucide="{{ icon|default:'dollar-sign' }}" class="w-12 h-12 text-white drop-shadow-sm"></i>
+          <div class="absolute -top-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-white animate-pulse"></div>
+        </div>
+      </div>
+      <div>
+        <h1 class="dashboard-title text-3xl font-bold text-gray-900 dark:text-gray-100">
+          {{ page_title|default:"Dashboard Financeiro" }}
+        </h1>
+        <p class="dashboard-subtitle text-gray-600 dark:text-gray-400 flex items-center gap-2 mt-2">
+          <span class="flex items-center gap-1">
+            <span class="status-live w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
+            {{ page_subtitle|default:"Gestão de Faturas, Liquidações e Reclamações" }}
+          </span>
+        </p>
+      </div>
     </div>
   </div>
-</div>
+</header>

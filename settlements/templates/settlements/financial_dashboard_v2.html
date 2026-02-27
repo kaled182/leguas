@@ -1,0 +1,49 @@
+{% extends 'settlements/base.html' %}
+
+{% block title %}Dashboard Financeiro{% endblock %}
+
+{% block content %}
+<!-- Loading overlay -->
+<div id="dashboard-loading" class="fixed inset-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+  <div class="text-center">
+    <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mb-4"></div>
+    <p class="text-gray-600 dark:text-gray-400 font-medium">Carregando dados financeiros...</p>
+  </div>
+</div>
+
+<div class="max-w-7xl mx-auto space-y-8">
+  <!-- Header do Dashboard -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 fade-in">
+    {% include 'settlements/partials/financial_header.html' with page_title="Dashboard Financeiro" page_subtitle="Gestão de Faturas, Liquidações e Reclamações" icon="dollar-sign" %}
+  </div>
+  
+  <!-- Cards de Métricas -->
+  <div class="slide-in">
+    {% include 'settlements/partials/financial_cards.html' %}
+  </div>
+  
+  <!-- Itens Recentes -->
+  <div class="grid grid-cols-1 xl:grid-cols-2 gap-8">
+    <!-- Faturas Recentes -->
+    <div class="xl:col-span-1 scale-in">
+      {% include 'settlements/partials/financial_recent_items.html' with title="Faturas Recentes" subtitle="Últimas 5 faturas" icon="file-text" color="blue" items=recent_invoices view_all_url="/settlements/invoices/" %}
+    </div>
+    
+    <!-- Reclamações Pendentes -->
+    <div class="xl:col-span-1 scale-in">
+      {% include 'settlements/partials/financial_recent_items.html' with title="Reclamações Pendentes" subtitle="Aguardando análise" icon="alert-circle" color="amber" items=pending_claims view_all_url="/settlements/claims/" %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Initialize lucide icons
+  document.addEventListener('DOMContentLoaded', function() {
+    if (typeof lucide !== 'undefined') {
+      lucide.createIcons();
+    }
+  });
+</script>
+{% endblock %}

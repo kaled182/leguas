@@ -165,50 +165,74 @@ def financial_dashboard(request):
     today = timezone.now().date()
     first_day_month = today.replace(day=1)
     
+    # Total counts
+    total_invoices = PartnerInvoice.objects.count()
+    total_settlements = DriverSettlement.objects.count()
+    total_claims = DriverClaim.objects.count()
+    
     # KPIs - Invoices
-    invoices_stats = PartnerInvoice.objects.aggregate(
-        pending_count=Count('id', filter=Q(status__in=['DRAFT', 'PENDING'])),
-        pending_amount=Sum('net_amount', filter=Q(status__in=['DRAFT', 'PENDING'])),
-        overdue_count=Count('id', filter=Q(status='OVERDUE')),
-        overdue_amount=Sum('net_amount', filter=Q(status='OVERDUE')),
-        paid_this_month=Sum('net_amount', filter=Q(status='PAID', paid_date__gte=first_day_month)),
-    )
+    invoices_stats = {
+        'total': total_invoices,
+        'pending': PartnerInvoice.objects.filter(status__in=['DRAFT', 'PENDING']).count(),
+        'paid': PartnerInvoice.objects.filter(status='PAID').count(),
+        'overdue': PartnerInvoice.objects.filter(status='OVERDUE').count(),
+    }
     
     # KPIs - Settlements
-    settlements_stats = DriverSettlement.objects.aggregate(
-        pending_count=Count('id', filter=Q(status__in=['DRAFT', 'CALCULATED', 'APPROVED'])),
-        pending_amount=Sum('net_amount', filter=Q(status__in=['DRAFT', 'CALCULATED', 'APPROVED'])),
-        paid_this_month=Sum('net_amount', filter=Q(status='PAID', paid_at__gte=first_day_month)),
-        avg_success_rate=Avg('success_rate', filter=Q(created_at__gte=first_day_month)),
-    )
+    settlements_stats = {
+        'total': total_settlements,
+        'paid': DriverSettlement.objects.filter(status='PAID').count(),
+        'pending': DriverSettlement.objects.filter(status__in=['DRAFT', 'CALCULATED', 'APPROVED']).count(),
+    }
     
     # KPIs - Claims
-    claims_stats = DriverClaim.objects.aggregate(
-        pending_count=Count('id', filter=Q(status='PENDING')),
-        pending_amount=Sum('amount', filter=Q(status='PENDING')),
-        approved_this_month=Count('id', filter=Q(status='APPROVED', reviewed_at__gte=first_day_month)),
-        approved_amount_this_month=Sum('amount', filter=Q(status='APPROVED', reviewed_at__gte=first_day_month)),
-    )
+    claims_stats = {
+        'total': total_claims,
+        'pending': DriverClaim.objects.filter(status='PENDING').count(),
+        'approved': DriverClaim.objects.filter(status='APPROVED').count(),
+        'rejected': DriverClaim.objects.filter(status='REJECTED').count(),
+    }
     
-    # Recent invoices
-    recent_invoices = PartnerInvoice.objects.select_related('partner').order_by('-created_at')[:5]
+    # Recent invoices - formatted for financial_recent_items.html
+    recent_invoices_qs = PartnerInvoice.objects.select_related('partner').order_by('-created_at')[:5]
+    recent_invoices = []
+    for inv in recent_invoices_qs:
+        status_class = {
+            'PAID': 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400',
+            'PENDING': 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
+            'OVERDUE': 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
+            'DRAFT': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
+        }.get(inv.status, 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300')
+        
+        recent_invoices.append({
+            'title': f'{inv.partner.name if inv.partner else "N/A"} - {inv.invoice_number}',
+            'description': f'{inv.period_start.strftime("%d/%m/%Y")} - {inv.period_end.strftime("%d/%m/%Y")}',
+            'value': f'€{inv.total_amount:,.2f}',
+            'badge': inv.get_status_display(),
+            'badge_class': status_class,
+        })
     
-    # Recent settlements
-    recent_settlements = DriverSettlement.objects.select_related('driver', 'partner').order_by('-created_at')[:5]
-    
-    # Pending claims
-    pending_claims = DriverClaim.objects.select_related('driver').filter(status='PENDING').order_by('-created_at')[:5]
+    # Pending claims - formatted for financial_recent_items.html
+    pending_claims_qs = DriverClaim.objects.select_related('driver').filter(status='PENDING').order_by('-created_at')[:5]
+    pending_claims = []
+    for claim in pending_claims_qs:
+        pending_claims.append({
+            'title': f'{claim.driver.name if claim.driver else "N/A"} - {claim.get_claim_type_display()}',
+            'description': claim.description[:80] + ('...' if len(claim.description) > 80 else ''),
+            'value': f'€{claim.claimed_amount:,.2f}' if claim.claimed_amount else '—',
+            'badge': f'#{claim.id}',
+            'badge_class': 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
+        })
     
     context = {
         'invoices_stats': invoices_stats,
         'settlements_stats': settlements_stats,
         'claims_stats': claims_stats,
         'recent_invoices': recent_invoices,
-        'recent_settlements': recent_settlements,
         'pending_claims': pending_claims,
     }
     
-    return render(request, 'settlements/financial_dashboard_simple.html', context)
+    return render(request, 'settlements/financial_dashboard_v2.html', context)
 
 
 @login_required
@@ -242,7 +266,7 @@ def invoice_list(request):
         'status_choices': PartnerInvoice.STATUS_CHOICES,
     }
     
-    return render(request, 'settlements/invoice_list_simple.html', context)
+    return render(request, 'settlements/invoice_list_v2.html', context)
 
 
 @login_required
@@ -325,7 +349,7 @@ def settlement_list(request):
     
     # Create simple template inline
     from django.http import HttpResponse
-    return render(request, 'settlements/settlement_list_simple.html', context)
+    return render(request, 'settlements/settlement_list_v2.html', context)
 
 
 @login_required
@@ -410,7 +434,7 @@ def claim_list(request):
         'type_choices': DriverClaim.CLAIM_TYPES,
     }
     
-    return render(request, 'settlements/claim_list_simple.html', context)
+    return render(request, 'settlements/claim_list_v2.html', context)
 
 
 @login_required
@@ -425,4 +449,4 @@ def claim_detail(request, claim_id):
         'claim': claim,
     }
     
-    return render(request, 'settlements/claim_detail.html', context)
+    return render(request, 'settlements/claim_list_v2.html', context)

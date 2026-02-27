@@ -1,0 +1,53 @@
+<!-- Itens recentes -->
+<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/50 dark:border-gray-700/50 shadow-sm overflow-hidden">
+  <div class="p-6 border-b border-gray-200/50 dark:border-gray-700/50">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="p-2 bg-gradient-to-br from-{{ color|default:'blue' }}-50 to-{{ color|default:'blue' }}-100 dark:from-{{ color|default:'blue' }}-900/20 dark:to-{{ color|default:'blue' }}-800/20 rounded-lg">
+          <i data-lucide="{{ icon|default:'list' }}" class="w-5 h-5 text-{{ color|default:'blue' }}-600 dark:text-{{ color|default:'blue' }}-400"></i>
+        </div>
+        <div>
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ title|default:"Itens Recentes" }}</h3>
+          <p class="text-sm text-gray-500 dark:text-gray-400">{{ subtitle|default:"Últimas atualizações" }}</p>
+        </div>
+      </div>
+      {% if view_all_url %}
+      <a href="{{ view_all_url }}" class="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 flex items-center gap-1">
+        Ver todos
+        <i data-lucide="arrow-right" class="w-4 h-4"></i>
+      </a>
+      {% endif %}
+    </div>
+  </div>
+  
+  <div class="divide-y divide-gray-200 dark:divide-gray-700">
+    {% if items %}
+      {% for item in items %}
+      <div class="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-150">
+        <div class="flex items-center justify-between gap-4">
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-medium text-gray-900 dark:text-white truncate">
+              {{ item.title }}
+            </p>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              {{ item.description }}
+            </p>
+          </div>
+          <div class="flex-shrink-0 text-right">
+            <span class="text-sm font-semibold text-gray-900 dark:text-white">
+              {{ item.value }}
+            </span>
+            {% if item.badge %}
+            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium {{ item.badge_class|default:'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300' }} mt-1">
+              {{ item.badge }}
+            </span>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+      {% include 'settlements/partials/financial_empty_state.html' with icon="inbox" title="Nenhum item recente" message="Não há itens para exibir no momento." %}
+    {% endif %}
+  </div>
+</div>

@@ -1,0 +1,265 @@
+{% extends 'settlements/base.html' %}
+
+{% block title %}Fatura {{ invoice.invoice_number }}{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-8">
+  <!-- Header com ações -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 fade-in">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-4">
+        <a href="{% url 'invoice-list' %}" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+          <i data-lucide="arrow-left" class="w-5 h-5 text-gray-600 dark:text-gray-400"></i>
+        </a>
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{{ invoice.invoice_number }}</h1>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Fatura de {{ invoice.partner.name }}</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <a href="{% url 'invoice-pdf' invoice.id %}" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium transition-colors duration-200 flex items-center gap-2">
+          <i data-lucide="download" class="w-4 h-4"></i>
+          Download PDF
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <!-- Coluna principal -->
+    <div class="lg:col-span-2 space-y-8">
+      <!-- Informações da Fatura -->
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 slide-in">
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
+          <i data-lucide="file-text" class="w-5 h-5 text-blue-600"></i>
+          Detalhes da Fatura
+        </h2>
+        
+        <div class="grid grid-cols-2 gap-6">
+          <div>
+            <p class="text-sm text-gray-500 dark:text-gray-400">Número da Fatura</p>
+            <p class="text-base font-semibold text-gray-900 dark:text-white mt-1">{{ invoice.invoice_number }}</p>
+          </div>
+          
+          <div>
+            <p class="text-sm text-gray-500 dark:text-gray-400">Parceiro</p>
+            <p class="text-base font-semibold text-gray-900 dark:text-white mt-1">{{ invoice.partner.name }}</p>
+          </div>
+          
+          <div>
+            <p class="text-sm text-gray-500 dark:text-gray-400">Período de Faturação</p>
+            <p class="text-base font-semibold text-gray-900 dark:text-white mt-1">
+              {{ invoice.period_start|date:"d/m/Y" }} - {{ invoice.period_end|date:"d/m/Y" }}
+            </p>
+          </div>
+          
+          <div>
+            <p class="text-sm text-gray-500 dark:text-gray-400">Status</p>
+            <div class="mt-1">
+              {% if invoice.status == 'PAID' %}
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400">
+                  <i data-lucide="check-circle" class="w-4 h-4 mr-1"></i>
+                  Pago
+                </span>
+              {% elif invoice.status == 'PENDING' %}
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
+                  <i data-lucide="clock" class="w-4 h-4 mr-1"></i>
+                  Pendente
+                </span>
+              {% elif invoice.status == 'OVERDUE' %}
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
+                  <i data-lucide="alert-circle" class="w-4 h-4 mr-1"></i>
+                  Vencido
+                </span>
+              {% elif invoice.status == 'DRAFT' %}
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+                  <i data-lucide="file" class="w-4 h-4 mr-1"></i>
+                  Rascunho
+                </span>
+              {% else %}
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+                  {{ invoice.get_status_display }}
+                </span>
+              {% endif %}
+            </div>
+          </div>
+          
+          {% if invoice.external_reference %}
+          <div>
+            <p class="text-sm text-gray-500 dark:text-gray-400">Referência Externa</p>
+            <p class="text-base font-semibold text-gray-900 dark:text-white mt-1">{{ invoice.external_reference }}</p>
+          </div>
+          {% endif %}
+          
+          <div>
+            <p class="text-sm text-gray-500 dark:text-gray-400">Total de Pedidos</p>
+            <p class="text-base font-semibold text-gray-900 dark:text-white mt-1">
+              {{ invoice.total_delivered }}/{{ invoice.total_orders }}
+              <span class="text-sm text-gray-500 dark:text-gray-400">entregues</span>
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Valores Detalhados -->
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 slide-in">
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
+          <i data-lucide="calculator" class="w-5 h-5 text-emerald-600"></i>
+          Valores
+        </h2>
+        
+        <div class="space-y-4">
+          <div class="flex justify-between items-center pb-3 border-b border-gray-200 dark:border-gray-700">
+            <span class="text-gray-600 dark:text-gray-400">Valor Bruto</span>
+            <span class="text-lg font-semibold text-gray-900 dark:text-white">€{{ invoice.gross_amount|floatformat:2 }}</span>
+          </div>
+          
+          <div class="flex justify-between items-center pb-3 border-b border-gray-200 dark:border-gray-700">
+            <span class="text-gray-600 dark:text-gray-400">IVA (23%)</span>
+            <span class="text-lg font-semibold text-gray-900 dark:text-white">€{{ invoice.tax_amount|floatformat:2 }}</span>
+          </div>
+          
+          <div class="flex justify-between items-center pt-2">
+            <span class="text-lg font-bold text-gray-900 dark:text-white">Valor Líquido</span>
+            <span class="text-2xl font-bold text-emerald-600 dark:text-emerald-400">€{{ invoice.net_amount|floatformat:2 }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pedidos Relacionados -->
+      {% if related_orders %}
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 overflow-hidden scale-in">
+        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+          <h2 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+            <i data-lucide="package" class="w-5 h-5 text-blue-600"></i>
+            Pedidos do Período
+          </h2>
+        </div>
+        
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead class="bg-gray-50 dark:bg-gray-900">
+              <tr>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">ID</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Data</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Motorista</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Status</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+              {% for order in related_orders %}
+              <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                <td class="px-4 py-3 text-sm text-gray-900 dark:text-white">#{{ order.id }}</td>
+                <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{{ order.created_at|date:"d/m/Y H:i" }}</td>
+                <td class="px-4 py-3 text-sm text-gray-900 dark:text-white">
+                  {% if order.assigned_driver %}{{ order.assigned_driver.nome_completo }}{% else %}—{% endif %}
+                </td>
+                <td class="px-4 py-3 text-sm">
+                  <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400">
+                    {{ order.status }}
+                  </span>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        
+        {% if related_orders|length >= 50 %}
+        <div class="p-4 bg-gray-50 dark:bg-gray-900 text-center text-sm text-gray-500 dark:text-gray-400">
+          Mostrando primeiros 50 pedidos de {{ invoice.total_orders }}
+        </div>
+        {% endif %}
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Coluna lateral -->
+    <div class="space-y-8">
+      <!-- Datas -->
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 slide-in">
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
+          <i data-lucide="calendar" class="w-5 h-5 text-purple-600"></i>
+          Datas
+        </h2>
+        
+        <div class="space-y-4">
+          <div>
+            <p class="text-sm text-gray-500 dark:text-gray-400">Data de Emissão</p>
+            <p class="text-base font-semibold text-gray-900 dark:text-white mt-1">
+              {{ invoice.issue_date|date:"d/m/Y" }}
+            </p>
+          </div>
+          
+          <div>
+            <p class="text-sm text-gray-500 dark:text-gray-400">Data de Vencimento</p>
+            <p class="text-base font-semibold text-gray-900 dark:text-white mt-1">
+              {{ invoice.due_date|date:"d/m/Y" }}
+            </p>
+          </div>
+          
+          {% if invoice.paid_date %}
+          <div>
+            <p class="text-sm text-gray-500 dark:text-gray-400">Data de Pagamento</p>
+            <p class="text-base font-semibold text-emerald-600 dark:text-emerald-400 mt-1">
+              {{ invoice.paid_date|date:"d/m/Y" }}
+            </p>
+          </div>
+          {% endif %}
+          
+          {% if invoice.paid_amount %}
+          <div class="pt-4 border-t border-gray-200 dark:border-gray-700">
+            <p class="text-sm text-gray-500 dark:text-gray-400">Valor Pago</p>
+            <p class="text-xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">
+              € {{ invoice.paid_amount|floatformat:2 }}
+            </p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Notas -->
+      {% if invoice.notes %}
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 slide-in">
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+          <i data-lucide="sticky-note" class="w-5 h-5 text-amber-600"></i>
+          Notas
+        </h2>
+        <p class="text-sm text-gray-600 dark:text-gray-400 whitespace-pre-wrap">{{ invoice.notes }}</p>
+      </div>
+      {% endif %}
+
+      <!-- Informações de Auditoria -->
+      <div class="bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-6">
+        <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Informações do Sistema</h3>
+        <div class="space-y-3 text-xs text-gray-500 dark:text-gray-400">
+          <div class="flex justify-between">
+            <span>Criada em:</span>
+            <span class="font-medium">{{ invoice.created_at|date:"d/m/Y H:i" }}</span>
+          </div>
+          <div class="flex justify-between">
+            <span>Atualizada em:</span>
+            <span class="font-medium">{{ invoice.updated_at|date:"d/m/Y H:i" }}</span>
+          </div>
+          {% if invoice.created_by %}
+          <div class="flex justify-between">
+            <span>Criada por:</span>
+            <span class="font-medium">{{ invoice.created_by.get_full_name|default:invoice.created_by.username }}</span>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    if (typeof lucide !== 'undefined') {
+      lucide.createIcons();
+    }
+  });
+</script>
+{% endblock %}

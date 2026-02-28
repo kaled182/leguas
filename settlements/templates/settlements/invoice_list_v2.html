@@ -75,7 +75,7 @@
                 {{ invoice.period_start|date:"d/m/Y" }} - {{ invoice.period_end|date:"d/m/Y" }}
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900 dark:text-white">
-                €{{ invoice.total_amount|floatformat:2 }}
+                €{{ invoice.net_amount|floatformat:2 }}
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
                 {% if invoice.status == 'PAID' %}
@@ -102,7 +102,7 @@
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                 <a href="{% url 'invoice-detail' invoice.id %}" class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 mr-3">Ver</a>
-                <a href="{% url 'invoice-download-pdf' invoice.id %}" class="text-emerald-600 hover:text-emerald-900 dark:text-emerald-400 dark:hover:text-emerald-300">PDF</a>
+                <a href="{% url 'invoice-pdf' invoice.id %}" class="text-emerald-600 hover:text-emerald-900 dark:text-emerald-400 dark:hover:text-emerald-300">PDF</a>
               </td>
             </tr>
             {% endfor %}
@@ -117,6 +117,48 @@
       </table>
     </div>
   </div>
+
+  <!-- Paginação -->
+  {% if invoices.has_other_pages %}
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-4 slide-in">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div class="text-sm text-gray-600 dark:text-gray-400">
+        Mostrando <span class="font-semibold text-gray-900 dark:text-white">{{ invoices.start_index }}</span>-<span class="font-semibold text-gray-900 dark:text-white">{{ invoices.end_index }}</span> de <span class="font-semibold text-gray-900 dark:text-white">{{ invoices.paginator.count }}</span> resultados
+      </div>
+      <div class="flex items-center gap-2">
+        {% if invoices.has_previous %}
+          <a href="?page={{ invoices.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" 
+             class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200 flex items-center gap-2">
+            <i data-lucide="chevron-left" class="w-4 h-4"></i>
+            Anterior
+          </a>
+        {% else %}
+          <span class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 rounded-lg cursor-not-allowed flex items-center gap-2">
+            <i data-lucide="chevron-left" class="w-4 h-4"></i>
+            Anterior
+          </span>
+        {% endif %}
+        
+        <span class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+          Página {{ invoices.number }} de {{ invoices.paginator.num_pages }}
+        </span>
+        
+        {% if invoices.has_next %}
+          <a href="?page={{ invoices.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" 
+             class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200 flex items-center gap-2">
+            Próxima
+            <i data-lucide="chevron-right" class="w-4 h-4"></i>
+          </a>
+        {% else %}
+          <span class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 rounded-lg cursor-not-allowed flex items-center gap-2">
+            Próxima
+            <i data-lucide="chevron-right" class="w-4 h-4"></i>
+          </span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
 </div>
 {% endblock %}
 

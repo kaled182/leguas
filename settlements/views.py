@@ -5,6 +5,7 @@ from django.utils.dateparse import parse_date
 from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
+from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 import csv
 
 from .models import SettlementRun, PartnerInvoice, DriverSettlement, DriverClaim
@@ -207,7 +208,7 @@ def financial_dashboard(request):
         recent_invoices.append({
             'title': f'{inv.partner.name if inv.partner else "N/A"} - {inv.invoice_number}',
             'description': f'{inv.period_start.strftime("%d/%m/%Y")} - {inv.period_end.strftime("%d/%m/%Y")}',
-            'value': f'€{inv.total_amount:,.2f}',
+            'value': f'€{inv.net_amount:,.2f}',
             'badge': inv.get_status_display(),
             'badge_class': status_class,
         })
@@ -217,9 +218,9 @@ def financial_dashboard(request):
     pending_claims = []
     for claim in pending_claims_qs:
         pending_claims.append({
-            'title': f'{claim.driver.name if claim.driver else "N/A"} - {claim.get_claim_type_display()}',
+            'title': f'{claim.driver.nome_completo if claim.driver else "N/A"} - {claim.get_claim_type_display()}',
             'description': claim.description[:80] + ('...' if len(claim.description) > 80 else ''),
-            'value': f'€{claim.claimed_amount:,.2f}' if claim.claimed_amount else '—',
+            'value': f'€{claim.amount:,.2f}' if claim.amount else '—',
             'badge': f'#{claim.id}',
             'badge_class': 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
         })
@@ -249,6 +250,15 @@ def invoice_list(request):
     if partner_id:
         invoices = invoices.filter(partner_id=partner_id)
     
+    # Filtros de data
+    date_from = request.GET.get('date_from')
+    if date_from:
+        invoices = invoices.filter(period_start__gte=date_from)
+    
+    date_to = request.GET.get('date_to')
+    if date_to:
+        invoices = invoices.filter(period_end__lte=date_to)
+    
     # Busca
     search = request.GET.get('search')
     if search:
@@ -260,6 +270,17 @@ def invoice_list(request):
     
     # Ordenação
     invoices = invoices.order_by('-created_at')
+    
+    # Paginação
+    paginator = Paginator(invoices, 25)  # 25 items por página
+    page = request.GET.get('page', 1)
+    
+    try:
+        invoices = paginator.page(page)
+    except PageNotAnInteger:
+        invoices = paginator.page(1)
+    except EmptyPage:
+        invoices = paginator.page(paginator.num_pages)
     
     context = {
         'invoices': invoices,
@@ -280,7 +301,7 @@ def invoice_detail(request, invoice_id):
         partner=invoice.partner,
         created_at__gte=invoice.period_start,
         created_at__lte=invoice.period_end,
-        status='DELIVERED'
+        current_status='DELIVERED'
     ).select_related('assigned_driver')[:50]
     
     context = {
@@ -294,10 +315,10 @@ def invoice_detail(request, invoice_id):
 @login_required
 def invoice_download_pdf(request, invoice_id):
     """Download do PDF da invoice"""
-    invoice = get_object_or_404(PartnerInvoice, id=invoice_id)
+    invoice = get_object_or_404(PartnerInvoice.objects.select_related('partner'), id=invoice_id)
     
     pdf_gen = PDFGenerator()
-    pdf_file = pdf_gen.generate_invoice_pdf(invoice.id)
+    pdf_file = pdf_gen.generate_invoice_pdf(invoice)
     
     response = HttpResponse(pdf_file.read(), content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="invoice_{invoice.invoice_number}.pdf"'
@@ -323,17 +344,36 @@ def settlement_list(request):
     if driver_id:
         settlements = settlements.filter(driver_id=driver_id)
     
+    # Filtros de data
+    date_from = request.GET.get('date_from')
+    if date_from:
+        settlements = settlements.filter(period_start__gte=date_from)
+    
+    date_to = request.GET.get('date_to')
+    if date_to:
+        settlements = settlements.filter(period_end__lte=date_to)
+    
     # Busca
     search = request.GET.get('search')
     if search:
         settlements = settlements.filter(
-            Q(driver__user__first_name__icontains=search) |
-            Q(driver__user__last_name__icontains=search) |
+            Q(driver__nome_completo__icontains=search) |
             Q(partner__name__icontains=search)
         )
     
     # Ordenação
     settlements = settlements.order_by('-year', '-week_number', '-month_number')
+    
+    # Paginação
+    paginator = Paginator(settlements, 25)  # 25 items por página
+    page = request.GET.get('page', 1)
+    
+    try:
+        settlements = paginator.page(page)
+    except PageNotAnInteger:
+        settlements = paginator.page(1)
+    except EmptyPage:
+        settlements = paginator.page(paginator.num_pages)
     
     # Period choices inline
     period_choices = [
@@ -371,8 +411,8 @@ def settlement_detail(request, settlement_id):
     # Estatísticas de orders
     orders_stats = related_orders.aggregate(
         total=Count('id'),
-        delivered=Count('id', filter=Q(status='DELIVERED')),
-        failed=Count('id', filter=Q(status__in=['CANCELLED', 'FAILED'])),
+        delivered=Count('id', filter=Q(current_status='DELIVERED')),
+        failed=Count('id', filter=Q(current_status__in=['CANCELLED', 'FAILED'])),
     )
     
     context = {
@@ -387,13 +427,21 @@ def settlement_detail(request, settlement_id):
 @login_required
 def settlement_download_pdf(request, settlement_id):
     """Download do PDF do settlement"""
-    settlement = get_object_or_404(DriverSettlement, id=settlement_id)
+    settlement = get_object_or_404(
+        DriverSettlement.objects.select_related('driver', 'partner'),
+        id=settlement_id
+    )
     
     pdf_gen = PDFGenerator()
-    pdf_file = pdf_gen.generate_settlement_pdf(settlement.id)
+    pdf_file = pdf_gen.generate_settlement_pdf(settlement)
+    
+    # Gerar nome do arquivo mais descritivo
+    driver_name = settlement.driver.nome_completo.replace(' ', '_')
+    period = f"S{settlement.week_number}" if settlement.period_type == 'WEEKLY' else f"M{settlement.month_number}"
+    filename = f"settlement_{driver_name}_{period}_{settlement.year}.pdf"
     
     response = HttpResponse(pdf_file.read(), content_type='application/pdf')
-    response['Content-Disposition'] = f'attachment; filename="settlement_{settlement.id}.pdf"'
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
     
     return response
 
@@ -416,17 +464,36 @@ def claim_list(request):
     if driver_id:
         claims = claims.filter(driver_id=driver_id)
     
+    # Filtros de data
+    date_from = request.GET.get('date_from')
+    if date_from:
+        claims = claims.filter(occurred_at__gte=date_from)
+    
+    date_to = request.GET.get('date_to')
+    if date_to:
+        claims = claims.filter(occurred_at__lte=date_to)
+    
     # Busca
     search = request.GET.get('search')
     if search:
         claims = claims.filter(
-            Q(driver__user__first_name__icontains=search) |
-            Q(driver__user__last_name__icontains=search) |
+            Q(driver__nome_completo__icontains=search) |
             Q(description__icontains=search)
         )
     
     # Ordenação
     claims = claims.order_by('-created_at')
+    
+    # Paginação
+    paginator = Paginator(claims, 25)  # 25 items por página
+    page = request.GET.get('page', 1)
+    
+    try:
+        claims = paginator.page(page)
+    except PageNotAnInteger:
+        claims = paginator.page(1)
+    except EmptyPage:
+        claims = paginator.page(paginator.num_pages)
     
     context = {
         'claims': claims,
@@ -449,4 +516,4 @@ def claim_detail(request, claim_id):
         'claim': claim,
     }
     
-    return render(request, 'settlements/claim_list_v2.html', context)
+    return render(request, 'settlements/claim_detail.html', context)

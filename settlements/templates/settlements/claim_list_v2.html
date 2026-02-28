@@ -126,6 +126,48 @@
       </table>
     </div>
   </div>
+
+  <!-- Paginação -->
+  {% if claims.has_other_pages %}
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-4 slide-in">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div class="text-sm text-gray-600 dark:text-gray-400">
+        Mostrando <span class="font-semibold text-gray-900 dark:text-white">{{ claims.start_index }}</span>-<span class="font-semibold text-gray-900 dark:text-white">{{ claims.end_index }}</span> de <span class="font-semibold text-gray-900 dark:text-white">{{ claims.paginator.count }}</span> resultados
+      </div>
+      <div class="flex items-center gap-2">
+        {% if claims.has_previous %}
+          <a href="?page={{ claims.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" 
+             class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200 flex items-center gap-2">
+            <i data-lucide="chevron-left" class="w-4 h-4"></i>
+            Anterior
+          </a>
+        {% else %}
+          <span class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 rounded-lg cursor-not-allowed flex items-center gap-2">
+            <i data-lucide="chevron-left" class="w-4 h-4"></i>
+            Anterior
+          </span>
+        {% endif %}
+        
+        <span class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+          Página {{ claims.number }} de {{ claims.paginator.num_pages }}
+        </span>
+        
+        {% if claims.has_next %}
+          <a href="?page={{ claims.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" 
+             class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200 flex items-center gap-2">
+            Próxima
+            <i data-lucide="chevron-right" class="w-4 h-4"></i>
+          </a>
+        {% else %}
+          <span class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 rounded-lg cursor-not-allowed flex items-center gap-2">
+            Próxima
+            <i data-lucide="chevron-right" class="w-4 h-4"></i>
+          </span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
 </div>
 {% endblock %}
 

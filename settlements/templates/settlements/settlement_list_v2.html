@@ -102,7 +102,7 @@
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                 <a href="{% url 'settlement-detail' settlement.id %}" class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 mr-3">Ver</a>
-                <a href="{% url 'settlement-download-pdf' settlement.id %}" class="text-emerald-600 hover:text-emerald-900 dark:text-emerald-400 dark:hover:text-emerald-300">PDF</a>
+                <a href="{% url 'settlement-pdf' settlement.id %}" class="text-emerald-600 hover:text-emerald-900 dark:text-emerald-400 dark:hover:text-emerald-300">PDF</a>
               </td>
             </tr>
             {% endfor %}
@@ -117,6 +117,48 @@
       </table>
     </div>
   </div>
+
+  <!-- Paginação -->
+  {% if settlements.has_other_pages %}
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-4 slide-in">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div class="text-sm text-gray-600 dark:text-gray-400">
+        Mostrando <span class="font-semibold text-gray-900 dark:text-white">{{ settlements.start_index }}</span>-<span class="font-semibold text-gray-900 dark:text-white">{{ settlements.end_index }}</span> de <span class="font-semibold text-gray-900 dark:text-white">{{ settlements.paginator.count }}</span> resultados
+      </div>
+      <div class="flex items-center gap-2">
+        {% if settlements.has_previous %}
+          <a href="?page={{ settlements.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" 
+             class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200 flex items-center gap-2">
+            <i data-lucide="chevron-left" class="w-4 h-4"></i>
+            Anterior
+          </a>
+        {% else %}
+          <span class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 rounded-lg cursor-not-allowed flex items-center gap-2">
+            <i data-lucide="chevron-left" class="w-4 h-4"></i>
+            Anterior
+          </span>
+        {% endif %}
+        
+        <span class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+          Página {{ settlements.number }} de {{ settlements.paginator.num_pages }}
+        </span>
+        
+        {% if settlements.has_next %}
+          <a href="?page={{ settlements.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" 
+             class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200 flex items-center gap-2">
+            Próxima
+            <i data-lucide="chevron-right" class="w-4 h-4"></i>
+          </a>
+        {% else %}
+          <span class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 rounded-lg cursor-not-allowed flex items-center gap-2">
+            Próxima
+            <i data-lucide="chevron-right" class="w-4 h-4"></i>
+          </span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
 </div>
 {% endblock %}
 

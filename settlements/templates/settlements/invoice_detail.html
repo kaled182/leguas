@@ -1,70 +1,318 @@
-{% extends "settlements/base.html" %}
-{% load static %}
+{% extends 'settlements/base.html' %}
 
-{% block subtitle %}Invoice #{{ invoice.invoice_number }}{% endblock %}
+{% block title %}Fatura {{ invoice.invoice_number }}{% endblock %}
 
-{% block settlements_content %}
-<div class="mb-6">
-  <a href="{% url 'invoice-list' %}" class="text-blue-600 hover:text-blue-900 text-sm mb-2 inline-block">← Voltar</a>
-  <div class="flex justify-between items-center">
-    <div>
-      <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Invoice {{ invoice.invoice_number }}</h1>
-      <p class="mt-2 text-gray-600 dark:text-gray-400">{{ invoice.partner.name }}</p>
-    </div>
-    <div class="flex space-x-3">
-      <a href="{% url 'invoice-pdf' invoice.id %}" class="btn">Download PDF</a>
-      <a href="/admin/settlements/partnerinvoice/{{ invoice.id }}/change/" class="btn btn-secondary">Editar</a>
-    </div>
-  </div>
-</div>
-
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-  <div class="card">
-    <div class="card-header"><h3 class="card-title">Informações</h3></div>
-    <div class="card-body space-y-3">
-      <div><p class="text-xs text-gray-500">Número</p><p class="font-medium">{{ invoice.invoice_number }}</p></div>
-      <div><p class="text-xs text-gray-500">Período</p><p class="font-medium">{{ invoice.period_start|date:"d/m/Y" }} - {{ invoice.period_end|date:"d/m/Y" }}</p></div>
-      <div><p class="text-xs text-gray-500">Status</p>
-        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full 
-          {% if invoice.status == 'PAID' %}bg-green-100 text-green-800
-          {% elif invoice.status == 'OVERDUE' %}bg-red-100 text-red-800
-          {% else %}bg-yellow-100 text-yellow-800{% endif %}">
-          {{ invoice.get_status_display }}
-        </span>
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-6">
+  <!-- Header com Título e Ações -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 fade-in">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div class="flex items-start gap-4">
+        <div class="flex-shrink-0">
+          <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center">
+            <i data-lucide="file-text" class="w-6 h-6 text-blue-600 dark:text-blue-400"></i>
+          </div>
+        </div>
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-1">
+            Fatura {{ invoice.invoice_number }}
+          </h1>
+          <p class="text-sm text-gray-500 dark:text-gray-400">
+            <a href="{% url 'invoice-list' %}" class="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+              ← Voltar para Faturas
+            </a>
+          </p>
+        </div>
+      </div>
+      <div class="flex flex-wrap gap-3">
+        <a href="{% url 'invoice-pdf' invoice.id %}" class="inline-flex items-center px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium transition-colors duration-200 gap-2">
+          <i data-lucide="download" class="w-4 h-4"></i>
+          Baixar PDF
+        </a>
+        {% if invoice.status == 'DRAFT' %}
+        <button class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200 gap-2">
+          <i data-lucide="send" class="w-4 h-4"></i>
+          Enviar
+        </button>
+        {% endif %}
       </div>
     </div>
   </div>
 
-  <div class="card">
-    <div class="card-header"><h3 class="card-title">Valores</h3></div>
-    <div class="card-body space-y-2">
-      <div class="flex justify-between"><span>Bruto</span><span class="font-medium">€{{ invoice.gross_amount|floatformat:2 }}</span></div>
-      <div class="flex justify-between"><span>IVA (23%)</span><span class="font-medium">€{{ invoice.tax_amount|floatformat:2 }}</span></div>
-      <div class="border-t pt-2 flex justify-between"><span class="font-bold">Total</span><span class="font-bold text-green-600">€{{ invoice.net_amount|floatformat:2 }}</span></div>
-    </div>
-  </div>
-</div>
+  <!-- Grid Principal -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Coluna Esquerda: Informações Principais -->
+    <div class="lg:col-span-2 space-y-6">
+      <!-- Card Status e Datas -->
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 slide-in">
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+          <i data-lucide="info" class="w-5 h-5 text-blue-600 dark:text-blue-400"></i>
+          Informações da Fatura
+        </h2>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</label>
+            <div class="mt-1">
+              {% if invoice.status == 'PAID' %}
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400">
+                  <i data-lucide="check-circle" class="w-4 h-4 mr-1"></i>
+                  Pago
+                </span>
+              {% elif invoice.status == 'PENDING' %}
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
+                  <i data-lucide="clock" class="w-4 h-4 mr-1"></i>
+                  Pendente
+                </span>
+              {% elif invoice.status == 'OVERDUE' %}
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
+                  <i data-lucide="alert-circle" class="w-4 h-4 mr-1"></i>
+                  Vencido
+                </span>
+              {% elif invoice.status == 'DRAFT' %}
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+                  <i data-lucide="file" class="w-4 h-4 mr-1"></i>
+                  Rascunho
+                </span>
+              {% else %}
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+                  {{ invoice.get_status_display }}
+                </span>
+              {% endif %}
+            </div>
+          </div>
+          <div>
+            <label class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Parceiro</label>
+            <p class="mt-1 text-sm font-semibold text-gray-900 dark:text-white">{{ invoice.partner.name }}</p>
+          </div>
+          <div>
+            <label class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Data de Emissão</label>
+            <p class="mt-1 text-sm text-gray-900 dark:text-white">{{ invoice.issue_date|date:"d/m/Y" }}</p>
+          </div>
+          <div>
+            <label class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Data de Vencimento</label>
+            <p class="mt-1 text-sm text-gray-900 dark:text-white">{{ invoice.due_date|date:"d/m/Y" }}</p>
+          </div>
+          <div>
+            <label class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Período</label>
+            <p class="mt-1 text-sm text-gray-900 dark:text-white">
+              {{ invoice.period_start|date:"d/m/Y" }} - {{ invoice.period_end|date:"d/m/Y" }}
+            </p>
+          </div>
+          {% if invoice.paid_date %}
+          <div>
+            <label class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Data de Pagamento</label>
+            <p class="mt-1 text-sm text-emerald-600 dark:text-emerald-400 font-semibold">{{ invoice.paid_date|date:"d/m/Y" }}</p>
+          </div>
+          {% endif %}
+        </div>
+        
+        {% if invoice.external_reference %}
+        <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <label class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Referência Externa</label>
+          <p class="mt-1 text-sm text-gray-900 dark:text-white font-mono">{{ invoice.external_reference }}</p>
+        </div>
+        {% endif %}
+        
+        {% if invoice.notes %}
+        <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <label class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Notas</label>
+          <p class="mt-1 text-sm text-gray-700 dark:text-gray-300">{{ invoice.notes }}</p>
+        </div>
+        {% endif %}
+      </div>
 
-{% if related_orders %}
-<div class="card mt-6">
-  <div class="card-header"><h3 class="card-title">Pedidos ({{ related_orders.count }})</h3></div>
-  <div class="card-body">
-    <div class="overflow-x-auto">
-      <table class="data-table">
-        <thead><tr><th>Data</th><th>Código</th><th>Motorista</th><th>Status</th></tr></thead>
-        <tbody>
-          {% for order in related_orders %}
-          <tr>
-            <td>{{ order.created_at|date:"d/m/Y" }}</td>
-            <td>{{ order.tracking_code }}</td>
-            <td>{{ order.assigned_driver.user.get_full_name|default:"-" }}</td>
-            <td><span class="px-2 py-1 text-xs rounded {% if order.status == 'DELIVERED' %}bg-green-100 text-green-800{% else %}bg-gray-100 text-gray-800{% endif %}">{{ order.get_status_display }}</span></td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+      <!-- Card Valores Detalhados -->
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 scale-in">
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+          <i data-lucide="calculator" class="w-5 h-5 text-blue-600 dark:text-blue-400"></i>
+          Valores
+        </h2>
+        <div class="space-y-3">
+          <div class="flex justify-between items-center py-2">
+            <span class="text-sm text-gray-600 dark:text-gray-400">Valor Bruto</span>
+            <span class="text-lg font-semibold text-gray-900 dark:text-white">
+              €{{ invoice.gross_amount|floatformat:2 }}
+            </span>
+          </div>
+          <div class="flex justify-between items-center py-2 border-t border-gray-200 dark:border-gray-700">
+            <span class="text-sm text-gray-600 dark:text-gray-400">IVA (23%)</span>
+            <span class="text-lg font-semibold text-gray-900 dark:text-white">
+              €{{ invoice.tax_amount|floatformat:2 }}
+            </span>
+          </div>
+          <div class="flex justify-between items-center py-3 border-t-2 border-gray-300 dark:border-gray-600 bg-blue-50 dark:bg-blue-900/20 -mx-6 px-6 rounded-lg">
+            <span class="text-base font-semibold text-gray-900 dark:text-white">Valor Líquido (Total)</span>
+            <span class="text-2xl font-bold text-blue-600 dark:text-blue-400">
+              €{{ invoice.net_amount|floatformat:2 }}
+            </span>
+          </div>
+          {% if invoice.paid_amount %}
+          <div class="flex justify-between items-center py-2 border-t border-gray-200 dark:border-gray-700">
+            <span class="text-sm text-gray-600 dark:text-gray-400">Valor Pago</span>
+            <span class="text-lg font-semibold text-emerald-600 dark:text-emerald-400">
+              €{{ invoice.paid_amount|floatformat:2 }}
+            </span>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Card Pedidos Relacionados -->
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 overflow-hidden slide-in">
+        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+          <h2 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+            <i data-lucide="package" class="w-5 h-5 text-blue-600 dark:text-blue-400"></i>
+            Pedidos Relacionados
+          </h2>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            {{ invoice.total_delivered }} de {{ invoice.total_orders }} pedidos entregues
+          </p>
+        </div>
+        {% if related_orders %}
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead class="bg-gray-50 dark:bg-gray-900">
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">ID</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Data</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Motorista</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+              {% for order in related_orders %}
+              <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-150">
+                <td class="px-6 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                  #{{ order.id }}
+                </td>
+                <td class="px-6 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                  {{ order.created_at|date:"d/m/Y H:i" }}
+                </td>
+                <td class="px-6 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                  {{ order.assigned_driver.nome_completo|default:"—" }}
+                </td>
+                <td class="px-6 py-3 whitespace-nowrap">
+                  <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium
+                    {% if order.status == 'DELIVERED' %}bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400
+                    {% else %}bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300{% endif %}">
+                    {{ order.get_status_display }}
+                  </span>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="p-8 text-center">
+          <i data-lucide="inbox" class="w-12 h-12 text-gray-400 dark:text-gray-600 mx-auto mb-3"></i>
+          <p class="text-sm text-gray-500 dark:text-gray-400">Nenhum pedido relacionado</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Coluna Direita: Cards Resumo -->
+    <div class="space-y-6">
+      <!-- Card Sumário -->
+      <div class="bg-gradient-to-br from-blue-600 to-blue-700 dark:from-blue-700 dark:to-blue-800 rounded-xl shadow-sm p-6 text-white scale-in">
+        <h3 class="text-sm font-medium opacity-90 mb-4">Resumo da Fatura</h3>
+        <div class="space-y-4">
+          <div>
+            <p class="text-xs opacity-75 mb-1">Total de Pedidos</p>
+            <p class="text-3xl font-bold">{{ invoice.total_orders }}</p>
+          </div>
+          <div class="pt-4 border-t border-blue-500/30">
+            <p class="text-xs opacity-75 mb-1">Pedidos Entregues</p>
+            <p class="text-2xl font-semibold">{{ invoice.total_delivered }}</p>
+          </div>
+          <div class="pt-4 border-t border-blue-500/30">
+            <p class="text-xs opacity-75 mb-1">Taxa de Sucesso</p>
+            <p class="text-2xl font-semibold">
+              {% if invoice.total_orders > 0 %}{% widthratio invoice.total_delivered invoice.total_orders 100 %}%{% else %}—{% endif %}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card Timeline -->
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 slide-in">
+        <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+          <i data-lucide="calendar" class="w-4 h-4 text-blue-600 dark:text-blue-400"></i>
+          Linha do Tempo
+        </h3>
+        <div class="space-y-4">
+          <div class="flex gap-3">
+            <div class="flex-shrink-0 w-2 h-2 mt-2 rounded-full bg-blue-600 dark:bg-blue-400"></div>
+            <div class="flex-1 min-w-0">
+              <p class="text-xs font-medium text-gray-900 dark:text-white">Criada</p>
+              <p class="text-xs text-gray-500 dark:text-gray-400">{{ invoice.created_at|date:"d/m/Y H:i" }}</p>
+            </div>
+          </div>
+          {% if invoice.issue_date %}
+          <div class="flex gap-3">
+            <div class="flex-shrink-0 w-2 h-2 mt-2 rounded-full bg-amber-600 dark:bg-amber-400"></div>
+            <div class="flex-1 min-w-0">
+              <p class="text-xs font-medium text-gray-900 dark:text-white">Emitida</p>
+              <p class="text-xs text-gray-500 dark:text-gray-400">{{ invoice.issue_date|date:"d/m/Y" }}</p>
+            </div>
+          </div>
+          {% endif %}
+          {% if invoice.paid_date %}
+          <div class="flex gap-3">
+            <div class="flex-shrink-0 w-2 h-2 mt-2 rounded-full bg-emerald-600 dark:bg-emerald-400"></div>
+            <div class="flex-1 min-w-0">
+              <p class="text-xs font-medium text-gray-900 dark:text-white">Paga</p>
+              <p class="text-xs text-gray-500 dark:text-gray-400">{{ invoice.paid_date|date:"d/m/Y" }}</p>
+            </div>
+          </div>
+          {% endif %}
+          <div class="flex gap-3">
+            <div class="flex-shrink-0 w-2 h-2 mt-2 rounded-full {% if invoice.status == 'OVERDUE' %}bg-red-600 dark:bg-red-400{% else %}bg-gray-400{% endif %}"></div>
+            <div class="flex-1 min-w-0">
+              <p class="text-xs font-medium text-gray-900 dark:text-white">Vencimento</p>
+              <p class="text-xs {% if invoice.status == 'OVERDUE' %}text-red-600 dark:text-red-400 font-semibold{% else %}text-gray-500 dark:text-gray-400{% endif %}">
+                {{ invoice.due_date|date:"d/m/Y" }}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card Auditoria -->
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 slide-in">
+        <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+          <i data-lucide="shield" class="w-4 h-4 text-blue-600 dark:text-blue-400"></i>
+          Auditoria
+        </h3>
+        <div class="space-y-3 text-xs">
+          <div>
+            <p class="text-gray-500 dark:text-gray-400">Criado em</p>
+            <p class="text-gray-900 dark:text-white font-medium mt-0.5">{{ invoice.created_at|date:"d/m/Y H:i" }}</p>
+          </div>
+          {% if invoice.created_by %}
+          <div>
+            <p class="text-gray-500 dark:text-gray-400">Criado por</p>
+            <p class="text-gray-900 dark:text-white font-medium mt-0.5">{{ invoice.created_by.get_full_name|default:invoice.created_by.username }}</p>
+          </div>
+          {% endif %}
+          <div>
+            <p class="text-gray-500 dark:text-gray-400">Última atualização</p>
+            <p class="text-gray-900 dark:text-white font-medium mt-0.5">{{ invoice.updated_at|date:"d/m/Y H:i" }}</p>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
-{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    if (typeof lucide !== 'undefined') {
+      lucide.createIcons();
+    }
+  });
+</script>
 {% endblock %}

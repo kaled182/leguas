@@ -1,0 +1,190 @@
+{% extends 'settlements/base.html' %}
+
+{% block title %}Manutenção - {{ maintenance.vehicle.license_plate }}{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto space-y-6">
+  <!-- Header -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 fade-in">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-4">
+        <a href="{% url 'fleet:maintenance_list' %}" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+          <i data-lucide="arrow-left" class="w-6 h-6"></i>
+        </a>
+        <div class="p-3 bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl shadow-lg">
+          <i data-lucide="wrench" class="w-6 h-6 text-white"></i>
+        </div>
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Manutenção - {{ maintenance.vehicle.license_plate }}</h1>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">{{ maintenance.get_maintenance_type_display }}</p>
+        </div>
+      </div>
+      <div class="flex gap-3">
+        <a href="{% url 'fleet:maintenance_edit' maintenance.pk %}" class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-medium transition-colors duration-200 flex items-center gap-2">
+          <i data-lucide="edit" class="w-4 h-4"></i>
+          Editar
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Status Card -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 slide-in">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-4">
+        {% if maintenance.is_completed %}
+          <div class="p-3 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl">
+            <i data-lucide="check-circle" class="w-8 h-8 text-emerald-600 dark:text-emerald-400"></i>
+          </div>
+          <div>
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Manutenção Concluída</h3>
+            <p class="text-sm text-gray-500 dark:text-gray-400">
+              {% if maintenance.completed_date %}
+                Concluída em {{ maintenance.completed_date|date:"d/m/Y" }}
+              {% else %}
+                Marcada como concluída
+              {% endif %}
+            </p>
+          </div>
+        {% else %}
+          <div class="p-3 bg-amber-100 dark:bg-amber-900/30 rounded-xl">
+            <i data-lucide="clock" class="w-8 h-8 text-amber-600 dark:text-amber-400"></i>
+          </div>
+          <div>
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Manutenção Agendada</h3>
+            <p class="text-sm text-gray-500 dark:text-gray-400">
+              {% if maintenance.scheduled_date %}
+                Prevista para {{ maintenance.scheduled_date|date:"d/m/Y" }}
+              {% else %}
+                Data a definir
+              {% endif %}
+            </p>
+          </div>
+        {% endif %}
+      </div>
+      {% if maintenance.cost %}
+        <div class="text-right">
+          <p class="text-sm text-gray-500 dark:text-gray-400">Custo Total</p>
+          <p class="text-3xl font-bold text-gray-900 dark:text-white">€{{ maintenance.cost }}</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <!-- Informações Gerais -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 slide-in">
+      <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+        <i data-lucide="info" class="w-5 h-5 text-teal-600 dark:text-teal-400"></i>
+        Informações Gerais
+      </h2>
+      <div class="space-y-4">
+        <div>
+          <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Veículo</p>
+          <a href="{% url 'fleet:vehicle_detail' maintenance.vehicle.pk %}" class="text-lg font-semibold text-teal-600 dark:text-teal-400 hover:underline">
+            {{ maintenance.vehicle.license_plate }} - {{ maintenance.vehicle.model }}
+          </a>
+        </div>
+        <div>
+          <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Tipo de Manutenção</p>
+          <p class="text-lg font-semibold text-gray-900 dark:text-white">{{ maintenance.get_maintenance_type_display }}</p>
+        </div>
+        {% if maintenance.scheduled_date %}
+        <div>
+          <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Data Agendada</p>
+          <p class="text-lg font-semibold text-gray-900 dark:text-white">{{ maintenance.scheduled_date|date:"d/m/Y" }}</p>
+        </div>
+        {% endif %}
+        {% if maintenance.completed_date %}
+        <div>
+          <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Data de Conclusão</p>
+          <p class="text-lg font-semibold text-gray-900 dark:text-white">{{ maintenance.completed_date|date:"d/m/Y" }}</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Detalhes Financeiros e Técnicos -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 slide-in">
+      <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+        <i data-lucide="dollar-sign" class="w-5 h-5 text-teal-600 dark:text-teal-400"></i>
+        Detalhes Financeiros
+      </h2>
+      <div class="space-y-4">
+        {% if maintenance.cost %}
+        <div>
+          <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Custo</p>
+          <p class="text-lg font-semibold text-gray-900 dark:text-white">€{{ maintenance.cost }}</p>
+        </div>
+        {% endif %}
+        {% if maintenance.invoice_number %}
+        <div>
+          <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Número da Fatura</p>
+          <p class="text-lg font-semibold text-gray-900 dark:text-white">{{ maintenance.invoice_number }}</p>
+        </div>
+        {% endif %}
+        {% if maintenance.workshop %}
+        <div>
+          <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Oficina</p>
+          <p class="text-lg font-semibold text-gray-900 dark:text-white">{{ maintenance.workshop }}</p>
+        </div>
+        {% endif %}
+        {% if maintenance.odometer_at_service %}
+        <div>
+          <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Quilometragem</p>
+          <p class="text-lg font-semibold text-gray-900 dark:text-white">{{ maintenance.odometer_at_service|floatformat:0 }} km</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Descrição e Notas -->
+  {% if maintenance.description or maintenance.notes %}
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 slide-in">
+    <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+      <i data-lucide="file-text" class="w-5 h-5 text-teal-600 dark:text-teal-400"></i>
+      Detalhes e Notas
+    </h2>
+    {% if maintenance.description %}
+    <div class="mb-6">
+      <p class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Descrição</p>
+      <div class="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
+        <p class="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{{ maintenance.description }}</p>
+      </div>
+    </div>
+    {% endif %}
+    {% if maintenance.notes %}
+    <div>
+      <p class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Notas Adicionais</p>
+      <div class="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
+        <p class="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{{ maintenance.notes }}</p>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <!-- Ações -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6">
+    <div class="flex flex-wrap gap-3">
+      <a href="{% url 'fleet:maintenance_edit' maintenance.pk %}" class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-medium transition-colors duration-200 flex items-center gap-2">
+        <i data-lucide="edit" class="w-4 h-4"></i>
+        Editar Manutenção
+      </a>
+      <a href="{% url 'fleet:vehicle_detail' maintenance.vehicle.pk %}" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors duration-200 flex items-center gap-2">
+        <i data-lucide="truck" class="w-4 h-4"></i>
+        Ver Veículo
+      </a>
+      <a href="{% url 'fleet:maintenance_calendar' %}" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors duration-200 flex items-center gap-2">
+        <i data-lucide="calendar" class="w-4 h-4"></i>
+        Ver Calendário
+      </a>
+      <a href="{% url 'fleet:maintenance_list' %}" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors duration-200 flex items-center gap-2">
+        <i data-lucide="list" class="w-4 h-4"></i>
+        Ver Todas
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}

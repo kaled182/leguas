@@ -1,0 +1,203 @@
+{% extends 'settlements/base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+  <!-- Header -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 fade-in">
+    <div class="flex items-center gap-4">
+      <a href="{% if maintenance %}{% url 'fleet:maintenance_detail' maintenance.pk %}{% else %}{% url 'fleet:maintenance_list' %}{% endif %}" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+        <i data-lucide="arrow-left" class="w-6 h-6"></i>
+      </a>
+      <div class="p-3 bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl shadow-lg">
+        <i data-lucide="wrench" class="w-6 h-6 text-white"></i>
+      </div>
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{{ title }}</h1>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          {% if maintenance %}Atualizar informações da manutenção{% else %}Programar nova manutenção{% endif %}
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Formulário -->
+  <form method="post" class="space-y-6">
+    {% csrf_token %}
+    
+    {% if form.non_field_errors %}
+    <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+      <div class="flex items-center gap-2">
+        <i data-lucide="alert-circle" class="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0"></i>
+        <div>
+          {% for error in form.non_field_errors %}
+          <p class="text-sm text-red-600 dark:text-red-400">{{ error }}</p>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Seção: Informações Básicas -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 slide-in">
+      <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
+        <i data-lucide="info" class="w-5 h-5 text-teal-600 dark:text-teal-400"></i>
+        Informações Básicas
+      </h2>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label for="{{ form.vehicle.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            {{ form.vehicle.label }} <span class="text-red-500">*</span>
+          </label>
+          {{ form.vehicle }}
+          {% if form.vehicle.errors %}
+          <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ form.vehicle.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+        <div>
+          <label for="{{ form.maintenance_type.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            {{ form.maintenance_type.label }} <span class="text-red-500">*</span>
+          </label>
+          {{ form.maintenance_type }}
+          {% if form.maintenance_type.errors %}
+          <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ form.maintenance_type.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+        <div>
+          <label for="{{ form.scheduled_date.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            {{ form.scheduled_date.label }}
+          </label>
+          {{ form.scheduled_date }}
+          {% if form.scheduled_date.errors %}
+          <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ form.scheduled_date.errors.0 }}</p>
+          {% endif %}
+          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Data prevista para a manutenção</p>
+        </div>
+
+        <div>
+          <label for="{{ form.completed_date.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            {{ form.completed_date.label }}
+          </label>
+          {{ form.completed_date }}
+          {% if form.completed_date.errors %}
+          <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ form.completed_date.errors.0 }}</p>
+          {% endif %}
+          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Preencher quando a manutenção for realizada</p>
+        </div>
+
+        <div class="md:col-span-2">
+          <label for="{{ form.description.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            {{ form.description.label }}
+          </label>
+          {{ form.description }}
+          {% if form.description.errors %}
+          <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ form.description.errors.0 }}</p>
+          {% endif %}
+          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Descrição detalhada do serviço a realizar</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Seção: Detalhes Técnicos e Financeiros -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 slide-in">
+      <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
+        <i data-lucide="dollar-sign" class="w-5 h-5 text-teal-600 dark:text-teal-400"></i>
+        Detalhes Técnicos e Financeiros
+      </h2>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label for="{{ form.workshop.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            {{ form.workshop.label }}
+          </label>
+          {{ form.workshop }}
+          {% if form.workshop.errors %}
+          <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ form.workshop.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+        <div>
+          <label for="{{ form.cost.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            {{ form.cost.label }}
+          </label>
+          {{ form.cost }}
+          {% if form.cost.errors %}
+          <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ form.cost.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+        <div>
+          <label for="{{ form.invoice_number.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            {{ form.invoice_number.label }}
+          </label>
+          {{ form.invoice_number }}
+          {% if form.invoice_number.errors %}
+          <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ form.invoice_number.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+        <div>
+          <label for="{{ form.odometer_at_service.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            {{ form.odometer_at_service.label }}
+          </label>
+          {{ form.odometer_at_service }}
+          {% if form.odometer_at_service.errors %}
+          <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ form.odometer_at_service.errors.0 }}</p>
+          {% endif %}
+          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Quilometragem no momento da manutenção</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Seção: Status e Notas -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 slide-in">
+      <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
+        <i data-lucide="file-text" class="w-5 h-5 text-teal-600 dark:text-teal-400"></i>
+        Status e Notas
+      </h2>
+      
+      <div class="space-y-6">
+        <div class="flex items-center">
+          <label class="relative inline-flex items-center cursor-pointer">
+            {{ form.is_completed }}
+            <span class="ml-3 text-sm font-medium text-gray-700 dark:text-gray-300">{{ form.is_completed.label }}</span>
+          </label>
+          {% if form.is_completed.errors %}
+          <p class="ml-3 text-sm text-red-600 dark:text-red-400">{{ form.is_completed.errors.0 }}</p>
+          {% endif %}
+          <p class="ml-3 text-xs text-gray-500 dark:text-gray-400">Marcar quando a manutenção estiver concluída</p>
+        </div>
+
+        <div>
+          <label for="{{ form.notes.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            {{ form.notes.label }}
+          </label>
+          {{ form.notes }}
+          {% if form.notes.errors %}
+          <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ form.notes.errors.0 }}</p>
+          {% endif %}
+          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Observações adicionais, problemas encontrados, etc.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Botões de Ação -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6">
+      <div class="flex flex-wrap gap-3">
+        <button type="submit" class="px-6 py-3 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-medium transition-colors duration-200 flex items-center gap-2">
+          <i data-lucide="check" class="w-5 h-5"></i>
+          {% if maintenance %}Atualizar Manutenção{% else %}Agendar Manutenção{% endif %}
+        </button>
+        <a href="{% if maintenance %}{% url 'fleet:maintenance_detail' maintenance.pk %}{% else %}{% url 'fleet:maintenance_list' %}{% endif %}" class="px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors duration-200 flex items-center gap-2">
+          <i data-lucide="x" class="w-5 h-5"></i>
+          Cancelar
+        </a>
+      </div>
+    </div>
+  </form>
+</div>
+{% endblock %}

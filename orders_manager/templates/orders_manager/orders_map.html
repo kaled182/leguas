@@ -1,0 +1,351 @@
+{% extends 'settlements/base.html' %}
+{% load static %}
+
+{% block title %}Mapa de Pedidos em Tempo Real{% endblock %}
+
+{% block extra_head %}
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+     crossorigin=""/>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+     crossorigin=""></script>
+
+<style>
+    #map {
+        height: calc(100vh - 250px);
+        min-height: 600px;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+    }
+    
+    .leaflet-popup-content-wrapper {
+        border-radius: 8px;
+    }
+    
+    .order-marker {
+        background-color: #6366f1;
+        border: 3px solid white;
+        border-radius: 50%;
+        width: 28px;
+        height: 28px;
+        box-shadow: 0 2px 10px rgba(99, 102, 241, 0.6);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        font-size: 12px;
+    }
+    
+    .order-marker.pending {
+        background-color: #f59e0b;
+        box-shadow: 0 2px 10px rgba(245, 158, 11, 0.6);
+    }
+    
+    .order-marker.assigned {
+        background-color: #3b82f6;
+        box-shadow: 0 2px 10px rgba(59, 130, 246, 0.6);
+    }
+    
+    .order-marker.in-transit {
+        background-color: #8b5cf6;
+        box-shadow: 0 2px 10px rgba(139, 92, 246, 0.6);
+    }
+    
+    .order-marker.delivered {
+        background-color: #10b981;
+        box-shadow: 0 2px 10px rgba(16, 185, 129, 0.6);
+    }
+    
+    .order-marker.incident {
+        background-color: #ef4444;
+        box-shadow: 0 2px 10px rgba(239, 68, 68, 0.6);
+    }
+    
+    .map-legend {
+        background: white;
+        padding: 14px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+    }
+    
+    .map-legend h4 {
+        margin: 0 0 10px 0;
+        font-size: 14px;
+        font-weight: 600;
+    }
+    
+    .legend-item {
+        display: flex;
+        align-items: center;
+        margin: 6px 0;
+        font-size: 13px;
+    }
+    
+    .legend-color {
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        margin-right: 8px;
+        border: 2px solid white;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6 max-w-full">
+    <!-- Header -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 mb-6 fade-in">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div class="p-3 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl shadow-lg">
+                    <i data-lucide="map-pin-area" class="w-6 h-6 text-white"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Mapa de Pedidos em Tempo Real</h1>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                        {{ stats.with_coords }} pedido(s) geolocalizado(s) de {{ stats.total }} total
+                    </p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <a href="{% url 'orders:order_list' %}" 
+                   class="px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors flex items-center gap-2">
+                    <i data-lucide="list" class="w-4 h-4"></i>
+                    Lista
+                </a>
+                <a href="{% url 'orders:orders_dashboard' %}"
+                   class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors flex items-center gap-2">
+                    <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+                    Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Estat ísticas -->
+    <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">Total</p>
+                    <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ stats.total }}</p>
+                </div>
+                <div class="p-3 bg-gray-100 dark:bg-gray-700/30 rounded-lg">
+                    <i data-lucide="package" class="w-6 h-6 text-gray-600 dark:text-gray-400"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">Pendente</p>
+                    <p class="text-2xl font-bold text-amber-600 dark:text-amber-400">{{ stats.pending }}</p>
+                </div>
+                <div class="p-3 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
+                    <i data-lucide="clock" class="w-6 h-6 text-amber-600 dark:text-amber-400"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">Atribuído</p>
+                    <p class="text-2xl font-bold text-blue-600 dark:text-blue-400">{{ stats.assigned }}</p>
+                </div>
+                <div class="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                    <i data-lucide="user-check" class="w-6 h-6 text-blue-600 dark:text-blue-400"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">Em Trânsito</p>
+                    <p class="text-2xl font-bold text-purple-600 dark:text-purple-400">{{ stats.in_transit }}</p>
+                </div>
+                <div class="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                    <i data-lucide="truck" class="w-6 h-6 text-purple-600 dark:text-purple-400"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">No Mapa</p>
+                    <p class="text-2xl font-bold text-indigo-600 dark:text-indigo-400">{{ stats.with_coords }}</p>
+                </div>
+                <div class="p-3 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg">
+                    <i data-lucide="map-pin" class="w-6 h-6 text-indigo-600 dark:text-indigo-400"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Avisos -->
+    {% if stats.without_coords > 0 %}
+    <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 mb-6">
+        <div class="flex items-start gap-3">
+            <i data-lucide="alert-triangle" class="w-5 h-5 text-yellow-600 dark:text-yellow-400 mt-0.5"></i>
+            <div>
+                <h4 class="font-semibold text-yellow-900 dark:text-yellow-100 mb-1">Pedidos sem coordenadas</h4>
+                <p class="text-sm text-yellow-800 dark:text-yellow-200">
+                    {{ stats.without_coords }} pedido(s) não puderam ser geolocalizados. Verifique se as zonas postais têm coordenadas cadastradas.
+                </p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Mapa -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6">
+        <div id="map"></div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Inicializa o mapa
+    const map = L.map('map').setView({{ map_center }}, {{ map_zoom }});
+    
+    // Adiciona tiles do OpenStreetMap
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 19
+    }).addTo(map);
+    
+    // Adiciona legenda
+    const legend = L.control({position: 'bottomright'});
+    legend.onAdd = function (map) {
+        const div = L.DomUtil.create('div', 'map-legend');
+        div.innerHTML = `
+            <h4>Status dos Pedidos</h4>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #f59e0b"></div>
+                <span>Pendente</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #3b82f6"></div>
+                <span>Atribuído</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #8b5cf6"></div>
+                <span>Em Trânsito</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #10b981"></div>
+                <span>Entregue</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #ef4444"></div>
+                <span>Incidente</span>
+            </div>
+        `;
+        return div;
+    };
+    legend.addTo(map);
+    
+    // Adiciona marcadores para cada pedido
+    const orders = [
+        {% for item in orders_with_coords %}
+        {
+            id: {{ item.order.pk }},
+            reference: "{{ item.order.external_reference|escapejs }}",
+            partner: "{{ item.order.partner.name|escapejs }}",
+            recipient: "{{ item.order.recipient_name|escapejs }}",
+            address: "{{ item.order.recipient_address|escapejs }}",
+            postal_code: "{{ item.order.postal_code|escapejs }}",
+            status: "{{ item.order.current_status|lower|escapejs }}",
+            status_display: "{{ item.order.get_current_status_display|escapejs }}",
+            zone_name: "{{ item.zone.name|escapejs }}",
+            lat: {{ item.lat }},
+            lng: {{ item.lng }},
+            driver: "{{ item.order.assigned_driver.user.get_full_name|default:'Não atribuído'|escapejs }}",
+            scheduled: "{{ item.order.scheduled_delivery|date:'d/m/Y'|default:'N/A' }}",
+            url: "{% url 'orders:order_detail' item.order.pk %}"
+        }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+    
+    // Mapa de cores por status
+    const statusColors = {
+        'pending': '#f59e0b',
+        'assigned': '#3b82f6',
+        'in_transit': '#8b5cf6',
+        'delivered': '#10b981',
+        'incident': '#ef4444',
+        'returned': '#64748b',
+        'cancelled': '#6b7280'
+    };
+    
+    orders.forEach(order => {
+        // Cria um marcador customizado
+        const color = statusColors[order.status] || '#6366f1';
+        const markerHtml = `<div class="order-marker ${order.status}"></div>`;
+        
+        const markerIcon = L.divIcon({
+            html: markerHtml,
+            className: '',
+            iconSize: [28, 28],
+            iconAnchor: [14, 14]
+        });
+        
+        const marker = L.marker([order.lat, order.lng], {icon: markerIcon}).addTo(map);
+        
+        // Popup com informações
+        const popupContent = `
+            <div class="p-2">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium" style="background-color: ${color}20; color: ${color};">
+                        ${order.status_display}
+                    </span>
+                </div>
+                <h3 class="font-bold text-base mb-2">${order.reference}</h3>
+                <p class="text-sm mb-1"><strong>Parceiro:</strong> ${order.partner}</p>
+                <p class="text-sm mb-1"><strong>Destinatário:</strong> ${order.recipient}</p>
+                <p class="text-sm mb-1"><strong>Morada:</strong> ${order.address}</p>
+                <p class="text-sm mb-1"><strong>CP:</strong> ${order.postal_code}</p>
+                <p class="text-sm mb-1"><strong>Zona:</strong> ${order.zone_name}</p>
+                <p class="text-sm mb-1"><strong>Motorista:</strong> ${order.driver}</p>
+                <p class="text-sm mb-3"><strong>Agendado:</strong> ${order.scheduled}</p>
+                <a href="${order.url}" class="inline-block px-3 py-1 bg-indigo-600 text-white text-sm rounded hover:bg-indigo-700">
+                    Ver Detalhes
+                </a>
+            </div>
+        `;
+        
+        marker.bindPopup(popupContent, {maxWidth: 300});
+    });
+    
+    // Se não houver pedidos, mostra mensagem
+    {% if not orders_with_coords %}
+    const noDataDiv = L.DomUtil.create('div', 'p-4 bg-yellow-50 dark:bg-yellow-900/20 border-2 border-yellow-300 dark:border-yellow-700 rounded-lg text-center');
+    noDataDiv.innerHTML = `
+        <i data-lucide="package-x" class="w-8 h-8 mx-auto mb-2 text-yellow-600"></i>
+        <p class="font-semibold text-yellow-900 dark:text-yellow-100">Nenhum pedido geolocalizado</p>
+        <p class="text-sm text-yellow-700 dark:text-yellow-300 mt-1">Verifique se as zonas postais têm coordenadas cadastradas</p>
+    `;
+    
+    const noDataControl = L.control({position: 'topleft'});
+    noDataControl.onAdd = function() {
+        return noData Div;
+    };
+    noDataControl.addTo(map);
+    {% endif %}
+    
+    // Inicializa ícones Lucide
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+});
+</script>
+{% endblock %}

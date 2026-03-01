@@ -1,0 +1,117 @@
+{% extends 'settlements/base.html' %}
+{% load static %}
+
+{% block title %}Calendário de Turnos{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-8">
+  <!-- Header -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 fade-in">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-4">
+        <div class="p-3 bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl shadow-lg">
+          <i data-lucide="calendar" class="w-6 h-6 text-white"></i>
+        </div>
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Calendário de Turnos</h1>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Visualização mensal das alocações</p>
+        </div>
+      </div>
+      <div class="flex gap-3">
+        <a href="{% url 'routes:shift_list' %}" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg font-medium transition-colors duration-200 flex items-center gap-2">
+          <i data-lucide="list" class="w-4 h-4"></i>
+          Lista
+        </a>
+        <a href="{% url 'routes:shift_create' %}" class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-medium transition-colors duration-200 flex items-center gap-2">
+          <i data-lucide="plus" class="w-4 h-4"></i>
+          Novo Turno
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Navegação do Calendário -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 slide-in">
+    <div class="flex items-center justify-between">
+      <a href="{% url 'routes:shift_calendar' %}?year={{ prev_year }}&month={{ prev_month }}" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg font-medium transition-colors duration-200 flex items-center gap-2">
+        <i data-lucide="chevron-left" class="w-4 h-4"></i>
+        Anterior
+      </a>
+      
+      <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
+        {{ month_name }} {{ year }}
+      </h2>
+      
+      <a href="{% url 'routes:shift_calendar' %}?year={{ next_year }}&month={{ next_month }}" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg font-medium transition-colors duration-200 flex items-center gap-2">
+        Próximo
+        <i data-lucide="chevron-right" class="w-4 h-4"></i>
+      </a>
+    </div>
+  </div>
+
+  <!-- Legenda -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6">
+    <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-3">Legenda:</h3>
+    <div class="flex flex-wrap gap-4 text-sm">
+      <div class="flex items-center gap-2">
+        <div class="w-4 h-4 rounded bg-blue-100 dark:bg-blue-900/30 border-l-4 border-blue-600"></div>
+        <span class="text-gray-700 dark:text-gray-300">Agendado</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <div class="w-4 h-4 rounded bg-amber-100 dark:bg-amber-900/30 border-l-4 border-amber-600"></div>
+        <span class="text-gray-700 dark:text-gray-300">Em Progresso</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <div class="w-4 h-4 rounded bg-emerald-100 dark:bg-emerald-900/30 border-l-4 border-emerald-600"></div>
+        <span class="text-gray-700 dark:text-gray-300">Concluído</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <div class="w-4 h-4 rounded bg-red-100 dark:bg-red-900/30 border-l-4 border-red-600"></div>
+        <span class="text-gray-700 dark:text-gray-300">Cancelado</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Calendário -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 overflow-hidden scale-in">
+    <div class="grid grid-cols-7 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+      <div class="p-4 text-center font-semibold text-gray-700 dark:text-gray-300 text-sm">Domingo</div>
+      <div class="p-4 text-center font-semibold text-gray-700 dark:text-gray-300 text-sm">Segunda</div>
+      <div class="p-4 text-center font-semibold text-gray-700 dark:text-gray-300 text-sm">Terça</div>
+      <div class="p-4 text-center font-semibold text-gray-700 dark:text-gray-300 text-sm">Quarta</div>
+      <div class="p-4 text-center font-semibold text-gray-700 dark:text-gray-300 text-sm">Quinta</div>
+      <div class="p-4 text-center font-semibold text-gray-700 dark:text-gray-300 text-sm">Sexta</div>
+      <div class="p-4 text-center font-semibold text-gray-700 dark:text-gray-300 text-sm">Sábado</div>
+    </div>
+
+    <div class="grid grid-cols-7 divide-x divide-y divide-gray-200 dark:divide-gray-700">
+      {% for day in calendar_days %}
+      <div class="min-h-32 p-2 {% if day.is_today %}bg-amber-50 dark:bg-amber-900/10{% elif day.is_other_month %}bg-gray-50 dark:bg-gray-900/50{% endif %}">
+        <div class="text-sm font-medium mb-2 {% if day.is_today %}text-amber-600 dark:text-amber-400{% elif day.is_other_month %}text-gray-400 dark:text-gray-600{% else %}text-gray-900 dark:text-white{% endif %}">
+          {{ day.day }}
+        </div>
+        
+        {% for shift in shifts_by_date.values %}
+          {% for s in shift %}
+            {% if s.date|date:"Y-m-d" == day.date %}
+            <a href="{% url 'routes:shift_detail' s.pk %}" class="block p-1.5 rounded text-xs hover:shadow-md transition-shadow duration-150 mb-1
+              {% if s.status == 'SCHEDULED' %}bg-blue-100 dark:bg-blue-900/30 border-l-2 border-blue-600 text-blue-900 dark:text-blue-300
+              {% elif s.status == 'IN_PROGRESS' %}bg-amber-100 dark:bg-amber-900/30 border-l-2 border-amber-600 text-amber-900 dark:text-amber-300
+              {% elif s.status == 'COMPLETED' %}bg-emerald-100 dark:bg-emerald-900/30 border-l-2 border-emerald-600 text-emerald-900 dark:text-emerald-300
+              {% else %}bg-red-100 dark:bg-red-900/30 border-l-2 border-red-600 text-red-900 dark:text-red-300{% endif %}">
+              <div class="font-medium truncate">{{ s.driver.user.get_full_name|truncatewords:2 }}</div>
+              <div class="text-xs opacity-75">{{ s.start_time }}</div>
+            </a>
+            {% endif %}
+          {% endfor %}
+        {% endfor %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<script>
+  lucide.createIcons();
+</script>
+{% endblock %}

@@ -1,0 +1,186 @@
+{% extends 'settlements/base.html' %}
+
+{% block title %}Calendário de Manutenções{% endblock %}
+
+{% block extra_head %}
+<!-- FullCalendar CSS -->
+<link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.css' rel='stylesheet' />
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-6">
+  <!-- Header -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 fade-in">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-4">
+        <a href="{% url 'fleet:dashboard' %}" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+          <i data-lucide="arrow-left" class="w-6 h-6"></i>
+        </a>
+        <div class="p-3 bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl shadow-lg">
+          <i data-lucide="calendar" class="w-6 h-6 text-white"></i>
+        </div>
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Calendário de Manutenções</h1>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Visualização e planejamento de manutenções</p>
+        </div>
+      </div>
+      <div class="flex gap-3">
+        <a href="{% url 'fleet:maintenance_list' %}" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors duration-200 flex items-center gap-2">
+          <i data-lucide="list" class="w-4 h-4"></i>
+          Ver Lista
+        </a>
+        <a href="{% url 'fleet:maintenance_create' %}" class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-medium transition-colors duration-200 flex items-center gap-2">
+          <i data-lucide="plus" class="w-4 h-4"></i>
+          Agendar Manutenção
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Legenda -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-4">
+    <div class="flex items-center gap-6">
+      <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Legenda:</span>
+      <div class="flex items-center gap-2">
+        <div class="w-4 h-4 bg-amber-500 rounded"></div>
+        <span class="text-sm text-gray-600 dark:text-gray-400">Agendada</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <div class="w-4 h-4 bg-emerald-500 rounded"></div>
+        <span class="text-sm text-gray-600 dark:text-gray-400">Concluída</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Calendário -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 slide-in">
+    <div id="calendar"></div>
+  </div>
+</div>
+
+<!-- Modal de Detalhes -->
+<div id="eventModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+    <div class="sticky top-0 bg-gradient-to-r from-teal-500 to-teal-600 p-6 flex items-center justify-between">
+      <h3 class="text-xl font-bold text-white" id="modalTitle">Detalhes da Manutenção</h3>
+      <button onclick="closeModal()" class="text-white hover:text-gray-200">
+        <i data-lucide="x" class="w-6 h-6"></i>
+      </button>
+    </div>
+    <div class="p-6 space-y-4" id="modalContent">
+      <!-- Conteúdo será preenchido via JavaScript -->
+    </div>
+    <div class="p-6 bg-gray-50 dark:bg-gray-900/50 flex gap-3">
+      <a id="modalEditBtn" href="#" class="flex-1 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-medium transition-colors duration-200 text-center">
+        Editar Manutenção
+      </a>
+      <button onclick="closeModal()" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors duration-200">
+        Fechar
+      </button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- FullCalendar JS -->
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js'></script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    var calendarEl = document.getElementById('calendar');
+    var events = {{ events_json|safe }};
+    
+    var calendar = new FullCalendar.Calendar(calendarEl, {
+      initialView: 'dayGridMonth',
+      locale: 'pt',
+      headerToolbar: {
+        left: 'prev,next today',
+        center: 'title',
+        right: 'dayGridMonth,timeGridWeek,listMonth'
+      },
+      buttonText: {
+        today: 'Hoje',
+        month: 'Mês',
+        week: 'Semana',
+        list: 'Lista'
+      },
+      events: events,
+      eventClick: function(info) {
+        showEventDetails(info.event);
+      },
+      height: 'auto',
+      eventTimeFormat: {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      }
+    });
+    
+    calendar.render();
+    
+    // Função para mostrar detalhes do evento
+    window.showEventDetails = function(event) {
+      const props = event.extendedProps;
+      const modal = document.getElementById('eventModal');
+      const content = document.getElementById('modalContent');
+      const editBtn = document.getElementById('modalEditBtn');
+      
+      // Preencher conteúdo
+      content.innerHTML = `
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Veículo</p>
+            <p class="text-lg font-semibold text-gray-900 dark:text-white">${props.vehicle}</p>
+          </div>
+          <div>
+            <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Tipo</p>
+            <p class="text-lg font-semibold text-gray-900 dark:text-white">${props.type}</p>
+          </div>
+          <div>
+            <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Data</p>
+            <p class="text-lg font-semibold text-gray-900 dark:text-white">${new Date(event.start).toLocaleDateString('pt-PT')}</p>
+          </div>
+          <div>
+            <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Custo</p>
+            <p class="text-lg font-semibold text-gray-900 dark:text-white">€${props.cost.toFixed(2)}</p>
+          </div>
+          <div class="col-span-2">
+            <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Oficina</p>
+            <p class="text-lg font-semibold text-gray-900 dark:text-white">${props.workshop}</p>
+          </div>
+          <div class="col-span-2">
+            <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Status</p>
+            ${props.completed 
+              ? '<span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300"><i data-lucide="check-circle" class="w-4 h-4 mr-1"></i>Concluída</span>'
+              : '<span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"><i data-lucide="clock" class="w-4 h-4 mr-1"></i>Agendada</span>'
+            }
+          </div>
+        </div>
+      `;
+      
+      // Link de edição
+      editBtn.href = `/fleet/maintenance/${props.maintenance_id}/edit/`;
+      
+      // Mostrar modal
+      modal.classList.remove('hidden');
+      
+      // Re-renderizar ícones Lucide
+      if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+      }
+    };
+    
+    window.closeModal = function() {
+      document.getElementById('eventModal').classList.add('hidden');
+    };
+    
+    // Fechar modal ao clicar fora
+    document.getElementById('eventModal').addEventListener('click', function(e) {
+      if (e.target === this) {
+        closeModal();
+      }
+    });
+  });
+</script>
+{% endblock %}

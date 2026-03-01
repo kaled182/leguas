@@ -1,11 +1,10 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import os
 from pathlib import Path
 from typing import Dict, Iterable
 
 from django.conf import settings
-
 
 _DEFAULT_ENV_PATH = Path(settings.BASE_DIR) / ".env"
 ENV_PATH = Path(os.environ.get("ENV_FILE_PATH", _DEFAULT_ENV_PATH))

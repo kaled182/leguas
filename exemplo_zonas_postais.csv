@@ -1,0 +1,11 @@
+name,code,postal_code_pattern,region,center_latitude,center_longitude,is_urban,average_delivery_time_hours,is_active,notes
+Lisboa Centro,LIS-CENTRO,^11\d{2},LISBOA,38.736946,-9.142685,true,24,true,Zona central de Lisboa com entregas rápidas
+Lisboa Norte,LIS-NORTE,^17\d{2},LISBOA,38.758095,-9.155464,false,48,true,Zona norte de Lisboa
+Porto Centro,PRT-CENTRO,^40\d{2},NORTE,41.147374,-8.610826,true,24,true,Centro histórico do Porto
+Porto Sul,PRT-SUL,^44\d{2},NORTE,41.137984,-8.617353,false,48,true,Zona sul do Porto
+Faro Centro,FAR-CENTRO,^80\d{2},ALGARVE,37.019356,-7.930833,true,72,true,Centro turístico de Faro
+Coimbra,COIM-GERAL,^30\d{2},CENTRO,40.211480,-8.429184,true,48,true,Cidade universitária de Coimbra
+Braga,BRAG-GERAL,^47\d{2},NORTE,41.545454,-8.426507,true,48,true,Cidade histórica de Braga
+Setúbal,SET-GERAL,^29\d{2},LISBOA,38.524410,-8.892920,false,48,true,Zona industrial de Setúbal
+Évora,EVOR-GERAL,^70\d{2},ALENTEJO,38.571508,-7.913502,false,72,true,Capital do Alentejo
+Funchal,FUNC-GERAL,^90\d{2},MADEIRA,32.650902,-16.924911,true,96,true,Capital da Madeira

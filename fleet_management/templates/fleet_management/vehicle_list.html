@@ -1,0 +1,258 @@
+{% extends 'settlements/base.html' %}
+
+{% block title %}Veículos{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-8">
+  <!-- Header -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 fade-in">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-4">
+        <div class="p-3 bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl shadow-lg">
+          <i data-lucide="truck" class="w-6 h-6 text-white"></i>
+        </div>
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Gestão de Veículos</h1>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Controle completo da frota de veículos</p>
+        </div>
+      </div>
+      <a href="{% url 'fleet:vehicle_create' %}" class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-medium transition-colors duration-200 flex items-center gap-2">
+        <i data-lucide="plus" class="w-4 h-4"></i>
+        Novo Veículo
+      </a>
+    </div>
+  </div>
+  
+  <!-- Filtros -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 slide-in">
+    <form method="get" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div class="md:col-span-2">
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Buscar</label>
+        <input type="text" name="search" value="{{ search }}" placeholder="Matrícula, marca, modelo, proprietário" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-teal-500">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Status</label>
+        <select name="status" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-teal-500">
+          <option value="">Todos</option>
+          <option value="ACTIVE" {% if status_filter == 'ACTIVE' %}selected{% endif %}>Ativo</option>
+          <option value="MAINTENANCE" {% if status_filter == 'MAINTENANCE' %}selected{% endif %}>Manutenção</option>
+          <option value="INACTIVE" {% if status_filter == 'INACTIVE' %}selected{% endif %}>Inativo</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Tipo</label>
+        <select name="vehicle_type" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-teal-500">
+          <option value="">Todos</option>
+          <option value="VAN" {% if type_filter == 'VAN' %}selected{% endif %}>Van</option>
+          <option value="TRUCK" {% if type_filter == 'TRUCK' %}selected{% endif %}>Camião</option>
+          <option value="MOTORCYCLE" {% if type_filter == 'MOTORCYCLE' %}selected{% endif %}>Mota</option>
+          <option value="CAR" {% if type_filter == 'CAR' %}selected{% endif %}>Carro</option>
+        </select>
+      </div>
+      <div class="md:col-span-4 flex gap-2">
+        <button type="submit" class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-medium transition-colors duration-200 flex items-center gap-2">
+          <i data-lucide="search" class="w-4 h-4"></i>
+          Filtrar
+        </button>
+        <a href="{% url 'fleet:vehicle_list' %}" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg font-medium transition-colors duration-200">
+          Limpar
+        </a>
+      </div>
+    </form>
+  </div>
+  
+  <!-- Estatísticas Rápidas -->
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6">
+      <div class="flex items-center gap-4">
+        <div class="p-3 bg-teal-100 dark:bg-teal-900/30 rounded-lg">
+          <i data-lucide="truck" class="w-6 h-6 text-teal-600 dark:text-teal-400"></i>
+        </div>
+        <div>
+          <p class="text-sm text-gray-500 dark:text-gray-400">Total</p>
+          <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ stats.total }}</p>
+        </div>
+      </div>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6">
+      <div class="flex items-center gap-4">
+        <div class="p-3 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
+          <i data-lucide="check-circle" class="w-6 h-6 text-emerald-600 dark:text-emerald-400"></i>
+        </div>
+        <div>
+          <p class="text-sm text-gray-500 dark:text-gray-400">Ativos</p>
+          <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ stats.active }}</p>
+        </div>
+      </div>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6">
+      <div class="flex items-center gap-4">
+        <div class="p-3 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
+          <i data-lucide="wrench" class="w-6 h-6 text-amber-600 dark:text-amber-400"></i>
+        </div>
+        <div>
+          <p class="text-sm text-gray-500 dark:text-gray-400">Manutenção</p>
+          <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ stats.maintenance }}</p>
+        </div>
+      </div>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6">
+      <div class="flex items-center gap-4">
+        <div class="p-3 bg-red-100 dark:bg-red-900/30 rounded-lg">
+          <i data-lucide="alert-triangle" class="w-6 h-6 text-red-600 dark:text-red-400"></i>
+        </div>
+        <div>
+          <p class="text-sm text-gray-500 dark:text-gray-400">Alertas</p>
+          <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ alerts_count }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Lista de Veículos -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 overflow-hidden scale-in">
+    {% if vehicles %}
+      <div class="divide-y divide-gray-200 dark:divide-gray-700">
+        {% for vehicle in vehicles %}
+        <div class="p-6 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-150">
+          <div class="flex items-start justify-between">
+            <div class="flex-1">
+              <div class="flex items-center gap-3 mb-2">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ vehicle.license_plate }}</h3>
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-400">
+                  {{ vehicle.get_vehicle_type_display }}
+                </span>
+                {% if vehicle.status == 'ACTIVE' %}
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400">
+                    <i data-lucide="check-circle" class="w-3 h-3 mr-1"></i>
+                    Ativo
+                  </span>
+                {% elif vehicle.status == 'MAINTENANCE' %}
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
+                    <i data-lucide="wrench" class="w-3 h-3 mr-1"></i>
+                    Manutenção
+                  </span>
+                {% else %}
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+                    <i data-lucide="x-circle" class="w-3 h-3 mr-1"></i>
+                    Inativo
+                  </span>
+                {% endif %}
+                
+                <!-- Alerta de Inspeção -->
+                {% if vehicle.inspection_expiry %}
+                  {% now "Y-m-d" as today %}
+                  {% if vehicle.inspection_expiry|date:"Y-m-d" < today %}
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
+                      <i data-lucide="alert-circle" class="w-3 h-3 mr-1"></i>
+                      Inspeção Expirada
+                    </span>
+                  {% endif %}
+                {% endif %}
+                
+                <!-- Alerta de Seguro -->
+                {% if vehicle.insurance_expiry %}
+                  {% now "Y-m-d" as today %}
+                  {% if vehicle.insurance_expiry|date:"Y-m-d" < today %}
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
+                      <i data-lucide="alert-circle" class="w-3 h-3 mr-1"></i>
+                      Seguro Expirado
+                    </span>
+                  {% endif %}
+                {% endif %}
+              </div>
+              
+              <p class="text-gray-600 dark:text-gray-400 mb-3">{{ vehicle.brand }} {{ vehicle.model }} ({{ vehicle.year }})</p>
+              
+              <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-3">
+                <div class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                  <i data-lucide="user" class="w-4 h-4"></i>
+                  <span>{{ vehicle.owner.name|default:"Sem proprietário" }}</span>
+                </div>
+                <div class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                  <i data-lucide="package" class="w-4 h-4"></i>
+                  <span>Carga: {{ vehicle.max_load_kg }} kg</span>
+                </div>
+                <div class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                  <i data-lucide="fuel" class="w-4 h-4"></i>
+                  <span>{{ vehicle.get_fuel_type_display }}</span>
+                </div>
+                <div class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                  <i data-lucide="gauge" class="w-4 h-4"></i>
+                  <span>{{ vehicle.current_odometer_km|default:0|floatformat:0 }} km</span>
+                </div>
+              </div>
+              
+              {% if vehicle.inspection_expiry or vehicle.insurance_expiry %}
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                {% if vehicle.inspection_expiry %}
+                <div class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                  <i data-lucide="clipboard-check" class="w-4 h-4"></i>
+                  <span>Inspeção: {{ vehicle.inspection_expiry|date:"d/m/Y" }}</span>
+                </div>
+                {% endif %}
+                {% if vehicle.insurance_expiry %}
+                <div class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                  <i data-lucide="shield" class="w-4 h-4"></i>
+                  <span>Seguro: {{ vehicle.insurance_expiry|date:"d/m/Y" }}</span>
+                </div>
+                {% endif %}
+              </div>
+              {% endif %}
+            </div>
+            
+            <div class="flex items-center gap-2 ml-4">
+              <a href="{% url 'fleet:vehicle_detail' vehicle.pk %}" class="px-3 py-2 text-sm bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-medium transition-colors duration-200 flex items-center gap-1">
+                <i data-lucide="eye" class="w-4 h-4"></i>
+                Ver
+              </a>
+              <a href="{% url 'fleet:vehicle_edit' vehicle.pk %}" class="px-3 py-2 text-sm bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg font-medium transition-colors duration-200 flex items-center gap-1">
+                <i data-lucide="edit" class="w-4 h-4"></i>
+                Editar
+              </a>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      
+      <!-- Paginação -->
+      {% if vehicles.has_other_pages %}
+      <div class="bg-gray-50 dark:bg-gray-900 px-6 py-4 border-t border-gray-200 dark:border-gray-700">
+        <div class="flex items-center justify-between">
+          <div class="text-sm text-gray-700 dark:text-gray-300">
+            Página {{ vehicles.number }} de {{ vehicles.paginator.num_pages }} ({{ vehicles.paginator.count }} total)
+          </div>
+          <div class="flex gap-2">
+            {% if vehicles.has_previous %}
+              <a href="?page={{ vehicles.previous_page_number }}&search={{ search }}&status={{ status_filter }}&vehicle_type={{ type_filter }}" class="px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
+                Anterior
+              </a>
+            {% endif %}
+            {% if vehicles.has_next %}
+              <a href="?page={{ vehicles.next_page_number }}&search={{ search }}&status={{ status_filter }}&vehicle_type={{ type_filter }}" class="px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
+                Próxima
+              </a>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% endif %}
+    {% else %}
+      <div class="p-12 text-center">
+        <i data-lucide="truck" class="w-16 h-16 mx-auto text-gray-400 dark:text-gray-600 mb-4"></i>
+        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">Nenhum veículo encontrado</h3>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">Comece adicionando veículos à frota.</p>
+        <a href="{% url 'fleet:vehicle_create' %}" class="inline-flex items-center px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-medium transition-colors duration-200 gap-2">
+          <i data-lucide="plus" class="w-4 h-4"></i>
+          Adicionar Primeiro Veículo
+        </a>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+  lucide.createIcons();
+</script>
+{% endblock %}

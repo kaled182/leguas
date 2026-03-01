@@ -1,8 +1,9 @@
-"""
+﻿"""
 Calculators financeiros para settlements.
 """
-from .settlement_calculator import SettlementCalculator
+
 from .claim_processor import ClaimProcessor
 from .invoice_calculator import InvoiceCalculator
+from .settlement_calculator import SettlementCalculator
 
-__all__ = ['SettlementCalculator', 'ClaimProcessor', 'InvoiceCalculator']
+__all__ = ["SettlementCalculator", "ClaimProcessor", "InvoiceCalculator"]

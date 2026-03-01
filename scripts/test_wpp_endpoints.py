@@ -1,24 +1,27 @@
 #!/usr/bin/env python
+import json
 import os
+
 import django
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'my_project.settings')
-django.setup()
 
 from system_config.whatsapp_helper import WhatsAppWPPConnectAPI
-import json
+
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "my_project.settings")
+django.setup()
+
 
 api = WhatsAppWPPConnectAPI.from_config()
 
 # Testar vários endpoints
 endpoints = [
-    ('/status-session', 'get'),
-    ('/host-device', 'get'),
-    ('/get-host-device', 'get'),
-    ('/device-info', 'get'),
-    ('/session-info-token', 'get'),
-    ('/battery-status', 'get'),
-    ('/get-battery-level', 'get'),
-    ('/all-chats', 'get'),
+    ("/status-session", "get"),
+    ("/host-device", "get"),
+    ("/get-host-device", "get"),
+    ("/device-info", "get"),
+    ("/session-info-token", "get"),
+    ("/battery-status", "get"),
+    ("/get-battery-level", "get"),
+    ("/all-chats", "get"),
 ]
 
 print("=" * 60)

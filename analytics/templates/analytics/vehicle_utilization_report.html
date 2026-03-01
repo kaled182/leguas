@@ -1,0 +1,197 @@
+{% extends 'paack_dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Utilização de Veículos - Relatórios{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 space-y-6">
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Relatório de Utilização de Veículos</h1>
+            <p class="text-gray-600 dark:text-gray-400 mt-1">
+                Análise de {{ start_date|date:"d/m/Y" }} a {{ end_date|date:"d/m/Y" }} ({{ days_filter }} dias)
+            </p>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6">
+        <form method="get" class="flex items-end gap-4">
+            <div>
+                <label for="days" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <i data-lucide="calendar-range" class="w-4 h-4 inline mr-1"></i>
+                    Período
+                </label>
+                <select name="days" id="days" 
+                        class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                    <option value="7" {% if days_filter == 7 %}selected{% endif %}>Últimos 7 dias</option>
+                    <option value="30" {% if days_filter == 30 %}selected{% endif %}>Últimos 30 dias</option>
+                    <option value="90" {% if days_filter == 90 %}selected{% endif %}>Últimos 90 dias</option>
+                    <option value="180" {% if days_filter == 180 %}selected{% endif %}>Últimos 6 meses</option>
+                </select>
+            </div>
+            <button type="submit" 
+                    class="px-6 py-2 bg-gradient-to-r from-teal-500 to-teal-600 text-white font-medium rounded-lg hover:from-teal-600 hover:to-teal-700 transition-all">
+                <i data-lucide="filter" class="w-4 h-4 inline mr-1"></i>
+                Filtrar
+            </button>
+        </form>
+    </div>
+
+    <!-- Resumo Geral -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20 rounded-xl p-6 border border-teal-200 dark:border-teal-700">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-teal-600 dark:text-teal-400 font-medium">Total de Veículos</p>
+                    <p class="text-3xl font-bold text-gray-900 dark:text-white mt-2">{{ total_vehicles }}</p>
+                </div>
+                <div class="p-3 bg-teal-500 rounded-xl">
+                    <i data-lucide="truck" class="w-8 h-8 text-white"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl p-6 border border-blue-200 dark:border-blue-700">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-blue-600 dark:text-blue-400 font-medium">Utilização Média</p>
+                    <p class="text-3xl font-bold text-gray-900 dark:text-white mt-2">{{ avg_utilization }}%</p>
+                </div>
+                <div class="p-3 bg-blue-500 rounded-xl">
+                    <i data-lucide="activity" class="w-8 h-8 text-white"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-xl p-6 border border-purple-200 dark:border-purple-700">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-purple-600 dark:text-purple-400 font-medium">Período Analisado</p>
+                    <p class="text-3xl font-bold text-gray-900 dark:text-white mt-2">{{ days_filter }}</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">dias</p>
+                </div>
+                <div class="p-3 bg-purple-500 rounded-xl">
+                    <i data-lucide="calendar" class="w-8 h-8 text-white"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabela de Veículos -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <h2 class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <i data-lucide="list" class="w-5 h-5 text-teal-500"></i>
+                Detalhamento por Veículo
+            </h2>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50 dark:bg-gray-700/50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            Veículo
+                        </th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            Dias Ativos
+                        </th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            Total Turnos
+                        </th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            Entregas
+                        </th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            KM Estimado
+                        </th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            KM/Dia
+                        </th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            Taxa Utilização
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                    {% for stat in vehicles_stats %}
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex items-center gap-3">
+                                <div class="p-2 bg-teal-100 dark:bg-teal-900/30 rounded-lg">
+                                    <i data-lucide="truck" class="w-5 h-5 text-teal-600 dark:text-teal-400"></i>
+                                </div>
+                                <div>
+                                    <div class="font-semibold text-gray-900 dark:text-white">
+                                        {{ stat.vehicle.license_plate }}
+                                    </div>
+                                    <div class="text-sm text-gray-500 dark:text-gray-400">
+                                        {{ stat.vehicle.get_vehicle_type_display }}
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center">
+                            <span class="text-lg font-semibold text-gray-900 dark:text-white">
+                                {{ stat.active_days }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center">
+                            <span class="text-gray-700 dark:text-gray-300">
+                                {{ stat.total_shifts }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center">
+                            <div class="text-gray-900 dark:text-white font-medium">
+                                {{ stat.total_deliveries }}
+                            </div>
+                            <div class="text-xs text-gray-500 dark:text-gray-400">
+                                {{ stat.avg_deliveries_per_shift }}/turno
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center">
+                            <span class="text-gray-700 dark:text-gray-300">
+                                {{ stat.estimated_km|floatformat:0 }} km
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center">
+                            <span class="text-gray-700 dark:text-gray-300">
+                                {{ stat.km_per_day }} km
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center">
+                            <div class="flex items-center justify-center gap-2">
+                                <div class="flex-1 max-w-[100px] bg-gray-200 dark:bg-gray-600 rounded-full h-2">
+                                    <div class="h-2 rounded-full {% if stat.utilization_rate >= 70 %}bg-green-500{% elif stat.utilization_rate >= 40 %}bg-yellow-500{% else %}bg-red-500{% endif %}"
+                                         style="width: {{ stat.utilization_rate }}%"></div>
+                                </div>
+                                <span class="text-sm font-semibold {% if stat.utilization_rate >= 70 %}text-green-600 dark:text-green-400{% elif stat.utilization_rate >= 40 %}text-yellow-600 dark:text-yellow-400{% else %}text-red-600 dark:text-red-400{% endif %}">
+                                    {{ stat.utilization_rate }}%
+                                </span>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                            <div class="flex flex-col items-center gap-2">
+                                <i data-lucide="inbox" class="w-12 h-12 text-gray-300 dark:text-gray-600"></i>
+                                <p>Nenhum dado disponível para o período selecionado</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        lucide.createIcons();
+    });
+</script>
+{% endblock %}

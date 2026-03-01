@@ -1,0 +1,11 @@
+partner_name,zone_code,base_price,success_bonus,failure_penalty,late_delivery_penalty,weekend_multiplier,express_multiplier,valid_from,valid_until,is_active,notes
+Paack Portugal,LIS-CENTRO,2.50,0.50,1.00,0.75,1.2,1.5,2024-01-01,,true,Tarifa premium para Lisboa Centro
+Paack Portugal,LIS-NORTE,2.00,0.40,1.00,0.75,1.2,1.5,2024-01-01,,true,Tarifa standard para Lisboa Norte
+Paack Portugal,PRT-CENTRO,3.00,0.60,1.50,1.00,1.3,1.6,2024-01-01,,true,Tarifa Porto Centro com bónus elevado
+Paack Portugal,PRT-SUL,2.50,0.50,1.50,1.00,1.3,1.6,2024-01-01,,true,Tarifa Porto Sul
+Paack Portugal,FAR-CENTRO,4.00,0.80,2.00,1.50,1.4,1.7,2024-01-01,,true,Tarifa Algarve (distância)
+Paack Portugal,COIM-GERAL,2.80,0.55,1.20,0.90,1.25,1.55,2024-01-01,,true,Tarifa Coimbra
+Paack Portugal,BRAG-GERAL,2.70,0.55,1.20,0.90,1.25,1.55,2024-01-01,,true,Tarifa Braga
+Paack Portugal,SET-GERAL,2.40,0.45,1.00,0.80,1.2,1.5,2024-01-01,,true,Tarifa Setúbal
+Paack Portugal,EVOR-GERAL,3.50,0.70,1.80,1.30,1.35,1.65,2024-01-01,,true,Tarifa Alentejo
+Paack Portugal,FUNC-GERAL,5.00,1.00,2.50,2.00,1.5,2.0,2024-01-01,2024-12-31,true,Tarifa Madeira (insular)

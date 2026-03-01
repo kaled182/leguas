@@ -1,0 +1,223 @@
+{% extends 'paack_dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Custos de Frota - Relatórios{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 space-y-6">
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Relatório de Custos de Frota</h1>
+            <p class="text-gray-600 dark:text-gray-400 mt-1">
+                Análise de {{ start_date|date:"d/m/Y" }} a {{ end_date|date:"d/m/Y" }} ({{ days_filter }} dias)
+            </p>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6">
+        <form method="get" class="flex items-end gap-4">
+            <div>
+                <label for="days" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <i data-lucide="calendar-range" class="w-4 h-4 inline mr-1"></i>
+                    Período
+                </label>
+                <select name="days" id="days" 
+                        class="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                    <option value="7" {% if days_filter == 7 %}selected{% endif %}>Últimos 7 dias</option>
+                    <option value="30" {% if days_filter == 30 %}selected{% endif %}>Últimos 30 dias</option>
+                    <option value="90" {% if days_filter == 90 %}selected{% endif %}>Últimos 90 dias</option>
+                    <option value="180" {% if days_filter == 180 %}selected{% endif %}>Últimos 6 meses</option>
+                </select>
+            </div>
+            <button type="submit" 
+                    class="px-6 py-2 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-medium rounded-lg hover:from-emerald-600 hover:to-emerald-700 transition-all">
+                <i data-lucide="filter" class="w-4 h-4 inline mr-1"></i>
+                Filtrar
+            </button>
+        </form>
+    </div>
+
+    <!-- Resumo Geral -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div class="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 rounded-xl p-6 border border-red-200 dark:border-red-700">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-red-600 dark:text-red-400 font-medium">Manutenção</p>
+                    <p class="text-2xl font-bold text-gray-900 dark:text-white mt-2">€{{ total_maintenance|floatformat:2 }}</p>
+                </div>
+                <div class="p-3 bg-red-500 rounded-xl">
+                    <i data-lucide="wrench" class="w-6 h-6 text-white"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 rounded-xl p-6 border border-orange-200 dark:border-orange-700">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-orange-600 dark:text-orange-400 font-medium">Combustível</p>
+                    <p class="text-2xl font-bold text-gray-900 dark:text-white mt-2">€{{ total_fuel|floatformat:2 }}</p>
+                </div>
+                <div class="p-3 bg-orange-500 rounded-xl">
+                    <i data-lucide="fuel" class="w-6 h-6 text-white"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-900/20 dark:to-emerald-800/20 rounded-xl p-6 border border-emerald-200 dark:border-emerald-700">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-emerald-600 dark:text-emerald-400 font-medium">Custo Total</p>
+                    <p class="text-2xl font-bold text-gray-900 dark:text-white mt-2">€{{ total_general|floatformat:2 }}</p>
+                </div>
+                <div class="p-3 bg-emerald-500 rounded-xl">
+                    <i data-lucide="euro" class="w-6 h-6 text-white"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-xl p-6 border border-blue-200 dark:border-blue-700">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-blue-600 dark:text-blue-400 font-medium">Custo/Entrega</p>
+                    <p class="text-2xl font-bold text-gray-900 dark:text-white mt-2">€{{ avg_cost_per_delivery|floatformat:2 }}</p>
+                </div>
+                <div class="p-3 bg-blue-500 rounded-xl">
+                    <i data-lucide="package" class="w-6 h-6 text-white"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabela de Custos por Veículo -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <h2 class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <i data-lucide="bar-chart-3" class="w-5 h-5 text-emerald-500"></i>
+                Detalhamento por Veículo
+            </h2>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50 dark:bg-gray-700/50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            Veículo
+                        </th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            Manutenção
+                        </th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            Nº Manutenções
+                        </th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            Combustível
+                        </th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            KM Estimado
+                        </th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            Entregas
+                        </th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            Custo Total
+                        </th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            Custo/Entrega
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                    {% for cost in vehicles_costs %}
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex items-center gap-3">
+                                <div class="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
+                                    <i data-lucide="truck" class="w-5 h-5 text-emerald-600 dark:text-emerald-400"></i>
+                                </div>
+                                <div>
+                                    <div class="font-semibold text-gray-900 dark:text-white">
+                                        {{ cost.vehicle.license_plate }}
+                                    </div>
+                                    <div class="text-sm text-gray-500 dark:text-gray-400">
+                                        {{ cost.vehicle.get_vehicle_type_display }}
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center">
+                            <span class="text-red-600 dark:text-red-400 font-semibold">
+                                €{{ cost.maintenance_cost|floatformat:2 }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center">
+                            <span class="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm rounded-lg">
+                                {{ cost.maintenance_count }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center">
+                            <span class="text-orange-600 dark:text-orange-400 font-semibold">
+                                €{{ cost.fuel_cost|floatformat:2 }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center">
+                            <span class="text-gray-700 dark:text-gray-300">
+                                {{ cost.estimated_km|floatformat:0 }} km
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center">
+                            <span class="text-gray-700 dark:text-gray-300">
+                                {{ cost.total_deliveries }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center">
+                            <span class="text-lg font-bold text-emerald-600 dark:text-emerald-400">
+                                €{{ cost.total_cost|floatformat:2 }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center">
+                            <span class="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-semibold rounded-lg">
+                                €{{ cost.cost_per_delivery|floatformat:2 }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                            <div class="flex flex-col items-center gap-2">
+                                <i data-lucide="inbox" class="w-12 h-12 text-gray-300 dark:text-gray-600"></i>
+                                <p>Nenhum dado disponível para o período selecionado</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Informação adicional -->
+    <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-xl p-6">
+        <div class="flex items-start gap-3">
+            <i data-lucide="info" class="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5"></i>
+            <div class="text-sm text-blue-800 dark:text-blue-200">
+                <h4 class="font-bold mb-2">Sobre os cálculos:</h4>
+                <ul class="list-disc list-inside space-y-1">
+                    <li><strong>Manutenção:</strong> Custo real das manutenções completadas no período</li>
+                    <li><strong>Combustível:</strong> Estimativa baseada em €0.15/km (média)</li>
+                    <li><strong>KM Estimado:</strong> Calculado como ~15km por entrega (pode variar)</li>
+                    <li><strong>Custo/Entrega:</strong> (Manutenção + Combustível) / Total de Entregas</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        lucide.createIcons();
+    });
+</script>
+{% endblock %}

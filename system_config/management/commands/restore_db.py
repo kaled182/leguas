@@ -1,4 +1,4 @@
-import os
+﻿import os
 import subprocess
 from pathlib import Path
 
@@ -10,7 +10,11 @@ class Command(BaseCommand):
     help = "Restaura um backup. CUIDADO: Apaga dados atuais."
 
     def add_arguments(self, parser):
-        parser.add_argument("filename", type=str, help="Nome do arquivo .dump/.sql na pasta de backups")
+        parser.add_argument(
+            "filename",
+            type=str,
+            help="Nome do arquivo .dump/.sql na pasta de backups",
+        )
 
     def handle(self, *args, **options):
         filename = options["filename"]

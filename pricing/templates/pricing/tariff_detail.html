@@ -1,0 +1,293 @@
+{% extends 'settlements/base.html' %}
+
+{% block title %}Tarifa: {{ tariff.partner.name }} - {{ tariff.zone.name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-6">
+  <!-- Header -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 fade-in">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div class="flex items-start gap-4">
+        <div class="flex-shrink-0">
+          <div class="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center">
+            <i data-lucide="dollar-sign" class="w-6 h-6 text-purple-600 dark:text-purple-400"></i>
+          </div>
+        </div>
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-1">
+            {{ tariff.partner.name }} → {{ tariff.zone.name }}
+          </h1>
+          <p class="text-sm text-gray-500 dark:text-gray-400">
+            <a href="{% url 'pricing:tariff-list' %}" class="hover:text-purple-600 dark:hover:text-purple-400 transition-colors">
+              ← Voltar para Tarifas
+            </a>
+          </p>
+        </div>
+      </div>
+      <div class="flex flex-wrap gap-3">
+        <a href="{% url 'pricing:tariff-edit' tariff.pk %}" class="inline-flex items-center px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors duration-200 gap-2">
+          <i data-lucide="edit" class="w-4 h-4"></i>
+          Editar
+        </a>
+        <a href="{% url 'pricing:tariff-toggle-status' tariff.pk %}" class="inline-flex items-center px-4 py-2 {% if tariff.is_active %}bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white{% else %}bg-emerald-600 hover:bg-emerald-700 text-white{% endif %} rounded-lg font-medium transition-colors duration-200 gap-2">
+          <i data-lucide="{% if tariff.is_active %}x-circle{% else %}check-circle{% endif %}" class="w-4 h-4"></i>
+          {% if tariff.is_active %}Desativar{% else %}Ativar{% endif %}
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Grid Principal -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Coluna Esquerda: Informações Principais -->
+    <div class="lg:col-span-2 space-y-6">
+      <!-- Card Informações Gerais -->
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 slide-in">
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+          <i data-lucide="info" class="w-5 h-5 text-purple-600 dark:text-purple-400"></i>
+          Informações da Tarifa
+        </h2>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</label>
+            <div class="mt-1">
+              {% if tariff.is_active %}
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400">
+                  <i data-lucide="check-circle" class="w-4 h-4 mr-1"></i>
+                  Ativa
+                </span>
+              {% else %}
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+                  <i data-lucide="x-circle" class="w-4 h-4 mr-1"></i>
+                  Inativa
+                </span>
+              {% endif %}
+            </div>
+          </div>
+          <div>
+            <label class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Preço Base</label>
+            <p class="mt-1 text-2xl font-bold text-purple-600 dark:text-purple-400">€{{ tariff.base_price }}</p>
+          </div>
+          <div>
+            <label class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Parceiro</label>
+            <p class="mt-1 text-sm text-gray-900 dark:text-white">
+              <a href="{% url 'core:partner-detail' tariff.partner.pk %}" class="text-purple-600 dark:text-purple-400 hover:underline">
+                {{ tariff.partner.name }}
+              </a>
+            </p>
+          </div>
+          <div>
+            <label class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Zona Postal</label>
+            <p class="mt-1 text-sm text-gray-900 dark:text-white">
+              <a href="{% url 'pricing:zone-detail' tariff.zone.pk %}" class="text-purple-600 dark:text-purple-400 hover:underline">
+                {{ tariff.zone.name }}
+              </a>
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card Preços e Modificadores -->
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 slide-in">
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+          <i data-lucide="trending-up" class="w-5 h-5 text-purple-600 dark:text-purple-400"></i>
+          Preços e Modificadores
+        </h2>
+        <div class="space-y-4">
+          <div class="grid grid-cols-2 gap-4">
+            <div class="p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg">
+              <label class="text-xs font-medium text-emerald-700 dark:text-emerald-300 uppercase tracking-wider flex items-center gap-1">
+                <i data-lucide="gift" class="w-3 h-3"></i>
+                Bônus Entrega Rápida
+              </label>
+              <p class="mt-1 text-lg font-bold text-emerald-900 dark:text-emerald-100">€{{ tariff.quick_delivery_bonus|default:"0.00" }}</p>
+            </div>
+            <div class="p-4 bg-sky-50 dark:bg-sky-900/20 rounded-lg">
+              <label class="text-xs font-medium text-sky-700 dark:text-sky-300 uppercase tracking-wider flex items-center gap-1">
+                <i data-lucide="award" class="w-3 h-3"></i>
+                Bônus Volume
+              </label>
+              <p class="mt-1 text-lg font-bold text-sky-900 dark:text-sky-100">€{{ tariff.volume_bonus|default:"0.00" }}</p>
+            </div>
+            <div class="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
+              <label class="text-xs font-medium text-red-700 dark:text-red-300 uppercase tracking-wider flex items-center gap-1">
+                <i data-lucide="alert-triangle" class="w-3 h-3"></i>
+                Penalidade Atraso
+              </label>
+              <p class="mt-1 text-lg font-bold text-red-900 dark:text-red-100">€{{ tariff.delay_penalty|default:"0.00" }}</p>
+            </div>
+            <div class="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
+              <label class="text-xs font-medium text-amber-700 dark:text-amber-300 uppercase tracking-wider flex items-center gap-1">
+                <i data-lucide="package-x" class="w-3 h-3"></i>
+                Penalidade Dano
+              </label>
+              <p class="mt-1 text-lg font-bold text-amber-900 dark:text-amber-100">€{{ tariff.damage_penalty|default:"0.00" }}</p>
+            </div>
+          </div>
+
+          <div class="pt-4 border-t border-gray-200 dark:border-gray-700">
+            <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-3">Multiplicadores</h3>
+            <div class="grid grid-cols-3 gap-3">
+              <div class="text-center p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                <i data-lucide="zap" class="w-4 h-4 mx-auto text-purple-600 dark:text-purple-400 mb-1"></i>
+                <p class="text-xs text-gray-600 dark:text-gray-400">Express</p>
+                <p class="text-lg font-bold text-purple-600 dark:text-purple-400">{{ tariff.express_multiplier }}x</p>
+              </div>
+              <div class="text-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                <i data-lucide="calendar" class="w-4 h-4 mx-auto text-blue-600 dark:text-blue-400 mb-1"></i>
+                <p class="text-xs text-gray-600 dark:text-gray-400">Weekend</p>
+                <p class="text-lg font-bold text-blue-600 dark:text-blue-400">{{ tariff.weekend_multiplier }}x</p>
+              </div>
+              <div class="text-center p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg">
+                <i data-lucide="box" class="w-4 h-4 mx-auto text-indigo-600 dark:text-indigo-400 mb-1"></i>
+                <p class="text-xs text-gray-600 dark:text-gray-400">Volume</p>
+                <p class="text-lg font-bold text-indigo-600 dark:text-indigo-400">{{ tariff.volume_multiplier }}x</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card Exemplos de Cálculo -->
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 scale-in">
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+          <i data-lucide="calculator" class="w-5 h-5 text-purple-600 dark:text-purple-400"></i>
+          Exemplos de Preços
+        </h2>
+        <div class="space-y-3">
+          <div class="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
+            <div class="flex justify-between items-center">
+              <div>
+                <p class="text-sm font-medium text-gray-900 dark:text-white">Entrega Normal</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Dia útil, sem serviços adicionais</p>
+              </div>
+              <p class="text-xl font-bold text-purple-600 dark:text-purple-400">€{{ tariff.base_price }}</p>
+            </div>
+          </div>
+          <div class="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+            <div class="flex justify-between items-center">
+              <div>
+                <p class="text-sm font-medium text-gray-900 dark:text-white">Entrega Express</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Multiplicador express aplicado</p>
+              </div>
+              <p class="text-xl font-bold text-purple-600 dark:text-purple-400">€{{ tariff.base_price|floatformat:2|add:0|multiply:tariff.express_multiplier|floatformat:2 }}</p>
+            </div>
+          </div>
+          <div class="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+            <div class="flex justify-between items-center">
+              <div>
+                <p class="text-sm font-medium text-gray-900 dark:text-white">Entrega Weekend</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Multiplicador weekend aplicado</p>
+              </div>
+              <p class="text-xl font-bold text-blue-600 dark:text-blue-400">€{{ tariff.base_price|floatformat:2|add:0|multiply:tariff.weekend_multiplier|floatformat:2 }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Coluna Direita: Resumo e Ações -->
+    <div class="space-y-6">
+      <!-- Card Período de Validade -->
+      <div class="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 rounded-xl shadow-sm border border-purple-200/50 dark:border-purple-700/50 p-6 scale-in">
+        <h3 class="text-sm font-semibold text-purple-900 dark:text-purple-300 mb-4 flex items-center gap-2">
+          <i data-lucide="calendar-range" class="w-4 h-4"></i>
+          Período de Validade
+        </h3>
+        <div class="space-y-3">
+          <div>
+            <label class="text-xs text-purple-700 dark:text-purple-300">Válido desde</label>
+            <p class="text-sm font-semibold text-purple-900 dark:text-purple-100 mt-1">{{ tariff.valid_from|date:"d/m/Y" }}</p>
+          </div>
+          {% if tariff.valid_until %}
+          <div>
+            <label class="text-xs text-purple-700 dark:text-purple-300">Válido até</label>
+            <p class="text-sm font-semibold text-purple-900 dark:text-purple-100 mt-1">{{ tariff.valid_until|date:"d/m/Y" }}</p>
+          </div>
+          {% else %}
+          <div>
+            <label class="text-xs text-purple-700 dark:text-purple-300">Validade</label>
+            <p class="text-sm font-semibold text-purple-900 dark:text-purple-100 mt-1">Sem data de expiração</p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Card Resumo -->
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 scale-in">
+        <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+          <i data-lucide="bar-chart-3" class="w-4 h-4 text-purple-600 dark:text-purple-400"></i>
+          Resumo
+        </h3>
+        <div class="space-y-3">
+          <div class="flex justify-between items-center">
+            <span class="text-sm text-gray-600 dark:text-gray-400">Preço Base</span>
+            <span class="text-lg font-bold text-purple-600 dark:text-purple-400">€{{ tariff.base_price }}</span>
+          </div>
+          <div class="h-px bg-gray-200 dark:bg-gray-700"></div>
+          <div class="flex justify-between items-center">
+            <span class="text-xs text-gray-500 dark:text-gray-400">Express</span>
+            <span class="text-sm font-semibold text-gray-800 dark:text-gray-200">+{{ tariff.express_multiplier }}x</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-xs text-gray-500 dark:text-gray-400">Weekend</span>
+            <span class="text-sm font-semibold text-gray-800 dark:text-gray-200">+{{ tariff.weekend_multiplier }}x</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-xs text-gray-500 dark:text-gray-400">Volume</span>
+            <span class="text-sm font-semibold text-gray-800 dark:text-gray-200">+{{ tariff.volume_multiplier }}x</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card Ações Rápidas -->
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 scale-in">
+        <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+          <i data-lucide="zap" class="w-4 h-4 text-purple-600 dark:text-purple-400"></i>
+          Ações Rápidas
+        </h3>
+        <div class="space-y-2">
+          <a href="{% url 'pricing:price-calculator' %}?partner={{ tariff.partner.pk }}" class="flex items-center gap-2 px-3 py-2 bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-lg transition-colors text-sm">
+            <i data-lucide="calculator" class="w-4 h-4"></i>
+            Calcular Preço
+          </a>
+          <a href="{% url 'core:partner-detail' tariff.partner.pk %}" class="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-gray-900/50 hover:bg-gray-100 dark:hover:bg-gray-900 text-gray-700 dark:text-gray-300 rounded-lg transition-colors text-sm">
+            <i data-lucide="building-2" class="w-4 h-4"></i>
+            Ver Parceiro
+          </a>
+          <a href="{% url 'pricing:zone-detail' tariff.zone.pk %}" class="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-gray-900/50 hover:bg-gray-100 dark:hover:bg-gray-900 text-gray-700 dark:text-gray-300 rounded-lg transition-colors text-sm">
+            <i data-lucide="map-pin" class="w-4 h-4"></i>
+            Ver Zona
+          </a>
+          <a href="{% url 'pricing:tariff-edit' tariff.pk %}" class="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-gray-900/50 hover:bg-gray-100 dark:hover:bg-gray-900 text-gray-700 dark:text-gray-300 rounded-lg transition-colors text-sm">
+            <i data-lucide="edit" class="w-4 h-4"></i>
+            Editar Tarifa
+          </a>
+        </div>
+      </div>
+
+      <!-- Card Metadados -->
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 scale-in">
+        <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+          <i data-lucide="clock" class="w-4 h-4 text-purple-600 dark:text-purple-400"></i>
+          Informações de Registro
+        </h3>
+        <div class="space-y-2 text-xs text-gray-500 dark:text-gray-400">
+          <div>
+            <span class="font-medium">Criado em:</span>
+            <p class="mt-1">{{ tariff.created_at|date:"d/m/Y H:i" }}</p>
+          </div>
+          <div>
+            <span class="font-medium">Atualizado em:</span>
+            <p class="mt-1">{{ tariff.updated_at|date:"d/m/Y H:i" }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  lucide.createIcons();
+</script>
+{% endblock %}

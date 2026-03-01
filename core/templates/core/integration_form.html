@@ -1,0 +1,120 @@
+{% extends 'settlements/base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+  <!-- Header -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 fade-in">
+    <div class="flex items-start gap-4">
+      <div class="flex-shrink-0">
+        <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center">
+          <i data-lucide="plug" class="w-6 h-6 text-blue-600 dark:text-blue-400"></i>
+        </div>
+      </div>
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-1">{{ title }}</h1>
+        <p class="text-sm text-gray-500 dark:text-gray-400">
+          <a href="{% url 'core:partner-detail' partner.pk %}" class="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+            ← Voltar para {{ partner.name }}
+          </a>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Formulário -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 slide-in">
+    <form method="post" class="space-y-6">
+      {% csrf_token %}
+      
+      {% if form.non_field_errors %}
+      <div class="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+        <div class="flex items-start gap-3">
+          <i data-lucide="alert-circle" class="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5"></i>
+          <div class="text-sm text-red-800 dark:text-red-200">
+            {{ form.non_field_errors }}
+          </div>
+        </div>
+      </div>
+      {% endif %}
+      
+      <!-- Configurações de Integração -->
+      <div class="space-y-4">
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2 pb-2 border-b border-gray-200 dark:border-gray-700">
+          <i data-lucide="settings" class="w-5 h-5 text-blue-600 dark:text-blue-400"></i>
+          Configurações de Integração
+        </h2>
+        
+        <div class="grid grid-cols-1 gap-4">
+          <div>
+            <label for="{{ form.integration_type.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Tipo de Integração <span class="text-red-500">*</span>
+            </label>
+            {{ form.integration_type }}
+            {% if form.integration_type.errors %}
+            <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ form.integration_type.errors.0 }}</p>
+            {% endif %}
+          </div>
+          
+          <div>
+            <label for="{{ form.endpoint_url.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              URL do Endpoint
+            </label>
+            {{ form.endpoint_url }}
+            {% if form.endpoint_url.errors %}
+            <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ form.endpoint_url.errors.0 }}</p>
+            {% endif %}
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">URL base da API do parceiro (ex: https://api.partner.com/v1)</p>
+          </div>
+          
+          <div>
+            <label for="{{ form.sync_frequency_minutes.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Frequência de Sincronização (minutos)
+            </label>
+            {{ form.sync_frequency_minutes }}
+            {% if form.sync_frequency_minutes.errors %}
+            <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ form.sync_frequency_minutes.errors.0 }}</p>
+            {% endif %}
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Intervalo entre importações automáticas de pedidos</p>
+          </div>
+          
+          <div class="flex items-center gap-2 p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
+            {{ form.is_active }}
+            <label for="{{ form.is_active.id_for_label }}" class="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Integração Ativa
+            </label>
+            <p class="text-xs text-gray-500 dark:text-gray-400 ml-2">(Se desativada, não fará sincronizações automáticas)</p>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Informação Adicional -->
+      <div class="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+        <div class="flex items-start gap-3">
+          <i data-lucide="info" class="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5"></i>
+          <div class="text-sm text-blue-800 dark:text-blue-200">
+            <p class="font-medium mb-1">Nota sobre Credenciais de Autenticação</p>
+            <p>As credenciais de autenticação (API keys, tokens, etc.) devem ser configuradas separadamente via Django Admin por questões de segurança.</p>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Botões de Ação -->
+      <div class="flex items-center justify-end gap-3 pt-6 border-t border-gray-200 dark:border-gray-700">
+        <a href="{% url 'core:partner-detail' partner.pk %}" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg font-medium transition-colors duration-200">
+          Cancelar
+        </a>
+        <button type="submit" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200 flex items-center gap-2">
+          <i data-lucide="save" class="w-4 h-4"></i>
+          {{ button_text }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  lucide.createIcons();
+</script>
+{% endblock %}

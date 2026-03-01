@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import logging
 import os
@@ -32,12 +32,21 @@ def _run_commands(commands: Iterable[str]) -> None:
             logger.info("Restarting services via command: %s", command)
             subprocess.run(command, shell=True, check=True)
         except subprocess.CalledProcessError as exc:
-            logger.error("Restart command failed (%s): %s", exc.returncode, command, exc_info=True)
+            logger.error(
+                "Restart command failed (%s): %s",
+                exc.returncode,
+                command,
+                exc_info=True,
+            )
         except Exception:
             logger.exception("Unexpected error executing restart command: %s", command)
 
 
-def trigger_restart(additional_commands: Iterable[str] | None = None, *, async_mode: bool = True) -> bool:
+def trigger_restart(
+    additional_commands: Iterable[str] | None = None,
+    *,
+    async_mode: bool = True,
+) -> bool:
     """
     Execute configured restart commands.
 
@@ -61,11 +70,11 @@ def trigger_restart(additional_commands: Iterable[str] | None = None, *, async_m
 
 class ServiceReloader:
     """Service reloader class for restarting services"""
-    
+
     def reload_all_services(self):
         """Reload all configured services"""
         return trigger_restart()
-    
+
     def reload_service(self, service_name: str):
         """Reload a specific service"""
         return trigger_restart([f"systemctl restart {service_name}"])

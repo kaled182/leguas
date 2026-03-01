@@ -1,0 +1,228 @@
+{% extends 'settlements/base.html' %}
+
+{% block title %}{% if order %}Editar Pedido{% else %}Novo Pedido{% endif %}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+  <!-- Header -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 fade-in">
+    <div class="flex items-center gap-4">
+      <a href="{% if order %}{% url 'orders:order_detail' order.pk %}{% else %}{% url 'orders:order_list' %}{% endif %}" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+        <i data-lucide="arrow-left" class="w-6 h-6"></i>
+      </a>
+      <div class="p-3 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl shadow-lg">
+        <i data-lucide="package" class="w-6 h-6 text-white"></i>
+      </div>
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
+          {% if order %}Editar Pedido{% else %}Novo Pedido{% endif %}
+        </h1>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          {% if order %}{{ order.external_reference }}{% else %}Criar novo pedido de entrega{% endif %}
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Formulário -->
+  <form method="post" class="space-y-6">
+    {% csrf_token %}
+    
+    <!-- Informações Básicas -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 slide-in">
+      <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+        <i data-lucide="file-text" class="w-5 h-5 text-indigo-600 dark:text-indigo-400"></i>
+        Informações Básicas
+      </h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label for="id_partner" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            {{ form.partner.label }} *
+          </label>
+          {{ form.partner }}
+          {% if form.partner.errors %}
+          <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ form.partner.errors.0 }}</p>
+          {% endif %}
+        </div>
+        <div>
+          <label for="id_external_reference" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            {{ form.external_reference.label }} *
+          </label>
+          {{ form.external_reference }}
+          {% if form.external_reference.errors %}
+          <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ form.external_reference.errors.0 }}</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Destinatário -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 slide-in">
+      <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+        <i data-lucide="user" class="w-5 h-5 text-indigo-600 dark:text-indigo-400"></i>
+        Destinatário
+      </h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="md:col-span-2">
+          <label for="id_recipient_name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            {{ form.recipient_name.label }} *
+          </label>
+          {{ form.recipient_name }}
+          {% if form.recipient_name.errors %}
+          <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ form.recipient_name.errors.0 }}</p>
+          {% endif %}
+        </div>
+        <div>
+          <label for="id_recipient_phone" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            {{ form.recipient_phone.label }}
+          </label>
+          {{ form.recipient_phone }}
+          {% if form.recipient_phone.errors %}
+          <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ form.recipient_phone.errors.0 }}</p>
+          {% endif %}
+        </div>
+        <div>
+          <label for="id_recipient_email" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            {{ form.recipient_email.label }}
+          </label>
+          {{ form.recipient_email }}
+          {% if form.recipient_email.errors %}
+          <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ form.recipient_email.errors.0 }}</p>
+          {% endif %}
+        </div>
+        <div class="md:col-span-2">
+          <label for="id_recipient_address" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            {{ form.recipient_address.label }} *
+          </label>
+          {{ form.recipient_address }}
+          {% if form.recipient_address.errors %}
+          <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ form.recipient_address.errors.0 }}</p>
+          {% endif %}
+        </div>
+        <div>
+          <label for="id_postal_code" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            {{ form.postal_code.label }} *
+          </label>
+          {{ form.postal_code }}
+          {% if form.postal_code.errors %}
+          <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ form.postal_code.errors.0 }}</p>
+          {% endif %}
+          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Formato: 4000-123</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Detalhes da Entrega -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 slide-in">
+      <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+        <i data-lucide="truck" class="w-5 h-5 text-indigo-600 dark:text-indigo-400"></i>
+        Detalhes da Entrega
+      </h2>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <label for="id_scheduled_delivery" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            {{ form.scheduled_delivery.label }}
+          </label>
+          {{ form.scheduled_delivery }}
+          {% if form.scheduled_delivery.errors %}
+          <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ form.scheduled_delivery.errors.0 }}</p>
+          {% endif %}
+        </div>
+        <div>
+          <label for="id_delivery_window_start" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            {{ form.delivery_window_start.label }}
+          </label>
+          {{ form.delivery_window_start }}
+          {% if form.delivery_window_start.errors %}
+          <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ form.delivery_window_start.errors.0 }}</p>
+          {% endif %}
+        </div>
+        <div>
+          <label for="id_delivery_window_end" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            {{ form.delivery_window_end.label }}
+          </label>
+          {{ form.delivery_window_end }}
+          {% if form.delivery_window_end.errors %}
+          <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ form.delivery_window_end.errors.0 }}</p>
+          {% endif %}
+        </div>
+        <div>
+          <label for="id_declared_value" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            {{ form.declared_value.label }}
+          </label>
+          {{ form.declared_value }}
+          {% if form.declared_value.errors %}
+          <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ form.declared_value.errors.0 }}</p>
+          {% endif %}
+        </div>
+        <div>
+          <label for="id_weight_kg" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            {{ form.weight_kg.label }}
+          </label>
+          {{ form.weight_kg }}
+          {% if form.weight_kg.errors %}
+          <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ form.weight_kg.errors.0 }}</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Instruções e Observações -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 slide-in">
+      <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+        <i data-lucide="message-square" class="w-5 h-5 text-indigo-600 dark:text-indigo-400"></i>
+        Instruções e Observações
+      </h2>
+      <div class="space-y-4">
+        <div>
+          <label for="id_special_instructions" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            {{ form.special_instructions.label }}
+          </label>
+          {{ form.special_instructions }}
+          {% if form.special_instructions.errors %}
+          <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ form.special_instructions.errors.0 }}</p>
+          {% endif %}
+        </div>
+        <div>
+          <label for="id_notes" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            {{ form.notes.label }}
+          </label>
+          {{ form.notes }}
+          {% if form.notes.errors %}
+          <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ form.notes.errors.0 }}</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Erros Gerais do Formulário -->
+    {% if form.non_field_errors %}
+    <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4">
+      <div class="flex items-center gap-2">
+        <i data-lucide="alert-circle" class="w-5 h-5 text-red-600 dark:text-red-400"></i>
+        <div>
+          {% for error in form.non_field_errors %}
+          <p class="text-sm text-red-600 dark:text-red-400">{{ error }}</p>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Botões -->
+    <div class="flex items-center justify-between bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 slide-in">
+      <a href="{% if order %}{% url 'orders:order_detail' order.pk %}{% else %}{% url 'orders:order_list' %}{% endif %}" class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+        Cancelar
+      </a>
+      <button type="submit" class="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2">
+        <i data-lucide="save" class="w-4 h-4"></i>
+        {% if order %}Atualizar Pedido{% else %}Criar Pedido{% endif %}
+      </button>
+    </div>
+  </form>
+</div>
+
+<script>
+  lucide.createIcons();
+</script>
+{% endblock %}

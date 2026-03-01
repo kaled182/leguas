@@ -1,4 +1,5 @@
-"""Runtime configuration loader fed by the ``FirstTimeSetup`` table."""
+﻿"""Runtime configuration loader fed by the ``FirstTimeSetup`` table."""
+
 from __future__ import annotations
 
 import os
@@ -22,18 +23,18 @@ def get_runtime_config() -> Dict[str, str]:
 
     # Fallback to the database if it is not cached
     config = _load_from_database()
-    
+
     # Store the refreshed payload in cache
     if config:
         cache.set(_CONFIG_CACHE_KEY, config, _CONFIG_CACHE_TTL)
-    
+
     return config
 
 
 def _load_from_database() -> Dict[str, str]:
     """Fetch the most recent configuration row from the database."""
     config = {}
-    
+
     try:
         record = SystemConfiguration.get_config()
         if not record or not record.configured:
@@ -58,11 +59,11 @@ def _load_from_database() -> Dict[str, str]:
         config["DB_USER"] = record.db_user
     if record.db_password:
         config["DB_PASSWORD"] = record.db_password
-    
+
     # Redis
     if record.redis_url:
         config["REDIS_URL"] = record.redis_url
-    
+
     # FTP
     if record.ftp_enabled is not None:
         config["FTP_ENABLED"] = str(record.ftp_enabled)
@@ -76,7 +77,7 @@ def _load_from_database() -> Dict[str, str]:
         config["FTP_PASSWORD"] = record.ftp_password
     if record.ftp_directory:
         config["FTP_PATH"] = record.ftp_directory
-    
+
     # Google Drive
     if record.gdrive_enabled is not None:
         config["GDRIVE_ENABLED"] = str(record.gdrive_enabled)
@@ -96,7 +97,7 @@ def _load_from_database() -> Dict[str, str]:
         config["GDRIVE_OAUTH_REFRESH_TOKEN"] = record.gdrive_oauth_refresh_token
     if record.gdrive_oauth_user_email:
         config["GDRIVE_OAUTH_USER_EMAIL"] = record.gdrive_oauth_user_email
-    
+
     # SMTP
     if record.smtp_enabled is not None:
         config["SMTP_ENABLED"] = str(record.smtp_enabled)
@@ -124,7 +125,7 @@ def _load_from_database() -> Dict[str, str]:
         config["SMTP_FROM_EMAIL"] = record.smtp_from_email
     if record.smtp_test_recipient:
         config["SMTP_TEST_RECIPIENT"] = record.smtp_test_recipient
-    
+
     # SMS
     if record.sms_enabled is not None:
         config["SMS_ENABLED"] = str(record.sms_enabled)
@@ -164,7 +165,7 @@ def _load_from_database() -> Dict[str, str]:
         config["SMS_AWS_SECRET_ACCESS_KEY"] = record.sms_aws_secret_access_key
     if record.sms_infobip_base_url:
         config["SMS_INFOBIP_BASE_URL"] = record.sms_infobip_base_url
-    
+
     # Map configuration
     if record.map_provider:
         config["MAP_PROVIDER"] = record.map_provider
@@ -223,7 +224,7 @@ def get_config_value(key: str, default: str = "") -> str:
     env_value = os.getenv(key)
     if env_value:
         return env_value
-    
+
     # 2. Database-backed runtime config
     runtime_config = get_runtime_config()
     return runtime_config.get(key, default)
@@ -255,15 +256,15 @@ def is_first_time_setup_needed() -> bool:
 
 class ConfigLoader:
     """Wrapper class for loading configuration"""
-    
+
     def get_all_config(self) -> Dict[str, str]:
         """Get all configuration as a dictionary"""
         return get_runtime_config()
-    
+
     def get_value(self, key: str, default: str = "") -> str:
         """Get a specific configuration value"""
         return get_config_value(key, default)
-    
+
     def refresh(self):
         """Clear the cache to force a reload"""
         cache.delete(_CONFIG_CACHE_KEY)

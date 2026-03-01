@@ -1,0 +1,187 @@
+{% extends 'settlements/base.html' %}
+
+{% block title %}Parceiros{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-8">
+  <!-- Header -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 fade-in">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-4">
+        <div class="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg">
+          <i data-lucide="building-2" class="w-6 h-6 text-white"></i>
+        </div>
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Parceiros</h1>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Gestão de parceiros logísticos e integrações</p>
+        </div>
+      </div>
+      <a href="{% url 'core:partner-create' %}" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200 flex items-center gap-2">
+        <i data-lucide="plus" class="w-4 h-4"></i>
+        Novo Parceiro
+      </a>
+    </div>
+  </div>
+  
+  <!-- Filtros -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 slide-in">
+    <form method="get" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div class="md:col-span-2">
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Buscar</label>
+        <input type="text" name="search" value="{{ search }}" placeholder="Nome, NIF ou email" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Status</label>
+        <select name="status" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500">
+          <option value="">Todos</option>
+          <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Ativos</option>
+          <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>Inativos</option>
+        </select>
+      </div>
+      <div class="md:col-span-3 flex gap-2">
+        <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200 flex items-center gap-2">
+          <i data-lucide="search" class="w-4 h-4"></i>
+          Filtrar
+        </button>
+        <a href="{% url 'core:partner-list' %}" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg font-medium transition-colors duration-200">
+          Limpar
+        </a>
+      </div>
+    </form>
+  </div>
+  
+  <!-- Estatísticas Rápidas -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6">
+      <div class="flex items-center gap-4">
+        <div class="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+          <i data-lucide="building-2" class="w-6 h-6 text-blue-600 dark:text-blue-400"></i>
+        </div>
+        <div>
+          <p class="text-sm text-gray-500 dark:text-gray-400">Total de Parceiros</p>
+          <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ total_count }}</p>
+        </div>
+      </div>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6">
+      <div class="flex items-center gap-4">
+        <div class="p-3 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
+          <i data-lucide="check-circle" class="w-6 h-6 text-emerald-600 dark:text-emerald-400"></i>
+        </div>
+        <div>
+          <p class="text-sm text-gray-500 dark:text-gray-400">Ativos</p>
+          <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ partners.paginator.count|default:0 }}</p>
+        </div>
+      </div>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6">
+      <div class="flex items-center gap-4">
+        <div class="p-3 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
+          <i data-lucide="plug" class="w-6 h-6 text-amber-600 dark:text-amber-400"></i>
+        </div>
+        <div>
+          <p class="text-sm text-gray-500 dark:text-gray-400">Link dashboard</p>
+          <a href="{% url 'core:integrations-dashboard' %}" class="text-sm text-blue-600 dark:text-blue-400 hover:underline">Ver integrações →</a>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Lista de Parceiros -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 overflow-hidden scale-in">
+    {% if partners %}
+      <div class="divide-y divide-gray-200 dark:divide-gray-700">
+        {% for partner in partners %}
+        <div class="p-6 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-150">
+          <div class="flex items-start justify-between">
+            <div class="flex-1">
+              <div class="flex items-center gap-3 mb-2">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ partner.name }}</h3>
+                {% if partner.is_active %}
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400">
+                    <i data-lucide="check-circle" class="w-3 h-3 mr-1"></i>
+                    Ativo
+                  </span>
+                {% else %}
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+                    <i data-lucide="x-circle" class="w-3 h-3 mr-1"></i>
+                    Inativo
+                  </span>
+                {% endif %}
+              </div>
+              
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
+                <div class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                  <i data-lucide="hash" class="w-4 h-4"></i>
+                  <span>NIF: {{ partner.nif }}</span>
+                </div>
+                <div class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                  <i data-lucide="mail" class="w-4 h-4"></i>
+                  <span>{{ partner.contact_email }}</span>
+                </div>
+                <div class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                  <i data-lucide="plug" class="w-4 h-4"></i>
+                  <span>{{ partner.active_integrations_count }} integração(ões) ativa(s)</span>
+                </div>
+              </div>
+              
+              {% if partner.notes %}
+              <p class="mt-3 text-sm text-gray-500 dark:text-gray-400">{{ partner.notes|truncatewords:20 }}</p>
+              {% endif %}
+            </div>
+            
+            <div class="flex items-center gap-2 ml-4">
+              <a href="{% url 'core:partner-detail' partner.pk %}" class="px-3 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200 flex items-center gap-1">
+                <i data-lucide="eye" class="w-4 h-4"></i>
+                Ver
+              </a>
+              <a href="{% url 'core:partner-edit' partner.pk %}" class="px-3 py-2 text-sm bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg font-medium transition-colors duration-200 flex items-center gap-1">
+                <i data-lucide="edit" class="w-4 h-4"></i>
+                Editar
+              </a>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      
+      <!-- Paginação -->
+      {% if partners.has_other_pages %}
+      <div class="bg-gray-50 dark:bg-gray-900 px-6 py-4 border-t border-gray-200 dark:border-gray-700">
+        <div class="flex items-center justify-between">
+          <div class="text-sm text-gray-700 dark:text-gray-300">
+            Página {{ partners.number }} de {{ partners.paginator.num_pages }} ({{ partners.paginator.count }} total)
+          </div>
+          <div class="flex gap-2">
+            {% if partners.has_previous %}
+              <a href="?page={{ partners.previous_page_number }}&search={{ search }}&status={{ status_filter }}" class="px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
+                Anterior
+              </a>
+            {% endif %}
+            {% if partners.has_next %}
+              <a href="?page={{ partners.next_page_number }}&search={{ search }}&status={{ status_filter }}" class="px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
+                Próxima
+              </a>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% endif %}
+    {% else %}
+      <div class="p-12 text-center">
+        <i data-lucide="inbox" class="w-16 h-16 mx-auto text-gray-400 dark:text-gray-600 mb-4"></i>
+        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">Nenhum parceiro encontrado</h3>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">Comece criando um novo parceiro logístico.</p>
+        <a href="{% url 'core:partner-create' %}" class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200 gap-2">
+          <i data-lucide="plus" class="w-4 h-4"></i>
+          Criar Primeiro Parceiro
+        </a>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+  lucide.createIcons();
+</script>
+{% endblock %}

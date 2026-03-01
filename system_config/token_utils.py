@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import logging
 import os
@@ -18,15 +18,15 @@ ENV_FILES: tuple[Path, ...] = (
     BASE_DIR / ".env",
     BASE_DIR / ".env.docker",
 )
-OPTIONAL_ENV_FILES: tuple[Path, ...] = (
-    BASE_DIR / ".env.docker.example",
-)
+OPTIONAL_ENV_FILES: tuple[Path, ...] = (BASE_DIR / ".env.docker.example",)
 ENV_KEYS = ("AUTHENTICATION_API_KEY", "EVOLUTION_API_KEY")
 COMPOSE_KEYS = ("AUTHENTICATION_API_KEY", "TOKEN")
 
 
 def _replace_env_line(content: str, key: str, value: str) -> tuple[str, int]:
-    pattern = re.compile(rf"(^\s*{re.escape(key)}\s*=\s*)(\".*?\"|[^\r\n]*)", re.MULTILINE)
+    pattern = re.compile(
+        rf"(^\s*{re.escape(key)}\s*=\s*)(\".*?\"|[^\r\n]*)", re.MULTILINE
+    )
 
     def repl(match) -> str:
         prefix = match.group(1)
@@ -40,6 +40,7 @@ def _replace_env_line(content: str, key: str, value: str) -> tuple[str, int]:
 
 def _replace_compose_line(content: str, key: str, value: str) -> tuple[str, int]:
     pattern = re.compile(rf"(^\s*-\s*{re.escape(key)}=)[^\r\n]*", re.MULTILINE)
+
     def repl(match):
         prefix = match.group(1)
         return f"{prefix}{value}"
@@ -47,7 +48,12 @@ def _replace_compose_line(content: str, key: str, value: str) -> tuple[str, int]
     return pattern.subn(repl, content, count=1)
 
 
-def _update_file(path: Path, key_value_pairs: Iterable[tuple[str, str]], *, compose: bool = False) -> bool:
+def _update_file(
+    path: Path,
+    key_value_pairs: Iterable[tuple[str, str]],
+    *,
+    compose: bool = False,
+) -> bool:
     if not path.exists():
         logger.debug("Skip missing file when propagating token: %s", path)
         return False
@@ -85,7 +91,12 @@ def _run_restart_commands(commands: Iterable[str]) -> None:
             logger.info("Restarting service via command: %s", command)
             subprocess.run(command, shell=True, check=True)
         except subprocess.CalledProcessError as exc:
-            logger.error("Restart command failed (%s): %s", exc.returncode, command, exc_info=True)
+            logger.error(
+                "Restart command failed (%s): %s",
+                exc.returncode,
+                command,
+                exc_info=True,
+            )
         except Exception:  # pragma: no cover - defensive logging
             logger.exception("Unexpected error executing restart command: %s", command)
 
@@ -102,7 +113,12 @@ def propagate_whatsapp_token(token: str | None) -> dict[str, object]:
     updates: list[tuple[Path, bool]] = []
 
     compose_pairs = [(key, token) for key in COMPOSE_KEYS]
-    updates.append((DOCKER_COMPOSE_PATH, _update_file(DOCKER_COMPOSE_PATH, compose_pairs, compose=True)))
+    updates.append(
+        (
+            DOCKER_COMPOSE_PATH,
+            _update_file(DOCKER_COMPOSE_PATH, compose_pairs, compose=True),
+        )
+    )
 
     env_pairs = [(key, token) for key in ENV_KEYS]
     for env_path in ENV_FILES:
@@ -118,7 +134,9 @@ def propagate_whatsapp_token(token: str | None) -> dict[str, object]:
 
     commands = _collect_restart_commands()
     if commands:
-        thread = threading.Thread(target=_run_restart_commands, args=(commands,), daemon=True)
+        thread = threading.Thread(
+            target=_run_restart_commands, args=(commands,), daemon=True
+        )
         thread.start()
         result["restart_triggered"] = True
 

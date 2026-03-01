@@ -1,0 +1,187 @@
+{% extends 'settlements/base.html' %}
+
+{% block title %}{% if zone.pk %}Editar Zona{% else %}Nova Zona Postal{% endif %}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+  <!-- Header -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 fade-in">
+    <div class="flex items-center gap-4">
+      <div class="p-3 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl shadow-lg">
+        <i data-lucide="map-pin" class="w-6 h-6 text-white"></i>
+      </div>
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
+          {% if zone.pk %}Editar Zona: {{ zone.name }}{% else %}Nova Zona Postal{% endif %}
+        </h1>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          <a href="{% url 'pricing:zone-list' %}" class="hover:text-purple-600 dark:hover:text-purple-400 transition-colors">
+            ← Voltar para Zonas
+          </a>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Form -->
+  <form method="post" class="space-y-6">
+    {% csrf_token %}
+    
+    {% if form.non_field_errors %}
+      <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+        <div class="flex items-center gap-2 text-red-800 dark:text-red-200">
+          <i data-lucide="alert-circle" class="w-5 h-5"></i>
+          <span class="font-semibold">Erros no formulário:</span>
+        </div>
+        <ul class="mt-2 list-disc list-inside text-sm text-red-700 dark:text-red-300">
+          {% for error in form.non_field_errors %}
+            <li>{{ error }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+
+    <!-- Seção: Identificação -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 slide-in">
+      <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+        <i data-lucide="info" class="w-5 h-5 text-purple-600 dark:text-purple-400"></i>
+        Identificação
+      </h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Nome da Zona *
+            {% if form.name.errors %}
+              <span class="text-red-600 dark:text-red-400 text-xs">({{ form.name.errors|striptags }})</span>
+            {% endif %}
+          </label>
+          {{ form.name }}
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Código *
+            {% if form.code.errors %}
+              <span class="text-red-600 dark:text-red-400 text-xs">({{ form.code.errors|striptags }})</span>
+            {% endif %}
+          </label>
+          {{ form.code }}
+        </div>
+        <div class="md:col-span-2">
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Padrão de Códigos Postais *
+            {% if form.postal_code_pattern.errors %}
+              <span class="text-red-600 dark:text-red-400 text-xs">({{ form.postal_code_pattern.errors|striptags }})</span>
+            {% endif %}
+          </label>
+          {{ form.postal_code_pattern }}
+          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            Expressão regular para validar códigos postais desta zona. Ex: ^1[01][0-9]{2}-[0-9]{3}$ para Lisboa
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Seção: Localização -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 slide-in">
+      <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+        <i data-lucide="map" class="w-5 h-5 text-purple-600 dark:text-purple-400"></i>
+        Localização e Características
+      </h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Região
+            {% if form.region.errors %}
+              <span class="text-red-600 dark:text-red-400 text-xs">({{ form.region.errors|striptags }})</span>
+            {% endif %}
+          </label>
+          {{ form.region }}
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Tempo Médio de Entrega (horas)
+            {% if form.average_delivery_time_hours.errors %}
+              <span class="text-red-600 dark:text-red-400 text-xs">({{ form.average_delivery_time_hours.errors|striptags }})</span>
+            {% endif %}
+          </label>
+          {{ form.average_delivery_time_hours }}
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Latitude Central
+            {% if form.center_latitude.errors %}
+              <span class="text-red-600 dark:text-red-400 text-xs">({{ form.center_latitude.errors|striptags }})</span>
+            {% endif %}
+          </label>
+          {{ form.center_latitude }}
+          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Coordenada central para cálculos de distância</p>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Longitude Central
+            {% if form.center_longitude.errors %}
+              <span class="text-red-600 dark:text-red-400 text-xs">({{ form.center_longitude.errors|striptags }})</span>
+            {% endif %}
+          </label>
+          {{ form.center_longitude }}
+          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Coordenada central para cálculos de distância</p>
+        </div>
+        <div class="md:col-span-2">
+          <label class="flex items-center gap-2 cursor-pointer">
+            {{ form.is_urban }}
+            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Zona Urbana</span>
+          </label>
+          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400 ml-6">
+            Marque se esta zona é considerada urbana (pode afetar cálculos de tarifa)
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Seção: Observações e Status -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 slide-in">
+      <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+        <i data-lucide="file-text" class="w-5 h-5 text-purple-600 dark:text-purple-400"></i>
+        Observações e Status
+      </h2>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Observações
+            {% if form.notes.errors %}
+              <span class="text-red-600 dark:text-red-400 text-xs">({{ form.notes.errors|striptags }})</span>
+            {% endif %}
+          </label>
+          {{ form.notes }}
+        </div>
+        <div>
+          <label class="flex items-center gap-2 cursor-pointer">
+            {{ form.is_active }}
+            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Zona Ativa</span>
+          </label>
+          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400 ml-6">
+            Zonas inativas não serão consideradas para novos cálculos de tarifa
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Ações -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 scale-in">
+      <div class="flex flex-col sm:flex-row gap-3 justify-end">
+        <a href="{% if zone.pk %}{% url 'pricing:zone-detail' zone.pk %}{% else %}{% url 'pricing:zone-list' %}{% endif %}" class="px-6 py-2.5 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg font-medium transition-colors duration-200 text-center">
+          Cancelar
+        </a>
+        <button type="submit" class="px-6 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors duration-200 flex items-center justify-center gap-2">
+          <i data-lucide="save" class="w-4 h-4"></i>
+          {% if zone.pk %}Atualizar Zona{% else %}Criar Zona{% endif %}
+        </button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<script>
+  lucide.createIcons();
+</script>
+{% endblock %}

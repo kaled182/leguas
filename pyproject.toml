@@ -1,0 +1,58 @@
+# Configuração de formatação e linting - Sistema Leguas
+# Black, isort, flake8, mypy
+
+[tool.black]
+line-length = 88
+target-version = ['py310', 'py311']
+extend-exclude = '''
+/(
+    \.git
+  | \.venv
+  | venv
+  | env
+  | migrations
+  | staticfiles
+  | media
+  | __pycache__
+  | build
+  | dist
+)/
+'''
+
+[tool.isort]
+profile = "black"
+line_length = 88
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+ensure_newline_before_comments = true
+skip_glob = ["*/migrations/*", "*/staticfiles/*", "*/media/*", "*/.venv/*"]
+
+[tool.pylint.messages_control]
+max-line-length = 88
+disable = [
+    "C0111",  # missing-docstring
+    "C0103",  # invalid-name
+    "R0903",  # too-few-public-methods
+    "R0913",  # too-many-arguments
+]
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
+exclude = [
+    "migrations/",
+    ".venv/",
+    "venv/",
+    "staticfiles/",
+    "media/"
+]
+
+[tool.autopep8]
+max_line_length = 88
+in-place = true
+recursive = true
+aggressive = 3

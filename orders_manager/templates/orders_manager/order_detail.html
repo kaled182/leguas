@@ -1,0 +1,256 @@
+{% extends 'settlements/base.html' %}
+
+{% block title %}{{ order.external_reference }}{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-6">
+  <!-- Header -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 fade-in">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-4">
+        <a href="{% url 'orders:order_list' %}" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+          <i data-lucide="arrow-left" class="w-6 h-6"></i>
+        </a>
+        <div class="p-3 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl shadow-lg">
+          <i data-lucide="package" class="w-6 h-6 text-white"></i>
+        </div>
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{{ order.external_reference }}</h1>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Pedido criado em {{ order.created_at|date:"d/m/Y H:i" }}</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <a href="{% url 'orders:order_edit' order.pk %}" class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200 flex items-center gap-2">
+          <i data-lucide="edit" class="w-4 h-4"></i>
+          Editar
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Status e Ações Rápidas -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <!-- Status Atual -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 slide-in">
+      <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Status Atual</h3>
+      <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium
+        {% if order.current_status == 'DELIVERED' %}bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400
+        {% elif order.current_status == 'IN_TRANSIT' %}bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400
+        {% elif order.current_status == 'ASSIGNED' %}bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400
+        {% elif order.current_status == 'INCIDENT' %}bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400
+        {% elif order.current_status == 'RETURNED' %}bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400
+        {% else %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400{% endif %}">
+        {{ order.get_current_status_display }}
+      </span>
+      
+      {% if order.is_overdue %}
+      <div class="mt-3 p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+        <div class="flex items-center gap-2">
+          <i data-lucide="alert-circle" class="w-4 h-4 text-red-600 dark:text-red-400"></i>
+          <span class="text-xs font-medium text-red-700 dark:text-red-300">Atrasado</span>
+        </div>
+      </div>
+      {% endif %}
+      
+      <!-- Alterar Status -->
+      <form method="post" action="{% url 'orders:order_change_status' order.pk %}" class="mt-4 space-y-3">
+        {% csrf_token %}
+        <select name="new_status" class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-indigo-500">
+          {% for value, label in order.STATUS_CHOICES %}
+          <option value="{{ value }}" {% if value == order.current_status %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        <button type="submit" class="w-full px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-colors">
+          Atualizar Status
+        </button>
+      </form>
+    </div>
+
+    <!-- Atribuir Motorista -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 slide-in">
+      <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Motorista</h3>
+      {% if order.assigned_driver %}
+      <div class="flex items-center gap-3 mb-3">
+        <div class="p-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg">
+          <i data-lucide="user" class="w-4 h-4 text-indigo-600 dark:text-indigo-400"></i>
+        </div>
+        <div>
+          <p class="text-sm font-medium text-gray-900 dark:text-white">{{ order.assigned_driver.nome_completo }}</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400">Atribuído em {{ order.assigned_at|date:"d/m/Y H:i" }}</p>
+        </div>
+      </div>
+      {% else %}
+      <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">Não atribuído</p>
+      {% endif %}
+      <a href="{% url 'orders:order_assign_driver' order.pk %}" class="w-full inline-block text-center px-3 py-2 border border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400 rounded-lg text-sm font-medium hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors">
+        {% if order.assigned_driver %}Reatribuir{% else %}Atribuir{% endif %} Motorista
+      </a>
+    </div>
+
+    <!-- Reportar Incidente -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 slide-in">
+      <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Incidentes</h3>
+      <div class="mb-3">
+        <span class="text-2xl font-bold text-gray-900 dark:text-white">{{ incidents.count }}</span>
+        <span class="text-sm text-gray-500 dark:text-gray-400 ml-1">registrado{{ incidents.count|pluralize }}</span>
+      </div>
+      <a href="{% url 'orders:order_report_incident' order.pk %}" class="w-full inline-block text-center px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2">
+        <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+        Reportar Incidente
+      </a>
+    </div>
+  </div>
+
+  <!-- Informações do Pedido -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <!-- Detalhes do Pedido -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 scale-in">
+      <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+        <i data-lucide="file-text" class="w-5 h-5 text-indigo-600 dark:text-indigo-400"></i>
+        Detalhes do Pedido
+      </h2>
+      <dl class="space-y-3">
+        <div>
+          <dt class="text-xs font-medium text-gray-500 dark:text-gray-400">Parceiro</dt>
+          <dd class="text-sm text-gray-900 dark:text-white mt-1">{{ order.partner.name }}</dd>
+        </div>
+        <div>
+          <dt class="text-xs font-medium text-gray-500 dark:text-gray-400">Referência Externa</dt>
+          <dd class="text-sm text-gray-900 dark:text-white mt-1 font-mono">{{ order.external_reference }}</dd>
+        </div>
+        <div>
+          <dt class="text-xs font-medium text-gray-500 dark:text-gray-400">Data de Entrega</dt>
+          <dd class="text-sm text-gray-900 dark:text-white mt-1">{{ order.scheduled_delivery|date:"d/m/Y" }}</dd>
+        </div>
+        {% if order.delivery_window_start and order.delivery_window_end %}
+        <div>
+          <dt class="text-xs font-medium text-gray-500 dark:text-gray-400">Janela de Entrega</dt>
+          <dd class="text-sm text-gray-900 dark:text-white mt-1">{{ order.delivery_window_start|time:"H:i" }} - {{ order.delivery_window_end|time:"H:i" }}</dd>
+        </div>
+        {% endif %}
+        {% if order.declared_value %}
+        <div>
+          <dt class="text-xs font-medium text-gray-500 dark:text-gray-400">Valor Declarado</dt>
+          <dd class="text-sm text-gray-900 dark:text-white mt-1">€ {{ order.declared_value }}</dd>
+        </div>
+        {% endif %}
+        {% if order.weight_kg %}
+        <div>
+          <dt class="text-xs font-medium text-gray-500 dark:text-gray-400">Peso</dt>
+          <dd class="text-sm text-gray-900 dark:text-white mt-1">{{ order.weight_kg }} kg</dd>
+        </div>
+        {% endif %}
+      </dl>
+    </div>
+
+    <!-- Destinatário -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 scale-in">
+      <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+        <i data-lucide="map-pin" class="w-5 h-5 text-indigo-600 dark:text-indigo-400"></i>
+        Destinatário
+      </h2>
+      <dl class="space-y-3">
+        <div>
+          <dt class="text-xs font-medium text-gray-500 dark:text-gray-400">Nome</dt>
+          <dd class="text-sm text-gray-900 dark:text-white mt-1">{{ order.recipient_name }}</dd>
+        </div>
+        {% if order.recipient_phone %}
+        <div>
+          <dt class="text-xs font-medium text-gray-500 dark:text-gray-400">Telefone</dt>
+          <dd class="text-sm text-gray-900 dark:text-white mt-1">{{ order.recipient_phone }}</dd>
+        </div>
+        {% endif %}
+        {% if order.recipient_email %}
+        <div>
+          <dt class="text-xs font-medium text-gray-500 dark:text-gray-400">Email</dt>
+          <dd class="text-sm text-gray-900 dark:text-white mt-1">{{ order.recipient_email }}</dd>
+        </div>
+        {% endif %}
+        <div>
+          <dt class="text-xs font-medium text-gray-500 dark:text-gray-400">Morada</dt>
+          <dd class="text-sm text-gray-900 dark:text-white mt-1">{{ order.recipient_address }}</dd>
+        </div>
+        <div>
+          <dt class="text-xs font-medium text-gray-500 dark:text-gray-400">Código Postal</dt>
+          <dd class="text-sm text-gray-900 dark:text-white mt-1 font-mono">{{ order.postal_code }}</dd>
+        </div>
+        {% if order.special_instructions %}
+        <div>
+          <dt class="text-xs font-medium text-gray-500 dark:text-gray-400">Instruções Especiais</dt>
+          <dd class="text-sm text-gray-900 dark:text-white mt-1">{{ order.special_instructions }}</dd>
+        </div>
+        {% endif %}
+      </dl>
+    </div>
+  </div>
+
+  <!-- Histórico e Incidentes -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <!-- Histórico de Status -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 scale-in">
+      <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+        <i data-lucide="clock" class="w-5 h-5 text-indigo-600 dark:text-indigo-400"></i>
+        Histórico de Status
+      </h2>
+      {% if status_history %}
+      <div class="space-y-3">
+        {% for history in status_history %}
+        <div class="flex gap-3">
+          <div class="flex-shrink-0">
+            <div class="w-2 h-2 mt-2 rounded-full bg-indigo-600 dark:bg-indigo-400"></div>
+          </div>
+          <div class="flex-1">
+            <p class="text-sm font-medium text-gray-900 dark:text-white">{{ history.get_status_display }}</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400">{{ history.changed_at|date:"d/m/Y H:i" }}</p>
+            {% if history.notes %}
+            <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">{{ history.notes }}</p>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="text-sm text-gray-500 dark:text-gray-400 text-center py-4">Sem histórico</p>
+      {% endif %}
+    </div>
+
+    <!-- Incidentes -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 scale-in">
+      <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+        <i data-lucide="alert-triangle" class="w-5 h-5 text-red-600 dark:text-red-400"></i>
+        Incidentes
+      </h2>
+      {% if incidents %}
+      <div class="space-y-3">
+        {% for incident in incidents %}
+        <div class="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+          <div class="flex items-start justify-between">
+            <div>
+              <p class="text-sm font-medium text-gray-900 dark:text-white">{{ incident.get_incident_type_display }}</p>
+              <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">{{ incident.description }}</p>
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ incident.created_at|date:"d/m/Y H:i" }}</p>
+            </div>
+            {% if incident.resolved %}
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400">
+              Resolvido
+            </span>
+            {% else %}
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
+              Pendente
+            </span>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="text-sm text-gray-500 dark:text-gray-400 text-center py-4">Sem incidentes registrados</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<script>
+  lucide.createIcons();
+</script>
+{% endblock %}

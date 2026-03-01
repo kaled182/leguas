@@ -1,4 +1,4 @@
-"""
+﻿"""
 Safe and optimized Markdown-to-HTML conversion for the documentation panel.
 
 IMPROVEMENTS IMPLEMENTED:
@@ -45,18 +45,18 @@ logger = logging.getLogger(__name__)
 
 class CacheStrategy(Enum):
     """Cache strategies available for the documentation pipeline."""
+
     CONTENT_HASH = "content_hash"
     TIMESTAMP = "timestamp"
     HYBRID = "hybrid"
+
 
 @dataclass
 class DocsConfig:
     """Central configuration for the documentation module."""
 
     # Paths and directories
-    docs_dir: str = field(
-        default_factory=lambda: os.getenv("DOCS_DIR", "doc")
-    )
+    docs_dir: str = field(default_factory=lambda: os.getenv("DOCS_DIR", "doc"))
     docs_path: Path | None = None
 
     # Cache
@@ -79,9 +79,7 @@ class DocsConfig:
 
     # GitHub
     github_base_url: str = field(
-        default_factory=lambda: os.getenv("DOCS_GITHUB_BASE_URL", "").rstrip(
-            "/"
-        )
+        default_factory=lambda: os.getenv("DOCS_GITHUB_BASE_URL", "").rstrip("/")
     )
 
     # Performance
@@ -115,6 +113,7 @@ CONFIG = DocsConfig()
 
 class DocMetadata(TypedDict, total=False):
     """Typed structure that describes documentation metadata."""
+
     title: str
     filename: str
     summary: str
@@ -133,6 +132,7 @@ class DocMetadata(TypedDict, total=False):
 
 class ProcessingMetrics(TypedDict):
     """Processing metrics captured while rendering markdown."""
+
     processing_time_ms: float
     cache_hit: bool
     file_size_bytes: int
@@ -146,8 +146,8 @@ class MarkdownProcessor(Protocol):
         self,
         text: str,
         filename: str,
-    ) -> tuple[str, dict[str, Any]]:
-        ...
+    ) -> tuple[str, dict[str, Any]]: ...
+
 
 # =============================================================================
 # PRIORITIZED FILES AND MARKDOWN SETTINGS
@@ -185,18 +185,18 @@ DEFAULT_FILES: dict[str, dict[str, Any]] = {
 
 # Optimized markdown2 extras
 MARKDOWN_EXTRAS = [
-    "fenced-code-blocks",    # Code blocks with syntax highlighting
-    "tables",                # Tables
-    "header-ids",            # Automatic header IDs
-    "toc",                   # Table of contents
-    "strike",                # Strikethrough text
-    "code-friendly",         # Improved inline code handling
-    "cuddled-lists",         # Compact list support
-    "smarty-pants",          # Smart typography
-    "task_list",             # Task list support
-    "break-on-newline",      # Line break support
-    "footnotes",             # Footnotes
-    "metadata",              # YAML front matter metadata
+    "fenced-code-blocks",  # Code blocks with syntax highlighting
+    "tables",  # Tables
+    "header-ids",  # Automatic header IDs
+    "toc",  # Table of contents
+    "strike",  # Strikethrough text
+    "code-friendly",  # Improved inline code handling
+    "cuddled-lists",  # Compact list support
+    "smarty-pants",  # Smart typography
+    "task_list",  # Task list support
+    "break-on-newline",  # Line break support
+    "footnotes",  # Footnotes
+    "metadata",  # YAML front matter metadata
 ]
 
 # =============================================================================
@@ -219,6 +219,7 @@ class HTMLSanitizer:
         """Initialize bleach configuration when the package is available."""
         try:
             import bleach
+
             self.has_bleach = True
 
             # Base set of allowed tags
@@ -257,14 +258,11 @@ class HTMLSanitizer:
             }
 
             # Allowed attributes
-            base_attrs = dict(
-                getattr(bleach.sanitizer, "ALLOWED_ATTRIBUTES", {})
-            )
+            base_attrs = dict(getattr(bleach.sanitizer, "ALLOWED_ATTRIBUTES", {}))
             self.allowed_attributes = {
                 **base_attrs,
                 "*": list(
-                    set(base_attrs.get("*", []))
-                    | {"class", "id", "title", "style"}
+                    set(base_attrs.get("*", [])) | {"class", "id", "title", "style"}
                 ),
                 "a": list(
                     set(base_attrs.get("a", []))
@@ -275,8 +273,7 @@ class HTMLSanitizer:
                     | {"src", "alt", "title", "width", "height"}
                 ),
                 "code": list(
-                    set(base_attrs.get("code", []))
-                    | {"class", "data-language"}
+                    set(base_attrs.get("code", [])) | {"class", "data-language"}
                 ),
                 "pre": list(set(base_attrs.get("pre", [])) | {"class"}),
                 "table": list(
@@ -295,9 +292,7 @@ class HTMLSanitizer:
             ) | {"http", "https", "mailto", "data"}
 
         except ImportError:
-            logger.warning(
-                "Bleach is not installed. HTML sanitization disabled."
-            )
+            logger.warning("Bleach is not installed. HTML sanitization disabled.")
             self.has_bleach = False
 
     def sanitize(self, html: str) -> str:
@@ -311,6 +306,7 @@ class HTMLSanitizer:
 
         try:
             import bleach
+
             return bleach.clean(
                 html,
                 tags=list(self.allowed_tags),
@@ -343,14 +339,14 @@ class DocsCacheManager:
     def _compress_data(self, data: str) -> bytes:
         """Compress cached data when compression is enabled."""
         if not CONFIG.enable_compression:
-            return data.encode('utf-8')
-        return zlib.compress(data.encode('utf-8'), level=6)
+            return data.encode("utf-8")
+        return zlib.compress(data.encode("utf-8"), level=6)
 
     def _decompress_data(self, data: bytes) -> str:
         """Decompress cached data when compression is enabled."""
         if not CONFIG.enable_compression:
-            return data.decode('utf-8')
-        return zlib.decompress(data).decode('utf-8')
+            return data.decode("utf-8")
+        return zlib.decompress(data).decode("utf-8")
 
     def _get_cache_key(
         self,
@@ -384,9 +380,7 @@ class DocsCacheManager:
         try:
             compressed_data = self._compress_data(data)
             cache.set(cache_key, compressed_data, timeout=CONFIG.cache_ttl)
-            logger.debug(
-                "Cache set for %s (%d bytes)", filename, len(compressed_data)
-            )
+            logger.debug("Cache set for %s (%d bytes)", filename, len(compressed_data))
             return True
         except Exception as e:
             logger.error("Error storing %s in cache: %s", filename, e)
@@ -427,25 +421,21 @@ class AdvancedMarkdownProcessor:
     def _basic_convert(self, text: str) -> str:
         """Perform a minimal conversion when markdown2 is unavailable."""
         # Remove fenced code markers but keep content
-        text = re.sub(r'```(.*?)```', r'\1', text, flags=re.DOTALL)
+        text = re.sub(r"```(.*?)```", r"\1", text, flags=re.DOTALL)
         # Convert headers to strong text
         text = re.sub(
-            r'^#{1,6}\s*(.+)$',
-            r'<strong>\1</strong>',
+            r"^#{1,6}\s*(.+)$",
+            r"<strong>\1</strong>",
             text,
             flags=re.MULTILINE,
         )
         # Emphasis replacements
-        text = re.sub(r'\*\*([^*]+)\*\*', r'<strong>\1</strong>', text)
-        text = re.sub(r'\*([^*]+)\*', r'<em>\1</em>', text)
+        text = re.sub(r"\*\*([^*]+)\*\*", r"<strong>\1</strong>", text)
+        text = re.sub(r"\*([^*]+)\*", r"<em>\1</em>", text)
         # Basic links
-        text = re.sub(r'\[([^\]]+)\]\(([^)]+)\)', r'<a href="\2">\1</a>', text)
+        text = re.sub(r"\[([^\]]+)\]\(([^)]+)\)", r'<a href="\2">\1</a>', text)
         # Line breaks to <br>
-        return (
-            '<p>'
-            + text.replace('\n\n', '</p><p>').replace('\n', '<br>')
-            + '</p>'
-        )
+        return "<p>" + text.replace("\n\n", "</p><p>").replace("\n", "<br>") + "</p>"
 
     def process(self, text: str, filename: str) -> tuple[str, dict[str, Any]]:
         """
@@ -459,13 +449,13 @@ class AdvancedMarkdownProcessor:
         if frontmatter_meta:
             text = self._remove_frontmatter(text)
 
-    # Process markdown content
+        # Process markdown content
         if self.markdown is not None:
             html = self.markdown.convert(text)
         else:
             html = self._basic_convert(text)
 
-    # Additional metadata collected during processing
+        # Additional metadata collected during processing
         extra_metadata = {
             **frontmatter_meta,
             "word_count": self._count_words(text),
@@ -480,7 +470,7 @@ class AdvancedMarkdownProcessor:
     def _extract_frontmatter(self, text: str) -> dict[str, Any]:
         """Extract metadata from the YAML front matter."""
         frontmatter_match = re.match(
-            r'^---\s*\n(.*?)\n---\s*\n',
+            r"^---\s*\n(.*?)\n---\s*\n",
             text,
             re.DOTALL,
         )
@@ -489,12 +479,11 @@ class AdvancedMarkdownProcessor:
 
         try:
             import yaml
+
             frontmatter_text = frontmatter_match.group(1)
             return yaml.safe_load(frontmatter_text) or {}
         except ImportError:
-            logger.debug(
-                "PyYAML is not installed. Ignoring front matter block."
-            )
+            logger.debug("PyYAML is not installed. Ignoring front matter block.")
         except Exception as e:
             logger.warning("Error while processing front matter: %s", e)
 
@@ -503,8 +492,8 @@ class AdvancedMarkdownProcessor:
     def _remove_frontmatter(self, text: str) -> str:
         """Remove front matter from the markdown text."""
         return re.sub(
-            r'^---\s*\n.*?\n---\s*\n',
-            '',
+            r"^---\s*\n.*?\n---\s*\n",
+            "",
             text,
             count=1,
             flags=re.DOTALL,
@@ -513,9 +502,9 @@ class AdvancedMarkdownProcessor:
     def _count_words(self, text: str) -> int:
         """Count the words in the text (excluding code blocks)."""
         # Remove code blocks before counting
-        text_no_code = re.sub(r'```.*?```', '', text, flags=re.DOTALL)
-        text_no_code = re.sub(r'`[^`]*`', '', text_no_code)
-        words = re.findall(r'\b\w+\b', text_no_code)
+        text_no_code = re.sub(r"```.*?```", "", text, flags=re.DOTALL)
+        text_no_code = re.sub(r"`[^`]*`", "", text_no_code)
+        words = re.findall(r"\b\w+\b", text_no_code)
         return len(words)
 
     def _calculate_reading_time(self, text: str) -> int:
@@ -525,8 +514,9 @@ class AdvancedMarkdownProcessor:
 
     def _count_sections(self, text: str) -> int:
         """Count the number of sections (headers) in the document."""
-        headers = re.findall(r'^#+\s+.+$', text, re.MULTILINE)
+        headers = re.findall(r"^#+\s+.+$", text, re.MULTILINE)
         return len(headers)
+
 
 # =============================================================================
 # ADVANCED UTILITIES
@@ -548,44 +538,44 @@ def _strip_md_for_summary(text: str) -> str:
     Improved version with additional patterns.
     """
     # Remove front matter first
-    text = re.sub(r'^---\s*\n.*?\n---\s*\n', '', text, flags=re.DOTALL)
+    text = re.sub(r"^---\s*\n.*?\n---\s*\n", "", text, flags=re.DOTALL)
 
     # Remove code blocks
-    text = re.sub(r'```.*?```', '', text, flags=re.DOTALL)
+    text = re.sub(r"```.*?```", "", text, flags=re.DOTALL)
 
     # Remove markdown elements sequentially
     patterns = [
-        (r'`([^`]+)`', r'\1'),                              # Inline code
-        (r'^#{1,6}\s+(.*)$', r'\1'),            # Headers (keep text)
-        (r'!\[[^\]]*\]\([^)]*\)', ''),                  # Images
-        (r'\[([^\]]+)\]\([^)]*\)', r'\1'),             # Links
-        (r'\*\*([^*]+)\*\*', r'\1'),                    # Bold
-        (r'__(([^_]+))__', r'\1'),                          # Alternate bold
-        (r'\*([^*]+)\*', r'\1'),                          # Italic
-        (r'_([^_]+)_', r'\1'),                              # Alternate italic
-        (r'~~([^~]+)~~', r'\1'),                            # Strikethrough
+        (r"`([^`]+)`", r"\1"),  # Inline code
+        (r"^#{1,6}\s+(.*)$", r"\1"),  # Headers (keep text)
+        (r"!\[[^\]]*\]\([^)]*\)", ""),  # Images
+        (r"\[([^\]]+)\]\([^)]*\)", r"\1"),  # Links
+        (r"\*\*([^*]+)\*\*", r"\1"),  # Bold
+        (r"__(([^_]+))__", r"\1"),  # Alternate bold
+        (r"\*([^*]+)\*", r"\1"),  # Italic
+        (r"_([^_]+)_", r"\1"),  # Alternate italic
+        (r"~~([^~]+)~~", r"\1"),  # Strikethrough
         # Inline code/backticks
-        (r'`{1,2}([^`]+)`{1,2}', r'\1'),
+        (r"`{1,2}([^`]+)`{1,2}", r"\1"),
     ]
 
     for pattern, repl in patterns:
         # Use re.MULTILINE for patterns anchored at the start
-        flags = re.MULTILINE if '^' in pattern else 0
+        flags = re.MULTILINE if "^" in pattern else 0
         text = re.sub(pattern, repl, text, flags=flags)
 
     # Remove list markers and residual blockquotes
-    text = re.sub(r'^[>\-\*\+]\s+', '', text, flags=re.MULTILINE)
+    text = re.sub(r"^[>\-\*\+]\s+", "", text, flags=re.MULTILINE)
     # Remove simple table rows (lines containing |)
-    text = re.sub(r'^\s*\|.*\n', '', text, flags=re.MULTILINE)
+    text = re.sub(r"^\s*\|.*\n", "", text, flags=re.MULTILINE)
     # Remove basic HTML tags
-    text = re.sub(r'<[^>]+>', '', text)
+    text = re.sub(r"<[^>]+>", "", text)
 
     # Normalize whitespace
-    text = re.sub(r'\s+', ' ', text).strip()
+    text = re.sub(r"\s+", " ", text).strip()
 
     # Enforce summary length limit
     if len(text) > CONFIG.summary_length:
-        text = text[:CONFIG.summary_length].rstrip() + '...'
+        text = text[: CONFIG.summary_length].rstrip() + "..."
     return text
 
 
@@ -755,9 +745,7 @@ def get_available_docs() -> dict[str, dict[str, Any]]:
             if defaults:
                 metadata.update(defaults)
 
-            metadata.setdefault(
-                "title", _generate_title_from_path(relative_path)
-            )
+            metadata.setdefault("title", _generate_title_from_path(relative_path))
             metadata.setdefault("summary", _extract_summary_from_file(entry))
 
             docs[rel_key] = metadata

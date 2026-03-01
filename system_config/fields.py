@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import base64
 import hashlib
@@ -56,7 +56,9 @@ class EncryptedCharField(models.TextField):
     def check(self, **kwargs):
         errors = super().check(**kwargs)
         if self.max_plain_length <= 0:
-            errors.append(checks.Error("max_plain_length must be greater than zero", obj=self))
+            errors.append(
+                checks.Error("max_plain_length must be greater than zero", obj=self)
+            )
         return errors
 
     def get_prep_value(self, value):
@@ -64,7 +66,9 @@ class EncryptedCharField(models.TextField):
         if value in (None, ""):
             return value
         if len(value) > self.max_plain_length:
-            raise ValidationError(f"Value exceeds the limit of {self.max_plain_length} characters")
+            raise ValidationError(
+                f"Value exceeds the limit of {self.max_plain_length} characters"
+            )
         return encrypt_string(value)
 
     def to_python(self, value):
@@ -84,4 +88,3 @@ class EncryptedCharField(models.TextField):
             return decrypt_string(value)
         except (InvalidToken, ValueError):
             return value
-

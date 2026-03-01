@@ -1,4 +1,4 @@
-"""
+﻿"""
 Modelos para autenticação customizada de motoristas.
 
 Este módulo contém:
@@ -6,87 +6,79 @@ Este módulo contém:
 - DriverRoute: Utilitário para gerenciar rotas de motoristas
 """
 
-from django.db import models
+from django.contrib.auth.hashers import check_password, make_password
 from django.contrib.auth.models import User
-from django.contrib.auth.hashers import make_password, check_password
+from django.db import models
 
 
 class DriverAccess(models.Model):
     """
     Modelo para gerenciar acessos de motoristas ao sistema.
-    
+
     Este modelo permite que gestores criem contas para motoristas
     acessarem suas rotas e pedidos sem usar o sistema de usuários do Django.
     """
-    
+
     # Relacionamentos
     user = models.ForeignKey(
-        User, 
-        on_delete=models.CASCADE, 
-        related_name='drivers',
+        User,
+        on_delete=models.CASCADE,
+        related_name="drivers",
         verbose_name="Gestor Responsável",
-        help_text="Gestor responsável por este motorista"
+        help_text="Gestor responsável por este motorista",
     )
     driver = models.ForeignKey(
-        'ordersmanager_paack.Driver', 
-        on_delete=models.CASCADE, 
-        related_name='driver_accesses', 
-        null=True, 
+        "ordersmanager_paack.Driver",
+        on_delete=models.CASCADE,
+        related_name="driver_accesses",
+        null=True,
         blank=True,
         verbose_name="Motorista",
-        help_text="Motorista do sistema de pedidos"
+        help_text="Motorista do sistema de pedidos",
     )
-    
+
     # Informações pessoais
-    profile_picture = models.ImageField(upload_to='drivers/profile_pictures/', null=True, blank=True)
+    profile_picture = models.ImageField(
+        upload_to="drivers/profile_pictures/", null=True, blank=True
+    )
 
     first_name = models.CharField(
-        max_length=100,
-        verbose_name="Nome",
-        help_text="Nome do motorista"
+        max_length=100, verbose_name="Nome", help_text="Nome do motorista"
     )
     last_name = models.CharField(
         max_length=100,
         verbose_name="Sobrenome",
-        help_text="Sobrenome do motorista"
+        help_text="Sobrenome do motorista",
     )
     phone = models.CharField(
         max_length=20,
         verbose_name="Telefone",
-        help_text="Número de telefone do motorista"
+        help_text="Número de telefone do motorista",
     )
     nif = models.CharField(
         max_length=20,
         verbose_name="NIF",
-        help_text="Número de identificação fiscal"
+        help_text="Número de identificação fiscal",
     )
     email = models.EmailField(
-        unique=True,
-        verbose_name="Email",
-        help_text="Email único para login"
+        unique=True, verbose_name="Email", help_text="Email único para login"
     )
-    
+
     # Autenticação
     password = models.CharField(
         max_length=128,
         verbose_name="Senha",
-        help_text="Hash da senha para autenticação"
+        help_text="Hash da senha para autenticação",
     )
-    
+
     # Timestamps
-    created_at = models.DateTimeField(
-        auto_now_add=True,
-        verbose_name="Criado em"
-    )
-    updated_at = models.DateTimeField(
-        auto_now=True,
-        verbose_name="Atualizado em"
-    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Criado em")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Atualizado em")
 
     class Meta:
         verbose_name = "Acesso de Motorista"
         verbose_name_plural = "Acessos de Motoristas"
-        ordering = ['first_name', 'last_name']
+        ordering = ["first_name", "last_name"]
 
     def __str__(self):
         return f"{self.first_name} {self.last_name} ({self.email})"
@@ -112,15 +104,15 @@ class DriverAccess(models.Model):
 class DriverRoute:
     """
     Classe utilitária para montar e gerenciar a rota de um motorista.
-    
+
     Esta classe fornece métodos para acessar os pedidos atribuídos
     a um motorista específico, com filtros opcionais por data.
     """
-    
+
     def __init__(self, driver):
         """
         Inicializa a rota para um Driver específico.
-        
+
         Args:
             driver: Instância do modelo Driver
         """
@@ -129,26 +121,27 @@ class DriverRoute:
     def get_orders(self, date=None):
         """
         Retorna os pedidos atribuídos ao motorista.
-        
+
         Args:
             date (date, optional): Data para filtrar pedidos
-            
+
         Returns:
             QuerySet: Pedidos do motorista
         """
         if not self.driver:
             from ordersmanager_paack.models import Order
+
             return Order.objects.none()
-            
+
         # Importação local para evitar import circular
-        from ordersmanager_paack.models import Order  
-        
+        from ordersmanager_paack.models import Order
+
         qs = Order.objects.filter(dispatch__driver=self.driver)
-        
+
         if date:
             qs = qs.filter(intended_delivery_date=date)
-            
-        return qs.order_by('intended_delivery_date', 'created_at')
+
+        return qs.order_by("intended_delivery_date", "created_at")
 
     def get_orders_count(self, date=None):
         """Retorna o número total de pedidos."""
@@ -170,25 +163,24 @@ class DriverRoute:
     def as_dict(self, date=None):
         """
         Retorna a rota como uma lista de dicionários com informações dos pedidos.
-        
+
         Args:
             date (date, optional): Data para filtrar pedidos
-            
+
         Returns:
             list: Lista de dicionários com dados dos pedidos
         """
         orders = self.get_orders(date)
         return [
             {
-                'order_id': order.order_id,
-                'retailer': order.retailer,
-                'client_address': order.client_address,
-                'intended_delivery_date': order.intended_delivery_date,
-                'actual_delivery_date': order.actual_delivery_date,
-                'status': order.simplified_order_status,
-                'is_delivered': order.is_delivered,
-                'is_failed': order.is_failed,
+                "order_id": order.order_id,
+                "retailer": order.retailer,
+                "client_address": order.client_address,
+                "intended_delivery_date": order.intended_delivery_date,
+                "actual_delivery_date": order.actual_delivery_date,
+                "status": order.simplified_order_status,
+                "is_delivered": order.is_delivered,
+                "is_failed": order.is_failed,
             }
             for order in orders
         ]
-

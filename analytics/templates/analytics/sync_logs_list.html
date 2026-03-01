@@ -1,0 +1,313 @@
+{% extends 'paack_dashboard/base.html' %}
+
+{% block title %}Logs de Sincronização - Analytics{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
+                Logs de Sincronização
+            </h1>
+            <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                Histórico detalhado de {{ start_date|date:"d/m/Y" }} a {{ end_date|date:"d/m/Y" }}
+            </p>
+        </div>
+        <a href="{% url 'analytics:api_status_dashboard' %}" class="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all shadow-md">
+            <i data-lucide="activity" class="w-4 h-4"></i>
+            <span>Dashboard de Status</span>
+        </a>
+    </div>
+
+    <!-- Estatísticas do Período -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div class="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 rounded-2xl p-6 border border-blue-200 dark:border-blue-700">
+            <div class="flex items-center justify-between mb-4">
+                <div class="p-3 bg-blue-500 rounded-xl">
+                    <i data-lucide="database" class="w-6 h-6 text-white"></i>
+                </div>
+            </div>
+            <div class="text-3xl font-bold text-blue-900 dark:text-blue-100 mb-1">
+                {{ total_logs }}
+            </div>
+            <p class="text-sm text-blue-600 dark:text-blue-400">Total de Logs</p>
+        </div>
+
+        <div class="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-800/30 rounded-2xl p-6 border border-green-200 dark:border-green-700">
+            <div class="flex items-center justify-between mb-4">
+                <div class="p-3 bg-green-500 rounded-xl">
+                    <i data-lucide="check-circle" class="w-6 h-6 text-white"></i>
+                </div>
+            </div>
+            <div class="text-3xl font-bold text-green-900 dark:text-green-100 mb-1">
+                {{ success_logs }}
+            </div>
+            <p class="text-sm text-green-600 dark:text-green-400">Bem-Sucedidos</p>
+        </div>
+
+        <div class="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/30 dark:to-red-800/30 rounded-2xl p-6 border border-red-200 dark:border-red-700">
+            <div class="flex items-center justify-between mb-4">
+                <div class="p-3 bg-red-500 rounded-xl">
+                    <i data-lucide="x-circle" class="w-6 h-6 text-white"></i>
+                </div>
+            </div>
+            <div class="text-3xl font-bold text-red-900 dark:text-red-100 mb-1">
+                {{ error_logs }}
+            </div>
+            <p class="text-sm text-red-600 dark:text-red-400">Com Erros</p>
+        </div>
+
+        <div class="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/30 dark:to-purple-800/30 rounded-2xl p-6 border border-purple-200 dark:border-purple-700">
+            <div class="flex items-center justify-between mb-4">
+                <div class="p-3 bg-purple-500 rounded-xl">
+                    <i data-lucide="clock" class="w-6 h-6 text-white"></i>
+                </div>
+            </div>
+            <div class="text-3xl font-bold text-purple-900 dark:text-purple-100 mb-1">
+                {{ avg_duration_seconds|floatformat:1 }}s
+            </div>
+            <p class="text-sm text-purple-600 dark:text-purple-400">Duração Média</p>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        <form method="get" class="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <!-- Integração -->
+            <div>
+                <label for="integration" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <i data-lucide="satellite" class="w-4 h-4 inline mr-1"></i>
+                    Integração
+                </label>
+                <select name="integration" id="integration" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+                    <option value="">Todas</option>
+                    {% for integ in integrations %}
+                    <option value="{{ integ.id }}" {% if filters.integration_id == integ.id|stringformat:"s" %}selected{% endif %}>
+                        {{ integ.partner.name }} ({{ integ.get_integration_type_display }})
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Status -->
+            <div>
+                <label for="status" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <i data-lucide="flag" class="w-4 h-4 inline mr-1"></i>
+                    Status
+                </label>
+                <select name="status" id="status" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+                    <option value="">Todos</option>
+                    {% for value, label in status_choices %}
+                    <option value="{{ value }}" {% if filters.status == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Operação -->
+            <div>
+                <label for="operation" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <i data-lucide="zap" class="w-4 h-4 inline mr-1"></i>
+                    Operação
+                </label>
+                <select name="operation" id="operation" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+                    <option value="">Todas</option>
+                    {% for value, label in operation_choices %}
+                    <option value="{{ value }}" {% if filters.operation == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Período -->
+            <div>
+                <label for="days" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <i data-lucide="calendar" class="w-4 h-4 inline mr-1"></i>
+                    Período
+                </label>
+                <select name="days" id="days" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+                    <option value="1" {% if filters.days == 1 %}selected{% endif %}>Hoje</option>
+                    <option value="7" {% if filters.days == 7 %}selected{% endif %}>Últimos 7 dias</option>
+                    <option value="30" {% if filters.days == 30 %}selected{% endif %}>Últimos 30 dias</option>
+                    <option value="90" {% if filters.days == 90 %}selected{% endif %}>Últimos 90 dias</option>
+                </select>
+            </div>
+
+            <!-- Botão -->
+            <div class="flex items-end">
+                <button type="submit" class="w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all">
+                    <i data-lucide="filter" class="w-4 h-4"></i>
+                    <span>Filtrar</span>
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Tabela de Logs -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <div class="flex items-center gap-2">
+                <i data-lucide="list" class="w-5 h-5 text-gray-500 dark:text-gray-400"></i>
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Logs Detalhados</h2>
+                <span class="ml-auto text-xs text-gray-500 dark:text-gray-400">Limitado a 100 registros</span>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50 dark:bg-gray-700/50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">ID</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Timestamp</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Parceiro</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Operação</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Registros</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Duração</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Taxa</th>
+                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Ações</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                    {% for log in logs %}
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                            #{{ log.id }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900 dark:text-white">{{ log.started_at|date:"d/m/Y" }}</div>
+                            <div class="text-xs text-gray-500 dark:text-gray-400">{{ log.started_at|date:"H:i:s" }}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex items-center gap-2">
+                                <div class="text-sm font-medium text-gray-900 dark:text-white">
+                                    {{ log.integration.partner.name }}
+                                </div>
+                            </div>
+                            <div class="text-xs text-gray-500 dark:text-gray-400">
+                                {{ log.integration.get_integration_type_display }}
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
+                            {{ log.get_operation_display }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center">
+                            {% if log.status == 'SUCCESS' %}
+                            <span class="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full text-xs font-semibold">
+                                {{ log.get_status_display }}
+                            </span>
+                            {% elif log.status == 'ERROR' %}
+                            <span class="px-3 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-full text-xs font-semibold">
+                                {{ log.get_status_display }}
+                            </span>
+                            {% elif log.status == 'PARTIAL' %}
+                            <span class="px-3 py-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 rounded-full text-xs font-semibold">
+                                {{ log.get_status_display }}
+                            </span>
+                            {% elif log.status == 'TIMEOUT' %}
+                            <span class="px-3 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 rounded-full text-xs font-semibold">
+                                {{ log.get_status_display }}
+                            </span>
+                            {% else %}
+                            <span class="px-3 py-1 bg-gray-100 dark:bg-gray-900/30 text-gray-700 dark:text-gray-400 rounded-full text-xs font-semibold">
+                                {{ log.get_status_display }}
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center">
+                            <div class="text-sm font-semibold text-gray-900 dark:text-white">{{ log.records_processed }}</div>
+                            <div class="text-xs text-gray-500 dark:text-gray-400">
+                                <span class="text-green-600 dark:text-green-400">+{{ log.records_created }}</span> /
+                                <span class="text-blue-600 dark:text-blue-400">~{{ log.records_updated }}</span> /
+                                <span class="text-red-600 dark:text-red-400">-{{ log.records_failed }}</span>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-600 dark:text-gray-400">
+                            {% if log.duration_seconds %}
+                                {{ log.duration_seconds|floatformat:1 }}s
+                            {% else %}
+                                <span class="text-gray-400">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center">
+                            {% if log.records_processed > 0 %}
+                            <span class="text-sm font-semibold
+                                {% if log.success_rate >= 90 %}text-green-600 dark:text-green-400
+                                {% elif log.success_rate >= 70 %}text-yellow-600 dark:text-yellow-400
+                                {% else %}text-red-600 dark:text-red-400{% endif %}">
+                                {{ log.success_rate|floatformat:0 }}%
+                            </span>
+                            {% else %}
+                            <span class="text-gray-400">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-center">
+                            {% if log.status in 'ERROR,TIMEOUT,PARTIAL' %}
+                            <form method="post" action="{% url 'analytics:retry_failed_sync' log.id %}" class="inline">
+                                {% csrf_token %}
+                                <button type="submit" 
+                                    onclick="return confirm('Deseja realmente executar retry desta sincronização?')"
+                                    class="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-lg text-xs font-semibold hover:bg-blue-200 dark:hover:bg-blue-800/50 transition-colors">
+                                    <i data-lucide="rotate-cw" class="w-3 h-3"></i>
+                                    Retry
+                                </button>
+                            </form>
+                            {% else %}
+                            <span class="text-gray-400 text-xs">-</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    
+                    <!-- Mensagem de erro expandível -->
+                    {% if log.error_details %}
+                    <tr class="bg-red-50 dark:bg-red-900/10">
+                        <td colspan="9" class="px-6 py-3">
+                            <details class="group">
+                                <summary class="text-sm text-red-700 dark:text-red-400 cursor-pointer hover:text-red-800 dark:hover:text-red-300">
+                                    <i data-lucide="alert-circle" class="w-4 h-4 inline mr-1"></i>
+                                    Detalhes do erro (clique para expandir)
+                                </summary>
+                                <div class="mt-2 p-3 bg-red-100 dark:bg-red-900/30 rounded-lg">
+                                    <p class="text-xs text-red-800 dark:text-red-300 font-mono whitespace-pre-wrap">{{ log.error_details|truncatechars:500 }}</p>
+                                </div>
+                            </details>
+                        </td>
+                    </tr>
+                    {% endif %}
+                    {% empty %}
+                    <tr>
+                        <td colspan="9" class="px-6 py-12 text-center">
+                            <i data-lucide="inbox" class="w-16 h-16 text-gray-400 mx-auto mb-4"></i>
+                            <p class="text-gray-500 dark:text-gray-400">Nenhum log encontrado com os filtros selecionados</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Info Box -->
+    <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-6">
+        <div class="flex gap-4">
+            <div class="flex-shrink-0">
+                <i data-lucide="info" class="w-5 h-5 text-blue-600 dark:text-blue-400"></i>
+            </div>
+            <div class="text-sm text-blue-800 dark:text-blue-300">
+                <p class="font-semibold mb-2">Legenda da coluna "Registros":</p>
+                <ul class="space-y-1 ml-4 list-disc">
+                    <li><span class="text-green-600 dark:text-green-400 font-semibold">+N</span> = Registros criados</li>
+                    <li><span class="text-blue-600 dark:text-blue-400 font-semibold">~N</span> = Registros atualizados</li>
+                    <li><span class="text-red-600 dark:text-red-400 font-semibold">-N</span> = Registros falhados</li>
+                </ul>
+                <p class="mt-3"><strong>Taxa:</strong> Percentual de sucesso (criados + atualizados) / total processado</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        lucide.createIcons();
+    });
+</script>
+{% endblock %}

@@ -51,6 +51,30 @@
         Gestão
       </div>
 
+      <!-- Parceiros - Link direto -->
+      <a href="{% url 'core:partner-list' %}" class="nav-link flex items-center gap-3 p-3 rounded-lg transition-all duration-200 group {% if 'partner' in request.resolver_match.url_name or 'tariff' in request.resolver_match.url_name or 'zone' in request.resolver_match.url_name or 'calculator' in request.resolver_match.url_name %}bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300{% else %}text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-100{% endif %}">
+        <i data-lucide="building-2" class="w-5 h-5 text-current group-hover:scale-110 transition-transform flex-shrink-0"></i>
+        <span class="sidebar-text font-medium">Parceiros & Tarifas</span>
+      </a>
+
+      <!-- Frota - Link direto -->
+      <a href="{% url 'fleet:dashboard' %}" class="nav-link flex items-center gap-3 p-3 rounded-lg transition-all duration-200 group {% if 'vehicle' in request.resolver_match.url_name or 'fleet' in request.resolver_match.url_name or 'maintenance' in request.resolver_match.url_name or 'incident' in request.resolver_match.url_name %}bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-300{% else %}text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-100{% endif %}">
+        <i data-lucide="truck" class="w-5 h-5 text-current group-hover:scale-110 transition-transform flex-shrink-0"></i>
+        <span class="sidebar-text font-medium">Frota</span>
+      </a>
+
+      <!-- Rotas - Link direto -->
+      <a href="{% url 'routes:dashboard' %}" class="nav-link flex items-center gap-3 p-3 rounded-lg transition-all duration-200 group {% if 'shift' in request.resolver_match.url_name or 'routes' in request.resolver_match.namespace %}bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300{% else %}text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-100{% endif %}">
+        <i data-lucide="calendar-clock" class="w-5 h-5 text-current group-hover:scale-110 transition-transform flex-shrink-0"></i>
+        <span class="sidebar-text font-medium">Rotas</span>
+      </a>
+
+      <!-- Pedidos - Link direto -->
+      <a href="{% url 'orders:dashboard' %}" class="nav-link flex items-center gap-3 p-3 rounded-lg transition-all duration-200 group {% if 'orders' in request.resolver_match.namespace %}bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300{% else %}text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-100{% endif %}">
+        <i data-lucide="package" class="w-5 h-5 text-current group-hover:scale-110 transition-transform flex-shrink-0"></i>
+        <span class="sidebar-text font-medium">Pedidos</span>
+      </a>
+
       <a href="{% url 'manualorders_paack:manual_management' %}" class="nav-link flex items-center gap-3 p-3 rounded-lg transition-all duration-200 group text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-100">
         <i data-lucide="file-text" class="w-5 h-5 text-current group-hover:scale-110 transition-transform flex-shrink-0"></i>
         <span class="sidebar-text font-medium">Correção Manual</span>
@@ -64,11 +88,6 @@
         {% if request.resolver_match.url_name == 'drivers_management' %}
           <div class="ml-auto w-2 h-2 bg-primary-500 rounded-full"></div>
         {% endif %}
-      </a>
-
-      <a href="{% url 'paack_dashboard:dashboard_paack' %}" class="nav-link flex items-center gap-3 p-3 rounded-lg transition-all duration-200 group text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-100">
-        <i data-lucide="file-text" class="w-5 h-5 text-current group-hover:scale-110 transition-transform flex-shrink-0"></i>
-        <span class="sidebar-text font-medium">Correção Manual</span>
       </a>
 
       <!-- Relatórios com submenu -->

@@ -1,0 +1,271 @@
+{% extends 'settlements/base.html' %}
+{% load static %}
+
+{% block title %}Mapa de Zonas Postais{% endblock %}
+
+{% block extra_head %}
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+     crossorigin=""/>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+     crossorigin=""></script>
+
+<style>
+    #map {
+        height: calc(100vh - 200px);
+        min-height: 600px;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+    }
+    
+    .leaflet-popup-content-wrapper {
+        border-radius: 8px;
+    }
+    
+    .zone-marker {
+        background-color: #8b5cf6;
+        border: 3px solid white;
+        border-radius: 50%;
+        width: 24px;
+        height: 24px;
+        box-shadow: 0 2px 8px rgba(139, 92, 246, 0.5);
+    }
+    
+    .zone-marker.urban {
+        background-color: #3b82f6;
+        box-shadow: 0 2px 8px rgba(59, 130, 246, 0.5);
+    }
+    
+    .zone-marker.rural {
+        background-color: #10b981;
+        box-shadow: 0 2px 8px rgba(16, 185, 129, 0.5);
+    }
+    
+    .map-legend {
+        background: white;
+        padding: 12px;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    
+    .map-legend h4 {
+        margin: 0 0 8px 0;
+        font-size: 14px;
+        font-weight: 600;
+    }
+    
+    .legend-item {
+        display: flex;
+        align-items: center;
+        margin: 6px 0;
+        font-size: 13px;
+    }
+    
+    .legend-color {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        margin-right: 8px;
+        border: 2px solid white;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6 max-w-full">
+    <!-- Header -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 mb-6 fade-in">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div class="p-3 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl shadow-lg">
+                    <i data-lucide="map" class="w-6 h-6 text-white"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Mapa de Zonas Postais</h1>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                        Visualização geográfica de {{ zones|length }} zona(s) ativa(s)
+                    </p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <a href="{% url 'pricing:zone-list' %}" 
+                   class="px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors flex items-center gap-2">
+                    <i data-lucide="list" class="w-4 h-4"></i>
+                    Lista
+                </a>
+                <a href="{% url 'pricing:zone-create' %}"
+                   class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors flex items-center gap-2">
+                    <i data-lucide="plus" class="w-4 h-4"></i>
+                    Nova Zona
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Estatísticas Rápidas -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">Total de Zonas</p>
+                    <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ zones|length }}</p>
+                </div>
+                <div class="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                    <i data-lucide="map-pin" class="w-6 h-6 text-purple-600 dark:text-purple-400"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">Zonas Urbanas</p>
+                    <p class="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                        {{ zones_urbanas }}
+                    </p>
+                </div>
+                <div class="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                    <i data-lucide="building-2" class="w-6 h-6 text-blue-600 dark:text-blue-400"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">Zonas Rurais</p>
+                    <p class="text-2xl font-bold text-green-600 dark:text-green-400">
+                        {{ zones_rurais }}
+                    </p>
+                </div>
+                <div class="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                    <i data-lucide="trees" class="w-6 h-6 text-green-600 dark:text-green-400"></i>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">Regiões</p>
+                    <p class="text-2xl font-bold text-gray-900 dark:text-white">
+                        {{ num_regioes }}
+                    </p>
+                </div>
+                <div class="p-3 bg-gray-100 dark:bg-gray-700/30 rounded-lg">
+                    <i data-lucide="map" class="w-6 h-6 text-gray-600 dark:text-gray-400"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mapa -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6">
+        <div id="map"></div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Inicializa o mapa
+    const map = L.map('map').setView({{ map_center }}, {{ map_zoom }});
+    
+    // Adiciona tiles do OpenStreetMap
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 18
+    }).addTo(map);
+    
+    // Adiciona legenda
+    const legend = L.control({position: 'bottomright'});
+    legend.onAdd = function (map) {
+        const div = L.DomUtil.create('div', 'map-legend');
+        div.innerHTML = `
+            <h4>Legenda</h4>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #3b82f6"></div>
+                <span>Zona Urbana</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #10b981"></div>
+                <span>Zona Rural</span>
+            </div>
+        `;
+        return div;
+    };
+    legend.addTo(map);
+    
+    // Adiciona marcadores para cada zona
+    const zones = [
+        {% for zone in zones %}
+        {
+            name: "{{ zone.name|escapejs }}",
+            code: "{{ zone.code|escapejs }}",
+            lat: {{ zone.center_latitude }},
+            lng: {{ zone.center_longitude }},
+            region: "{{ zone.get_region_display|escapejs }}",
+            is_urban: {{ zone.is_urban|yesno:"true,false" }},
+            delivery_time: {{ zone.average_delivery_time_hours }},
+            pattern: "{{ zone.postal_code_pattern|escapejs }}",
+            url: "{% url 'pricing:zone-detail' zone.pk %}"
+        }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+    
+    zones.forEach(zone => {
+        // Cria um marcador customizado
+        const markerClass = zone.is_urban ? 'urban' : 'rural';
+        const markerIcon = L.divIcon({
+            className: `zone-marker ${markerClass}`,
+            iconSize: [24, 24],
+            iconAnchor: [12, 12]
+        });
+        
+        const marker = L.marker([zone.lat, zone.lng], {icon: markerIcon}).addTo(map);
+        
+        // Popup com informações
+        const popupContent = `
+            <div class="p-2">
+                <h3 class="font-bold text-lg mb-2">${zone.name}</h3>
+                <p class="text-sm mb-1"><strong>Código:</strong> ${zone.code}</p>
+                <p class="text-sm mb-1"><strong>Região:</strong> ${zone.region}</p>
+                <p class="text-sm mb-1"><strong>Tipo:</strong> ${zone.is_urban ? 'Urbana' : 'Rural'}</p>
+                <p class="text-sm mb-1"><strong>Tempo Entrega:</strong> ${zone.delivery_time}h</p>
+                <p class="text-sm mb-3"><strong>Padrão CP:</strong> <code>${zone.pattern}</code></p>
+                <a href="${zone.url}" class="inline-block px-3 py-1 bg-purple-600 text-white text-sm rounded hover:bg-purple-700">
+                    Ver Detalhes
+                </a>
+            </div>
+        `;
+        
+        marker.bindPopup(popupContent);
+    });
+    
+    // Se não houver zonas, mostra mensagem
+    {% if not zones %}
+    const noDataDiv = L.DomUtil.create('div', 'p-4 bg-yellow-50 dark:bg-yellow-900/20 border-2 border-yellow-300 dark:border-yellow-700 rounded-lg text-center');
+    noDataDiv.innerHTML = `
+        <i data-lucide="alert-triangle" class="w-8 h-8 mx-auto mb-2 text-yellow-600"></i>
+        <p class="font-semibold text-yellow-900 dark:text-yellow-100">Nenhuma zona com coordenadas cadastradas</p>
+        <p class="text-sm text-yellow-700 dark:text-yellow-300 mt-1">Adicione lat/long nas zonas para vê-las no mapa</p>
+    `;
+    
+    const noDataControl = L.control({position: 'topleft'});
+    noDataControl.onAdd = function() {
+        return noDataDiv;
+    };
+    noDataControl.addTo(map);
+    {% endif %}
+    
+    // Inicializa ícones Lucide
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+});
+</script>
+{% endblock %}

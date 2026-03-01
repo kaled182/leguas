@@ -1,4 +1,396 @@
-from django.shortcuts import render
+﻿from datetime import date, timedelta
 
-# Views para orders_manager
-# Serão adicionadas views específicas conforme necessário
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
+from django.db.models import Count, Q
+from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
+
+from .forms import AssignDriverForm, OrderForm, OrderIncidentForm
+from .models import Order, OrderIncident, OrderStatusHistory
+
+
+@login_required
+def orders_dashboard(request):
+    """Dashboard de pedidos com estatísticas e visão geral."""
+    today = date.today()
+
+    # Pedidos de hoje
+    today_orders = Order.objects.filter(scheduled_delivery=today)
+
+    # Estatísticas gerais
+    stats = {
+        "total_today": today_orders.count(),
+        "pending": Order.objects.filter(current_status="PENDING").count(),
+        "assigned": Order.objects.filter(current_status="ASSIGNED").count(),
+        "in_transit": Order.objects.filter(current_status="IN_TRANSIT").count(),
+        "delivered_today": today_orders.filter(current_status="DELIVERED").count(),
+        "incidents": Order.objects.filter(current_status="INCIDENT").count(),
+        "overdue": Order.objects.filter(
+            scheduled_delivery__lt=today,
+            current_status__in=["PENDING", "ASSIGNED", "IN_TRANSIT"],
+        ).count(),
+    }
+
+    # Pedidos atrasados
+    overdue_orders = Order.objects.filter(
+        scheduled_delivery__lt=today,
+        current_status__in=["PENDING", "ASSIGNED", "IN_TRANSIT"],
+    ).select_related("partner", "assigned_driver")[:10]
+
+    # Pedidos de hoje por status
+    today_by_status = (
+        today_orders.values("current_status")
+        .annotate(count=Count("id"))
+        .order_by("current_status")
+    )
+
+    # Próximos 7 dias
+    end_date = today + timedelta(days=7)
+    upcoming_orders = (
+        Order.objects.filter(
+            scheduled_delivery__gt=today,
+            scheduled_delivery__lte=end_date,
+            current_status="PENDING",
+        )
+        .select_related("partner")
+        .order_by("scheduled_delivery")[:10]
+    )
+
+    context = {
+        "stats": stats,
+        "overdue_orders": overdue_orders,
+        "today_by_status": today_by_status,
+        "upcoming_orders": upcoming_orders,
+        "today": today,
+    }
+
+    return render(request, "orders_manager/orders_dashboard.html", context)
+
+
+@login_required
+def order_list(request):
+    """Lista de pedidos com filtros."""
+    orders = Order.objects.select_related("partner", "assigned_driver").all()
+
+    # Filtros
+    status_filter = request.GET.get("status", "")
+    partner_filter = request.GET.get("partner", "")
+    driver_filter = request.GET.get("driver", "")
+    date_filter = request.GET.get("date", "")
+    search_query = request.GET.get("search", "")
+
+    if status_filter:
+        orders = orders.filter(current_status=status_filter)
+
+    if partner_filter:
+        orders = orders.filter(partner_id=partner_filter)
+
+    if driver_filter:
+        orders = orders.filter(assigned_driver_id=driver_filter)
+
+    if date_filter:
+        orders = orders.filter(scheduled_delivery=date_filter)
+
+    if search_query:
+        orders = orders.filter(
+            Q(external_reference__icontains=search_query)
+            | Q(recipient_name__icontains=search_query)
+            | Q(postal_code__icontains=search_query)
+        )
+
+    # Ordenação
+    orders = orders.order_by("-created_at")
+
+    # Paginação
+    paginator = Paginator(orders, 25)
+    page_number = request.GET.get("page")
+    orders_page = paginator.get_page(page_number)
+
+    # Dados para filtros
+    from core.models import Partner
+    from drivers_app.models import DriverProfile
+
+    all_partners = Partner.objects.filter(is_active=True).order_by("name")
+    all_drivers = DriverProfile.objects.filter(is_active=True).order_by("nome_completo")
+
+    context = {
+        "orders": orders_page,
+        "status_filter": status_filter,
+        "partner_filter": partner_filter,
+        "driver_filter": driver_filter,
+        "date_filter": date_filter,
+        "search_query": search_query,
+        "all_partners": all_partners,
+        "all_drivers": all_drivers,
+        "status_choices": Order.STATUS_CHOICES,
+    }
+
+    return render(request, "orders_manager/order_list.html", context)
+
+
+@login_required
+def order_detail(request, pk):
+    """Detalhes de um pedido com histórico."""
+    order = get_object_or_404(
+        Order.objects.select_related("partner", "assigned_driver"), pk=pk
+    )
+
+    # Histórico de status
+    status_history = (
+        OrderStatusHistory.objects.filter(order=order)
+        .select_related("changed_by")
+        .order_by("-changed_at")
+    )
+
+    # Incidentes
+    incidents = (
+        OrderIncident.objects.filter(order=order)
+        .select_related("created_by")
+        .order_by("-created_at")
+    )
+
+    context = {
+        "order": order,
+        "status_history": status_history,
+        "incidents": incidents,
+    }
+
+    return render(request, "orders_manager/order_detail.html", context)
+
+
+@login_required
+def order_create(request):
+    """Criar novo pedido."""
+    if request.method == "POST":
+        form = OrderForm(request.POST)
+        if form.is_valid():
+            order = form.save()
+
+            # Registrar histórico inicial
+            OrderStatusHistory.objects.create(
+                order=order,
+                status=order.current_status,
+                changed_by=request.user,
+                notes="Pedido criado",
+            )
+
+            messages.success(
+                request,
+                f"Pedido {order.external_reference} criado com sucesso!",
+            )
+            return redirect("orders:order_detail", pk=order.pk)
+    else:
+        form = OrderForm()
+
+    context = {"form": form, "order": None}
+    return render(request, "orders_manager/order_form.html", context)
+
+
+@login_required
+def order_edit(request, pk):
+    """Editar pedido existente."""
+    order = get_object_or_404(Order, pk=pk)
+
+    if request.method == "POST":
+        form = OrderForm(request.POST, instance=order)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Pedido atualizado com sucesso!")
+            return redirect("orders:order_detail", pk=order.pk)
+    else:
+        form = OrderForm(instance=order)
+
+    context = {"form": form, "order": order}
+    return render(request, "orders_manager/order_form.html", context)
+
+
+@login_required
+def order_assign_driver(request, pk):
+    """Atribuir motorista a um pedido."""
+    order = get_object_or_404(Order, pk=pk)
+    order.current_status
+
+    if request.method == "POST":
+        form = AssignDriverForm(request.POST, instance=order)
+        if form.is_valid():
+            order = form.save(commit=False)
+            order.assigned_at = timezone.now()
+            if order.current_status == "PENDING":
+                order.current_status = "ASSIGNED"
+            order.save()
+
+            # Registrar no histórico
+            OrderStatusHistory.objects.create(
+                order=order,
+                status=order.current_status,
+                changed_by=request.user,
+                notes=f"Atribuído a {order.assigned_driver.nome_completo}",
+            )
+
+            messages.success(
+                request,
+                f"Pedido atribuído a {order.assigned_driver.nome_completo}!",
+            )
+            return redirect("orders:order_detail", pk=order.pk)
+    else:
+        form = AssignDriverForm(instance=order)
+
+    context = {"form": form, "order": order}
+    return render(request, "orders_manager/assign_driver.html", context)
+
+
+@login_required
+def order_change_status(request, pk):
+    """Alterar status de um pedido."""
+    if request.method != "POST":
+        return redirect("orders:order_detail", pk=pk)
+
+    order = get_object_or_404(Order, pk=pk)
+    new_status = request.POST.get("new_status")
+    notes = request.POST.get("notes", "")
+
+    if new_status not in dict(Order.STATUS_CHOICES):
+        messages.error(request, "Status inválido")
+        return redirect("orders:order_detail", pk=pk)
+
+    order.current_status
+    order.current_status = new_status
+
+    # Atualizar data de entrega se applicable
+    if new_status == "DELIVERED" and not order.delivered_at:
+        order.delivered_at = timezone.now()
+
+    order.save()
+
+    # Registrar no histórico
+    OrderStatusHistory.objects.create(
+        order=order, status=new_status, changed_by=request.user, notes=notes
+    )
+
+    messages.success(
+        request, f"Status alterado para {order.get_current_status_display()}!"
+    )
+    return redirect("orders:order_detail", pk=pk)
+
+
+@login_required
+def order_report_incident(request, pk):
+    """Reportar incidente em um pedido."""
+    order = get_object_or_404(Order, pk=pk)
+
+    if request.method == "POST":
+        form = OrderIncidentForm(request.POST)
+        if form.is_valid():
+            incident = form.save(commit=False)
+            incident.order = order
+            incident.created_by = request.user
+            incident.save()
+
+            # Atualizar status do pedido
+            if order.current_status != "INCIDENT":
+                order.current_status
+                order.current_status = "INCIDENT"
+                order.save()
+
+                OrderStatusHistory.objects.create(
+                    order=order,
+                    status="INCIDENT",
+                    changed_by=request.user,
+                    notes=f"Incidente reportado: {incident.get_incident_type_display()}",
+                )
+
+            messages.success(request, "Incidente reportado com sucesso!")
+            return redirect("orders:order_detail", pk=order.pk)
+    else:
+        form = OrderIncidentForm()
+
+    context = {"form": form, "order": order}
+    return render(request, "orders_manager/incident_form.html", context)
+
+
+# ========== MAPAS ==========
+
+
+@login_required
+def orders_map(request):
+    """Mapa visual de pedidos em tempo real (Leaflet.js)"""
+    from pricing.models import PostalZone
+
+    # Filtros de status
+    status_filter = request.GET.getlist("status")
+    if not status_filter:
+        # Por padrão, mostrar apenas pedidos ativos
+        status_filter = ["PENDING", "ASSIGNED", "IN_TRANSIT"]
+
+    # Buscar pedidos ativos (sem slice ainda para poder filtrar)
+    orders_qs_full = (
+        Order.objects.filter(current_status__in=status_filter)
+        .select_related("partner", "assigned_driver")
+        .order_by("-created_at")
+    )
+
+    # Estatísticas (antes do slice)
+    total_count = orders_qs_full.count()
+    pending_count = orders_qs_full.filter(current_status="PENDING").count()
+    assigned_count = orders_qs_full.filter(current_status="ASSIGNED").count()
+    in_transit_count = orders_qs_full.filter(current_status="IN_TRANSIT").count()
+
+    # Limitar aos últimos 500 pedidos para performance
+    orders_qs = orders_qs_full[:500]
+
+    # Tentar geolocalizar pedidos usando PostalZone
+    orders_with_coords = []
+    orders_without_coords = []
+
+    for order in orders_qs:
+        try:
+            # Buscar zona postal usando o método do modelo
+            zone = PostalZone.find_zone_for_postal_code(order.postal_code)
+
+            if zone and zone.center_latitude and zone.center_longitude:
+                orders_with_coords.append(
+                    {
+                        "order": order,
+                        "lat": float(zone.center_latitude),
+                        "lng": float(zone.center_longitude),
+                        "zone": zone,
+                    }
+                )
+            else:
+                orders_without_coords.append(order)
+        except Exception:
+            orders_without_coords.append(order)
+
+    # Calcular centro do mapa
+    if orders_with_coords:
+        avg_lat = sum(o["lat"] for o in orders_with_coords) / len(orders_with_coords)
+        avg_lng = sum(o["lng"] for o in orders_with_coords) / len(orders_with_coords)
+        map_center = [avg_lat, avg_lng]
+        map_zoom = 8
+    else:
+        # Portugal centro
+        map_center = [39.5, -8.0]
+        map_zoom = 7
+
+    # Estatísticas
+    stats = {
+        "total": total_count,
+        "with_coords": len(orders_with_coords),
+        "without_coords": len(orders_without_coords),
+        "pending": pending_count,
+        "assigned": assigned_count,
+        "in_transit": in_transit_count,
+    }
+
+    context = {
+        "orders_with_coords": orders_with_coords,
+        "orders_without_coords": orders_without_coords,
+        "map_center": map_center,
+        "map_zoom": map_zoom,
+        "stats": stats,
+        "status_filter": status_filter,
+    }
+
+    return render(request, "orders_manager/orders_map.html", context)

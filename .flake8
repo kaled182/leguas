@@ -1,0 +1,45 @@
+[flake8]
+# Configuração Flake8 - Sistema Leguas Franzinas
+# Data: 01/03/2026
+
+# Limite de caracteres por linha (Black padrão = 88)
+max-line-length = 88
+
+# Ignorar regras específicas
+extend-ignore = 
+    E203,  # whitespace before ':'
+    W503,  # line break before binary operator
+    W291,  # trailing whitespace (Black cuida disso)
+    W293,  # blank line contains whitespace
+    E501,  # line too long (já controlado por max-line-length)
+    E502,  # the backslash is redundant between brackets
+    F541,  # f-string without any placeholders
+
+# Excluir diretórios da análise
+exclude = 
+    .git,
+    __pycache__,
+    */migrations/*,
+    .venv,
+    venv,
+    env,
+    staticfiles,
+    media,
+    node_modules,
+    build,
+    dist,
+    *.egg-info,
+    .tox,
+    docs/_build
+
+# Permitir imports não usados em __init__.py
+per-file-ignores =
+    __init__.py:F401,F403
+    settings.py:E501
+    */migrations/*.py:E501
+
+# Complexidade ciclomática máxima
+max-complexity = 15
+
+# Comprimento máximo de docstring
+max-doc-length = 120

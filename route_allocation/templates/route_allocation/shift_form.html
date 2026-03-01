@@ -1,0 +1,218 @@
+{% extends 'settlements/base.html' %}
+
+{% block title %}{% if shift %}Editar Turno{% else %}Novo Turno{% endif %}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-8">
+  <!-- Header -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 fade-in">
+    <div class="flex items-center gap-4">
+      <a href="{% if shift %}{% url 'routes:shift_detail' shift.pk %}{% else %}{% url 'routes:shift_list' %}{% endif %}" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+        <i data-lucide="arrow-left" class="w-5 h-5 text-gray-600 dark:text-gray-400"></i>
+      </a>
+      <div class="p-3 bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl shadow-lg">
+        <i data-lucide="calendar-clock" class="w-6 h-6 text-white"></i>
+      </div>
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
+          {% if shift %}Editar Turno{% else %}Novo Turno{% endif %}
+        </h1>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          {% if shift %}Modificar informações do turno{% else %}Criar um novo turno para alocação de rotas{% endif %}
+        </p>
+      </div>
+    </div>
+  </div>
+
+  {% if shift.status == 'IN_PROGRESS' or shift.status == 'COMPLETED' %}
+  <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 flex items-start gap-3">
+    <i data-lucide="alert-triangle" class="w-5 h-5 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0"></i>
+    <div>
+      <h3 class="font-semibold text-amber-900 dark:text-amber-300">Turno em Andamento ou Concluído</h3>
+      <p class="text-sm text-amber-800 dark:text-amber-400 mt-1">
+        Alguns campos foram desabilitados porque o turno já está em andamento ou foi concluído.
+      </p>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Formulário -->
+  <form method="post" class="space-y-6">
+    {% csrf_token %}
+    
+    <!-- Erros gerais do formulário -->
+    {% if form.non_field_errors %}
+    <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4">
+      <div class="flex items-start gap-3">
+        <i data-lucide="alert-circle" class="w-5 h-5 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0"></i>
+        <div class="flex-1">
+          <h3 class="font-semibold text-red-900 dark:text-red-300 mb-2">Erros no formulário</h3>
+          <ul class="list-disc list-inside text-sm text-red-800 dark:text-red-400 space-y-1">
+            {% for error in form.non_field_errors %}
+            <li>{{ error }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Seção 1: Motorista e Data -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 slide-in">
+      <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
+        <i data-lucide="user" class="w-5 h-5 text-amber-600"></i>
+        Motorista e Data
+      </h2>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Motorista -->
+        <div>
+          <label for="{{ form.driver.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            {{ form.driver.label }}
+            <span class="text-red-500">*</span>
+          </label>
+          {{ form.driver }}
+          {% if form.driver.errors %}
+          <div class="mt-1 text-sm text-red-600 dark:text-red-400">
+            {{ form.driver.errors.0 }}
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- Data -->
+        <div>
+          <label for="{{ form.date.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            {{ form.date.label }}
+            <span class="text-red-500">*</span>
+          </label>
+          {{ form.date }}
+          {% if form.date.errors %}
+          <div class="mt-1 text-sm text-red-600 dark:text-red-400">
+            {{ form.date.errors.0 }}
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Seção 2: Horários -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 slide-in">
+      <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
+        <i data-lucide="clock" class="w-5 h-5 text-amber-600"></i>
+        Horários
+      </h2>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Hora de Início -->
+        <div>
+          <label for="{{ form.start_time.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            {{ form.start_time.label }}
+            <span class="text-red-500">*</span>
+          </label>
+          {{ form.start_time }}
+          {% if form.start_time.errors %}
+          <div class="mt-1 text-sm text-red-600 dark:text-red-400">
+            {{ form.start_time.errors.0 }}
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- Hora de Término -->
+        <div>
+          <label for="{{ form.end_time.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            {{ form.end_time.label }}
+            <span class="text-red-500">*</span>
+          </label>
+          {{ form.end_time }}
+          {% if form.end_time.errors %}
+          <div class="mt-1 text-sm text-red-600 dark:text-red-400">
+            {{ form.end_time.errors.0 }}
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+        <p class="text-sm text-blue-800 dark:text-blue-400 flex items-start gap-2">
+          <i data-lucide="info" class="w-4 h-4 mt-0.5 flex-shrink-0"></i>
+          <span>A hora de início deve ser anterior à hora de término.</span>
+        </p>
+      </div>
+    </div>
+
+    <!-- Seção 3: Zonas Postais e Status -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 slide-in">
+      <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
+        <i data-lucide="map-pin" class="w-5 h-5 text-amber-600"></i>
+        Zonas e Configurações
+      </h2>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Zonas Postais -->
+        <div class="md:col-span-2">
+          <label for="{{ form.assigned_postal_zones.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            {{ form.assigned_postal_zones.label }}
+            <span class="text-red-500">*</span>
+          </label>
+          {{ form.assigned_postal_zones }}
+          {% if form.assigned_postal_zones.help_text %}
+          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ form.assigned_postal_zones.help_text }}</p>
+          {% endif %}
+          {% if form.assigned_postal_zones.errors %}
+          <div class="mt-1 text-sm text-red-600 dark:text-red-400">
+            {{ form.assigned_postal_zones.errors.0 }}
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- Status -->
+        <div>
+          <label for="{{ form.status.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            {{ form.status.label }}
+          </label>
+          {{ form.status }}
+          {% if form.status.errors %}
+          <div class="mt-1 text-sm text-red-600 dark:text-red-400">
+            {{ form.status.errors.0 }}
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- Observações -->
+        <div class="md:col-span-2">
+          <label for="{{ form.notes.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            {{ form.notes.label }}
+          </label>
+          {{ form.notes }}
+          {% if form.notes.help_text %}
+          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ form.notes.help_text }}</p>
+          {% endif %}
+          {% if form.notes.errors %}
+          <div class="mt-1 text-sm text-red-600 dark:text-red-400">
+            {{ form.notes.errors.0 }}
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Botões de Ação -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 scale-in">
+      <div class="flex items-center justify-between gap-4">
+        <a href="{% if shift %}{% url 'routes:shift_detail' shift.pk %}{% else %}{% url 'routes:shift_list' %}{% endif %}" class="px-6 py-3 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg font-medium transition-colors duration-200 flex items-center gap-2">
+          <i data-lucide="x" class="w-4 h-4"></i>
+          Cancelar
+        </a>
+        <button type="submit" class="px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-medium transition-colors duration-200 flex items-center gap-2">
+          <i data-lucide="save" class="w-4 h-4"></i>
+          {% if shift %}Atualizar Turno{% else %}Criar Turno{% endif %}
+        </button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<script>
+  lucide.createIcons();
+</script>
+{% endblock %}

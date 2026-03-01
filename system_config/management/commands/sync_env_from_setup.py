@@ -1,13 +1,12 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import os
 
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
-
 from setup_app.models import FirstTimeSetup
-from setup_app.utils import env_manager
 from setup_app.services.service_reloader import trigger_restart
+from setup_app.utils import env_manager
 
 
 class Command(BaseCommand):
@@ -67,4 +66,6 @@ class Command(BaseCommand):
         if trigger_restart(async_mode=False):
             self.stdout.write(self.style.SUCCESS("Service restart commands executed."))
         else:
-            self.stdout.write("No service restart commands configured; skipped restart.")
+            self.stdout.write(
+                "No service restart commands configured; skipped restart."
+            )

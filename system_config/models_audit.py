@@ -1,4 +1,4 @@
-"""Audit log model for configuration changes tracking."""
+﻿"""Audit log model for configuration changes tracking."""
 
 from __future__ import annotations
 

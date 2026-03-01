@@ -1,4 +1,4 @@
-import json
+﻿import json
 import os
 import subprocess
 import tempfile
@@ -7,7 +7,6 @@ from pathlib import Path
 
 from django.conf import settings
 from django.core.management.base import BaseCommand
-
 from setup_app.services import runtime_settings
 from setup_app.utils import env_manager
 

@@ -1,6 +1,7 @@
-"""
+﻿"""
 Template tags and filters for analytics app.
 """
+
 from django import template
 
 register = template.Library()

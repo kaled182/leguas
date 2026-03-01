@@ -1,3 +1,1 @@
-from django.test import TestCase
-
-# Tests para fleet_management
+﻿# Tests para fleet_management

@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import os
 from typing import Any
@@ -21,10 +21,15 @@ class FirstTimeSetupForm(forms.Form):
     zabbix_url = forms.CharField(label="Zabbix URL", max_length=255)
     auth_type = forms.ChoiceField(
         label="Authentication method",
-        choices=[("token", "Zabbix API token"), ("login", "Zabbix user and password")],
+        choices=[
+            ("token", "Zabbix API token"),
+            ("login", "Zabbix user and password"),
+        ],
         widget=forms.RadioSelect,
     )
-    zabbix_api_key = forms.CharField(label="Zabbix API key", max_length=255, required=False)
+    zabbix_api_key = forms.CharField(
+        label="Zabbix API key", max_length=255, required=False
+    )
     zabbix_user = forms.CharField(label="Zabbix user", max_length=255, required=False)
     zabbix_password = forms.CharField(
         label="Zabbix password",
@@ -79,7 +84,9 @@ class EnvConfigForm(forms.Form):
         help_text="Disable in production to avoid leaking sensitive information.",
     )
     zabbix_api_url = forms.CharField(label="ZABBIX_API_URL", max_length=255)
-    zabbix_api_user = forms.CharField(label="ZABBIX_API_USER", max_length=255, required=False)
+    zabbix_api_user = forms.CharField(
+        label="ZABBIX_API_USER", max_length=255, required=False
+    )
     zabbix_api_password = forms.CharField(
         label="ZABBIX_API_PASSWORD",
         max_length=255,
@@ -92,7 +99,9 @@ class EnvConfigForm(forms.Form):
         required=False,
         help_text="Use when authenticating via API token.",
     )
-    google_maps_api_key = forms.CharField(label="GOOGLE_MAPS_API_KEY", max_length=255, required=False)
+    google_maps_api_key = forms.CharField(
+        label="GOOGLE_MAPS_API_KEY", max_length=255, required=False
+    )
     allowed_hosts = forms.CharField(
         label="ALLOWED_HOSTS",
         max_length=255,
@@ -147,8 +156,7 @@ class EnvConfigForm(forms.Form):
             "focus:ring-blue-500/20 w-full"
         )
         checkbox_class = (
-            "h-4 w-4 text-blue-600 rounded border-gray-300 "
-            "focus:ring-blue-500"
+            "h-4 w-4 text-blue-600 rounded border-gray-300 " "focus:ring-blue-500"
         )
         for field in self.fields.values():
             if isinstance(field.widget, forms.CheckboxInput):

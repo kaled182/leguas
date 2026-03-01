@@ -1,0 +1,258 @@
+{% extends 'settlements/base.html' %}
+
+{% block title %}Turno - {{ shift.driver.user.get_full_name }} - {{ shift.date|date:"d/m/Y" }}{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-8">
+  <!-- Header -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 fade-in">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-4">
+        <a href="{% url 'routes:shift_list' %}" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+          <i data-lucide="arrow-left" class="w-5 h-5 text-gray-600 dark:text-gray-400"></i>
+        </a>
+        <div class="p-3 bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl shadow-lg">
+          <i data-lucide="calendar-clock" class="w-6 h-6 text-white"></i>
+        </div>
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Detalhes do Turno</h1>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">{{ shift.driver.user.get_full_name }} - {{ shift.date|date:"d/m/Y" }}</p>
+        </div>
+      </div>
+      <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium
+        {% if shift.status == 'SCHEDULED' %}bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400
+        {% elif shift.status == 'IN_PROGRESS' %}bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400
+        {% elif shift.status == 'COMPLETED' %}bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400
+        {% else %}bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400{% endif %}">
+        {{ shift.get_status_display }}
+      </span>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Coluna Esquerda - Informações -->
+    <div class="lg:col-span-2 space-y-6">
+      <!-- Informações do Motorista -->
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 slide-in">
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+          <i data-lucide="user" class="w-5 h-5 text-amber-600"></i>
+          Motorista
+        </h2>
+        <div class="flex items-center gap-4">
+          <div class="w-16 h-16 bg-gradient-to-br from-amber-500 to-amber-600 rounded-full flex items-center justify-center text-white text-xl font-bold">
+            {{ shift.driver.user.first_name.0 }}{{ shift.driver.user.last_name.0 }}
+          </div>
+          <div>
+            <h3 class="font-semibold text-gray-900 dark:text-white">{{ shift.driver.user.get_full_name }}</h3>
+            <p class="text-sm text-gray-500 dark:text-gray-400">{{ shift.driver.user.email }}</p>
+            {% if shift.driver.phone %}
+            <p class="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1 mt-1">
+              <i data-lucide="phone" class="w-3 h-3"></i>
+              {{ shift.driver.phone }}
+            </p>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Informações do Turno -->
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 slide-in">
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+          <i data-lucide="calendar-clock" class="w-5 h-5 text-amber-600"></i>
+          Informações do Turno
+        </h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Data</p>
+            <p class="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+              <i data-lucide="calendar" class="w-4 h-4 text-amber-600"></i>
+              {{ shift.date|date:"d/m/Y (D)" }}
+            </p>
+          </div>
+          <div>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Horário Planejado</p>
+            <p class="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+              <i data-lucide="clock" class="w-4 h-4 text-amber-600"></i>
+              {{ shift.start_time }} - {{ shift.end_time }}
+            </p>
+          </div>
+          {% if shift.actual_start_time %}
+          <div>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Início Real</p>
+            <p class="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+              <i data-lucide="play-circle" class="w-4 h-4 text-emerald-600"></i>
+              {{ shift.actual_start_time }}
+            </p>
+          </div>
+          {% endif %}
+          {% if shift.actual_end_time %}
+          <div>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Fim Real</p>
+            <p class="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+              <i data-lucide="stop-circle" class="w-4 h-4 text-red-600"></i>
+              {{ shift.actual_end_time }}
+            </p>
+          </div>
+          {% endif %}
+          {% if duration %}
+          <div class="md:col-span-2">
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Duração</p>
+            <p class="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+              <i data-lucide="timer" class="w-4 h-4 text-amber-600"></i>
+              {{ duration }}
+            </p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Zonas Atribuídas -->
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 slide-in">
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+          <i data-lucide="map-pin" class="w-5 h-5 text-amber-600"></i>
+          Zonas Atribuídas ({{ shift.assigned_postal_zones.count }})
+        </h2>
+        {% if shift.assigned_postal_zones.exists %}
+        <div class="flex flex-wrap gap-2">
+          {% for zone in shift.assigned_postal_zones.all %}
+          <span class="inline-flex items-center px-3 py-1.5 rounded-lg bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 text-sm font-medium">
+            <i data-lucide="map-pin" class="w-3 h-3 mr-1"></i>
+            {{ zone.code }} - {{ zone.name }}
+          </span>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-sm text-gray-500 dark:text-gray-400 italic">Nenhuma zona atribuída</p>
+        {% endif %}
+      </div>
+
+      <!-- Observações -->
+      {% if shift.notes %}
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 slide-in">
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+          <i data-lucide="file-text" class="w-5 h-5 text-amber-600"></i>
+          Observações
+        </h2>
+        <p class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{{ shift.notes }}</p>
+      </div>
+      {% endif %}
+
+      <!-- Pedidos do Turno -->
+      {% if orders %}
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 slide-in">
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+          <i data-lucide="package" class="w-5 h-5 text-amber-600"></i>
+          Pedidos ({{ orders.count }})
+        </h2>
+        <div class="space-y-2">
+          {% for order in orders|slice:":10" %}
+          <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
+            <div>
+              <p class="font-medium text-gray-900 dark:text-white text-sm">{{ order.order_id }}</p>
+              <p class="text-xs text-gray-500 dark:text-gray-400">{{ order.postal_zone.code }}</p>
+            </div>
+            <span class="text-xs px-2 py-1 rounded-full {% if order.status == 'delivered' %}bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400{% else %}bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400{% endif %}">
+              {{ order.get_status_display }}
+            </span>
+          </div>
+          {% endfor %}
+          {% if orders.count > 10 %}
+          <p class="text-sm text-gray-500 dark:text-gray-400 text-center pt-2">... e mais {{ orders.count|add:"-10" }} pedido(s)</p>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Coluna Direita - Ações e Estatísticas -->
+    <div class="space-y-6">
+      <!-- Estatísticas -->
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 scale-in">
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+          <i data-lucide="bar-chart" class="w-5 h-5 text-amber-600"></i>
+          Estatísticas
+        </h2>
+        <div class="space-y-4">
+          <div>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Total de Entregas</p>
+            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ shift.total_deliveries|default:0 }}</p>
+          </div>
+          <div>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Entregas Concluídas</p>
+            <p class="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{{ shift.successful_deliveries|default:0 }}</p>
+          </div>
+          <div>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Taxa de Sucesso</p>
+            <p class="text-2xl font-bold text-amber-600 dark:text-amber-400">{{ shift.success_rate|default:0|floatformat:1 }}%</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Ações Rápidas -->
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 scale-in">
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+          <i data-lucide="zap" class="w-5 h-5 text-amber-600"></i>
+          Ações Rápidas
+        </h2>
+        <div class="space-y-3">
+          {% if shift.status == 'SCHEDULED' %}
+          <form method="post" action="{% url 'routes:shift_start' shift.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="w-full px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium transition-colors duration-200 flex items-center justify-center gap-2">
+              <i data-lucide="play-circle" class="w-4 h-4"></i>
+              Iniciar Turno
+            </button>
+          </form>
+          {% endif %}
+          
+          {% if shift.status == 'IN_PROGRESS' %}
+          <form method="post" action="{% url 'routes:shift_end' shift.pk %}" onsubmit="return confirm('Tem certeza que deseja finalizar este turno?');">
+            {% csrf_token %}
+            <button type="submit" class="w-full px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors duration-200 flex items-center justify-center gap-2">
+              <i data-lucide="stop-circle" class="w-4 h-4"></i>
+              Finalizar Turno
+            </button>
+          </form>
+          {% endif %}
+          
+          <a href="{% url 'routes:shift_edit' shift.pk %}" class="w-full px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-medium transition-colors duration-200 flex items-center justify-center gap-2">
+            <i data-lucide="edit" class="w-4 h-4"></i>
+            Editar Turno
+          </a>
+          
+          <a href="{% url 'routes:shift_list' %}" class="w-full px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg font-medium transition-colors duration-200 flex items-center justify-center gap-2">
+            <i data-lucide="list" class="w-4 h-4"></i>
+            Ver Todos os Turnos
+          </a>
+        </div>
+      </div>
+
+      <!-- Informações do Sistema -->
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 scale-in">
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+          <i data-lucide="info" class="w-5 h-5 text-amber-600"></i>
+          Informações do Sistema
+        </h2>
+        <div class="space-y-3 text-sm">
+          <div>
+            <p class="text-gray-500 dark:text-gray-400">Criado por</p>
+            <p class="font-medium text-gray-900 dark:text-white">{{ shift.created_by.get_full_name|default:"Sistema" }}</p>
+          </div>
+          <div>
+            <p class="text-gray-500 dark:text-gray-400">Criado em</p>
+            <p class="font-medium text-gray-900 dark:text-white">{{ shift.created_at|date:"d/m/Y H:i" }}</p>
+          </div>
+          <div>
+            <p class="text-gray-500 dark:text-gray-400">Atualizado em</p>
+            <p class="font-medium text-gray-900 dark:text-white">{{ shift.updated_at|date:"d/m/Y H:i" }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  lucide.createIcons();
+</script>
+{% endblock %}

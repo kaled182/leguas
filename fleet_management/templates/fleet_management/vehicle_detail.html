@@ -1,0 +1,374 @@
+{% extends 'settlements/base.html' %}
+
+{% block title %}{{ vehicle.license_plate }}{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-6">
+  <!-- Header -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 fade-in">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div class="flex items-start gap-4">
+        <div class="flex-shrink-0">
+          <div class="w-12 h-12 bg-teal-100 dark:bg-teal-900/30 rounded-xl flex items-center justify-center">
+            <i data-lucide="truck" class="w-6 h-6 text-teal-600 dark:text-teal-400"></i>
+          </div>
+        </div>
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-1">
+            {{ vehicle.license_plate }}
+          </h1>
+          <p class="text-gray-600 dark:text-gray-400">{{ vehicle.brand }} {{ vehicle.model }} ({{ vehicle.year }})</p>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            <a href="{% url 'fleet:vehicle_list' %}" class="hover:text-teal-600 dark:hover:text-teal-400 transition-colors">
+              ← Voltar para Veículos
+            </a>
+          </p>
+        </div>
+      </div>
+      <div class="flex flex-wrap gap-3">
+        <a href="{% url 'fleet:vehicle_edit' vehicle.pk %}" class="inline-flex items-center px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-medium transition-colors duration-200 gap-2">
+          <i data-lucide="edit" class="w-4 h-4"></i>
+          Editar
+        </a>
+        <form method="post" action="{% url 'fleet:vehicle_toggle_status' vehicle.pk %}" class="inline">
+          {% csrf_token %}
+          <button type="submit" class="inline-flex items-center px-4 py-2 {% if vehicle.status == 'ACTIVE' %}bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white{% else %}bg-emerald-600 hover:bg-emerald-700 text-white{% endif %} rounded-lg font-medium transition-colors duration-200 gap-2">
+            <i data-lucide="{% if vehicle.status == 'ACTIVE' %}pause{% else %}play{% endif %}" class="w-4 h-4"></i>
+            {% if vehicle.status == 'ACTIVE' %}Inativar{% else %}Ativar{% endif %}
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Alertas -->
+  {% if inspection_alert or insurance_alert %}
+  <div class="space-y-3">
+    {% if inspection_alert %}
+    <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 slide-in">
+      <div class="flex items-center gap-2 text-red-800 dark:text-red-200">
+        <i data-lucide="alert-triangle" class="w-5 h-5"></i>
+        <span class="font-semibold">Atenção: Inspeção {{ inspection_alert }}</span>
+      </div>
+      <p class="mt-1 text-sm text-red-700 dark:text-red-300">
+        A inspeção técnica precisa ser renovada. Data de validade: {{ vehicle.inspection_expiry|date:"d/m/Y" }}
+      </p>
+    </div>
+    {% endif %}
+    {% if insurance_alert %}
+    <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 slide-in">
+      <div class="flex items-center gap-2 text-red-800 dark:text-red-200">
+        <i data-lucide="alert-triangle" class="w-5 h-5"></i>
+        <span class="font-semibold">Atenção: Seguro {{ insurance_alert }}</span>
+      </div>
+      <p class="mt-1 text-sm text-red-700 dark:text-red-300">
+        O seguro do veículo precisa ser renovado. Data de validade: {{ vehicle.insurance_expiry|date:"d/m/Y" }}
+      </p>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <!-- Grid Principal -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Coluna Esquerda: Informações Principais -->
+    <div class="lg:col-span-2 space-y-6">
+      <!-- Card Informações Gerais -->
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 slide-in">
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+          <i data-lucide="info" class="w-5 h-5 text-teal-600 dark:text-teal-400"></i>
+          Informações do Veículo
+        </h2>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</label>
+            <div class="mt-1">
+              {% if vehicle.status == 'ACTIVE' %}
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400">
+                  <i data-lucide="check-circle" class="w-4 h-4 mr-1"></i>
+                  Ativo
+                </span>
+              {% elif vehicle.status == 'MAINTENANCE' %}
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
+                  <i data-lucide="wrench" class="w-4 h-4 mr-1"></i>
+                  Manutenção
+                </span>
+              {% else %}
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+                  <i data-lucide="x-circle" class="w-4 h-4 mr-1"></i>
+                  Inativo
+                </span>
+              {% endif %}
+            </div>
+          </div>
+          <div>
+            <label class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tipo</label>
+            <p class="mt-1 text-sm font-semibold text-gray-900 dark:text-white">{{ vehicle.get_vehicle_type_display }}</p>
+          </div>
+          <div>
+            <label class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Matrícula</label>
+            <p class="mt-1 text-sm font-mono font-bold text-gray-900 dark:text-white">{{ vehicle.license_plate }}</p>
+          </div>
+          <div>
+            <label class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Proprietário</label>
+            <p class="mt-1 text-sm text-gray-900 dark:text-white">{{ vehicle.owner.name }}</p>
+          </div>
+          <div>
+            <label class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Marca/Modelo</label>
+            <p class="mt-1 text-sm text-gray-900 dark:text-white">{{ vehicle.brand }} {{ vehicle.model }}</p>
+          </div>
+          <div>
+            <label class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Ano</label>
+            <p class="mt-1 text-sm text-gray-900 dark:text-white">{{ vehicle.year }}</p>
+          </div>
+        </div>
+        
+        <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-3">Especificações Técnicas</h3>
+          <div class="grid grid-cols-3 gap-4">
+            <div>
+              <label class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Carga Máxima</label>
+              <p class="mt-1 text-sm text-gray-900 dark:text-white">{{ vehicle.max_load_kg|default:"—" }} kg</p>
+            </div>
+            <div>
+              <label class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Combustível</label>
+              <p class="mt-1 text-sm text-gray-900 dark:text-white">{{ vehicle.get_fuel_type_display }}</p>
+            </div>
+            <div>
+              <label class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Quilometragem</label>
+              <p class="mt-1 text-sm text-gray-900 dark:text-white">{{ vehicle.current_odometer_km|default:0|floatformat:0 }} km</p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-3">Documentação</h3>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Validade da Inspeção</label>
+              <p class="mt-1 text-sm text-gray-900 dark:text-white">{{ vehicle.inspection_expiry|date:"d/m/Y"|default:"—" }}</p>
+            </div>
+            <div>
+              <label class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Validade do Seguro</label>
+              <p class="mt-1 text-sm text-gray-900 dark:text-white">{{ vehicle.insurance_expiry|date:"d/m/Y"|default:"—" }}</p>
+            </div>
+            {% if vehicle.insurance_policy_number %}
+            <div class="col-span-2">
+              <label class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nº da Apólice</label>
+              <p class="mt-1 text-sm font-mono text-gray-900 dark:text-white">{{ vehicle.insurance_policy_number }}</p>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+        
+        {% if vehicle.notes %}
+        <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <label class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Notas</label>
+          <p class="mt-1 text-sm text-gray-700 dark:text-gray-300">{{ vehicle.notes }}</p>
+        </div>
+        {% endif %}
+        
+        <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <div class="grid grid-cols-2 gap-4 text-xs text-gray-500 dark:text-gray-400">
+            <div>
+              <span class="font-medium">Adicionado em:</span> {{ vehicle.created_at|date:"d/m/Y H:i" }}
+            </div>
+            <div>
+              <span class="font-medium">Atualizado em:</span> {{ vehicle.updated_at|date:"d/m/Y H:i" }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card Histórico de Atribuições -->
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 scale-in">
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+          <i data-lucide="users" class="w-5 h-5 text-teal-600 dark:text-teal-400"></i>
+          Atribuições de Motoristas
+        </h2>
+        
+        {% if assignments %}
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead>
+              <tr>
+                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Motorista</th>
+                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Atribuído</th>
+                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Devolvido</th>
+                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Km Inicial</th>
+                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Km Final</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+              {% for assignment in assignments %}
+              <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                <td class="px-3 py-3 text-sm text-gray-900 dark:text-white">{{ assignment.driver.user.get_full_name|default:assignment.driver.user.username }}</td>
+                <td class="px-3 py-3 text-sm text-gray-600 dark:text-gray-400">{{ assignment.assigned_date|date:"d/m/Y" }}</td>
+                <td class="px-3 py-3 text-sm text-gray-600 dark:text-gray-400">{{ assignment.returned_date|date:"d/m/Y"|default:"Em uso" }}</td>
+                <td class="px-3 py-3 text-sm text-gray-600 dark:text-gray-400">{{ assignment.odometer_start_km|default:"—" }}</td>
+                <td class="px-3 py-3 text-sm text-gray-600 dark:text-gray-400">{{ assignment.odometer_end_km|default:"—" }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="text-center py-8">
+          <i data-lucide="users" class="w-12 h-12 mx-auto text-gray-400 dark:text-gray-600 mb-3"></i>
+          <p class="text-sm text-gray-500 dark:text-gray-400">Nenhuma atribuição registada para este veículo</p>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Card Manutenções -->
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 scale-in">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+            <i data-lucide="wrench" class="w-5 h-5 text-teal-600 dark:text-teal-400"></i>
+            Manutenções
+          </h2>
+        </div>
+        
+        {% if maintenances %}
+        <div class="space-y-3">
+          {% for maintenance in maintenances %}
+          <div class="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-200 dark:border-gray-700">
+            <div class="flex items-start justify-between">
+              <div>
+                <h3 class="text-sm font-semibold text-gray-900 dark:text-white">{{ maintenance.get_maintenance_type_display }}</h3>
+                <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                  {{ maintenance.description|default:"Sem descrição" }}
+                </p>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Agendado: {{ maintenance.scheduled_date|date:"d/m/Y" }}
+                  {% if maintenance.completed_date %} | Concluído: {{ maintenance.completed_date|date:"d/m/Y" }}{% endif %}
+                </p>
+              </div>
+              <div class="text-right">
+                {% if maintenance.cost %}
+                <p class="text-sm font-bold text-teal-600 dark:text-teal-400">€{{ maintenance.cost }}</p>
+                {% endif %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium 
+                  {% if maintenance.status == 'SCHEDULED' %}bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400
+                  {% elif maintenance.status == 'IN_PROGRESS' %}bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400
+                  {% elif maintenance.status == 'COMPLETED' %}bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400
+                  {% else %}bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400{% endif %} mt-1">
+                  {{ maintenance.get_status_display }}
+                </span>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-8">
+          <i data-lucide="wrench" class="w-12 h-12 mx-auto text-gray-400 dark:text-gray-600 mb-3"></i>
+          <p class="text-sm text-gray-500 dark:text-gray-400">Nenhuma manutenção registada</p>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Card Incidentes -->
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 scale-in">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+            <i data-lucide="alert-triangle" class="w-5 h-5 text-teal-600 dark:text-teal-400"></i>
+            Incidentes
+          </h2>
+        </div>
+        
+        {% if incidents %}
+        <div class="space-y-3">
+          {% for incident in incidents %}
+          <div class="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-200 dark:border-gray-700">
+            <div class="flex items-start justify-between">
+              <div>
+                <h3 class="text-sm font-semibold text-gray-900 dark:text-white">{{ incident.get_incident_type_display }}</h3>
+                <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">{{ incident.description|truncatewords:20 }}</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  {{ incident.incident_date|date:"d/m/Y H:i" }}
+                  {% if incident.location %} | {{ incident.location }}{% endif %}
+                </p>
+              </div>
+              <div class="text-right">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium 
+                  {% if incident.severity == 'LOW' %}bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400
+                  {% elif incident.severity == 'MEDIUM' %}bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400
+                  {% elif incident.severity == 'HIGH' %}bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400
+                  {% else %}bg-red-200 text-red-900 dark:bg-red-800/40 dark:text-red-300{% endif %}">
+                  {{ incident.get_severity_display }}
+                </span>
+                {% if incident.resolved %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400 mt-1 ml-2">
+                  <i data-lucide="check" class="w-3 h-3 mr-1"></i>
+                  Resolvido
+                </span>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-8">
+          <i data-lucide="check-circle" class="w-12 h-12 mx-auto text-emerald-400 dark:text-emerald-600 mb-3"></i>
+          <p class="text-sm text-gray-500 dark:text-gray-400">Nenhum incidente registado</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Coluna Direita: Stats e Ações -->
+    <div class="space-y-6">
+      <!-- Card Resumo -->
+      <div class="bg-gradient-to-br from-teal-50 to-teal-100 dark:from-teal-900/20 dark:to-teal-800/20 rounded-xl shadow-sm border border-teal-200/50 dark:border-teal-700/50 p-6 scale-in">
+        <h3 class="text-sm font-semibold text-teal-900 dark:text-teal-300 mb-4 flex items-center gap-2">
+          <i data-lucide="bar-chart-3" class="w-4 h-4"></i>
+          Estatísticas
+        </h3>
+        <div class="space-y-3">
+          <div class="flex justify-between items-center">
+            <span class="text-sm text-teal-700 dark:text-teal-300">Atribuições</span>
+            <span class="text-2xl font-bold text-teal-900 dark:text-teal-100">{{ assignments|length }}</span>
+          </div>
+          <div class="h-px bg-teal-200 dark:bg-teal-700"></div>
+          <div class="flex justify-between items-center">
+            <span class="text-xs text-teal-600 dark:text-teal-400">Manutenções</span>
+            <span class="text-sm font-semibold text-teal-800 dark:text-teal-200">{{ maintenances|length }}</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-xs text-teal-600 dark:text-teal-400">Incidentes</span>
+            <span class="text-sm font-semibold text-teal-800 dark:text-teal-200">{{ incidents|length }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card Ações Rápidas -->
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 scale-in">
+        <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+          <i data-lucide="zap" class="w-4 h-4 text-teal-600 dark:text-teal-400"></i>
+          Ações Rápidas
+        </h3>
+        <div class="space-y-2">
+          <a href="{% url 'fleet:vehicle_edit' vehicle.pk %}" class="block w-full px-4 py-2 bg-teal-50 hover:bg-teal-100 dark:bg-teal-900/20 dark:hover:bg-teal-900/30 text-teal-700 dark:text-teal-300 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center gap-2">
+            <i data-lucide="edit" class="w-4 h-4"></i>
+            Editar Informações
+          </a>
+          <a href="{% url 'fleet:maintenance_list' %}?vehicle={{ vehicle.pk }}" class="block w-full px-4 py-2 bg-gray-50 hover:bg-gray-100 dark:bg-gray-700/50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center gap-2">
+            <i data-lucide="wrench" class="w-4 h-4"></i>
+            Ver Manutenções
+          </a>
+          <a href="{% url 'fleet:incident_list' %}?vehicle={{ vehicle.pk }}" class="block w-full px-4 py-2 bg-gray-50 hover:bg-gray-100 dark:bg-gray-700/50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center gap-2">
+            <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+            Ver Incidentes
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  lucide.createIcons();
+</script>
+{% endblock %}

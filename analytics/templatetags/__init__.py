@@ -1,1 +1,1 @@
-# Template tags package for analytics app
+﻿# Template tags package for analytics app

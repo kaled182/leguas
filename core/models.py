@@ -1,6 +1,6 @@
-from django.db import models
+﻿from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
-from django.core.exceptions import ValidationError
+from django.db import models
 from django.utils import timezone
 
 
@@ -9,120 +9,112 @@ class Partner(models.Model):
     Representa um parceiro logístico (e.g., Paack, Amazon, DPD, CTT).
     Este é o modelo central da arquitetura multi-partner.
     """
-    
+
     # Identificação
     name = models.CharField(
-        'Nome do Parceiro',
+        "Nome do Parceiro",
         max_length=200,
         unique=True,
-        help_text='Nome oficial do parceiro (e.g., "Paack", "Amazon Logistics")'
+        help_text='Nome oficial do parceiro (e.g., "Paack", "Amazon Logistics")',
     )
-    
+
     nif_validator = RegexValidator(
-        regex=r'^(PT)?\d{9}$',
-        message='NIF deve ter 9 dígitos, opcionalmente precedidos por "PT"'
+        regex=r"^(PT)?\d{9}$",
+        message='NIF deve ter 9 dígitos, opcionalmente precedidos por "PT"',
     )
     nif = models.CharField(
-        'NIF',
+        "NIF",
         max_length=20,
         unique=True,
         validators=[nif_validator],
-        help_text='Número de Identificação Fiscal português'
+        help_text="Número de Identificação Fiscal português",
     )
-    
+
     # Contactos
     contact_email = models.EmailField(
-        'Email de Contacto',
-        help_text='Email principal para comunicações operacionais'
+        "Email de Contacto",
+        help_text="Email principal para comunicações operacionais",
     )
-    
+
     contact_phone = models.CharField(
-        'Telefone de Contacto',
+        "Telefone de Contacto",
         max_length=20,
         blank=True,
-        help_text='Telefone de suporte operacional'
+        help_text="Telefone de suporte operacional",
     )
-    
+
     # Configurações de Integração
     api_credentials = models.JSONField(
-        'Credenciais API',
+        "Credenciais API",
         default=dict,
         blank=True,
-        help_text='Credenciais de API (api_key, api_secret, etc.). Será encriptado em produção.'
+        help_text="Credenciais de API (api_key, api_secret, etc.). Será encriptado em produção.",
     )
-    
+
     # Status
     is_active = models.BooleanField(
-        'Ativo',
+        "Ativo",
         default=True,
-        help_text='Se desativado, não serão feitas novas importações de pedidos'
+        help_text="Se desativado, não serão feitas novas importações de pedidos",
     )
-    
+
     # Configurações Operacionais
     default_delivery_time_days = models.IntegerField(
-        'Prazo de Entrega Padrão (dias)',
+        "Prazo de Entrega Padrão (dias)",
         default=2,
-        help_text='Prazo padrão para entregas sem data específica'
+        help_text="Prazo padrão para entregas sem data específica",
     )
-    
+
     auto_assign_orders = models.BooleanField(
-        'Auto-Atribuir Pedidos',
+        "Auto-Atribuir Pedidos",
         default=True,
-        help_text='Se ativo, pedidos serão automaticamente atribuídos a motoristas disponíveis'
+        help_text="Se ativo, pedidos serão automaticamente atribuídos a motoristas disponíveis",
     )
-    
+
     # Metadados
-    created_at = models.DateTimeField(
-        'Criado em',
-        auto_now_add=True
-    )
-    
-    updated_at = models.DateTimeField(
-        'Atualizado em',
-        auto_now=True
-    )
-    
+    created_at = models.DateTimeField("Criado em", auto_now_add=True)
+
+    updated_at = models.DateTimeField("Atualizado em", auto_now=True)
+
     notes = models.TextField(
-        'Observações',
-        blank=True,
-        help_text='Notas internas sobre o parceiro'
+        "Observações", blank=True, help_text="Notas internas sobre o parceiro"
     )
-    
+
     class Meta:
-        verbose_name = 'Parceiro'
-        verbose_name_plural = 'Parceiros'
-        ordering = ['name']
+        verbose_name = "Parceiro"
+        verbose_name_plural = "Parceiros"
+        ordering = ["name"]
         indexes = [
-            models.Index(fields=['is_active', 'name']),
-            models.Index(fields=['nif']),
+            models.Index(fields=["is_active", "name"]),
+            models.Index(fields=["nif"]),
         ]
-    
+
     def __str__(self):
         return f"{self.name} ({self.nif})"
-    
+
     def clean(self):
         """Validações customizadas"""
         super().clean()
-        
+
         # Normalizar NIF (remover espaços, uppercase PT)
         if self.nif:
             self.nif = self.nif.strip().upper()
-            if not self.nif.startswith('PT') and len(self.nif) == 9:
+            if not self.nif.startswith("PT") and len(self.nif) == 9:
                 self.nif = f"PT{self.nif}"
-        
+
         # Validar email
-        if self.contact_email and not '@' in self.contact_email:
-            raise ValidationError({'contact_email': 'Email inválido'})
-    
+        if self.contact_email and "@" not in self.contact_email:
+            raise ValidationError({"contact_email": "Email inválido"})
+
     def save(self, *args, **kwargs):
         self.full_clean()
         super().save(*args, **kwargs)
-    
+
     @property
     def active_orders_count(self):
         """Conta pedidos ativos deste parceiro"""
-        return self.orders.exclude(current_status='DELIVERED').count()
-    
+        return self.orders.exclude(current_status="DELIVERED").count()
+
     @property
     def has_active_integration(self):
         """Verifica se tem integração API ativa"""
@@ -134,114 +126,247 @@ class PartnerIntegration(models.Model):
     Configurações de integração API com cada parceiro.
     Um parceiro pode ter múltiplas integrações (API, SFTP, Email, etc.)
     """
-    
+
     INTEGRATION_TYPES = [
-        ('API', 'API REST/JSON'),
-        ('SFTP', 'SFTP (CSV/XML)'),
-        ('EMAIL', 'Email (anexos)'),
-        ('WEBHOOK', 'Webhook'),
-        ('MANUAL', 'Manual'),
+        ("API", "API REST/JSON"),
+        ("SFTP", "SFTP (CSV/XML)"),
+        ("EMAIL", "Email (anexos)"),
+        ("WEBHOOK", "Webhook"),
+        ("MANUAL", "Manual"),
     ]
-    
+
     partner = models.ForeignKey(
         Partner,
         on_delete=models.CASCADE,
-        related_name='integrations',
-        verbose_name='Parceiro'
+        related_name="integrations",
+        verbose_name="Parceiro",
     )
-    
+
     integration_type = models.CharField(
-        'Tipo de Integração',
+        "Tipo de Integração",
         max_length=20,
         choices=INTEGRATION_TYPES,
-        default='API'
+        default="API",
     )
-    
+
     endpoint_url = models.URLField(
-        'URL do Endpoint',
+        "URL do Endpoint",
         max_length=500,
         blank=True,
-        help_text='URL base da API do parceiro'
+        help_text="URL base da API do parceiro",
     )
-    
+
     auth_config = models.JSONField(
-        'Configuração de Autenticação',
+        "Configuração de Autenticação",
         default=dict,
         blank=True,
-        help_text='Configuração de autenticação (type: bearer/basic/oauth, tokens, etc.)'
+        help_text="Configuração de autenticação (type: bearer/basic/oauth, tokens, etc.)",
     )
-    
+
     # Configurações de Sincronização
     sync_frequency_minutes = models.IntegerField(
-        'Frequência de Sincronização (minutos)',
+        "Frequência de Sincronização (minutos)",
         default=15,
-        help_text='Intervalo entre importações automáticas de pedidos'
+        help_text="Intervalo entre importações automáticas de pedidos",
     )
-    
-    last_sync_at = models.DateTimeField(
-        'Última Sincronização',
-        null=True,
-        blank=True
-    )
-    
+
+    last_sync_at = models.DateTimeField("Última Sincronização", null=True, blank=True)
+
     last_sync_status = models.CharField(
-        'Status da Última Sincronização',
+        "Status da Última Sincronização",
         max_length=20,
         blank=True,
         choices=[
-            ('SUCCESS', 'Sucesso'),
-            ('ERROR', 'Erro'),
-            ('PARTIAL', 'Parcial'),
-        ]
+            ("SUCCESS", "Sucesso"),
+            ("ERROR", "Erro"),
+            ("PARTIAL", "Parcial"),
+        ],
     )
-    
-    last_sync_message = models.TextField(
-        'Mensagem da Última Sincronização',
-        blank=True
-    )
-    
+
+    last_sync_message = models.TextField("Mensagem da Última Sincronização", blank=True)
+
     # Status
     is_active = models.BooleanField(
-        'Ativo',
+        "Ativo",
         default=True,
-        help_text='Se desativado, não fará sincronizações automáticas'
+        help_text="Se desativado, não fará sincronizações automáticas",
     )
-    
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
-        verbose_name = 'Integração de Parceiro'
-        verbose_name_plural = 'Integrações de Parceiros'
-        ordering = ['partner__name', '-is_active']
+        verbose_name = "Integração de Parceiro"
+        verbose_name_plural = "Integrações de Parceiros"
+        ordering = ["partner__name", "-is_active"]
         indexes = [
-            models.Index(fields=['partner', 'is_active']),
-            models.Index(fields=['last_sync_at']),
+            models.Index(fields=["partner", "is_active"]),
+            models.Index(fields=["last_sync_at"]),
         ]
-    
+
     def __str__(self):
         return f"{self.partner.name} - {self.get_integration_type_display()}"
-    
-    def mark_sync_success(self, message=''):
+
+    def mark_sync_success(self, message=""):
         """Marca sincronização como bem-sucedida"""
         self.last_sync_at = timezone.now()
-        self.last_sync_status = 'SUCCESS'
+        self.last_sync_status = "SUCCESS"
         self.last_sync_message = message
         self.save()
-    
+
     def mark_sync_error(self, error_message):
         """Marca sincronização como erro"""
         self.last_sync_at = timezone.now()
-        self.last_sync_status = 'ERROR'
+        self.last_sync_status = "ERROR"
         self.last_sync_message = error_message
         self.save()
-    
+
     @property
     def is_sync_overdue(self):
         """Verifica se sincronização está atrasada"""
         if not self.last_sync_at:
             return True
-        
+
         from datetime import timedelta
+
         threshold = timezone.now() - timedelta(minutes=self.sync_frequency_minutes * 2)
         return self.last_sync_at < threshold
+
+
+class SyncLog(models.Model):
+    """
+    Histórico detalhado de sincronizações com parceiros.
+    Registra cada tentativa de sync (sucesso ou erro) para auditoria e troubleshooting.
+    """
+
+    SYNC_OPERATIONS = [
+        ("IMPORT_ORDERS", "Importação de Pedidos"),
+        ("EXPORT_ORDERS", "Exportação de Pedidos"),
+        ("IMPORT_DRIVERS", "Importação de Motoristas"),
+        ("EXPORT_DRIVERS", "Exportação de Motoristas"),
+        ("UPDATE_STATUS", "Atualização de Status"),
+        ("HEALTH_CHECK", "Verificação de Saúde"),
+    ]
+
+    STATUSES = [
+        ("STARTED", "Iniciado"),
+        ("SUCCESS", "Sucesso"),
+        ("ERROR", "Erro"),
+        ("PARTIAL", "Parcial"),
+        ("TIMEOUT", "Timeout"),
+    ]
+
+    # Relacionamentos
+    integration = models.ForeignKey(
+        PartnerIntegration,
+        on_delete=models.CASCADE,
+        related_name="sync_logs",
+        verbose_name="Integração",
+    )
+
+    # Detalhes da Operação
+    operation = models.CharField(
+        "Operação",
+        max_length=30,
+        choices=SYNC_OPERATIONS,
+        default="IMPORT_ORDERS",
+    )
+
+    status = models.CharField(
+        "Status",
+        max_length=20,
+        choices=STATUSES,
+        default="STARTED",
+        db_index=True,
+    )
+
+    # Timestamps
+    started_at = models.DateTimeField("Iniciado Em", auto_now_add=True, db_index=True)
+
+    completed_at = models.DateTimeField("Concluído Em", null=True, blank=True)
+
+    # Estatísticas
+    records_processed = models.IntegerField(
+        "Registros Processados",
+        default=0,
+        help_text="Total de registros processados (sucesso + erro)",
+    )
+
+    records_created = models.IntegerField("Registros Criados", default=0)
+
+    records_updated = models.IntegerField("Registros Atualizados", default=0)
+
+    records_failed = models.IntegerField("Registros Falhados", default=0)
+
+    # Logs e Mensagens
+    message = models.TextField(
+        "Mensagem",
+        blank=True,
+        help_text="Mensagem de status ou resumo da operação",
+    )
+
+    error_details = models.TextField(
+        "Detalhes do Erro",
+        blank=True,
+        help_text="Stack trace ou detalhes técnicos do erro",
+    )
+
+    # Metadados
+    request_data = models.JSONField(
+        "Dados da Requisição",
+        default=dict,
+        blank=True,
+        help_text="Parâmetros enviados na requisição (para debug)",
+    )
+
+    response_data = models.JSONField(
+        "Dados da Resposta",
+        default=dict,
+        blank=True,
+        help_text="Amostra da resposta recebida (primeiros registros)",
+    )
+
+    class Meta:
+        verbose_name = "Log de Sincronização"
+        verbose_name_plural = "Logs de Sincronização"
+        ordering = ["-started_at"]
+        indexes = [
+            models.Index(fields=["integration", "status"]),
+            models.Index(fields=["started_at", "status"]),
+            models.Index(fields=["operation", "status"]),
+        ]
+
+    def __str__(self):
+        return f"{self.integration.partner.name} - {self.get_operation_display()} - {self.get_status_display()}"
+
+    @property
+    def duration_seconds(self):
+        """Duração da sincronização em segundos"""
+        if not self.completed_at:
+            return None
+        delta = self.completed_at - self.started_at
+        return delta.total_seconds()
+
+    @property
+    def success_rate(self):
+        """Taxa de sucesso dos registros processados"""
+        if self.records_processed == 0:
+            return 0
+        successful = self.records_created + self.records_updated
+        return (successful / self.records_processed) * 100
+
+    def mark_completed(self, status="SUCCESS", message=""):
+        """Marca o log como concluído"""
+        self.completed_at = timezone.now()
+        self.status = status
+        if message:
+            self.message = message
+        self.save()
+
+    def add_error(self, error_message, error_details=""):
+        """Adiciona informação de erro ao log"""
+        self.status = "ERROR"
+        self.message = error_message
+        self.error_details = error_details
+        self.completed_at = timezone.now()
+        self.save()

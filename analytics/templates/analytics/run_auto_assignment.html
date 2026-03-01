@@ -1,0 +1,147 @@
+{% extends 'paack_dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Atribuição Automática - Analytics{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6 max-w-4xl">
+    <!-- Header -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 mb-6">
+        <div class="flex items-center gap-4">
+            <a href="{% url 'analytics:automations_dashboard' %}" 
+               class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+                <i data-lucide="arrow-left" class="w-5 h-5 text-gray-600 dark:text-gray-400"></i>
+            </a>
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Atribuição Automática</h1>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    Configure e execute a atribuição automática de pedidos
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Formulário -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6">
+        <form method="post">
+            {% csrf_token %}
+            
+            <!-- Tipo de Atribuição -->
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                    Tipo de Atribuição
+                </label>
+                <div class="space-y-3">
+                    <label class="flex items-start p-4 border-2 border-gray-200 dark:border-gray-700 rounded-lg cursor-pointer hover:border-purple-500 transition-colors">
+                        <input type="radio" name="assignment_type" value="by_date" class="mt-1 mr-3" checked>
+                        <div>
+                            <div class="font-medium text-gray-900 dark:text-white">Por Data Específica</div>
+                            <div class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                Atribuir todos os pedidos agendados para uma data específica aos turnos ativos
+                            </div>
+                        </div>
+                    </label>
+                    
+                    <label class="flex items-start p-4 border-2 border-gray-200 dark:border-gray-700 rounded-lg cursor-pointer hover:border-purple-500 transition-colors">
+                        <input type="radio" name="assignment_type" value="pending" class="mt-1 mr-3">
+                        <div>
+                            <div class="font-medium text-gray-900 dark:text-white">Pedidos Pendentes</div>
+                            <div class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                Atribuir pedidos pendentes sem motorista aos turnos disponíveis hoje
+                            </div>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Opções por Data -->
+            <div id="date_options" class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Data de Atribuição
+                </label>
+                <input type="date" 
+                       name="target_date" 
+                       value="{{ today|date:'Y-m-d' }}"
+                       class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                <p class="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                    Todos os pedidos agendados para esta data serão atribuídos aos turnos disponíveis
+                </p>
+            </div>
+
+            <!-- Opções Pendentes -->
+            <div id="pending_options" class="mb-6 hidden">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Número Máximo de Pedidos
+                </label>
+                <input type="number" 
+                       name="max_orders" 
+                       value="50"
+                       min="1"
+                       max="500"
+                       class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                <p class="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                    Limita quantos pedidos pendentes serão processados (máximo 500)
+                </p>
+            </div>
+
+            <!-- Informações -->
+            <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6">
+                <div class="flex gap-3">
+                    <i data-lucide="info" class="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5"></i>
+                    <div class="text-sm text-blue-800 dark:text-blue-200">
+                        <p class="font-semibold mb-2">Como funciona a atribuição automática:</p>
+                        <ul class="list-disc pl-5 space-y-1">
+                            <li>Identifica turnos ativos para a data selecionada</li>
+                            <li>Verifica as zonas postais atribuídas a cada motorista</li>
+                            <li>Corresponde pedidos às zonas usando o código postal</li>
+                            <li>Distribui pedidos  equitativamente entre motoristas disponíveis</li>
+                            <li>Atualiza automaticamente o status dos pedidos para "ASSIGNED"</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Botões -->
+            <div class="flex items-center gap-3">
+                <button type="submit" 
+                        class="flex-1 px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2">
+                    <i data-lucide="play" class="w-5 h-5"></i>
+                    Executar Atribuição
+                </button>
+                <a href="{% url 'analytics:automations_dashboard' %}" 
+                   class="px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                    Cancelar
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const radios = document.querySelectorAll('input[name="assignment_type"]');
+    const dateOptions = document.getElementById('date_options');
+    const pendingOptions = document.getElementById('pending_options');
+    
+    radios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            if (this.value === 'by_date') {
+                dateOptions.classList.remove('hidden');
+                pendingOptions.classList.add('hidden');
+                document.querySelector('input[name="target_date"]').required = true;
+                document.querySelector('input[name="max_orders"]').required = false;
+            } else {
+                dateOptions.classList.add('hidden');
+                pendingOptions.classList.remove('hidden');
+                document.querySelector('input[name="target_date"]').required = false;
+                document.querySelector('input[name="max_orders"]').required = true;
+            }
+        });
+    });
+    
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,193 @@
+{% extends 'settlements/base.html' %}
+
+{% block title %}Dashboard de Pedidos{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-8">
+  <!-- Header -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 fade-in">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-4">
+        <div class="p-3 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl shadow-lg">
+          <i data-lucide="package" class="w-6 h-6 text-white"></i>
+        </div>
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Dashboard de Pedidos</h1>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Visão geral das entregas - {{ today|date:"d/m/Y" }}</p>
+        </div>
+      </div>
+      <a href="{% url 'orders:order_create' %}" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors duration-200 flex items-center gap-2">
+        <i data-lucide="plus" class="w-4 h-4"></i>
+        Novo Pedido
+      </a>
+    </div>
+  </div>
+  
+  <!-- Cards Estatísticas -->
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 slide-in">
+      <div class="flex items-center gap-4">
+        <div class="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+          <i data-lucide="calendar" class="w-6 h-6 text-blue-600 dark:text-blue-400"></i>
+        </div>
+        <div>
+          <p class="text-sm text-gray-500 dark:text-gray-400">Hoje</p>
+          <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ stats.total_today }}</p>
+        </div>
+      </div>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 slide-in">
+      <div class="flex items-center gap-4">
+        <div class="p-3 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg">
+          <i data-lucide="clock" class="w-6 h-6 text-yellow-600 dark:text-yellow-400"></i>
+        </div>
+        <div>
+          <p class="text-sm text-gray-500 dark:text-gray-400">Pendentes</p>
+          <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ stats.pending }}</p>
+        </div>
+      </div>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 slide-in">
+      <div class="flex items-center gap-4">
+        <div class="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+          <i data-lucide="truck" class="w-6 h-6 text-purple-600 dark:text-purple-400"></i>
+        </div>
+        <div>
+          <p class="text-sm text-gray-500 dark:text-gray-400">Em Trânsito</p>
+          <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ stats.in_transit }}</p>
+        </div>
+      </div>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 slide-in">
+      <div class="flex items-center gap-4">
+        <div class="p-3 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
+          <i data-lucide="check-circle" class="w-6 h-6 text-emerald-600 dark:text-emerald-400"></i>
+        </div>
+        <div>
+          <p class="text-sm text-gray-500 dark:text-gray-400">Entregues Hoje</p>
+          <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ stats.delivered_today }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Alertas -->
+  {% if stats.overdue > 0 %}
+  <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-6 fade-in">
+    <div class="flex items-center gap-3">
+      <div class="p-2 bg-red-100 dark:bg-red-900/40 rounded-lg">
+        <i data-lucide="alert-circle" class="w-5 h-5 text-red-600 dark:text-red-400"></i>
+      </div>
+      <div>
+        <h3 class="text-sm font-semibold text-red-900 dark:text-red-100">Pedidos Atrasados</h3>
+        <p class="text-sm text-red-700 dark:text-red-300">{{ stats.overdue }} pedido{{ stats.overdue|pluralize }} atrasado{{ stats.overdue|pluralize }} - requer atenção!</p>
+      </div>
+      <a href="{% url 'orders:order_list' %}?overdue=true" class="ml-auto px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors">
+        Ver Pedidos
+      </a>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Conteúdo Principal -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <!-- Pedidos Atrasados -->
+    {% if overdue_orders %}
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 scale-in">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+          <i data-lucide="alert-triangle" class="w-5 h-5 text-red-600 dark:text-red-400"></i>
+          Atrasados
+        </h2>
+        <a href="{% url 'orders:order_list' %}?overdue=true" class="text-sm text-indigo-600 dark:text-indigo-400 hover:underline">Ver todos</a>
+      </div>
+      <div class="space-y-2">
+        {% for order in overdue_orders %}
+        <a href="{% url 'orders:order_detail' order.pk %}" class="block p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors">
+          <div class="flex items-center justify-between">
+            <div class="flex-1">
+              <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ order.external_reference }}</p>
+              <p class="text-xs text-gray-600 dark:text-gray-400">{{ order.recipient_name }} • {{ order.postal_code }}</p>
+            </div>
+            <div class="text-right">
+              <p class="text-xs font-medium text-red-600 dark:text-red-400">{{ order.scheduled_delivery|date:"d/m/Y" }}</p>
+              <p class="text-xs text-gray-500 dark:text-gray-400">{{ order.partner.name }}</p>
+            </div>
+          </div>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Próximos Pedidos -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 scale-in">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+          <i data-lucide="calendar-days" class="w-5 h-5 text-indigo-600 dark:text-indigo-400"></i>
+          Próximos 7 Dias
+        </h2>
+        <a href="{% url 'orders:order_list' %}" class="text-sm text-indigo-600 dark:text-indigo-400 hover:underline">Ver todos</a>
+      </div>
+      {% if upcoming_orders %}
+      <div class="space-y-2">
+        {% for order in upcoming_orders %}
+        <a href="{% url 'orders:order_detail' order.pk %}" class="block p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-900/70 transition-colors">
+          <div class="flex items-center justify-between">
+            <div class="flex-1">
+              <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ order.external_reference }}</p>
+              <p class="text-xs text-gray-600 dark:text-gray-400">{{ order.recipient_name }} • {{ order.postal_code }}</p>
+            </div>
+            <div class="text-right">
+              <p class="text-xs font-medium text-indigo-600 dark:text-indigo-400">{{ order.scheduled_delivery|date:"d/m/Y" }}</p>
+              <p class="text-xs text-gray-500 dark:text-gray-400">{{ order.partner.name }}</p>
+            </div>
+          </div>
+        </a>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="text-sm text-gray-500 dark:text-gray-400 text-center py-4">Sem pedidos agendados</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Links Rápidos -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 scale-in">
+    <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+      <i data-lucide="zap" class="w-5 h-5 text-indigo-600 dark:text-indigo-400"></i>
+      Ações Rápidas
+    </h2>
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <a href="{% url 'orders:order_list' %}" class="p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/30 transition-colors group">
+        <div class="flex items-center gap-3">
+          <i data-lucide="list" class="w-5 h-5 text-indigo-600 dark:text-indigo-400"></i>
+          <span class="font-medium text-gray-900 dark:text-white">Ver Todos os Pedidos</span>
+        </div>
+      </a>
+      <a href="{% url 'orders:order_create' %}" class="p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-colors group">
+        <div class="flex items-center gap-3">
+          <i data-lucide="plus-circle" class="w-5 h-5 text-emerald-600 dark:text-emerald-400"></i>
+          <span class="font-medium text-gray-900 dark:text-white">Criar Novo Pedido</span>
+        </div>
+      </a>
+      <a href="{% url 'orders:order_list' %}?status=PENDING" class="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg hover:bg-yellow-100 dark:hover:bg-yellow-900/30 transition-colors group">
+        <div class="flex items-center gap-3">
+          <i data-lucide="clock" class="w-5 h-5 text-yellow-600 dark:text-yellow-400"></i>
+          <span class="font-medium text-gray-900 dark:text-white">Pedidos Pendentes</span>
+        </div>
+      </a>
+      <a href="{% url 'orders:order_list' %}?status=INCIDENT" class="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors group">
+        <div class="flex items-center gap-3">
+          <i data-lucide="alert-circle" class="w-5 h-5 text-red-600 dark:text-red-400"></i>
+          <span class="font-medium text-gray-900 dark:text-white">Incidentes</span>
+        </div>
+      </a>
+    </div>
+  </div>
+</div>
+
+<script>
+  lucide.createIcons();
+</script>
+{% endblock %}

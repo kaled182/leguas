@@ -1,0 +1,818 @@
+{% extends 'settlements/base.html' %}
+{% block title %}Pesquisa Global de Pacotes{% endblock %}
+{% block content %}
+<div class="min-h-screen bg-gray-50 dark:bg-gray-900" x-data="packagesApp()" x-init="init()">
+<div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-4">
+
+  <!-- Header -->
+  <div class="flex items-center justify-between flex-wrap gap-3">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+        <i data-lucide="package-search" class="w-6 h-6 text-indigo-500"></i>
+        Pesquisa Global de Pacotes
+      </h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400">
+        Busca avançada em todos os pacotes Cainiao · prioridades · tags · resoluções
+      </p>
+    </div>
+    <div class="flex gap-2">
+      <button @click="settingsModal.open = true"
+              class="px-3 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-sm font-semibold flex items-center gap-1.5">
+        <i data-lucide="settings" class="w-4 h-4"></i>
+        Config Prioridade
+      </button>
+      <button @click="exportCsv()"
+              class="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold flex items-center gap-1.5">
+        <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+        Exportar
+      </button>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div x-show="!loading" x-cloak class="grid grid-cols-2 md:grid-cols-4 gap-3">
+    <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3">
+      <div class="text-[10px] uppercase text-gray-500">Total resultado</div>
+      <div class="text-2xl font-bold text-gray-900 dark:text-white" x-text="kpis.n_total"></div>
+    </div>
+    <div class="bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800 p-3 cursor-pointer hover:shadow-md"
+         @click="setQuickFilter('priority_open')">
+      <div class="text-[10px] uppercase text-orange-700 dark:text-orange-300">🔥 Prioritários</div>
+      <div class="text-2xl font-bold text-orange-700 dark:text-orange-300" x-text="kpis.n_priority"></div>
+    </div>
+    <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800 p-3 cursor-pointer hover:shadow-md"
+         @click="setQuickFilter('open')">
+      <div class="text-[10px] uppercase text-blue-700 dark:text-blue-300">Em aberto</div>
+      <div class="text-2xl font-bold text-blue-700 dark:text-blue-300" x-text="kpis.n_open"></div>
+    </div>
+    <div class="bg-rose-50 dark:bg-rose-900/20 rounded-lg border border-rose-200 dark:border-rose-800 p-3 cursor-pointer hover:shadow-md"
+         @click="setQuickFilter('wrong_hub')">
+      <div class="text-[10px] uppercase text-rose-700 dark:text-rose-300">⚠ Wrong HUB</div>
+      <div class="text-2xl font-bold text-rose-700 dark:text-rose-300" x-text="kpis.n_wrong_hub"></div>
+    </div>
+  </div>
+
+  <!-- HUB quick chips -->
+  <div x-show="hubChips.length > 0" x-cloak class="flex flex-wrap gap-2 items-center">
+    <span class="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase">🏢 HUBs:</span>
+    <button @click="filters.hub_id = ''; search()"
+            :class="!filters.hub_id ? 'bg-indigo-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300'"
+            class="px-3 py-1 rounded-full text-xs font-semibold">
+      Todos
+    </button>
+    <template x-for="h in hubChips" :key="h.id">
+      <button @click="filters.hub_id = h.id; search()"
+              :class="filters.hub_id == h.id ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 text-gray-700 dark:text-gray-200'"
+              class="px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5">
+        <span x-text="h.name"></span>
+        <span x-show="h.n_priority > 0"
+              :class="filters.hub_id == h.id ? 'bg-orange-300 text-orange-900' : 'bg-orange-100 dark:bg-orange-900/40 text-orange-800 dark:text-orange-300'"
+              class="px-1.5 py-0.5 rounded font-bold text-[10px]"
+              x-text="'🔥 ' + h.n_priority"></span>
+        <span :class="filters.hub_id == h.id ? 'bg-blue-300 text-blue-900' : 'bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300'"
+              class="px-1.5 py-0.5 rounded font-bold text-[10px]"
+              x-text="h.n_open + ' abertos'"></span>
+      </button>
+    </template>
+  </div>
+
+  <!-- Quick filter chips -->
+  <div class="flex flex-wrap gap-2">
+    <button @click="setQuickFilter('priority_open')" class="px-3 py-1.5 bg-orange-100 dark:bg-orange-900/30 hover:bg-orange-200 text-orange-800 dark:text-orange-200 rounded-full text-xs font-semibold">🔥 Prioritários abertos</button>
+    <button @click="setQuickFilter('open')" class="px-3 py-1.5 bg-blue-100 dark:bg-blue-900/30 hover:bg-blue-200 text-blue-800 dark:text-blue-200 rounded-full text-xs font-semibold">📦 Em aberto</button>
+    <button @click="setQuickFilter('multiple_attempts')" class="px-3 py-1.5 bg-rose-100 dark:bg-rose-900/30 hover:bg-rose-200 text-rose-800 dark:text-rose-200 rounded-full text-xs font-semibold">🔁 Múltiplas tentativas</button>
+    <button @click="setQuickFilter('wrong_hub')" class="px-3 py-1.5 bg-amber-100 dark:bg-amber-900/30 hover:bg-amber-200 text-amber-800 dark:text-amber-200 rounded-full text-xs font-semibold">⚠ Wrong HUB</button>
+    <button @click="setQuickFilter('today')" class="px-3 py-1.5 bg-violet-100 dark:bg-violet-900/30 hover:bg-violet-200 text-violet-800 dark:text-violet-200 rounded-full text-xs font-semibold">📅 Hoje</button>
+    <a href="/settlements/returns/" class="px-3 py-1.5 bg-amber-100 dark:bg-amber-900/30 hover:bg-amber-200 text-amber-800 dark:text-amber-200 rounded-full text-xs font-semibold">📤 Devoluções</a>
+    <button @click="resetFilters()" class="px-3 py-1.5 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 text-gray-700 dark:text-gray-300 rounded-full text-xs font-semibold">↺ Limpar</button>
+  </div>
+
+  <!-- Filter form -->
+  <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+      <div class="md:col-span-2">
+        <label class="block text-[10px] uppercase font-semibold text-gray-500 mb-1">Pesquisa livre</label>
+        <input type="text" x-model="filters.q" @keydown.enter="search()"
+               placeholder="Waybill, LP, courier, cliente, cidade, morada…"
+               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700">
+      </div>
+      <div>
+        <label class="block text-[10px] uppercase font-semibold text-gray-500 mb-1">HUB</label>
+        <select x-model="filters.hub_id" @change="onHubChange()" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700">
+          <option value="">Todos</option>
+          {% for h in hubs %}<option value="{{ h.id }}">{{ h.name }}</option>{% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block text-[10px] uppercase font-semibold text-gray-500 mb-1">Prioridade</label>
+        <select x-model="filters.priority" @change="search()" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700">
+          <option value="">Todos</option>
+          <option value="yes">🔥 Só prioritários</option>
+          <option value="no">Não-prioritários</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-[10px] uppercase font-semibold text-gray-500 mb-1">Status</label>
+        <select x-model="filters.status" @change="search()" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700">
+          <option value="">Todos</option>
+          <option value="Delivered">Delivered</option>
+          <option value="Driver_received">Driver Received</option>
+          <option value="Assigned">Assigned</option>
+          <option value="Attempt Failure">Attempt Failure</option>
+          <option value="Unassign">Unassign</option>
+        </select>
+      </div>
+      <div class="relative" @click.outside="cp4Dropdown = false">
+        <label class="block text-[10px] uppercase font-semibold text-gray-500 mb-1">
+          CP4
+          <span x-show="selectedCp4Set.length > 0" class="ml-1 px-1.5 py-0.5 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded text-[9px] font-bold" x-text="selectedCp4Set.length + ' selec.'"></span>
+        </label>
+        <button type="button" @click="cp4Dropdown = !cp4Dropdown"
+                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-left flex items-center justify-between gap-2"
+                :class="selectedCp4Set.length > 0 ? 'border-indigo-500 dark:border-indigo-400' : ''">
+          <span class="truncate" x-text="selectedCp4Set.length === 0 ? 'Todos os CP4' : selectedCp4Set.length + ' CP4 seleccionado' + (selectedCp4Set.length > 1 ? 's' : '')"></span>
+          <i data-lucide="chevron-down" class="w-3.5 h-3.5 flex-shrink-0"></i>
+        </button>
+        <div x-show="cp4Dropdown" x-cloak
+             class="absolute z-30 mt-1 w-full max-h-72 overflow-y-auto bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg">
+          <div class="p-2 sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
+            <input type="text" x-model="cp4Search" placeholder="Filtrar…"
+                   class="flex-1 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-700">
+            <button @click="clearCp4()" type="button"
+                    class="text-[10px] text-rose-600 hover:text-rose-700"
+                    x-show="selectedCp4Set.length > 0">Limpar</button>
+          </div>
+          <template x-for="cp4 in cp4OptionsFiltered" :key="cp4">
+            <label class="flex items-center gap-2 px-3 py-1.5 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 cursor-pointer text-sm">
+              <input type="checkbox" :value="cp4" :checked="selectedCp4Set.includes(cp4)" @change="toggleCp4(cp4)">
+              <span class="font-mono" x-text="cp4"></span>
+            </label>
+          </template>
+          <div x-show="cp4OptionsFiltered.length === 0" class="px-3 py-4 text-xs text-gray-400 text-center">
+            <span x-show="cp4Options.length === 0">Selecciona um HUB para ver os CP4s</span>
+            <span x-show="cp4Options.length > 0">Sem resultados</span>
+          </div>
+        </div>
+      </div>
+      <div>
+        <label class="block text-[10px] uppercase font-semibold text-gray-500 mb-1">Driver</label>
+        <input type="text" x-model="filters.driver" @change="search()" @keydown.enter="search()"
+               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700">
+      </div>
+      <div>
+        <label class="block text-[10px] uppercase font-semibold text-gray-500 mb-1">Seller</label>
+        <input type="text" x-model="filters.seller" @change="search()" @keydown.enter="search()"
+               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700">
+      </div>
+      <div>
+        <label class="block text-[10px] uppercase font-semibold text-gray-500 mb-1">Date from / to</label>
+        <div class="flex gap-1">
+          <input type="date" x-model="filters.date_from" @change="search()" class="flex-1 px-2 py-2 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-700">
+          <input type="date" x-model="filters.date_to" @change="search()" class="flex-1 px-2 py-2 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-700">
+        </div>
+      </div>
+      <div class="flex items-end gap-2">
+        <label class="flex items-center gap-1 text-xs">
+          <input type="checkbox" x-model="filters.open_only" @change="search()">
+          Em aberto
+        </label>
+        <label class="flex items-center gap-1 text-xs">
+          <input type="checkbox" x-model="filters.wrong_hub" @change="search()">
+          Wrong HUB
+        </label>
+        <label class="flex items-center gap-1 text-xs">
+          <input type="checkbox" x-model="filters.has_exception" @change="search()">
+          Exception
+        </label>
+      </div>
+    </div>
+    <div class="flex flex-wrap gap-2 mt-3 items-center">
+      <button @click="search()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold flex items-center gap-1">
+        <i data-lucide="search" class="w-4 h-4"></i> Pesquisar
+      </button>
+      <button @click="copyShareLink()" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm flex items-center gap-1">
+        <i data-lucide="link" class="w-4 h-4"></i>
+        <span x-text="linkCopied ? 'Copiado!' : 'Copiar link'"></span>
+      </button>
+      <button @click="savedModal.open = true" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm flex items-center gap-1">
+        <i data-lucide="bookmark" class="w-4 h-4"></i> Filtros guardados
+      </button>
+      <label class="flex items-center gap-1.5 text-xs ml-auto cursor-pointer select-none px-2 py-1 rounded border border-gray-300 dark:border-gray-600"
+             :class="filters.include_unregistered ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-700' : ''"
+             title="Por defeito só vê pacotes em CP4s cadastrados nos HUBs. Activa esta opção para ver TODOS.">
+        <input type="checkbox" x-model="filters.include_unregistered" @change="search()">
+        <span x-show="!filters.include_unregistered">🏢 Só CP4s dos HUBs</span>
+        <span x-show="filters.include_unregistered" class="text-amber-700 dark:text-amber-300 font-semibold">⚠ TODOS os CP4s (sem filtro HUB)</span>
+      </label>
+      <span class="text-xs text-gray-500">
+        Config: <strong x-text="settings.min_days_in_hub"></strong>d · <strong x-text="settings.min_attempts"></strong> tent.
+      </span>
+    </div>
+  </div>
+
+  <!-- Results table -->
+  <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <div x-show="loading" class="p-12 text-center">
+      <i data-lucide="loader-2" class="w-10 h-10 mx-auto animate-spin text-indigo-500"></i>
+      <p class="text-sm text-gray-500 mt-3">A pesquisar…</p>
+    </div>
+    <div x-show="!loading && rows.length === 0 && hasSearched" x-cloak class="p-12 text-center text-gray-500">
+      <i data-lucide="search-x" class="w-12 h-12 mx-auto text-gray-400 mb-2"></i>
+      <p>Nenhum pacote encontrado.</p>
+    </div>
+    <div x-show="!loading && rows.length > 0" x-cloak class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-gray-50 dark:bg-gray-700 sticky top-0">
+          <tr>
+            <th class="px-2 py-2 text-left text-[10px] uppercase">Status</th>
+            <th class="px-2 py-2 text-left text-[10px] uppercase">Waybill</th>
+            <th class="px-2 py-2 text-left text-[10px] uppercase">Driver</th>
+            <th class="px-2 py-2 text-left text-[10px] uppercase">CP4</th>
+            <th class="px-2 py-2 text-left text-[10px] uppercase">Cidade</th>
+            <th class="px-2 py-2 text-left text-[10px] uppercase">Seller</th>
+            <th class="px-2 py-2 text-right text-[10px] uppercase" title="Dias no HUB">HUB</th>
+            <th class="px-2 py-2 text-right text-[10px] uppercase" title="Tentativas">Tent.</th>
+            <th class="px-2 py-2 text-left text-[10px] uppercase">Hub Inbound</th>
+            <th class="px-2 py-2 text-left text-[10px] uppercase">Entregue</th>
+            <th class="px-2 py-2 text-right text-[10px] uppercase">Acções</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+          <template x-for="r in rows" :key="r.waybill">
+            <tr :class="r.is_priority ? 'bg-orange-50/50 dark:bg-orange-900/10' : ''" class="hover:bg-indigo-50/40 dark:hover:bg-indigo-900/10">
+              <td class="px-2 py-1.5">
+                <div class="flex items-center gap-1 flex-wrap">
+                  <span class="px-1.5 py-0.5 rounded text-[10px] font-bold"
+                        :class="{
+                          'bg-emerald-100 text-emerald-700': r.task_status === 'Delivered',
+                          'bg-amber-100 text-amber-700': r.task_status === 'Driver_received' || r.task_status === 'Driver Received',
+                          'bg-blue-100 text-blue-700': r.task_status === 'Assigned',
+                          'bg-rose-100 text-rose-700': r.task_status === 'Attempt Failure',
+                          'bg-gray-100 text-gray-700': r.task_status === 'Unassign',
+                        }" x-text="r.task_status"></span>
+                  <span x-show="r.is_priority" class="px-1 bg-orange-200 text-orange-900 rounded text-[10px] font-bold" :title="(r.priority_reasons||[]).map(x => x.label).join(', ')">🔥</span>
+                  <span x-show="r.is_flagged" class="px-1 bg-rose-200 text-rose-900 rounded text-[10px] font-bold" title="Sinalizado">🚨</span>
+                  <span x-show="r.is_resolved" class="px-1 bg-blue-200 text-blue-900 rounded text-[10px] font-bold" title="Resolvido manual">✅</span>
+                  <span x-show="r.arrive_wrong_hub" class="px-1 bg-amber-200 text-amber-900 rounded text-[10px]" title="Wrong HUB">⚠</span>
+                </div>
+              </td>
+              <td class="px-2 py-1.5">
+                <a :href="'/settlements/cainiao/waybill/' + r.waybill + '/'" target="_blank"
+                   class="font-mono text-xs text-blue-600 hover:underline" x-text="r.waybill"></a>
+                <div x-show="r.tags.length > 0" class="flex flex-wrap gap-0.5 mt-0.5">
+                  <template x-for="t in r.tags" :key="t">
+                    <span class="px-1 bg-pink-100 text-pink-700 rounded text-[9px]" x-text="t"></span>
+                  </template>
+                </div>
+              </td>
+              <td class="px-2 py-1.5">
+                <div class="text-xs font-semibold" x-text="r.courier_name || '—'"></div>
+                <div x-show="r.dsp_name" class="text-[10px] text-gray-500 truncate max-w-[120px]" :title="r.dsp_name" x-text="r.dsp_name"></div>
+              </td>
+              <td class="px-2 py-1.5">
+                <span class="font-mono px-1.5 py-0.5 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded text-xs" x-text="r.cp4 || '—'"></span>
+              </td>
+              <td class="px-2 py-1.5 text-xs" x-text="r.city || '—'"></td>
+              <td class="px-2 py-1.5 text-xs truncate max-w-[140px]" :title="r.seller" x-text="r.seller || '—'"></td>
+              <td class="px-2 py-1.5 text-right text-xs font-mono">
+                <span :class="r.task_status === 'Delivered' ? 'text-gray-400' : (r.days_in_hub >= 5 ? 'text-rose-600 font-bold' : (r.days_in_hub >= 3 ? 'text-orange-600 font-semibold' : 'text-gray-600'))"
+                      :title="r.task_status === 'Delivered' ? 'Esteve ' + r.days_in_hub + ' dia(s) no HUB antes de ser entregue' : r.days_in_hub + ' dia(s) no HUB'"
+                      x-text="r.days_in_hub !== null ? r.days_in_hub + 'd' : '—'"></span>
+              </td>
+              <td class="px-2 py-1.5 text-right text-xs font-mono">
+                <span :class="r.n_attempts >= 2 ? 'text-rose-600 font-bold' : (r.n_attempts >= 1 ? 'text-amber-600 font-semibold' : 'text-gray-500')"
+                      :title="r.n_attempts + ' tentativa(s) falhada(s) em Operation Update'"
+                      x-text="r.n_attempts"></span>
+              </td>
+              <td class="px-2 py-1.5 text-xs font-mono text-gray-500" x-text="r.receipt_time || '—'"></td>
+              <td class="px-2 py-1.5 text-xs font-mono">
+                <template x-if="r.task_status === 'Delivered' && r.delivery_time">
+                  <div class="flex items-center gap-1" :title="'Entregue em ' + r.delivery_time">
+                    <span class="px-1 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">ENTREGUE</span>
+                    <span class="text-emerald-600 dark:text-emerald-400" x-text="r.delivery_time"></span>
+                  </div>
+                </template>
+                <template x-if="r.task_status === 'Attempt Failure'">
+                  <div class="flex items-center gap-1" :title="'Falha em ' + (r.failure_time || r.task_date)">
+                    <span class="px-1 py-0.5 rounded text-[9px] font-bold bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300">FALHA</span>
+                    <span class="text-rose-600 dark:text-rose-400" x-text="r.failure_time || r.task_date"></span>
+                  </div>
+                </template>
+                <template x-if="r.task_status !== 'Delivered' && r.task_status !== 'Attempt Failure' && r.is_returned">
+                  <div class="flex items-center gap-1" :title="'Devolvido ao remetente em ' + r.return_date">
+                    <span class="px-1 py-0.5 rounded text-[9px] font-bold bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300">DEVOLVIDO</span>
+                    <span class="text-orange-600 dark:text-orange-400" x-text="r.return_date"></span>
+                  </div>
+                </template>
+                <template x-if="r.task_status !== 'Delivered' && r.task_status !== 'Attempt Failure' && !r.is_returned">
+                  <span class="text-gray-400">—</span>
+                </template>
+              </td>
+              <td class="px-2 py-1.5 text-right">
+                <div class="flex items-center justify-end gap-0.5">
+                  <button @click="openReturnModal(r.waybill)"
+                          class="p-1 hover:bg-amber-100 dark:hover:bg-amber-900/30 rounded text-amber-600"
+                          title="Marcar como devolvido ao remetente">
+                    <i data-lucide="undo-2" class="w-3.5 h-3.5"></i>
+                  </button>
+                  <a :href="'/settlements/cainiao/waybill/' + r.waybill + '/'" target="_blank"
+                     class="p-1 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded text-blue-600">
+                    <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+                  </a>
+                </div>
+              </td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+    <!-- Pagination -->
+    <div x-show="!loading && rows.length > 0 && n_pages > 1" x-cloak class="px-4 py-2 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
+      <span class="text-xs text-gray-500">Página <strong x-text="page"></strong> de <strong x-text="n_pages"></strong> · <span x-text="kpis.n_total"></span> resultados</span>
+      <div class="flex gap-1">
+        <button @click="page > 1 && (page--, search(false))" :disabled="page <= 1" class="px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded text-xs disabled:opacity-40">‹ Anterior</button>
+        <button @click="page < n_pages && (page++, search(false))" :disabled="page >= n_pages" class="px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded text-xs disabled:opacity-40">Próximo ›</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings modal -->
+  <div x-show="settingsModal.open" x-cloak @click.self="settingsModal.open = false"
+       class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md p-5">
+      <h3 class="text-base font-bold mb-2 flex items-center gap-2">
+        <i data-lucide="settings" class="w-5 h-5 text-amber-600"></i>
+        Configuração de Prioridade
+      </h3>
+      <p class="text-xs text-gray-500 mb-4">Define quando um pacote é considerado prioritário (além da flag PRIORITYS do Cainiao).</p>
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold mb-1">Mín. dias no HUB para prioridade</label>
+          <input type="number" min="0" x-model.number="settings.min_days_in_hub"
+                 class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700">
+          <p class="text-[10px] text-gray-500 mt-0.5">Pacotes com ≥ N dias no HUB tornam-se prioritários.</p>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold mb-1">Mín. tentativas falhadas para prioridade</label>
+          <input type="number" min="0" x-model.number="settings.min_attempts"
+                 class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700">
+          <p class="text-[10px] text-gray-500 mt-0.5">Pacotes com ≥ N tentativas tornam-se prioritários.</p>
+        </div>
+        <label class="flex items-center gap-2 text-sm">
+          <input type="checkbox" x-model="settings.auto_apply">
+          Aplicar regras automáticas
+        </label>
+      </div>
+      <div class="flex justify-end gap-2 mt-4">
+        <button @click="settingsModal.open = false" class="px-3 py-1.5 text-sm bg-gray-200 dark:bg-gray-700 rounded">Cancelar</button>
+        <button @click="saveSettings()" class="px-3 py-1.5 text-sm bg-amber-600 hover:bg-amber-700 text-white rounded font-semibold">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Return modal -->
+  <div x-show="returnModal.open" x-cloak @click.self="returnModal.open = false"
+       class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md p-5">
+      <h3 class="text-base font-bold mb-1 flex items-center gap-2">
+        <i data-lucide="undo-2" class="w-5 h-5 text-amber-600"></i>
+        Devolver ao remetente
+      </h3>
+      <p class="text-xs font-mono text-gray-500 mb-3" x-text="returnModal.waybill"></p>
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold mb-1">Status</label>
+          <select x-model="returnModal.return_status"
+                  class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700">
+            <option value="PREPARING">A preparar</option>
+            <option value="IN_TRANSIT">Em trânsito de retorno</option>
+            <option value="RETURNED_TO_SENDER">Chegou ao remetente</option>
+            <option value="CLOSED">Fechado</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold mb-1">Razão</label>
+          <select x-model="returnModal.return_reason"
+                  class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700">
+            <option value="address_wrong">Endereço errado</option>
+            <option value="customer_refused">Cliente recusou</option>
+            <option value="customer_not_found">Cliente não encontrado</option>
+            <option value="damaged">Pacote danificado</option>
+            <option value="no_response">Cliente não respondeu</option>
+            <option value="expired">Prazo expirou</option>
+            <option value="other">Outro</option>
+          </select>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-xs font-semibold mb-1">Tracking de retorno</label>
+            <input type="text" x-model="returnModal.return_tracking_number" placeholder="ex: ABC123"
+                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700 font-mono">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold mb-1">Carrier</label>
+            <input type="text" x-model="returnModal.return_carrier" placeholder="ex: Cainiao, CTT"
+                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700">
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-xs font-semibold mb-1">Data</label>
+            <input type="date" x-model="returnModal.return_date"
+                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold mb-1">Custo (€)</label>
+            <input type="number" step="0.01" x-model.number="returnModal.return_cost_eur"
+                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700">
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold mb-1">Notas</label>
+          <textarea x-model="returnModal.notes" rows="2"
+                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700"></textarea>
+        </div>
+        <label class="flex items-center gap-2 text-sm">
+          <input type="checkbox" x-model="returnModal.customer_notified">
+          Cliente notificado
+        </label>
+      </div>
+      <div class="flex justify-end gap-2 mt-4">
+        <button @click="returnModal.open = false" class="px-3 py-1.5 text-sm bg-gray-200 dark:bg-gray-700 rounded">Cancelar</button>
+        <button @click="saveReturn()" class="px-3 py-1.5 text-sm bg-amber-600 hover:bg-amber-700 text-white rounded font-semibold">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Saved filters modal -->
+  <div x-show="savedModal.open" x-cloak @click.self="savedModal.open = false"
+       class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-lg p-5">
+      <h3 class="text-base font-bold mb-3 flex items-center gap-2">
+        <i data-lucide="bookmark" class="w-5 h-5 text-indigo-600"></i>
+        Filtros guardados
+      </h3>
+      <div class="space-y-2 max-h-80 overflow-y-auto mb-3">
+        <template x-for="f in savedFilters" :key="f.id">
+          <div class="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-900/50 rounded">
+            <div>
+              <div class="font-semibold text-sm" x-text="f.name"></div>
+              <div class="text-[10px] text-gray-500">
+                <span x-show="f.is_shared" class="text-blue-600">📤 Partilhado</span>
+                <span x-show="!f.is_mine" x-text="'· por ' + f.owner"></span>
+              </div>
+            </div>
+            <div class="flex gap-1">
+              <button @click="loadFilter(f)" class="px-2 py-1 bg-indigo-600 text-white rounded text-xs">Aplicar</button>
+              <button x-show="f.is_mine" @click="deleteFilter(f.id)" class="px-2 py-1 bg-rose-100 dark:bg-rose-900/30 text-rose-600 rounded text-xs">×</button>
+            </div>
+          </div>
+        </template>
+        <p x-show="savedFilters.length === 0" class="text-sm text-gray-500 italic text-center py-4">Sem filtros guardados.</p>
+      </div>
+      <div class="border-t border-gray-200 dark:border-gray-700 pt-3">
+        <label class="block text-xs font-semibold mb-1">Guardar filtros actuais como…</label>
+        <div class="flex gap-2">
+          <input type="text" x-model="savedModal.newName" placeholder="ex: Prioritários Aveiro"
+                 class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700">
+          <label class="flex items-center gap-1 text-xs">
+            <input type="checkbox" x-model="savedModal.shared">
+            Partilhar
+          </label>
+          <button @click="saveCurrentFilter()" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-sm font-semibold">Guardar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<script src="https://unpkg.com/lucide@latest"></script>
+<script>
+function packagesApp() {
+  return {
+    loading: false,
+    hasSearched: false,
+    rows: [],
+    page: 1,
+    n_pages: 1,
+    kpis: { n_total: 0, n_priority: 0, n_open: 0, n_wrong_hub: 0 },
+    settings: { min_days_in_hub: 3, min_attempts: 2, auto_apply: true },
+    settingsModal: { open: false },
+    savedModal: { open: false, newName: '', shared: false },
+    hubChips: [],
+    returnModal: {
+      open: false, waybill: '',
+      return_status: 'PREPARING',
+      return_reason: 'address_wrong',
+      return_tracking_number: '', return_carrier: '',
+      return_date: '', return_cost_eur: 0, notes: '',
+      customer_notified: false,
+    },
+    savedFilters: [],
+    linkCopied: false,
+    cp4Dropdown: false,
+    cp4Search: '',
+    cp4Options: [],          // CP4s disponíveis (filtrado pelo hub)
+    cp4OptionsByHub: {},     // {hub_id: [cp4...]}
+    cp4OptionsAll: [],       // Todos os CP4s registados
+    filters: {
+      q: '', hub_id: '', cp4: '', driver: '', seller: '',
+      priority: '', status: '',
+      date_from: '', date_to: '',
+      open_only: false, wrong_hub: false, has_exception: false,
+      include_unregistered: false,
+    },
+
+    get selectedCp4Set() {
+      return (this.filters.cp4 || '')
+        .split(',').map(s => s.trim()).filter(Boolean);
+    },
+    get cp4OptionsFiltered() {
+      const q = (this.cp4Search || '').toLowerCase().trim();
+      if (!q) return this.cp4Options;
+      return this.cp4Options.filter(c => c.toLowerCase().includes(q));
+    },
+
+    init() {
+      // Restaura filtros do URL primeiro
+      const params = new URLSearchParams(window.location.search);
+      let hasUrlParams = false;
+      for (const k of Object.keys(this.filters)) {
+        const v = params.get(k);
+        if (v !== null) {
+          hasUrlParams = true;
+          if (typeof this.filters[k] === 'boolean') {
+            this.filters[k] = v === '1';
+          } else {
+            this.filters[k] = v;
+          }
+        }
+      }
+      if (!hasUrlParams) {
+        // Sem params no URL: usa o último HUB do localStorage.
+        // Data fica vazia por defeito (mostra todos os pacotes em aberto)
+        // — usa o atalho "Hoje" para filtrar pelo dia.
+        try {
+          const lastHub = localStorage.getItem('packages.lastHubId');
+          if (lastHub) this.filters.hub_id = lastHub;
+        } catch (e) {}
+      }
+      this.loadSavedFilters();
+      this.loadHubChips();  // também popula cp4OptionsByHub
+      this.search();
+      // Persistir hub_id ao mudar
+      this.$watch('filters.hub_id', (v) => {
+        try {
+          if (v) localStorage.setItem('packages.lastHubId', v);
+          else localStorage.removeItem('packages.lastHubId');
+        } catch (e) {}
+      });
+      lucide.createIcons();
+    },
+
+    onHubChange() {
+      // Ao trocar de HUB, limpa CP4 selecionados e atualiza opções
+      this.filters.cp4 = '';
+      this._updateCp4Options();
+      this.search();
+    },
+    _updateCp4Options() {
+      if (this.filters.hub_id && this.cp4OptionsByHub[this.filters.hub_id]) {
+        this.cp4Options = this.cp4OptionsByHub[this.filters.hub_id].slice();
+      } else {
+        this.cp4Options = this.cp4OptionsAll.slice();
+      }
+    },
+    toggleCp4(cp4) {
+      const set = new Set(this.selectedCp4Set);
+      if (set.has(cp4)) set.delete(cp4); else set.add(cp4);
+      this.filters.cp4 = Array.from(set).join(',');
+      this.search();
+    },
+    clearCp4() {
+      this.filters.cp4 = '';
+      this.search();
+    },
+
+    async loadHubChips() {
+      try {
+        const r = await fetch(
+          '/settlements/cainiao/hubs-with-counts/',
+        );
+        const j = await r.json();
+        if (j.success) {
+          this.hubChips = j.hubs || [];
+          // Popular cp4OptionsByHub e cp4OptionsAll
+          const allSet = new Set();
+          for (const h of this.hubChips) {
+            const cp4s = (h.cp4_codes || []).slice().sort();
+            this.cp4OptionsByHub[h.id] = cp4s;
+            for (const c of cp4s) allSet.add(c);
+          }
+          this.cp4OptionsAll = Array.from(allSet).sort();
+          this._updateCp4Options();
+        }
+      } catch (e) {}
+    },
+
+    _csrf() {
+      return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
+        || document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+    },
+
+    _params() {
+      const p = new URLSearchParams();
+      for (const [k, v] of Object.entries(this.filters)) {
+        if (v === '' || v === false || v === null || v === undefined) continue;
+        p.set(k, v === true ? '1' : v);
+      }
+      p.set('page', String(this.page));
+      return p;
+    },
+
+    async search(resetPage = true) {
+      this.loading = true;
+      this.hasSearched = true;
+      if (resetPage) this.page = 1;
+      try {
+        const r = await fetch('/settlements/cainiao/packages/search/?' + this._params());
+        const j = await r.json();
+        if (j.success) {
+          this.rows = j.rows || [];
+          this.n_pages = j.n_pages;
+          this.kpis = j.kpis;
+          this.settings = j.settings;
+          // Atualizar URL sem recarregar
+          window.history.replaceState({}, '', '?' + this._params());
+          this.$nextTick(() => lucide.createIcons());
+        }
+      } catch (e) {
+        console.error(e);
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    setQuickFilter(kind) {
+      // Preservar HUB e datas — apenas redefinir os filtros relevantes
+      const savedHubId = this.filters.hub_id;
+      const savedFrom = this.filters.date_from;
+      const savedTo = this.filters.date_to;
+      this.resetFilters(false);
+      this.filters.hub_id = savedHubId;
+      this.filters.date_from = savedFrom;
+      this.filters.date_to = savedTo;
+      if (kind === 'priority_open') {
+        this.filters.priority = 'yes';
+        this.filters.open_only = true;
+      } else if (kind === 'open') {
+        this.filters.open_only = true;
+      } else if (kind === 'wrong_hub') {
+        this.filters.wrong_hub = true;
+      } else if (kind === 'multiple_attempts') {
+        this.filters.status = 'Attempt Failure';
+      } else if (kind === 'today') {
+        const today = new Date().toISOString().slice(0, 10);
+        this.filters.date_from = today;
+        this.filters.date_to = today;
+      }
+      this.search();
+    },
+
+    resetFilters(triggerSearch = true) {
+      // Preserva HUB e limpa todo o resto (incluindo datas)
+      const savedHubId = this.filters.hub_id;
+      this.filters = {
+        q: '', hub_id: savedHubId, cp4: '', driver: '', seller: '',
+        priority: '', status: '',
+        date_from: '', date_to: '',
+        open_only: false, wrong_hub: false, has_exception: false,
+        include_unregistered: false,
+      };
+      if (triggerSearch) this.search();
+    },
+
+    async copyShareLink() {
+      try {
+        await navigator.clipboard.writeText(window.location.href);
+        this.linkCopied = true;
+        setTimeout(() => { this.linkCopied = false; }, 2000);
+      } catch (e) {}
+    },
+
+    exportCsv() {
+      // Export do resultado actual (ainda não implementado — fallback para imprimir)
+      window.print();
+    },
+
+    async saveSettings() {
+      const r = await fetch('/settlements/cainiao/priority-settings/save/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': this._csrf() },
+        body: JSON.stringify(this.settings),
+      });
+      const j = await r.json();
+      if (j.success) {
+        this.settingsModal.open = false;
+        this.search();
+      }
+    },
+
+    async loadSavedFilters() {
+      try {
+        const r = await fetch('/settlements/cainiao/saved-filters/');
+        const j = await r.json();
+        if (j.success) this.savedFilters = j.filters || [];
+      } catch (e) {}
+    },
+
+    loadFilter(f) {
+      this.filters = Object.assign(
+        { q: '', hub_id: '', cp4: '', driver: '', seller: '',
+          priority: '', status: '', date_from: '', date_to: '',
+          open_only: false, wrong_hub: false, has_exception: false,
+          include_unregistered: false },
+        f.filter_data || {},
+      );
+      this.savedModal.open = false;
+      this.search();
+    },
+
+    async saveCurrentFilter() {
+      const name = (this.savedModal.newName || '').trim();
+      if (!name) return;
+      const r = await fetch('/settlements/cainiao/saved-filters/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': this._csrf() },
+        body: JSON.stringify({
+          name,
+          filter_data: this.filters,
+          is_shared: this.savedModal.shared,
+        }),
+      });
+      const j = await r.json();
+      if (j.success) {
+        this.savedModal.newName = '';
+        this.savedModal.shared = false;
+        await this.loadSavedFilters();
+      }
+    },
+
+    async deleteFilter(id) {
+      if (!confirm('Apagar este filtro?')) return;
+      await fetch('/settlements/cainiao/saved-filters/?id=' + id, {
+        method: 'DELETE',
+        headers: { 'X-CSRFToken': this._csrf() },
+      });
+      await this.loadSavedFilters();
+    },
+
+    async openReturnModal(waybill) {
+      this.returnModal.waybill = waybill;
+      this.returnModal.return_status = 'PREPARING';
+      this.returnModal.return_reason = 'address_wrong';
+      this.returnModal.return_tracking_number = '';
+      this.returnModal.return_carrier = '';
+      this.returnModal.return_date = new Date().toISOString().slice(0, 10);
+      this.returnModal.return_cost_eur = 0;
+      this.returnModal.notes = '';
+      this.returnModal.customer_notified = false;
+      // Tenta carregar devolução existente
+      try {
+        const r = await fetch('/settlements/waybill/' + encodeURIComponent(waybill) + '/return/');
+        const j = await r.json();
+        if (j.success && j.return) {
+          this.returnModal.return_status = j.return.return_status;
+          this.returnModal.return_reason = j.return.return_reason;
+          this.returnModal.return_tracking_number = j.return.return_tracking_number;
+          this.returnModal.return_carrier = j.return.return_carrier;
+          this.returnModal.return_date = j.return.return_date;
+          this.returnModal.return_cost_eur = j.return.return_cost_eur;
+          this.returnModal.notes = j.return.notes;
+          this.returnModal.customer_notified = j.return.customer_notified;
+        }
+      } catch (e) {}
+      this.returnModal.open = true;
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    async saveReturn() {
+      const r = await fetch('/settlements/waybill/' + encodeURIComponent(this.returnModal.waybill) + '/return/save/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': this._csrf() },
+        body: JSON.stringify(this.returnModal),
+      });
+      const j = await r.json();
+      if (j.success) {
+        this.returnModal.open = false;
+        this.search(false);
+      } else {
+        alert(j.error || 'Erro');
+      }
+    },
+  };
+}
+</script>
+{% endblock %}

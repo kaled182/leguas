@@ -1,0 +1,879 @@
+{% extends 'settlements/base.html' %}
+{% block title %}{{ waybill }} — Detalhe{% endblock %}
+{% block content %}
+<div class="min-h-screen bg-gray-50 dark:bg-gray-900">
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-4">
+
+  {# Breadcrumb #}
+  <nav class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+    <a href="javascript:history.back()" class="inline-flex items-center gap-1 hover:text-indigo-600 dark:hover:text-indigo-400">
+      <i data-lucide="arrow-left" class="w-4 h-4"></i>
+      Voltar
+    </a>
+    <span class="text-gray-300 dark:text-gray-600">/</span>
+    <span class="text-gray-700 dark:text-gray-300">Waybill</span>
+  </nav>
+
+  {# Banner: DEVOLVIDO ao remetente #}
+  {% if return_record %}
+  <div class="bg-amber-50 dark:bg-amber-900/20 border-l-4 border-amber-600 dark:border-amber-500 rounded-xl p-5">
+    <div class="flex items-start gap-3">
+      <div class="w-10 h-10 bg-amber-100 dark:bg-amber-900/40 rounded-lg flex items-center justify-center flex-shrink-0">
+        <i data-lucide="undo-2" class="w-5 h-5 text-amber-700 dark:text-amber-400"></i>
+      </div>
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="text-sm font-bold text-amber-900 dark:text-amber-200">📤 DEVOLVIDO AO REMETENTE</span>
+          <span class="px-2 py-0.5 bg-amber-200 dark:bg-amber-900/50 text-amber-800 dark:text-amber-200 rounded text-xs font-bold">
+            {{ return_record.get_return_status_display }}
+          </span>
+        </div>
+        <p class="text-sm text-amber-800 dark:text-amber-200 mt-1">
+          Razão: <strong>{{ return_record.get_return_reason_display }}</strong>
+        </p>
+        <p class="text-xs text-amber-700 dark:text-amber-400 mt-1">
+          Data: <strong>{{ return_record.return_date|date:"d/m/Y" }}</strong>
+          {% if return_record.return_carrier %} · Transportadora: <strong>{{ return_record.return_carrier }}</strong>{% endif %}
+          {% if return_record.return_tracking_number %} · Tracking: <strong class="font-mono">{{ return_record.return_tracking_number }}</strong>{% endif %}
+          {% if return_record.return_cost_eur %} · Custo: <strong>€{{ return_record.return_cost_eur }}</strong>{% endif %}
+          {% if return_record.batch %} · Lote: <strong>#{{ return_record.batch.id }} {{ return_record.batch.name }}</strong>{% endif %}
+        </p>
+        <p class="text-[10px] text-amber-600 dark:text-amber-400 mt-1">
+          Marcado por <strong>{{ return_record.marked_by.username|default:"sistema" }}</strong> em {{ return_record.created_at|date:"d/m/Y H:i" }}
+        </p>
+        {% if return_record.notes %}
+        <div class="mt-2 px-3 py-2 bg-white/60 dark:bg-gray-800/60 rounded text-xs text-amber-800 dark:text-amber-200 whitespace-pre-wrap">{{ return_record.notes }}</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {# Banner: PRIORITÁRIO (computado) #}
+  {% if priority_info.is_priority %}
+  <div class="bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 border-l-4 border-orange-500 dark:border-orange-400 rounded-xl p-5">
+    <div class="flex items-start gap-3">
+      <div class="w-10 h-10 bg-gradient-to-br from-orange-500 to-amber-500 rounded-lg flex items-center justify-center flex-shrink-0 text-white text-xl">
+        🔥
+      </div>
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="text-sm font-bold text-orange-800 dark:text-orange-300">PACOTE PRIORITÁRIO</span>
+        </div>
+        <ul class="mt-1 text-sm text-orange-700 dark:text-orange-200 space-y-0.5">
+          {% for r in priority_info.reasons %}
+          <li>• {{ r.label }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {# Banner: Flag activo (sinalização persistente) #}
+  {% if active_flag %}
+  <div class="bg-rose-50 dark:bg-rose-900/20 border-l-4 border-rose-500 dark:border-rose-400 rounded-xl p-5">
+    <div class="flex items-start gap-3">
+      <div class="w-10 h-10 bg-rose-100 dark:bg-rose-900/40 rounded-lg flex items-center justify-center flex-shrink-0">
+        <i data-lucide="flag" class="w-5 h-5 text-rose-600 dark:text-rose-400"></i>
+      </div>
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="text-sm font-bold text-rose-800 dark:text-rose-300">🚨 PACOTE SINALIZADO</span>
+          <span class="px-2 py-0.5 bg-rose-200 dark:bg-rose-900/50 text-rose-800 dark:text-rose-200 rounded text-xs font-bold">
+            {{ active_flag.get_flag_type_display }}
+          </span>
+        </div>
+        <p class="text-sm text-rose-700 dark:text-rose-200 mt-1">
+          Razão: <strong>{{ active_flag.get_reason_display }}</strong>
+        </p>
+        <p class="text-xs text-rose-600 dark:text-rose-400 mt-1">
+          Sinalizado em <strong>{{ active_flag.flagged_at|date:"d/m/Y H:i" }}</strong>
+          {% if active_flag.flagged_by %} por <strong>{{ active_flag.flagged_by.get_username }}</strong>{% endif %}
+        </p>
+        {% if active_flag.notes %}
+        <div class="mt-2 px-3 py-2 bg-white/60 dark:bg-gray-800/60 rounded text-xs text-rose-800 dark:text-rose-200 whitespace-pre-wrap">{{ active_flag.notes }}</div>
+        {% endif %}
+        <p class="text-[11px] text-rose-500 dark:text-rose-400 italic mt-2">
+          ⓘ Esta sinalização será limpa automaticamente quando o pacote reaparecer com status entregue numa importação futura.
+        </p>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {# Banner: Resolução manual (se houver) #}
+  {% if resolution %}
+  <div class="bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 dark:border-blue-400 rounded-xl p-5">
+    <div class="flex items-start gap-3">
+      <div class="w-10 h-10 bg-blue-100 dark:bg-blue-900/40 rounded-lg flex items-center justify-center flex-shrink-0">
+        <i data-lucide="check-circle" class="w-5 h-5 text-blue-600 dark:text-blue-400"></i>
+      </div>
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="text-sm font-bold text-blue-800 dark:text-blue-300">✅ RESOLVIDO</span>
+          <span class="px-2 py-0.5 bg-blue-200 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200 rounded text-xs font-bold">
+            {{ resolution.get_resolution_type_display }}
+          </span>
+        </div>
+        <p class="text-xs text-blue-600 dark:text-blue-400 mt-1">
+          Resolvido em <strong>{{ resolution.resolved_at|date:"d/m/Y H:i" }}</strong>
+          {% if resolution.resolved_by %} por <strong>{{ resolution.resolved_by.get_username }}</strong>{% endif %}
+        </p>
+        {% if resolution.other_hub or resolution.other_courier %}
+        <p class="text-xs text-blue-700 dark:text-blue-300 mt-1">
+          {% if resolution.other_hub %}HUB: <strong>{{ resolution.other_hub }}</strong>{% endif %}
+          {% if resolution.other_courier %} · Courier real: <strong>{{ resolution.other_courier }}</strong>{% endif %}
+          {% if resolution.other_delivery_time %} · Entregue em <strong>{{ resolution.other_delivery_time|date:"d/m/Y H:i" }}</strong>{% endif %}
+        </p>
+        {% endif %}
+        {% if resolution.notes %}
+        <div class="mt-2 px-3 py-2 bg-white/60 dark:bg-gray-800/60 rounded text-xs text-blue-800 dark:text-blue-200 whitespace-pre-wrap">{{ resolution.notes }}</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {# Hero card #}
+  <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-6">
+    <div class="flex items-start justify-between gap-4 flex-wrap">
+      <div class="min-w-0">
+        <p class="text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500 font-medium">Waybill Number</p>
+        <h1 class="mt-1 text-2xl font-mono font-bold text-gray-900 dark:text-white select-all">{{ waybill }}</h1>
+        {% if latest.lp_number %}
+          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">LP: <span class="font-mono font-semibold text-gray-700 dark:text-gray-300">{{ latest.lp_number }}</span></p>
+        {% endif %}
+      </div>
+
+      <div class="text-right">
+        {% if latest.task_status == 'Delivered' %}
+          <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400">
+            <i data-lucide="check-circle" class="w-4 h-4"></i>Delivered
+          </span>
+        {% elif latest.task_status == 'Driver_received' %}
+          <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400">
+            <i data-lucide="truck" class="w-4 h-4"></i>Driver Received
+          </span>
+        {% elif latest.task_status == 'Attempt Failure' %}
+          <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400">
+            <i data-lucide="x-circle" class="w-4 h-4"></i>Attempt Failure
+          </span>
+        {% elif latest.task_status == 'Assigned' %}
+          <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400">
+            <i data-lucide="warehouse" class="w-4 h-4"></i>Assigned
+          </span>
+        {% elif latest.task_status == 'Unassign' %}
+          <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-slate-100 text-slate-700 dark:bg-slate-900/40 dark:text-slate-400">
+            <i data-lucide="package-2" class="w-4 h-4"></i>Unassign
+          </span>
+        {% else %}
+          <span class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300">{{ latest.task_status }}</span>
+        {% endif %}
+        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+          Última data: <span class="font-medium">{{ latest.task_date|date:"d/m/Y" }}</span>
+        </p>
+      </div>
+    </div>
+
+    {# Quick stats grid #}
+    <div class="mt-5 grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div class="bg-gray-50 dark:bg-gray-900/50 rounded-lg px-4 py-3 border border-gray-100 dark:border-gray-700/50">
+        <p class="text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400 font-medium">Tentativas / Drivers</p>
+        <div class="mt-1 flex items-baseline gap-2">
+          <p class="text-xl font-bold text-gray-900 dark:text-white">{{ total_attempts }}</p>
+          <span class="text-xs text-gray-400">·</span>
+          <p class="text-sm font-semibold text-violet-600 dark:text-violet-400" title="Drivers únicos que passaram pelo pacote">{{ unique_drivers_count }} driver{{ unique_drivers_count|pluralize:"s" }}</p>
+        </div>
+        {% if n_attempts %}
+          <p class="text-[10px] text-rose-600 dark:text-rose-400 mt-0.5">{{ n_attempts }} falha{{ n_attempts|pluralize:"s" }}</p>
+        {% endif %}
+      </div>
+      <div class="bg-gray-50 dark:bg-gray-900/50 rounded-lg px-4 py-3 border border-gray-100 dark:border-gray-700/50">
+        <p class="text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400 font-medium">CP / Cidade</p>
+        <p class="mt-1 text-sm font-mono font-semibold text-gray-900 dark:text-white">{{ latest.zip_code|default:"—" }}</p>
+        <p class="text-xs text-gray-500 dark:text-gray-400">{{ latest.destination_city|default:"—" }}</p>
+      </div>
+      <div class="bg-gray-50 dark:bg-gray-900/50 rounded-lg px-4 py-3 border border-gray-100 dark:border-gray-700/50">
+        <p class="text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400 font-medium">Driver</p>
+        {% if latest.courier_name %}
+          <a href="{% url 'cainiao-driver-packages' %}?courier={{ latest.courier_name|urlencode }}"
+            class="mt-1 block text-sm font-semibold text-indigo-600 dark:text-indigo-400 hover:underline truncate" title="{{ latest.courier_name }}">
+            {{ latest.courier_name }}
+          </a>
+        {% else %}
+          <p class="mt-1 text-sm text-gray-400">—</p>
+        {% endif %}
+        {% if latest.dsp_name %}<p class="text-xs text-gray-500 dark:text-gray-400 truncate">{{ latest.dsp_name }}</p>{% endif %}
+      </div>
+      <div class="bg-gray-50 dark:bg-gray-900/50 rounded-lg px-4 py-3 border border-gray-100 dark:border-gray-700/50">
+        <p class="text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400 font-medium">Criação</p>
+        <p class="mt-1 text-sm font-semibold text-gray-900 dark:text-white">{% if records.0.creation_time %}{{ records.0.creation_time|date:"d/m H:i" }}{% else %}—{% endif %}</p>
+      </div>
+    </div>
+  </div>
+
+  {# Trilha de drivers — quem passou pelo pacote, em ordem cronológica #}
+  {% if drivers_seen|length > 1 %}
+  <div class="bg-violet-50 dark:bg-violet-900/15 border border-violet-200/50 dark:border-violet-700/30 rounded-xl p-4">
+    <div class="flex items-center gap-2 mb-3">
+      <i data-lucide="users" class="w-4 h-4 text-violet-600 dark:text-violet-400"></i>
+      <h3 class="text-sm font-bold text-violet-800 dark:text-violet-300">Trilha de Drivers</h3>
+      <span class="text-xs text-violet-600/70 dark:text-violet-400/70">· {{ unique_drivers_count }} drivers passaram por este pacote</span>
+    </div>
+    <div class="flex items-center gap-1 flex-wrap">
+      {% for d in drivers_seen %}
+        <a href="{% url 'cainiao-driver-packages' %}?courier={{ d.name|urlencode }}"
+           class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors
+                  {% if d.first_status == 'Delivered' %}bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 hover:bg-emerald-200
+                  {% elif d.first_status == 'Attempt Failure' %}bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300 hover:bg-rose-200
+                  {% elif d.first_status == 'Driver_received' %}bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 hover:bg-amber-200
+                  {% else %}bg-gray-100 text-gray-700 dark:bg-gray-700/50 dark:text-gray-300 hover:bg-gray-200{% endif %}"
+           title="Primeiro contacto: {{ d.first_date|date:'d/m/Y' }} · {{ d.first_status }}{% if d.dsp %} · {{ d.dsp }}{% endif %}">
+          {% if d.first_status == 'Delivered' %}
+            <i data-lucide="check-circle" class="w-3 h-3"></i>
+          {% elif d.first_status == 'Attempt Failure' %}
+            <i data-lucide="x-circle" class="w-3 h-3"></i>
+          {% else %}
+            <i data-lucide="user" class="w-3 h-3"></i>
+          {% endif %}
+          <span>{{ d.name }}</span>
+          <span class="text-[10px] opacity-70">{{ d.first_date|date:"d/m" }}</span>
+        </a>
+        {% if not forloop.last %}
+          <i data-lucide="arrow-right" class="w-3 h-3 text-violet-400 mx-0.5"></i>
+        {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {# Exception alert #}
+  {% if latest.exception_type or latest.exception_detail %}
+  <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700/50 rounded-xl p-4">
+    <div class="flex items-start gap-3">
+      <div class="w-8 h-8 bg-red-100 dark:bg-red-900/40 rounded-lg flex items-center justify-center flex-shrink-0">
+        <i data-lucide="alert-triangle" class="w-4 h-4 text-red-600 dark:text-red-400"></i>
+      </div>
+      <div class="min-w-0">
+        <p class="text-sm font-semibold text-red-800 dark:text-red-300">{{ latest.exception_type|default:"Exceção" }}</p>
+        {% if latest.exception_detail %}
+          <p class="mt-1 text-sm text-red-700 dark:text-red-400">{{ latest.exception_detail }}</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+    {# Timeline multi-dia #}
+    <div class="lg:col-span-2 bg-white dark:bg-gray-800 rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-6">
+      <h2 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-4">
+        <i data-lucide="git-branch" class="w-4 h-4 text-indigo-500"></i>
+        Timeline
+        <span class="text-xs font-normal text-gray-500 dark:text-gray-400">· {{ total_attempts }} dia{{ total_attempts|pluralize:"s" }}</span>
+      </h2>
+
+      <div class="space-y-6">
+        {% for day in timeline %}
+        <div class="relative pl-6 {% if not forloop.last %}pb-6 border-l-2 border-gray-200 dark:border-gray-700{% endif %}">
+          {# Day marker #}
+          <div class="absolute -left-[9px] top-0 w-4 h-4 rounded-full border-2
+            {% if day.record.task_status == 'Delivered' %}bg-emerald-500 border-emerald-200 dark:border-emerald-900
+            {% elif day.record.task_status == 'Attempt Failure' %}bg-red-500 border-red-200 dark:border-red-900
+            {% elif day.record.task_status == 'Driver_received' %}bg-amber-500 border-amber-200 dark:border-amber-900
+            {% elif day.record.task_status == 'Assigned' %}bg-blue-500 border-blue-200 dark:border-blue-900
+            {% else %}bg-gray-400 border-gray-200 dark:border-gray-700{% endif %}"></div>
+
+          {# Day header #}
+          <div class="flex items-center gap-2 mb-3">
+            <p class="text-sm font-bold text-gray-900 dark:text-white">{{ day.task_date|date:"l, d F Y" }}</p>
+            {% if day.record.task_status == 'Delivered' %}
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400">Delivered</span>
+            {% elif day.record.task_status == 'Attempt Failure' %}
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400">Attempt Failure</span>
+            {% elif day.record.task_status == 'Driver_received' %}
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400">Driver Received</span>
+            {% elif day.record.task_status == 'Assigned' %}
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400">Assigned</span>
+            {% elif day.record.task_status == 'Unassign' %}
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-700 dark:bg-slate-900/40 dark:text-slate-400">Unassign</span>
+            {% endif %}
+            {% if day.record.courier_name %}
+              <span class="text-xs text-gray-500 dark:text-gray-400">· {{ day.record.courier_name }}</span>
+            {% endif %}
+          </div>
+
+          {# Events #}
+          {% if day.events %}
+          <div class="space-y-2 ml-1">
+            {% for ev in day.events %}
+            <div class="flex items-start gap-3 text-sm">
+              <div class="flex-shrink-0 mt-0.5">
+                {% if ev.kind == 'creation' %}
+                  <i data-lucide="package-plus" class="w-4 h-4 text-indigo-500"></i>
+                {% elif ev.kind == 'receipt' %}
+                  <i data-lucide="inbox" class="w-4 h-4 text-purple-500"></i>
+                {% elif ev.kind == 'outbound' %}
+                  <i data-lucide="package-open" class="w-4 h-4 text-sky-500"></i>
+                {% elif ev.kind == 'start_delivery' %}
+                  <i data-lucide="play" class="w-4 h-4 text-amber-500"></i>
+                {% elif ev.kind == 'delivery' %}
+                  <i data-lucide="check-circle" class="w-4 h-4 text-emerald-500"></i>
+                {% elif ev.kind == 'failure' %}
+                  <i data-lucide="x-circle" class="w-4 h-4 text-red-500"></i>
+                {% elif ev.kind == 'return' %}
+                  <i data-lucide="undo-2" class="w-4 h-4 text-orange-500"></i>
+                {% endif %}
+              </div>
+              <div class="min-w-0 flex-1">
+                <p class="text-gray-800 dark:text-gray-200">
+                  {{ ev.label }}
+                  {% if ev.kind == 'return' %}
+                    <span class="ml-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300">FECHADO</span>
+                  {% endif %}
+                </p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">{{ ev.time|date:"d/m/Y" }}</p>
+                {% if ev.kind == 'return' %}
+                  <div class="mt-1 text-[11px] text-gray-600 dark:text-gray-400 space-y-0.5">
+                    {% if ev.reason %}<div><span class="font-semibold">Razão:</span> {{ ev.reason }}</div>{% endif %}
+                    {% if ev.tracking %}<div><span class="font-semibold">Tracking retorno:</span> <span class="font-mono">{{ ev.tracking }}</span>{% if ev.carrier %} · {{ ev.carrier }}{% endif %}</div>{% endif %}
+                    {% if ev.cost and ev.cost != '0.00' and ev.cost != '0' %}<div><span class="font-semibold">Custo:</span> €{{ ev.cost }}</div>{% endif %}
+                    {% if ev.notes %}<div class="italic text-gray-500">{{ ev.notes }}</div>{% endif %}
+                  </div>
+                {% endif %}
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <p class="text-xs text-gray-400 italic">Sem eventos registados.</p>
+          {% endif %}
+
+          {# Exception on this day #}
+          {% if day.record.exception_type or day.record.exception_detail %}
+          <div class="mt-3 ml-1 px-3 py-2 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200/50 dark:border-red-700/30">
+            <p class="text-xs font-semibold text-red-700 dark:text-red-400">{{ day.record.exception_type|default:"Exceção" }}</p>
+            {% if day.record.exception_detail %}
+              <p class="text-xs text-red-600 dark:text-red-400 mt-0.5">{{ day.record.exception_detail }}</p>
+            {% endif %}
+          </div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    {# Sidebar: package + driver + planning info #}
+    <div class="space-y-4">
+
+      {# Cliente / Destinatário (com contatos) #}
+      {% if customer_name or customer_phone or customer_email %}
+      <div class="bg-gradient-to-br from-fuchsia-50 to-pink-50 dark:from-fuchsia-900/20 dark:to-pink-900/20 rounded-xl border border-fuchsia-200/50 dark:border-fuchsia-700/50 p-5">
+        <h3 class="text-sm font-bold text-fuchsia-900 dark:text-fuchsia-200 flex items-center gap-2 mb-3">
+          <i data-lucide="user-circle" class="w-4 h-4"></i>
+          Cliente
+        </h3>
+        <p class="text-base font-bold text-fuchsia-900 dark:text-fuchsia-100 mb-2">{{ customer_name|default:"—" }}</p>
+        <div class="flex flex-wrap gap-2">
+          {% if customer_phone %}
+          <a href="tel:{{ customer_phone }}"
+             class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-gray-800 rounded-lg text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 border border-fuchsia-200/30 dark:border-fuchsia-700/30">
+            <i data-lucide="phone" class="w-3.5 h-3.5"></i>
+            {{ customer_phone }}
+          </a>
+          {% endif %}
+          {% if wa_phone %}
+          <a href="https://wa.me/{{ wa_phone }}" target="_blank" rel="noopener"
+             class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-gray-800 rounded-lg text-sm text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 border border-fuchsia-200/30 dark:border-fuchsia-700/30">
+            <i data-lucide="message-circle" class="w-3.5 h-3.5"></i>
+            WhatsApp
+          </a>
+          {% endif %}
+          {% if customer_email %}
+          <a href="mailto:{{ customer_email }}"
+             class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-gray-800 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 border border-fuchsia-200/30 dark:border-fuchsia-700/30 truncate max-w-full"
+             title="{{ customer_email }}">
+            <i data-lucide="mail" class="w-3.5 h-3.5"></i>
+            {{ customer_email }}
+          </a>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+
+      {# Destinatário / Morada #}
+      <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-5">
+        <h3 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-3">
+          <i data-lucide="map-pin" class="w-4 h-4 text-indigo-500"></i>
+          Destino
+        </h3>
+        <dl class="space-y-2 text-sm">
+          <div>
+            <dt class="text-[10px] uppercase tracking-wider text-gray-400">Morada</dt>
+            <dd class="text-gray-800 dark:text-gray-200">{{ latest.detailed_address|default:"—" }}</dd>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <dt class="text-[10px] uppercase tracking-wider text-gray-400">CP</dt>
+              <dd class="font-mono text-gray-800 dark:text-gray-200">{{ latest.zip_code|default:"—" }}</dd>
+            </div>
+            <div>
+              <dt class="text-[10px] uppercase tracking-wider text-gray-400">Cidade</dt>
+              <dd class="text-gray-800 dark:text-gray-200">{{ latest.destination_city|default:"—" }}</dd>
+            </div>
+          </div>
+          {% if latest.destination_area %}
+          <div>
+            <dt class="text-[10px] uppercase tracking-wider text-gray-400">Área</dt>
+            <dd class="text-gray-800 dark:text-gray-200">{{ latest.destination_area }}</dd>
+          </div>
+          {% endif %}
+          {% if latest.zone %}
+          <div>
+            <dt class="text-[10px] uppercase tracking-wider text-gray-400">Zona</dt>
+            <dd class="text-gray-800 dark:text-gray-200">{{ latest.zone }}</dd>
+          </div>
+          {% endif %}
+        </dl>
+      </div>
+
+      {# Mapa Leaflet com gap de entrega #}
+      {% if has_receiver_coords or has_actual_coords %}
+      <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-5">
+        <h3 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-3">
+          <i data-lucide="map" class="w-4 h-4 text-indigo-500"></i>
+          Localização
+          {% if latest.delivery_gap_distance %}
+            <span class="ml-auto text-xs font-normal px-2 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400">Gap: {{ latest.delivery_gap_distance }}</span>
+          {% endif %}
+        </h3>
+        <div id="wb-map" class="w-full h-72 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-900"
+          data-rlat="{{ latest.receiver_latitude|default:'' }}"
+          data-rlng="{{ latest.receiver_longitude|default:'' }}"
+          data-alat="{{ latest.actual_latitude|default:'' }}"
+          data-alng="{{ latest.actual_longitude|default:'' }}"
+          data-status="{{ latest.task_status|default:'' }}"></div>
+        <div class="mt-2 flex flex-wrap gap-3 text-xs text-gray-500 dark:text-gray-400">
+          {% if has_receiver_coords %}
+            <span class="inline-flex items-center gap-1.5">
+              <span class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span>Destinatário
+            </span>
+          {% endif %}
+          {% if has_actual_coords %}
+            <span class="inline-flex items-center gap-1.5">
+              <span class="w-3 h-3 rounded-full {% if latest.task_status == 'Attempt Failure' %}bg-red-500{% else %}bg-amber-500{% endif %} inline-block"></span>Entrega real
+            </span>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+
+      {# Package info #}
+      <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-5">
+        <h3 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-3">
+          <i data-lucide="box" class="w-4 h-4 text-indigo-500"></i>
+          Pacote
+        </h3>
+        <dl class="space-y-2 text-sm">
+          {% if seller_name %}
+          <div>
+            <dt class="text-[10px] uppercase tracking-wider text-gray-400">Seller</dt>
+            <dd class="text-gray-800 dark:text-gray-200 font-semibold">{{ seller_name }}</dd>
+          </div>
+          {% endif %}
+          {% if latest.weight_g %}
+          <div>
+            <dt class="text-[10px] uppercase tracking-wider text-gray-400">Peso</dt>
+            <dd class="text-gray-800 dark:text-gray-200 font-semibold">{{ latest.weight_g|floatformat:0 }} g</dd>
+          </div>
+          {% endif %}
+          {% if latest.length or latest.width or latest.height %}
+          <div>
+            <dt class="text-[10px] uppercase tracking-wider text-gray-400">Dimensões (L×W×H)</dt>
+            <dd class="text-gray-800 dark:text-gray-200 font-mono text-xs">
+              {{ latest.length|default:"—" }} × {{ latest.width|default:"—" }} × {{ latest.height|default:"—" }}
+            </dd>
+          </div>
+          {% endif %}
+          {% if latest.delivery_type %}
+          <div>
+            <dt class="text-[10px] uppercase tracking-wider text-gray-400">Delivery Type</dt>
+            <dd class="text-gray-800 dark:text-gray-200">{{ latest.delivery_type }}</dd>
+          </div>
+          {% endif %}
+          {% if latest.order_type %}
+          <div>
+            <dt class="text-[10px] uppercase tracking-wider text-gray-400">Order Type</dt>
+            <dd class="text-gray-800 dark:text-gray-200">{{ latest.order_type }}</dd>
+          </div>
+          {% endif %}
+          {% if latest.task_id %}
+          <div>
+            <dt class="text-[10px] uppercase tracking-wider text-gray-400">Task ID</dt>
+            <dd class="text-gray-800 dark:text-gray-200 font-mono text-xs">{{ latest.task_id }}</dd>
+          </div>
+          {% endif %}
+          {% if latest.sign_pod %}
+          <div>
+            <dt class="text-[10px] uppercase tracking-wider text-gray-400">POD / Assinatura</dt>
+            <dd>
+              <a href="{{ latest.sign_pod }}" target="_blank" rel="noopener"
+                class="inline-flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-400 hover:underline">
+                <i data-lucide="image" class="w-3.5 h-3.5"></i>Ver assinatura
+                <i data-lucide="external-link" class="w-3 h-3"></i>
+              </a>
+            </dd>
+          </div>
+          {% endif %}
+        </dl>
+      </div>
+
+      {# Métricas de tempo entre etapas #}
+      {% if time_metrics %}
+      <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-5">
+        <h3 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-3">
+          <i data-lucide="timer" class="w-4 h-4 text-cyan-500"></i>
+          Tempo entre etapas
+        </h3>
+        <dl class="space-y-1.5 text-xs">
+          {% if time_metrics.creation_to_inbound %}
+          <div class="flex justify-between">
+            <dt class="text-gray-500">Criação → Hub Inbound:</dt>
+            <dd class="font-mono font-semibold text-cyan-600 dark:text-cyan-400">{{ time_metrics.creation_to_inbound }}</dd>
+          </div>
+          {% endif %}
+          {% if time_metrics.inbound_to_delivered %}
+          <div class="flex justify-between">
+            <dt class="text-gray-500">Hub Inbound → Entregue:</dt>
+            <dd class="font-mono font-semibold text-emerald-600 dark:text-emerald-400">{{ time_metrics.inbound_to_delivered }}</dd>
+          </div>
+          {% endif %}
+          {% if time_metrics.start_to_delivered %}
+          <div class="flex justify-between">
+            <dt class="text-gray-500">Início entrega → Entregue:</dt>
+            <dd class="font-mono font-semibold text-blue-600 dark:text-blue-400">{{ time_metrics.start_to_delivered }}</dd>
+          </div>
+          {% endif %}
+          {% if priority_info.days_in_hub is not None %}
+          <div class="flex justify-between border-t border-gray-200 dark:border-gray-700 pt-1.5 mt-1.5">
+            <dt class="text-gray-500 font-semibold">
+              {% if priority_info.is_delivered %}Esteve no HUB:{% else %}No HUB há:{% endif %}
+            </dt>
+            <dd class="font-mono font-bold {% if priority_info.is_delivered %}text-emerald-600 dark:text-emerald-400{% elif priority_info.days_in_hub >= 5 %}text-rose-600{% elif priority_info.days_in_hub >= 3 %}text-orange-600{% else %}text-gray-700 dark:text-gray-300{% endif %}">
+              {{ priority_info.days_in_hub }} dia(s)
+            </dd>
+          </div>
+          {% endif %}
+          {% if n_attempts > 0 %}
+          <div class="flex justify-between">
+            <dt class="text-gray-500 font-semibold">Tentativas:</dt>
+            <dd class="font-mono font-bold {% if n_attempts >= 2 %}text-rose-600{% else %}text-amber-600{% endif %}">
+              {{ n_attempts }}
+            </dd>
+          </div>
+          {% endif %}
+        </dl>
+      </div>
+      {% endif %}
+
+      {# Pré-planeamento (Tracking columns) #}
+      {% if latest.pre_assigned_driver or latest.pre_allocated_dsp or latest.commercial_area %}
+      <div class="bg-violet-50 dark:bg-violet-900/20 rounded-xl border border-violet-200/50 dark:border-violet-700/30 p-5">
+        <h3 class="text-sm font-bold text-violet-900 dark:text-violet-300 flex items-center gap-2 mb-3">
+          <i data-lucide="calendar-clock" class="w-4 h-4"></i>
+          Pré-planeamento
+        </h3>
+        <dl class="space-y-1.5 text-xs">
+          {% if latest.pre_assigned_driver %}
+          <div class="flex justify-between">
+            <dt class="text-violet-700 dark:text-violet-400">Driver pré-atribuído:</dt>
+            <dd class="font-semibold {% if latest.pre_assigned_driver != latest.courier_name %}text-amber-700 dark:text-amber-300{% else %}text-violet-900 dark:text-violet-200{% endif %}">
+              {{ latest.pre_assigned_driver }}
+              {% if latest.pre_assigned_driver != latest.courier_name and latest.courier_name %}
+              <span class="block text-[10px] text-amber-600 dark:text-amber-400">⚠ diferente do real ({{ latest.courier_name }})</span>
+              {% endif %}
+            </dd>
+          </div>
+          {% endif %}
+          {% if latest.pre_allocated_dsp %}
+          <div class="flex justify-between">
+            <dt class="text-violet-700 dark:text-violet-400">DSP pré-alocado:</dt>
+            <dd class="text-violet-900 dark:text-violet-200 truncate max-w-[60%]" title="{{ latest.pre_allocated_dsp }}">{{ latest.pre_allocated_dsp }}</dd>
+          </div>
+          {% endif %}
+          {% if latest.commercial_area %}
+          <div class="flex justify-between">
+            <dt class="text-violet-700 dark:text-violet-400">Área comercial:</dt>
+            <dd class="text-violet-900 dark:text-violet-200">{{ latest.commercial_area }}</dd>
+          </div>
+          {% endif %}
+          {% if latest.bigbag_number %}
+          <div class="flex justify-between">
+            <dt class="text-violet-700 dark:text-violet-400">Bigbag:</dt>
+            <dd class="font-mono text-violet-900 dark:text-violet-200">{{ latest.bigbag_number }}</dd>
+          </div>
+          {% endif %}
+          {% if latest.task_plan_date %}
+          <div class="flex justify-between">
+            <dt class="text-violet-700 dark:text-violet-400">Data planeada:</dt>
+            <dd class="font-semibold text-violet-900 dark:text-violet-200">{{ latest.task_plan_date|date:"d/m/Y" }}</dd>
+          </div>
+          {% endif %}
+        </dl>
+      </div>
+      {% endif %}
+
+      {# Wrong HUB warning #}
+      {% if latest.wrong_hub_parcel or latest.arrive_wrong_hub or latest.hub_exception_reason %}
+      <div class="bg-amber-50 dark:bg-amber-900/20 rounded-xl border-l-4 border-amber-500 p-4">
+        <h3 class="text-sm font-bold text-amber-800 dark:text-amber-300 flex items-center gap-2 mb-1">
+          <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+          Problema de roteamento
+        </h3>
+        {% if latest.wrong_hub_parcel %}<p class="text-xs text-amber-700 dark:text-amber-300">⚠ Wrong HUB Parcel</p>{% endif %}
+        {% if latest.arrive_wrong_hub %}<p class="text-xs text-amber-700 dark:text-amber-300">⚠ Chegou ao HUB errado</p>{% endif %}
+        {% if latest.hub_exception_reason %}<p class="text-xs text-amber-700 dark:text-amber-300 mt-1">{{ latest.hub_exception_reason }}</p>{% endif %}
+      </div>
+      {% endif %}
+
+      {# Tags + Watch (acções rápidas) #}
+      <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-5"
+           x-data="waybillSidebar('{{ waybill }}', {{ is_watching|yesno:'true,false' }})" x-init="init()">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <i data-lucide="tag" class="w-4 h-4 text-pink-500"></i>
+            Tags & Watch
+          </h3>
+          <button @click="toggleWatch()"
+                  :class="watching ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'"
+                  class="px-2 py-1 rounded text-xs font-semibold flex items-center gap-1">
+            <i :data-lucide="watching ? 'eye' : 'eye-off'" class="w-3 h-3"></i>
+            <span x-text="watching ? 'A seguir' : 'Seguir'"></span>
+          </button>
+        </div>
+        <div class="flex flex-wrap gap-1 mb-2">
+          {% for t in tags %}
+          <span class="px-2 py-0.5 bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300 rounded text-xs flex items-center gap-1">
+            {{ t.tag }}
+            <button onclick="window._delTag({{ t.id }})" class="text-pink-500 hover:text-pink-700">×</button>
+          </span>
+          {% empty %}
+          <span class="text-xs text-gray-400 italic">Sem tags</span>
+          {% endfor %}
+        </div>
+        <div class="flex gap-1">
+          <input type="text" x-model="newTag" @keydown.enter="addTag()" placeholder="ex: VIP, Frágil…"
+                 class="flex-1 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-700">
+          <button @click="addTag()" class="px-2 py-1 bg-pink-600 hover:bg-pink-700 text-white rounded text-xs">+</button>
+        </div>
+      </div>
+
+      {# Equipa de entrega (helper, locker) — só se houver detail #}
+      {% if detail.courier_helper or detail.courier_telephone or detail.pudo_locker_id %}
+      <div class="bg-teal-50 dark:bg-teal-900/20 rounded-xl border border-teal-200/50 dark:border-teal-700/30 p-5">
+        <h3 class="text-sm font-bold text-teal-800 dark:text-teal-300 flex items-center gap-2 mb-3">
+          <i data-lucide="users" class="w-4 h-4"></i>
+          Equipa de entrega
+        </h3>
+        <dl class="space-y-1.5 text-xs">
+          {% if detail.courier_helper %}
+          <div class="flex justify-between">
+            <dt class="text-teal-700 dark:text-teal-400">Helper:</dt>
+            <dd class="font-semibold text-teal-900 dark:text-teal-200">{{ detail.courier_helper }}</dd>
+          </div>
+          {% endif %}
+          {% if detail.courier_telephone %}
+          <div class="flex justify-between items-center">
+            <dt class="text-teal-700 dark:text-teal-400">Telefone driver:</dt>
+            <dd>
+              <a href="tel:{{ detail.courier_telephone }}" class="text-blue-600 dark:text-blue-400 hover:underline">
+                {{ detail.courier_telephone }}
+              </a>
+            </dd>
+          </div>
+          {% endif %}
+          {% if detail.pudo_locker_id %}
+          <div class="flex justify-between">
+            <dt class="text-teal-700 dark:text-teal-400">PUDO/Locker:</dt>
+            <dd class="font-mono text-teal-900 dark:text-teal-200">{{ detail.pudo_locker_id }}</dd>
+          </div>
+          {% endif %}
+        </dl>
+      </div>
+      {% endif %}
+
+      {# Planning (forecast) info — completo #}
+      {% if planning %}
+      <div class="bg-indigo-50 dark:bg-indigo-900/20 rounded-xl border border-indigo-200/50 dark:border-indigo-700/30 p-5">
+        <h3 class="text-sm font-bold text-indigo-900 dark:text-indigo-300 flex items-center gap-2 mb-3">
+          <i data-lucide="calendar-check" class="w-4 h-4"></i>
+          Forecast / Planning
+        </h3>
+        <dl class="space-y-1.5 text-xs">
+          <div class="flex justify-between">
+            <dt class="text-indigo-700 dark:text-indigo-400">Data prevista:</dt>
+            <dd class="font-semibold text-indigo-900 dark:text-indigo-200">{{ planning.operation_date|date:"d/m/Y" }}</dd>
+          </div>
+          {% if planning.hub %}
+          <div class="flex justify-between">
+            <dt class="text-indigo-700 dark:text-indigo-400">HUB:</dt>
+            <dd class="font-semibold text-indigo-900 dark:text-indigo-200">{{ planning.hub }}</dd>
+          </div>
+          {% endif %}
+          {% if planning.dsp %}
+          <div class="flex justify-between">
+            <dt class="text-indigo-700 dark:text-indigo-400">DSP:</dt>
+            <dd class="text-indigo-900 dark:text-indigo-200 truncate max-w-[60%]" title="{{ planning.dsp }}">{{ planning.dsp }}</dd>
+          </div>
+          {% endif %}
+          {% if planning.receiver_province %}
+          <div class="flex justify-between">
+            <dt class="text-indigo-700 dark:text-indigo-400">Província:</dt>
+            <dd class="text-indigo-900 dark:text-indigo-200">{{ planning.receiver_province }}</dd>
+          </div>
+          {% endif %}
+          {% if planning.order_creation_time %}
+          <div class="flex justify-between">
+            <dt class="text-indigo-700 dark:text-indigo-400">Pedido criado:</dt>
+            <dd class="font-mono text-indigo-900 dark:text-indigo-200">{{ planning.order_creation_time|date:"d/m H:i" }}</dd>
+          </div>
+          {% endif %}
+          {% if planning.pickup_time %}
+          <div class="flex justify-between">
+            <dt class="text-indigo-700 dark:text-indigo-400">Pick-up:</dt>
+            <dd class="font-mono text-indigo-900 dark:text-indigo-200">{{ planning.pickup_time|date:"d/m H:i" }}</dd>
+          </div>
+          {% endif %}
+          {% if planning.sign_time %}
+          <div class="flex justify-between">
+            <dt class="text-indigo-700 dark:text-indigo-400">Sign Time:</dt>
+            <dd class="font-mono text-indigo-900 dark:text-indigo-200">{{ planning.sign_time|date:"d/m H:i" }}</dd>
+          </div>
+          {% endif %}
+          {% if planning.exception_type %}
+          <div class="mt-2 px-2 py-1 bg-rose-100 dark:bg-rose-900/30 rounded text-rose-700 dark:text-rose-300">
+            <strong>⚠ {{ planning.exception_type }}</strong>
+            {% if planning.exception_reason %}
+              <div class="text-[11px]">{{ planning.exception_reason }}</div>
+            {% endif %}
+          </div>
+          {% endif %}
+        </dl>
+      </div>
+      {% endif %}
+
+    </div>
+  </div>
+
+</div>
+</div>
+
+<script src="https://unpkg.com/lucide@latest"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+{% include 'system_config/_leaflet_tiles.html' %}
+<script>
+lucide.createIcons();
+
+function _csrf() {
+  return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
+    || document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+}
+
+function waybillSidebar(waybill, isWatching) {
+  return {
+    waybill,
+    watching: isWatching,
+    newTag: '',
+    async toggleWatch() {
+      const r = await fetch('/settlements/waybill/' + encodeURIComponent(this.waybill) + '/watch/', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': _csrf() },
+      });
+      const j = await r.json();
+      if (j.success) this.watching = j.watching;
+    },
+    async addTag() {
+      const tag = (this.newTag || '').trim();
+      if (!tag) return;
+      const r = await fetch('/settlements/waybill/' + encodeURIComponent(this.waybill) + '/tags/add/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': _csrf(),
+        },
+        body: JSON.stringify({ tag }),
+      });
+      const j = await r.json();
+      if (j.success) {
+        this.newTag = '';
+        location.reload();
+      } else alert(j.error || 'Erro');
+    },
+  };
+}
+
+window._delTag = async function(tagId) {
+  if (!confirm('Apagar tag?')) return;
+  await fetch('/settlements/waybill/tags/' + tagId + '/delete/', {
+    method: 'POST',
+    headers: { 'X-CSRFToken': _csrf() },
+  });
+  location.reload();
+};
+
+
+// Leaflet map init (waybill location)
+(function initWaybillMap(){
+  const mapEl = document.getElementById('wb-map');
+  if (!mapEl || typeof L === 'undefined') return;
+  const rLat = parseFloat(mapEl.dataset.rlat);
+  const rLng = parseFloat(mapEl.dataset.rlng);
+  const aLat = parseFloat(mapEl.dataset.alat);
+  const aLng = parseFloat(mapEl.dataset.alng);
+  const status = mapEl.dataset.status || '';
+  const hasR = !isNaN(rLat) && !isNaN(rLng) && rLat !== 0;
+  const hasA = !isNaN(aLat) && !isNaN(aLng) && aLat !== 0;
+  if (!hasR && !hasA) return;
+
+  const center = hasR ? [rLat, rLng] : [aLat, aLng];
+  const map = L.map('wb-map', { zoomControl: true, scrollWheelZoom: false }).setView(center, 15);
+  window.addTileLayer(map);
+
+  const makeIcon = (color) => L.divIcon({
+    html: `<span style="display:inline-block;width:18px;height:18px;border-radius:50%;background:${color};border:3px solid white;box-shadow:0 2px 6px rgba(0,0,0,.4);"></span>`,
+    className: '',
+    iconSize: [18, 18],
+    iconAnchor: [9, 9],
+  });
+
+  const actualColor = status === 'Attempt Failure' ? '#ef4444' : '#f59e0b';
+  const bounds = [];
+
+  if (hasR) {
+    L.marker([rLat, rLng], { icon: makeIcon('#10b981') })
+      .addTo(map)
+      .bindPopup('<strong>Destinatário</strong><br>' + rLat.toFixed(6) + ', ' + rLng.toFixed(6));
+    bounds.push([rLat, rLng]);
+  }
+  if (hasA) {
+    L.marker([aLat, aLng], { icon: makeIcon(actualColor) })
+      .addTo(map)
+      .bindPopup('<strong>Entrega real</strong><br>' + aLat.toFixed(6) + ', ' + aLng.toFixed(6));
+    bounds.push([aLat, aLng]);
+  }
+  if (hasR && hasA) {
+    L.polyline([[rLat, rLng], [aLat, aLng]], {
+      color: actualColor, weight: 2, opacity: 0.7, dashArray: '6,6',
+    }).addTo(map);
+  }
+  if (bounds.length > 1) {
+    map.fitBounds(bounds, { padding: [30, 30] });
+  }
+})();
+</script>
+{% endblock %}

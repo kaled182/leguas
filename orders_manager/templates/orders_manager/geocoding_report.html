@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Falhas de Geocodificação - Leguas</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            color: #d32f2f;
+            margin-bottom: 10px;
+            font-size: 32px;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        
+        /* Stats Cards */
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border-left: 5px solid;
+        }
+        
+        .stat-card.danger { border-left-color: #d32f2f; }
+        .stat-card.success { border-left-color: #388e3c; }
+        .stat-card.info { border-left-color: #1976d2; }
+        .stat-card.warning { border-left-color: #f57c00; }
+        
+        .stat-value {
+            font-size: 48px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .stat-card.danger .stat-value { color: #d32f2f; }
+        .stat-card.success .stat-value { color: #388e3c; }
+        .stat-card.info .stat-value { color: #1976d2; }
+        .stat-card.warning .stat-value { color: #f57c00; }
+        
+        .stat-label {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        /* Filters */
+        .filters {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .filter-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 150px 150px;
+            gap: 15px;
+            align-items: end;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        button, .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+        
+        .btn-primary {
+            background: #1976d2;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #1565c0;
+        }
+        
+        .btn-secondary {
+            background: #757575;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #616161;
+        }
+        
+        /* Failure Cards */
+        .failure-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 15px;
+            border-left: 5px solid;
+        }
+        
+        .failure-card.unresolved { border-left-color: #d32f2f; }
+        .failure-card.resolved { border-left-color: #388e3c; }
+        
+        .failure-header {
+            margin-bottom: 15px;
+        }
+        
+        .failure-status {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .status-unresolved {
+            background: #ffebee;
+            color: #d32f2f;
+        }
+        
+        .status-resolved {
+            background: #e8f5e9;
+            color: #388e3c;
+        }
+        
+        .failure-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        .failure-title a {
+            color: #1976d2;
+            text-decoration: none;
+        }
+        
+        .failure-title a:hover {
+            text-decoration: underline;
+        }
+        
+        .retry-badge {
+            background: #fff3cd;
+            color: #856404;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            margin-left: 10px;
+        }
+        
+        .addresses {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .address-box {
+            padding: 12px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+        
+        .address-original {
+            background: #f5f5f5;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .address-normalized {
+            background: #fff8e1;
+            border: 1px solid #ffecb3;
+        }
+        
+        .address-label {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            font-size: 11px;
+            font-weight: 600;
+            color: #666;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+        
+        .details {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #eee;
+        }
+        
+        .detail-item {
+            font-size: 13px;
+        }
+        
+        .detail-label {
+            font-weight: 600;
+            color: #666;
+        }
+        
+        .timestamps {
+            font-size: 12px;
+            color: #999;
+            padding-top: 10px;
+            border-top: 1px solid #eee;
+        }
+        
+        .no-results {
+            background: #e8f5e9;
+            padding: 40px;
+            text-align: center;
+            border-radius: 8px;
+            border: 2px solid #388e3c;
+        }
+        
+        .no-results h2 {
+            color: #388e3c;
+            margin-bottom: 10px;
+        }
+        
+        /* Pagination */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 30px;
+        }
+        
+        .pagination a, .pagination span {
+            padding: 8px 15px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            text-decoration: none;
+            color: #333;
+        }
+        
+        .pagination a:hover {
+            background: #f5f5f5;
+        }
+        
+        .pagination .current {
+            background: #1976d2;
+            color: white;
+            border-color: #1976d2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🗺️ Relatório de Falhas de Geocodificação</h1>
+        <p class="subtitle">Endereços que não foram geocodificados automaticamente</p>
+        
+        <!-- Estatísticas -->
+        <div class="stats">
+            <div class="stat-card danger">
+                <div class="stat-value">{{ stats.unresolved }}</div>
+                <div class="stat-label">Não Resolvidos</div>
+            </div>
+            <div class="stat-card success">
+                <div class="stat-value">{{ stats.resolved }}</div>
+                <div class="stat-label">Resolvidos</div>
+            </div>
+            <div class="stat-card info">
+                <div class="stat-value">{{ stats.total_geocoded }}</div>
+                <div class="stat-label">Total Geocodificados</div>
+            </div>
+            <div class="stat-card {% if stats.success_rate >= 90 %}success{% elif stats.success_rate >= 70 %}warning{% else %}danger{% endif %}">
+                <div class="stat-value">{{ stats.success_rate }}%</div>
+                <div class="stat-label">Taxa de Sucesso</div>
+            </div>
+        </div>
+        
+        <!-- Filtros -->
+        <div class="filters">
+            <form method="get">
+                <div class="filter-row">
+                    <div>
+                        <label>Parceiro</label>
+                        <input type="text" name="partner" value="{{ partner_filter }}" placeholder="Ex: Delnext">
+                    </div>
+                    <div>
+                        <label>Mostrar Resolvidos</label>
+                        <select name="show_resolved">
+                            <option value="false" {% if not show_resolved %}selected{% endif %}>Não</option>
+                            <option value="true" {% if show_resolved %}selected{% endif %}>Sim</option>
+                        </select>
+                    </div>
+                    <div>
+                        <button type="submit" class="btn btn-primary">🔍 Filtrar</button>
+                    </div>
+                    <div>
+                        <a href="{% url 'orders:geocoding_failures_report' %}" class="btn btn-secondary">🔄 Limpar</a>
+                    </div>
+                </div>
+            </form>
+        </div>
+        
+        <!-- Lista de Falhas -->
+        {% if failures %}
+            {% for failure in failures %}
+            <div class="failure-card {% if failure.resolved %}resolved{% else %}unresolved{% endif %}">
+                <div class="failure-header">
+                    <div class="failure-status {% if failure.resolved %}status-resolved{% else %}status-unresolved{% endif %}">
+                        {% if failure.resolved %}✅ RESOLVIDO{% else %}❌ NÃO RESOLVIDO{% endif %}
+                    </div>
+                    <div class="failure-title">
+                        Pedido: <a href="{% url 'orders:order_detail' failure.order.id %}">{{ failure.order.external_reference }}</a>
+                        {% if failure.retry_count > 1 %}
+                            <span class="retry-badge">{{ failure.retry_count }} tentativas</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="addresses">
+                    <div>
+                        <div class="address-label">Endereço Original</div>
+                        <div class="address-box address-original">{{ failure.original_address }}</div>
+                    </div>
+                    <div>
+                        <div class="address-label">Endereço Normalizado</div>
+                        <div class="address-box address-normalized">{{ failure.normalized_address }}</div>
+                    </div>
+                </div>
+                
+                <div class="details">
+                    <div class="detail-item">
+                        <span class="detail-label">Código Postal:</span> {{ failure.postal_code }}
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Localidade:</span> {{ failure.locality|default:"N/A" }}
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Parceiro:</span> {{ failure.order.partner.name }}
+                    </div>
+                </div>
+                
+                <div class="timestamps">
+                    📅 Primeira tentativa: {{ failure.attempted_at|date:"d/m/Y H:i" }} | 
+                    🔄 Última tentativa: {{ failure.last_retry_at|date:"d/m/Y H:i" }}
+                    {% if failure.resolved %}
+                        | ✅ Resolvido: {{ failure.resolved_at|date:"d/m/Y H:i" }}
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+            
+            <!-- Paginação -->
+            {% if failures.has_other_pages %}
+            <div class="pagination">
+                {% if failures.has_previous %}
+                <a href="?page={{ failures.previous_page_number }}{% if partner_filter %}&partner={{ partner_filter }}{% endif %}{% if show_resolved %}&show_resolved=true{% endif %}">
+                    ← Anterior
+                </a>
+                {% endif %}
+                
+                <span class="current">Página {{ failures.number }} de {{ failures.paginator.num_pages }}</span>
+                
+                {% if failures.has_next %}
+                <a href="?page={{ failures.next_page_number }}{% if partner_filter %}&partner={{ partner_filter }}{% endif %}{% if show_resolved %}&show_resolved=true{% endif %}">
+                    Próxima →
+                </a>
+                {% endif %}
+            </div>
+            {% endif %}
+        {% else %}
+            <div class="no-results">
+                <h2>✅ Nenhuma falha encontrada!</h2>
+                <p>Todos os endereços foram geocodificados com sucesso.</p>
+            </div>
+        {% endif %}
+    </div>
+</body>
+</html>

@@ -29,6 +29,9 @@
 
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Alpine.js (required for sidebar submenus) -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>[x-cloak]{display:none!important}</style>
     <script>
       tailwind.config = {
         darkMode: 'class',
@@ -106,8 +109,7 @@
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    <!-- Custom CSS -->
-    <link rel="stylesheet" href="{% static 'management/css/management.css' %}" />
+    <!-- Custom CSS removed (legacy) to avoid conflicts with Tailwind utilities -->
     
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚚</text></svg>">
 
@@ -136,7 +138,7 @@
       <div id="sidebar-overlay" class="fixed inset-0 bg-black/50 dark:bg-black/70 z-30 lg:hidden hidden transition-opacity duration-300 backdrop-blur-sm"></div>
       
       <!-- Sidebar -->
-      {% include 'management/partials/sidebar.html' %}
+      {% include 'paack_dashboard/partials/sidebar.html' %}
       
       <!-- Botão de toggle da sidebar (mobile) -->
       <button id="sidebar-toggle" class="fixed top-4 left-4 z-40 lg:hidden bg-primary-600 hover:bg-primary-700 text-white p-3 rounded-lg shadow-lg transition-colors duration-200">

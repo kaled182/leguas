@@ -55,3 +55,14 @@ theme/node_modules/
 
 # Arquivos de backup
 files/
+
+# Backups
+backups/
+
+# Docker dev backup
+docker-compose.yml.bak
+
+# Production-only files (não precisam ir na imagem dev)
+# (Note: Dockerfile production COPY -> /app inclui tudo, então podem
+# ficar disponíveis dentro do container, mas evitamos lixo grande)
+

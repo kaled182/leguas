@@ -71,6 +71,56 @@ class Partner(models.Model):
         help_text="Se ativo, pedidos serão automaticamente atribuídos a motoristas disponíveis",
     )
 
+    # ── Financeiro (Fase 1) ────────────────────────────────────────────────
+    price_per_package = models.DecimalField(
+        "Valor por Pacote (€)",
+        max_digits=8, decimal_places=4, default=0,
+        help_text="Preço base que o parceiro paga por pacote entregue.",
+    )
+    driver_default_price_per_package = models.DecimalField(
+        "Valor por Pacote ao Driver (default) (€)",
+        max_digits=8, decimal_places=4, null=True, blank=True,
+        help_text=(
+            "Default global pago ao motorista por pacote entregue. "
+            "Cascata: Driver.price_per_package > "
+            "EmpresaParceira.driver_default > Partner.driver_default."
+        ),
+    )
+    bonus_performance_enabled = models.BooleanField(
+        "Bónus por Performance",
+        default=False,
+        help_text="Se ativo, aplica bónus quando taxa de sucesso ≥ limiar configurado.",
+    )
+    bonus_sunday_holiday_enabled = models.BooleanField(
+        "Bónus Domingo/Feriado",
+        default=False,
+        help_text="Se ativo, aplica bónus adicional em entregas ao domingo ou feriado.",
+    )
+    bonus_volume_enabled = models.BooleanField(
+        "Bónus por Volume",
+        default=False,
+        help_text="Se ativo, aplica bónus quando volume ultrapassa limiar configurado.",
+    )
+    VAT_REGIME_CHOICES = [
+        ("normal",      "Regime Normal (23%)"),
+        ("isento",      "Isento (art. 53º)"),
+        ("simplificado", "Simplificado"),
+    ]
+    vat_regime = models.CharField(
+        "Regime de IVA",
+        max_length=20, choices=VAT_REGIME_CHOICES, default="normal",
+    )
+    vat_rate_override = models.DecimalField(
+        "Taxa IVA (override, %)",
+        max_digits=5, decimal_places=2, null=True, blank=True,
+        help_text="Se definido, substitui a taxa padrão do regime.",
+    )
+    irs_retention_pct = models.DecimalField(
+        "Retenção IRS (%)",
+        max_digits=5, decimal_places=2, default=0,
+        help_text="Percentagem de retenção na fonte (ex: 25 ou 11.5).",
+    )
+
     # Metadados
     created_at = models.DateTimeField("Criado em", auto_now_add=True)
 
@@ -284,6 +334,13 @@ class SyncLog(models.Model):
     started_at = models.DateTimeField("Iniciado Em", auto_now_add=True, db_index=True)
 
     completed_at = models.DateTimeField("Concluído Em", null=True, blank=True)
+    
+    # Origem dos dados
+    is_from_cache = models.BooleanField(
+        "Do Cache",
+        default=False,
+        help_text="Se True, dados foram processados do cache ao invés da API"
+    )
 
     # Estatísticas
     records_processed = models.IntegerField(

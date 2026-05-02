@@ -1,0 +1,80 @@
+# ════════════════════════════════════════════════════════════════════
+# Léguas Franzinas — Caddy reverse proxy
+# ════════════════════════════════════════════════════════════════════
+# Modo automático:
+#   - Se DOMAIN é um domínio real (ex: leguas.example.com), Caddy emite
+#     certificado Let's Encrypt automático (HTTPS).
+#   - Se DOMAIN começa com `:` (ex: `:80`), Caddy serve HTTP-only — útil
+#     em dev / VPN interna / IP bruto.
+#
+# A variável {$DOMAIN} é substituída em tempo de start pelo Caddy.
+# ════════════════════════════════════════════════════════════════════
+
+{
+    # Email para registar com Let's Encrypt (notificações de expiração)
+    email {$LETSENCRYPT_EMAIL}
+
+    # Tamanho máximo de upload (PDFs, fotos drivers, comprovantes)
+    servers {
+        max_header_size 100MB
+    }
+}
+
+# ── Site principal ─────────────────────────────────────────────────
+{$DOMAIN} {
+    # Logging
+    log {
+        output stdout
+        format console
+    }
+
+    # Limite de upload — uploads grandes (PDFs faturas, fotos)
+    request_body {
+        max_size 50MB
+    }
+
+    # Compressão para responses
+    encode zstd gzip
+
+    # ── Static files (servidos directamente pelo Caddy, mais rápido)
+    handle_path /static/* {
+        root * /srv/static
+        file_server
+        header Cache-Control "public, max-age=2592000"  # 30 dias
+    }
+
+    # ── Media files (uploads de utilizadores)
+    handle_path /media/* {
+        root * /srv/media
+        file_server
+        header Cache-Control "public, max-age=604800"   # 7 dias
+    }
+
+    # ── Tudo o resto vai para o Django via gunicorn
+    handle {
+        reverse_proxy web:8000 {
+            # Headers reais para o Django saber o IP / scheme reais
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+            header_up Host {host}
+
+            # Timeouts longos para uploads e PDFs grandes
+            transport http {
+                read_timeout 300s
+                write_timeout 300s
+            }
+        }
+    }
+
+    # ── Security headers ──────────────────────────────────────────
+    header {
+        # HSTS apenas se HTTPS está activo (Caddy auto-deteta)
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        # Remover Server header
+        -Server
+    }
+}

@@ -1,0 +1,312 @@
+{% extends "settlements/base.html" %}
+{% load static %}
+
+{% block title %}Dashboard Delnext - {{ partner.name }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+  <!-- Header -->
+  <div class="mb-8">
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
+          <i data-lucide="package" class="w-8 h-8 text-blue-600 dark:text-blue-400"></i>
+          Dashboard {{ partner.name }}
+        </h1>
+        <p class="text-gray-600 dark:text-gray-400 mt-2">
+          Gerencie e monitore pedidos do parceiro Delnext
+        </p>
+      </div>
+      <div class="flex gap-3">
+        <a href="{% url 'core:partner-detail' partner.pk %}" class="px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg font-medium transition-colors duration-200 flex items-center gap-2">
+          <i data-lucide="arrow-left" class="w-4 h-4"></i>
+          Voltar ao Parceiro
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cards de Estatísticas -->
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <!-- Total de Pedidos -->
+    <div class="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-xl shadow-sm border border-blue-200/50 dark:border-blue-700/50 p-6">
+      <div class="flex items-center justify-between mb-2">
+        <h3 class="text-sm font-semibold text-blue-900 dark:text-blue-300">Total de Pedidos</h3>
+        <i data-lucide="package" class="w-5 h-5 text-blue-600 dark:text-blue-400"></i>
+      </div>
+      <p class="text-3xl font-bold text-blue-900 dark:text-blue-100">{{ stats.total }}</p>
+      <p class="text-xs text-blue-600 dark:text-blue-400 mt-2">Desde o início</p>
+    </div>
+
+    <!-- Em Trânsito -->
+    <div class="bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-900/20 dark:to-amber-800/20 rounded-xl shadow-sm border border-amber-200/50 dark:border-amber-700/50 p-6">
+      <div class="flex items-center justify-between mb-2">
+        <h3 class="text-sm font-semibold text-amber-900 dark:text-amber-300">Em Trânsito</h3>
+        <i data-lucide="truck" class="w-5 h-5 text-amber-600 dark:text-amber-400"></i>
+      </div>
+      <p class="text-3xl font-bold text-amber-900 dark:text-amber-100">{{ stats.IN_TRANSIT }}</p>
+      <p class="text-xs text-amber-600 dark:text-amber-400 mt-2">Ativos agora</p>
+    </div>
+
+    <!-- Entregues -->
+    <div class="bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-900/20 dark:to-emerald-800/20 rounded-xl shadow-sm border border-emerald-200/50 dark:border-emerald-700/50 p-6">
+      <div class="flex items-center justify-between mb-2">
+        <h3 class="text-sm font-semibold text-emerald-900 dark:text-emerald-300">Entregues</h3>
+        <i data-lucide="check-circle" class="w-5 h-5 text-emerald-600 dark:text-emerald-400"></i>
+      </div>
+      <p class="text-3xl font-bold text-emerald-900 dark:text-emerald-100">{{ stats.DELIVERED }}</p>
+      <p class="text-xs text-emerald-600 dark:text-emerald-400 mt-2">
+        {% if stats.total > 0 %}
+          {{ stats.DELIVERED|floatformat:0 }} / {{ stats.total }} ({{ stats.DELIVERED|floatformat:0|default:0|add:0|floatformat:0|default:0 }})
+        {% else %}
+          0%
+        {% endif %}
+      </p>
+    </div>
+
+    <!-- Últimos 7 Dias -->
+    <div class="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20 rounded-xl shadow-sm border border-purple-200/50 dark:border-purple-700/50 p-6">
+      <div class="flex items-center justify-between mb-2">
+        <h3 class="text-sm font-semibold text-purple-900 dark:text-purple-300">Últimos 7 Dias</h3>
+        <i data-lucide="calendar" class="w-5 h-5 text-purple-600 dark:text-purple-400"></i>
+      </div>
+      <p class="text-3xl font-bold text-purple-900 dark:text-purple-100">{{ stats.last_7_days }}</p>
+      <p class="text-xs text-purple-600 dark:text-purple-400 mt-2">Novos pedidos</p>
+    </div>
+  </div>
+
+  <!-- Info da Última Sincronização -->
+  {% if stats.last_sync %}
+  <div class="mb-6 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-4">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <i data-lucide="refresh-cw" class="w-5 h-5 text-blue-600 dark:text-blue-400"></i>
+        <div>
+          <p class="text-sm font-semibold text-gray-900 dark:text-white">Última Sincronização</p>
+          <p class="text-xs text-gray-600 dark:text-gray-400">{{ stats.last_sync|date:"d/m/Y H:i" }}</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-4">
+        {% if stats.last_sync_status == 'SUCCESS' %}
+          <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400">
+            <i data-lucide="check" class="w-3 h-3 mr-1"></i>
+            Sucesso
+          </span>
+        {% elif stats.last_sync_status == 'ERROR' %}
+          <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
+            <i data-lucide="x" class="w-3 h-3 mr-1"></i>
+            Erro
+          </span>
+        {% endif %}
+        {% if stats.last_sync_stats %}
+        <div class="text-xs text-gray-600 dark:text-gray-400">
+          <span class="font-medium">{{ stats.last_sync_stats.total|default:0 }}</span> processados,
+          <span class="font-medium text-emerald-600">{{ stats.last_sync_stats.created|default:0 }}</span> criados,
+          <span class="font-medium text-blue-600">{{ stats.last_sync_stats.updated|default:0 }}</span> atualizados
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Filtros -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 mb-6">
+    <form method="get" action="" class="space-y-4">
+      <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+        <i data-lucide="filter" class="w-5 h-5 text-blue-600 dark:text-blue-400"></i>
+        Filtros
+      </h3>
+      
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <!-- Status -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Status</label>
+          <select name="status" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+            <option value="">Todos</option>
+            {% for value, label in status_choices %}
+              <option value="{{ value }}" {% if current_filters.status == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Data Início -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Data Início</label>
+          <input type="date" name="date_from" value="{{ current_filters.date_from }}" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+        </div>
+
+        <!-- Data Fim -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Data Fim</label>
+          <input type="date" name="date_to" value="{{ current_filters.date_to }}" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+        </div>
+
+        <!-- Busca -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Buscar</label>
+          <input type="text" name="search" value="{{ current_filters.search }}" placeholder="Ref, nome, CEP..." class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+        </div>
+      </div>
+
+      <div class="flex gap-3">
+        <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200 flex items-center gap-2">
+          <i data-lucide="search" class="w-4 h-4"></i>
+          Filtrar
+        </button>
+        <a href="{% url 'core:delnext-dashboard' %}" class="px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg font-medium transition-colors duration-200 flex items-center gap-2">
+          <i data-lucide="x" class="w-4 h-4"></i>
+          Limpar
+        </a>
+      </div>
+    </form>
+  </div>
+
+  <!-- Tabela de Pedidos -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
+    <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+      <div class="flex items-center justify-between">
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+          <i data-lucide="list" class="w-5 h-5 text-blue-600 dark:text-blue-400"></i>
+          Pedidos
+          <span class="text-sm font-normal text-gray-500 dark:text-gray-400">({{ total_filtered }} encontrados)</span>
+        </h3>
+      </div>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full">
+        <thead class="bg-gray-50 dark:bg-gray-900/50">
+          <tr>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Ref. Externa</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Destinatário</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">CEP</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Data</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+          {% for order in page_obj %}
+          <tr class="hover:bg-gray-50 dark:hover:bg-gray-900/30 transition-colors">
+            <td class="px-6 py-4 whitespace-nowrap">
+              <div class="text-sm font-medium text-gray-900 dark:text-white">{{ order.external_reference }}</div>
+            </td>
+            <td class="px-6 py-4">
+              <div class="text-sm text-gray-900 dark:text-white">{{ order.recipient_name }}</div>
+              {% if order.recipient_address %}
+              <div class="text-xs text-gray-500 dark:text-gray-400 truncate max-w-xs">{{ order.recipient_address|truncatewords:10 }}</div>
+              {% endif %}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+              <div class="text-sm font-mono text-gray-900 dark:text-white">{{ order.postal_code }}</div>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+              {% if order.current_status == 'PENDING' %}
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+                  <i data-lucide="clock" class="w-3 h-3 mr-1"></i>
+                  Pendente
+                </span>
+              {% elif order.current_status == 'IN_TRANSIT' %}
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
+                  <i data-lucide="truck" class="w-3 h-3 mr-1"></i>
+                  Em Trânsito
+                </span>
+              {% elif order.current_status == 'DELIVERED' %}
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400">
+                  <i data-lucide="check-circle" class="w-3 h-3 mr-1"></i>
+                  Entregue
+                </span>
+              {% elif order.current_status == 'RETURNED' %}
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
+                  <i data-lucide="rotate-ccw" class="w-3 h-3 mr-1"></i>
+                  Devolvido
+                </span>
+              {% elif order.current_status == 'CANCELLED' %}
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+                  <i data-lucide="x-circle" class="w-3 h-3 mr-1"></i>
+                  Cancelado
+                </span>
+              {% endif %}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+              {{ order.created_at|date:"d/m/Y H:i" }}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="5" class="px-6 py-12 text-center">
+              <i data-lucide="inbox" class="w-12 h-12 mx-auto text-gray-400 dark:text-gray-600 mb-3"></i>
+              <p class="text-gray-500 dark:text-gray-400">Nenhum pedido encontrado</p>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Paginação -->
+    {% if page_obj.has_other_pages %}
+    <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
+      <nav class="flex items-center justify-between">
+        <div class="flex-1 flex justify-between sm:hidden">
+          {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}{% if current_filters.status %}&status={{ current_filters.status }}{% endif %}{% if current_filters.date_from %}&date_from={{ current_filters.date_from }}{% endif %}{% if current_filters.date_to %}&date_to={{ current_filters.date_to }}{% endif %}{% if current_filters.search %}&search={{ current_filters.search }}{% endif %}" class="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700">
+              Anterior
+            </a>
+          {% endif %}
+          {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}{% if current_filters.status %}&status={{ current_filters.status }}{% endif %}{% if current_filters.date_from %}&date_from={{ current_filters.date_from }}{% endif %}{% if current_filters.date_to %}&date_to={{ current_filters.date_to }}{% endif %}{% if current_filters.search %}&search={{ current_filters.search }}{% endif %}" class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700">
+              Próximo
+            </a>
+          {% endif %}
+        </div>
+        <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+          <div>
+            <p class="text-sm text-gray-700 dark:text-gray-300">
+              Mostrando
+              <span class="font-medium">{{ page_obj.start_index }}</span>
+              a
+              <span class="font-medium">{{ page_obj.end_index }}</span>
+              de
+              <span class="font-medium">{{ page_obj.paginator.count }}</span>
+              resultados
+            </p>
+          </div>
+          <div>
+            <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+              {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}{% if current_filters.status %}&status={{ current_filters.status }}{% endif %}{% if current_filters.date_from %}&date_from={{ current_filters.date_from }}{% endif %}{% if current_filters.date_to %}&date_to={{ current_filters.date_to }}{% endif %}{% if current_filters.search %}&search={{ current_filters.search }}{% endif %}" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700">
+                  <i data-lucide="chevron-left" class="w-5 h-5"></i>
+                </a>
+              {% endif %}
+              
+              {% for num in page_obj.paginator.page_range %}
+                {% if page_obj.number == num %}
+                  <span class="relative inline-flex items-center px-4 py-2 border border-blue-500 dark:border-blue-600 bg-blue-50 dark:bg-blue-900/30 text-sm font-medium text-blue-600 dark:text-blue-400">
+                    {{ num }}
+                  </span>
+                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                  <a href="?page={{ num }}{% if current_filters.status %}&status={{ current_filters.status }}{% endif %}{% if current_filters.date_from %}&date_from={{ current_filters.date_from }}{% endif %}{% if current_filters.date_to %}&date_to={{ current_filters.date_to }}{% endif %}{% if current_filters.search %}&search={{ current_filters.search }}{% endif %}" class="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
+                    {{ num }}
+                  </a>
+                {% endif %}
+              {% endfor %}
+              
+              {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}{% if current_filters.status %}&status={{ current_filters.status }}{% endif %}{% if current_filters.date_from %}&date_from={{ current_filters.date_from }}{% endif %}{% if current_filters.date_to %}&date_to={{ current_filters.date_to }}{% endif %}{% if current_filters.search %}&search={{ current_filters.search }}{% endif %}" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700">
+                  <i data-lucide="chevron-right" class="w-5 h-5"></i>
+                </a>
+              {% endif %}
+            </nav>
+          </div>
+        </div>
+      </nav>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+  lucide.createIcons();
+</script>
+{% endblock %}

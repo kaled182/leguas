@@ -2,7 +2,7 @@
 from django.utils import timezone
 from django.utils.html import format_html
 
-from .models import Order, OrderIncident, OrderStatusHistory
+from .models import Order, OrderIncident, OrderStatusHistory, GeocodedAddress, GeocodingFailure
 
 
 class OrderStatusHistoryInline(admin.TabularInline):
@@ -341,3 +341,168 @@ class OrderIncidentAdmin(admin.ModelAdmin):
         self.message_user(request, f"{updated} incidente(s) marcado(s) como resolvido.")
 
     mark_as_resolved.short_description = "Marcar como Resolvido"
+
+
+@admin.register(GeocodedAddress)
+class GeocodedAddressAdmin(admin.ModelAdmin):
+    """Admin para endereços geocodificados"""
+    
+    list_display = [
+        'normalized_address',
+        'postal_code',
+        'locality',
+        'latitude',
+        'longitude',
+        'geocode_quality',
+        'geocoded_at'
+    ]
+    
+    list_filter = ['geocode_quality', 'geocode_source', 'geocoded_at']
+    
+    search_fields = [
+        'normalized_address',
+        'address',
+        'postal_code',
+        'locality'
+    ]
+    
+    readonly_fields = ['geocoded_at']
+    
+    fieldsets = (
+        (
+            "Endereço",
+            {
+                "fields": (
+                    "address",
+                    "normalized_address",
+                    "postal_code",
+                    "locality",
+                )
+            },
+        ),
+        (
+            "Coordenadas",
+            {
+                "fields": (
+                    "latitude",
+                    "longitude",
+                    "geocode_quality",
+                    "geocode_source",
+                )
+            },
+        ),
+        (
+            "Metadados",
+            {
+                "fields": ("geocoded_at",),
+            },
+        ),
+    )
+
+
+@admin.register(GeocodingFailure)
+class GeocodingFailureAdmin(admin.ModelAdmin):
+    """Admin para falhas de geocodificação"""
+    
+    list_display = [
+        'order_reference',
+        'postal_code',
+        'retry_count',
+        'formatted_resolved',
+        'attempted_at',
+        'last_retry_at'
+    ]
+    
+    list_filter = ['resolved', 'attempted_at', 'postal_code']
+    
+    search_fields = [
+        'original_address',
+        'normalized_address',
+        'postal_code',
+        'order__external_reference'
+    ]
+    
+    readonly_fields = ['attempted_at', 'last_retry_at', 'resolved_at']
+    
+    fieldsets = (
+        (
+            "Pedido",
+            {
+                "fields": ("order",)
+            },
+        ),
+        (
+            "Endereço",
+            {
+                "fields": (
+                    "original_address",
+                    "normalized_address",
+                    "postal_code",
+                    "locality",
+                )
+            },
+        ),
+        (
+            "Falha",
+            {
+                "fields": (
+                    "failure_reason",
+                    "retry_count",
+                    "attempted_at",
+                    "last_retry_at",
+                )
+            },
+        ),
+        (
+            "Resolução",
+            {
+                "fields": (
+                    "resolved",
+                    "resolved_at",
+                    "resolved_by",
+                    "manual_latitude",
+                    "manual_longitude",
+                )
+            },
+        ),
+    )
+    
+    def order_reference(self, obj):
+        return obj.order.external_reference
+    
+    order_reference.short_description = "Referência"
+    order_reference.admin_order_field = 'order__external_reference'
+    
+    def formatted_resolved(self, obj):
+        if obj.resolved:
+            return format_html('<span style="color: green;">✓</span> Resolvido')
+        return format_html('<span style="color: red;">✗</span> Pendente ({} tentativas)', obj.retry_count)
+    
+    formatted_resolved.short_description = "Status"
+    
+    actions = ["mark_as_resolved_action"]
+    
+    def mark_as_resolved_action(self, request, queryset):
+        """Ação para marcar falhas como resolvidas (requer coordenadas manuais)"""
+        # Esta ação apenas marca como resolvido se já tiver coordenadas manuais
+        updated = 0
+        for failure in queryset.filter(resolved=False):
+            if failure.manual_latitude and failure.manual_longitude:
+                failure.mark_resolved(
+                    failure.manual_latitude,
+                    failure.manual_longitude,
+                    request.user
+                )
+                updated += 1
+        
+        if updated > 0:
+            self.message_user(request, f"{updated} falha(s) marcada(s) como resolvida(s).")
+        else:
+            self.message_user(
+                request,
+                "Nenhuma falha foi resolvida. Certifique-se de adicionar coordenadas manuais primeiro.",
+                level='warning'
+            )
+    
+    mark_as_resolved_action.short_description = "Marcar como Resolvido (requer coordenadas manuais)"
+

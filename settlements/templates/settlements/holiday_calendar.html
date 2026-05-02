@@ -1,0 +1,346 @@
+{% extends "settlements/base.html" %}
+{% load static %}
+
+{% block title %}Calendário de Feriados{% endblock %}
+
+{% block content %}
+<div class="px-6 py-6 max-w-7xl mx-auto" x-data="holidayCalendar()" x-init="init()">
+
+  <!-- Header -->
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+        <i data-lucide="calendar-days" class="w-7 h-7 text-primary-500"></i>
+        Calendário de Feriados
+      </h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+        Configura os dias com bónus de pré-fatura. Domingos são detectados automaticamente.
+      </p>
+    </div>
+    <div class="flex items-center gap-2">
+      <a href="?year={{ year_prev }}"
+         class="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-sm">
+        <i data-lucide="chevron-left" class="w-4 h-4 inline"></i> {{ year_prev }}
+      </a>
+      <select onchange="window.location.href='?year='+this.value"
+              class="px-3 py-1.5 rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-sm font-bold">
+        {% for y in available_years %}
+        <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
+        {% endfor %}
+      </select>
+      <a href="?year={{ year_next }}"
+         class="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-sm">
+        {{ year_next }} <i data-lucide="chevron-right" class="w-4 h-4 inline"></i>
+      </a>
+    </div>
+  </div>
+
+  <!-- Action bar -->
+  <div class="flex flex-wrap gap-2 mb-6">
+    <button @click="openCreate()"
+            class="px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold flex items-center gap-2">
+      <i data-lucide="plus" class="w-4 h-4"></i> Adicionar Feriado
+    </button>
+    <button @click="importPreset()"
+            class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold flex items-center gap-2">
+      <i data-lucide="download-cloud" class="w-4 h-4"></i>
+      Importar móveis PT {{ year }}
+    </button>
+    <span class="ml-auto px-3 py-2 text-sm text-gray-600 dark:text-gray-400">
+      <strong>{{ holidays_in_year|length }}</strong> feriados em {{ year }}
+    </span>
+  </div>
+
+  <!-- Visual calendar grid (12 months) -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 mb-8">
+    {% for month_num in "123456789101112"|make_list %}{% endfor %}
+    {% for m in "0,1,2,3,4,5,6,7,8,9,10,11"|cut:""|cut:" " %}{% endfor %}
+    <template x-for="m in 12" :key="m">
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-3">
+        <div class="text-xs font-bold uppercase text-gray-500 dark:text-gray-400 mb-2"
+             x-text="monthName(m)"></div>
+        <div class="grid grid-cols-7 gap-0.5 text-[10px] text-center text-gray-400">
+          <div>D</div><div>S</div><div>T</div><div>Q</div><div>Q</div><div>S</div><div>S</div>
+        </div>
+        <div class="grid grid-cols-7 gap-0.5 mt-1">
+          <template x-for="d in monthDays(m)" :key="m+'-'+d.key">
+            <div :class="dayClass(d)"
+                 :title="d.title"
+                 x-text="d.day || ''"
+                 class="aspect-square flex items-center justify-center text-[11px] rounded">
+            </div>
+          </template>
+        </div>
+      </div>
+    </template>
+  </div>
+
+  <!-- Legend -->
+  <div class="flex flex-wrap gap-4 mb-6 text-xs text-gray-600 dark:text-gray-400">
+    <span class="flex items-center gap-1.5">
+      <span class="w-3 h-3 rounded bg-amber-400"></span> Domingo
+    </span>
+    <span class="flex items-center gap-1.5">
+      <span class="w-3 h-3 rounded bg-rose-500"></span> Feriado
+    </span>
+    <span class="flex items-center gap-1.5">
+      <span class="w-3 h-3 rounded bg-purple-500"></span> Feriado regional
+    </span>
+  </div>
+
+  <!-- All entries (admin table) -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+    <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+      <h3 class="text-sm font-bold text-gray-900 dark:text-gray-100">
+        Todos os feriados configurados ({{ all_holidays|length }})
+      </h3>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-gray-50 dark:bg-gray-900/50">
+          <tr class="text-left text-xs uppercase text-gray-500 dark:text-gray-400">
+            <th class="px-4 py-2">Data</th>
+            <th class="px-4 py-2">Nome</th>
+            <th class="px-4 py-2">Tipo</th>
+            <th class="px-4 py-2">Anual</th>
+            <th class="px-4 py-2">Região</th>
+            <th class="px-4 py-2">Notas</th>
+            <th class="px-4 py-2 text-right">Acções</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+          {% for h in all_holidays %}
+          <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+            <td class="px-4 py-2 font-mono">
+              {% if h.is_recurring_yearly %}
+                <span class="text-gray-500">{{ h.date|date:"d/m" }}</span>
+              {% else %}
+                {{ h.date|date:"d/m/Y" }}
+              {% endif %}
+            </td>
+            <td class="px-4 py-2 font-semibold">{{ h.name }}</td>
+            <td class="px-4 py-2">
+              {% if h.scope == "national" %}
+                <span class="px-2 py-0.5 text-xs rounded-full bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400">Nacional</span>
+              {% elif h.scope == "regional" %}
+                <span class="px-2 py-0.5 text-xs rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400">Regional</span>
+              {% else %}
+                <span class="px-2 py-0.5 text-xs rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">Custom</span>
+              {% endif %}
+            </td>
+            <td class="px-4 py-2">
+              {% if h.is_recurring_yearly %}
+                <i data-lucide="repeat" class="w-4 h-4 text-emerald-600"></i>
+              {% else %}
+                <span class="text-gray-400 text-xs">—</span>
+              {% endif %}
+            </td>
+            <td class="px-4 py-2 text-gray-600 dark:text-gray-400">{{ h.region|default:"—" }}</td>
+            <td class="px-4 py-2 text-xs text-gray-500 dark:text-gray-400 max-w-xs truncate">{{ h.notes|default:"—" }}</td>
+            <td class="px-4 py-2 text-right">
+              <button @click='openEdit({{ h.id }}, {{ h.name|escapejs|stringformat:"q" }}, "{{ h.date|date:"Y-m-d" }}", {{ h.is_recurring_yearly|yesno:"true,false" }}, "{{ h.scope }}", "{{ h.region|escapejs }}", "{{ h.notes|escapejs }}")'
+                      class="px-2 py-1 text-xs text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded">
+                Editar
+              </button>
+              <button @click="del({{ h.id }}, '{{ h.name|escapejs }}')"
+                      class="px-2 py-1 text-xs text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded">
+                Remover
+              </button>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="7" class="px-4 py-8 text-center text-gray-400">
+              Nenhum feriado configurado.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Modal Add/Edit -->
+  <div x-show="modalOpen" x-cloak
+       class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
+       @click.self="modalOpen = false">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100" x-text="editing ? 'Editar Feriado' : 'Novo Feriado'"></h3>
+        <button @click="modalOpen = false" class="text-gray-400 hover:text-gray-600">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <form @submit.prevent="save()">
+        <div class="space-y-3">
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Nome</label>
+            <input type="text" x-model="form.name" required maxlength="120"
+                   class="w-full px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700">
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Data</label>
+              <input type="date" x-model="form.date" required
+                     class="w-full px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Tipo</label>
+              <select x-model="form.scope"
+                      class="w-full px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700">
+                <option value="national">Nacional</option>
+                <option value="regional">Regional</option>
+                <option value="custom">Custom</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label class="flex items-center gap-2 text-sm">
+              <input type="checkbox" x-model="form.is_recurring_yearly" class="rounded">
+              <span class="text-gray-700 dark:text-gray-300">Repete anualmente (mesmo dia/mês todos os anos)</span>
+            </label>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+              Região (vazio = aplica a todos)
+            </label>
+            <input type="text" x-model="form.region" maxlength="80" placeholder="Ex: Aveiro, Lisboa..."
+                   class="w-full px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Notas</label>
+            <input type="text" x-model="form.notes" maxlength="255"
+                   class="w-full px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700">
+          </div>
+        </div>
+        <div class="flex justify-end gap-2 mt-6">
+          <button type="button" @click="modalOpen = false"
+                  class="px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-sm">Cancelar</button>
+          <button type="submit"
+                  class="px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold">
+            <span x-text="editing ? 'Guardar' : 'Criar'"></span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+</div>
+
+{{ holidays_in_year|json_script:"holidays-data" }}
+
+<script>
+function holidayCalendar() {
+  return {
+    year: {{ year }},
+    holidays: [],
+    modalOpen: false,
+    editing: null,
+    form: { name: '', date: '', is_recurring_yearly: false, scope: 'national', region: '', notes: '' },
+
+    init() {
+      const raw = JSON.parse(document.getElementById('holidays-data').textContent || '[]');
+      // raw[i].date is "YYYY-MM-DD"
+      this.holidays = raw.map(h => ({
+        id: h.id, date: h.date, name: h.name, is_recurring: h.is_recurring,
+        scope: h.scope, region: h.region, notes: h.notes,
+      }));
+      this.$nextTick(() => { if (window.lucide) window.lucide.createIcons(); });
+    },
+
+    monthName(m) {
+      return ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'][m-1];
+    },
+
+    monthDays(m) {
+      // m is 1-12
+      const monthIdx = m - 1;
+      const firstDay = new Date(this.year, monthIdx, 1);
+      const startWeekday = firstDay.getDay(); // 0=sun
+      const daysInMonth = new Date(this.year, m, 0).getDate();
+      const cells = [];
+      // leading empty
+      for (let i = 0; i < startWeekday; i++) {
+        cells.push({ key: 'e'+i, day: null });
+      }
+      const yearStr = String(this.year);
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dateStr = yearStr + '-' + String(m).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+        const isSunday = new Date(this.year, monthIdx, d).getDay() === 0;
+        const h = this.holidays.find(x => x.date === dateStr);
+        cells.push({
+          key: d, day: d, dateStr,
+          isSunday, holiday: h || null,
+          title: h ? `${h.name} (${h.scope})` : (isSunday ? 'Domingo' : ''),
+        });
+      }
+      return cells;
+    },
+
+    dayClass(d) {
+      if (!d.day) return '';
+      if (d.holiday) {
+        if (d.holiday.scope === 'regional') return 'bg-purple-500 text-white font-bold';
+        return 'bg-rose-500 text-white font-bold';
+      }
+      if (d.isSunday) return 'bg-amber-200 dark:bg-amber-700/50 text-amber-900 dark:text-amber-100 font-semibold';
+      return 'text-gray-700 dark:text-gray-300';
+    },
+
+    openCreate() {
+      this.editing = null;
+      this.form = { name: '', date: this.year + '-01-01', is_recurring_yearly: false, scope: 'national', region: '', notes: '' };
+      this.modalOpen = true;
+      this.$nextTick(() => { if (window.lucide) window.lucide.createIcons(); });
+    },
+
+    openEdit(id, name, date, isRecurring, scope, region, notes) {
+      this.editing = id;
+      this.form = { name, date, is_recurring_yearly: isRecurring, scope, region, notes };
+      this.modalOpen = true;
+      this.$nextTick(() => { if (window.lucide) window.lucide.createIcons(); });
+    },
+
+    async save() {
+      const csrf = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+      const url = this.editing
+        ? `/settlements/calendar/${this.editing}/update/`
+        : `/settlements/calendar/create/`;
+      const r = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+        body: JSON.stringify(this.form),
+      });
+      const j = await r.json();
+      if (!j.success) { alert(j.error || 'Erro'); return; }
+      window.location.reload();
+    },
+
+    async del(id, name) {
+      if (!confirm(`Remover feriado "${name}"?`)) return;
+      const csrf = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+      const r = await fetch(`/settlements/calendar/${id}/delete/`, {
+        method: 'POST', headers: { 'X-CSRFToken': csrf },
+      });
+      const j = await r.json();
+      if (!j.success) { alert(j.error || 'Erro'); return; }
+      window.location.reload();
+    },
+
+    async importPreset() {
+      const csrf = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+      const r = await fetch(`/settlements/calendar/import-preset/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+        body: JSON.stringify({ year: this.year }),
+      });
+      const j = await r.json();
+      if (!j.success) { alert(j.error || 'Erro'); return; }
+      alert(`Criados: ${j.created}, ignorados: ${j.skipped}`);
+      window.location.reload();
+    },
+  };
+}
+</script>
+
+{% endblock %}

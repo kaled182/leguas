@@ -34,4 +34,76 @@ urlpatterns = [
     ),
     # Relatórios
     path("relatorios/", views.reports, name="reports"),
+
+    # ── Fase 1: Contas a Pagar (Bills) + DRE ──
+    path("contas-a-pagar/", views.bill_list, name="bill_list"),
+    path("contas-a-pagar/nova/", views.bill_create, name="bill_create"),
+    path(
+        "contas-a-pagar/<int:pk>/",
+        views.bill_detail, name="bill_detail",
+    ),
+    path(
+        "contas-a-pagar/<int:pk>/editar/",
+        views.bill_edit, name="bill_edit",
+    ),
+    path(
+        "contas-a-pagar/<int:pk>/apagar/",
+        views.bill_delete, name="bill_delete",
+    ),
+    path(
+        "contas-a-pagar/<int:pk>/marcar-paga/",
+        views.bill_mark_paid, name="bill_mark_paid",
+    ),
+    path(
+        "contas-a-pagar/anexo/<int:pk>/apagar/",
+        views.bill_attachment_delete,
+        name="bill_attachment_delete",
+    ),
+    path(
+        "contas-a-pagar/<int:pk>/gerar-proxima/",
+        views.bill_generate_next,
+        name="bill_generate_next",
+    ),
+    path(
+        "contas-a-pagar/<int:pk>/aprovar/",
+        views.bill_approve, name="bill_approve",
+    ),
+    path(
+        "contas-a-pagar/<int:pk>/rejeitar/",
+        views.bill_reject, name="bill_reject",
+    ),
+    path("dre/", views.dre, name="dre"),
+    path("fluxo-caixa/", views.cash_flow_projection, name="cash_flow"),
+    path(
+        "break-even/", views.break_even_monitor,
+        name="break_even",
+    ),
+    path(
+        "break-even/data/", views.break_even_data,
+        name="break_even_data",
+    ),
+
+    # Conciliação bancária
+    path(
+        "extractos/", views.bank_statement_list,
+        name="bank_statement_list",
+    ),
+    path(
+        "extractos/upload/", views.bank_statement_upload,
+        name="bank_statement_upload",
+    ),
+    path(
+        "extractos/<int:pk>/", views.bank_statement_detail,
+        name="bank_statement_detail",
+    ),
+    path(
+        "extractos/transacao/<int:pk>/conciliar/",
+        views.bank_transaction_match,
+        name="bank_transaction_match",
+    ),
+    path(
+        "extractos/transacao/<int:pk>/desconciliar/",
+        views.bank_transaction_unmatch,
+        name="bank_transaction_unmatch",
+    ),
 ]

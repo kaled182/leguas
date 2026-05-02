@@ -1,0 +1,1377 @@
+{% extends 'settlements/base.html' %}
+{% block title %}Mapa de Entregas{% endblock %}
+{% block content %}
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css">
+
+<style>
+  /* Force Leaflet marker pane to allow overflow; bypass any global reset */
+  .leaflet-marker-icon,
+  .leaflet-div-icon,
+  .mp-pin-icon,
+  .mp-cluster {
+    background: transparent !important;
+    border: 0 !important;
+    overflow: visible !important;
+  }
+  .mp-pin-icon svg { display: block; }
+
+  .map-popup .pp-hdr {
+    font-family: monospace; font-size: 12px; font-weight: 700;
+  }
+  .map-popup .pp-row { font-size: 11px; margin-top: 2px; color: #4b5563; }
+  .dark .map-popup .pp-row { color: #d1d5db; }
+  .map-popup a.detail {
+    display: inline-block; margin-top: 6px; color: #4f46e5;
+    font-size: 11px; font-weight: 600; text-decoration: none;
+  }
+  .map-popup a.detail:hover { text-decoration: underline; }
+
+  /* Sidebar scrollbar tidy */
+  .map-sidebar::-webkit-scrollbar { width: 6px; }
+  .map-sidebar::-webkit-scrollbar-thumb { background: rgba(99, 102, 241, .3); border-radius: 3px; }
+</style>
+
+<div class="h-screen w-full flex flex-col bg-gray-50 dark:bg-gray-900">
+
+  {# Top bar #}
+  <div class="flex items-center gap-3 px-4 py-2.5 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shrink-0">
+    <a href="javascript:history.back()" class="inline-flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400 hover:text-indigo-600">
+      <i data-lucide="arrow-left" class="w-4 h-4"></i>Voltar
+    </a>
+    <div class="h-5 w-px bg-gray-200 dark:bg-gray-700"></div>
+    <h1 class="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+      <i data-lucide="map" class="w-4 h-4 text-indigo-500"></i>
+      Mapa de Entregas
+    </h1>
+    <span id="mp-stats" class="ml-4 text-xs text-gray-500 dark:text-gray-400">A carregar...</span>
+    <span id="mp-viewport-stats" class="ml-2 text-xs text-indigo-600 dark:text-indigo-400"></span>
+    <div class="ml-auto flex items-center gap-2">
+      <button id="mp-clear-shape" onclick="_mpClearShape()"
+        class="hidden inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-amber-300 dark:border-amber-600 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 hover:bg-amber-100">
+        <i data-lucide="eraser" class="w-3.5 h-3.5"></i>Limpar área
+      </button>
+      <button id="mp-missing-btn" onclick="_mpOpenMissing()"
+        class="hidden inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50">
+        <i data-lucide="map-pin-off" class="w-3.5 h-3.5"></i>Sem coords <span id="mp-missing-count" class="font-bold"></span>
+      </button>
+      <button onclick="_mpExportCSV()"
+        class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-emerald-300 dark:border-emerald-600 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100">
+        <i data-lucide="download" class="w-3.5 h-3.5"></i>Export CSV
+      </button>
+      <a href="{% url 'cainiao-map-compare' %}"
+        class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-purple-300 dark:border-purple-600 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 hover:bg-purple-100">
+        <i data-lucide="columns-2" class="w-3.5 h-3.5"></i>Comparar
+      </a>
+      <button onclick="document.getElementById('mp-sidebar').classList.toggle('hidden')"
+        class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50">
+        <i data-lucide="sliders-horizontal" class="w-3.5 h-3.5"></i>Filtros
+      </button>
+    </div>
+  </div>
+
+  {# Main area: sidebar + map #}
+  <div class="flex-1 flex overflow-hidden relative">
+
+    {# Sidebar #}
+    <aside id="mp-sidebar" class="map-sidebar w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 overflow-y-auto shrink-0">
+      <div class="p-4 space-y-4">
+
+        {# Address search #}
+        <div>
+          <p class="text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Buscar endereço</p>
+          <div class="relative">
+            <i data-lucide="map-pin" class="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"></i>
+            <input id="mp-addr-search" type="text" placeholder="Rua, cidade, CP..." autocomplete="off"
+              class="w-full pl-8 pr-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+            <div id="mp-addr-results" class="hidden absolute left-0 right-0 top-full mt-1 z-50 max-h-64 overflow-y-auto bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700"></div>
+          </div>
+        </div>
+
+        {# Date range #}
+        <div>
+          <p class="text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Período</p>
+          <div class="flex gap-1 mb-2">
+            <button type="button" onclick="_mpSetPreset('today')"
+              class="flex-1 px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30">Hoje</button>
+            <button type="button" onclick="_mpSetPreset('week')"
+              class="flex-1 px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30">Semana</button>
+            <button type="button" onclick="_mpSetPreset('month')"
+              class="flex-1 px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30">Mês</button>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <input type="date" id="mp-date-from"
+              class="text-xs border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg px-2 py-1.5">
+            <input type="date" id="mp-date-to"
+              class="text-xs border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg px-2 py-1.5">
+          </div>
+        </div>
+
+        {# HUB #}
+        <div>
+          <p class="text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">HUB</p>
+          <select id="mp-hub" onchange="_mpOnHubChange()"
+            class="w-full text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg px-2 py-1.5">
+            <option value="">— Todos os HUBs —</option>
+            {% for h in hubs %}
+              <option value="{{ h.id }}">{{ h.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        {# Driver (dynamic) #}
+        <div>
+          <p class="text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Driver</p>
+          <select id="mp-driver"
+            class="w-full text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg px-2 py-1.5">
+            <option value="">— Todos os drivers —</option>
+          </select>
+        </div>
+
+        {# Status multi-check #}
+        <div>
+          <p class="text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Status a mostrar</p>
+          <div class="space-y-1.5">
+            <label class="flex items-center gap-2 cursor-pointer text-sm">
+              <input type="checkbox" class="mp-status w-4 h-4 accent-emerald-500" value="Delivered" checked>
+              <span class="inline-block w-3 h-3 rounded-full bg-emerald-500"></span>
+              <span class="text-gray-700 dark:text-gray-300">Delivered</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer text-sm">
+              <input type="checkbox" class="mp-status w-4 h-4 accent-amber-500" value="Driver_received" checked>
+              <span class="inline-block w-3 h-3 rounded-full bg-amber-500"></span>
+              <span class="text-gray-700 dark:text-gray-300">Driver Received</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer text-sm">
+              <input type="checkbox" class="mp-status w-4 h-4 accent-blue-500" value="Assigned" checked>
+              <span class="inline-block w-3 h-3 rounded-full bg-blue-500"></span>
+              <span class="text-gray-700 dark:text-gray-300">Assigned</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer text-sm">
+              <input type="checkbox" class="mp-status w-4 h-4 accent-slate-500" value="Unassign">
+              <span class="inline-block w-3 h-3 rounded-full bg-slate-500"></span>
+              <span class="text-gray-700 dark:text-gray-300">Unassign</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer text-sm">
+              <input type="checkbox" class="mp-status w-4 h-4 accent-red-500" value="Attempt Failure" checked>
+              <span class="inline-block w-3 h-3 rounded-full bg-red-500"></span>
+              <span class="text-gray-700 dark:text-gray-300">Attempt Failure</span>
+            </label>
+          </div>
+        </div>
+
+        {# Overlays #}
+        <div>
+          <p class="text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Camadas contextuais</p>
+          <div class="space-y-1.5">
+            <label class="flex items-center gap-2 cursor-pointer text-sm">
+              <input type="checkbox" id="mp-overlay-hubs" class="w-4 h-4 accent-indigo-500">
+              <i data-lucide="warehouse" class="w-3.5 h-3.5 text-indigo-500"></i>
+              <span class="text-gray-700 dark:text-gray-300">Mostrar HUBs</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer text-sm">
+              <input type="checkbox" id="mp-overlay-cp4" class="w-4 h-4 accent-indigo-500">
+              <i data-lucide="circle-dashed" class="w-3.5 h-3.5 text-indigo-500"></i>
+              <span class="text-gray-700 dark:text-gray-300">Centróides CP4</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer text-sm">
+              <input type="checkbox" id="mp-overlay-heat" class="w-4 h-4 accent-red-500">
+              <i data-lucide="flame" class="w-3.5 h-3.5 text-red-500"></i>
+              <span class="text-gray-700 dark:text-gray-300">Heatmap de falhas</span>
+            </label>
+          </div>
+        </div>
+
+        {# Playback temporal + Rota — só activos quando 1 dia seleccionado #}
+        <div id="mp-playback-wrap" class="hidden border-t border-gray-200 dark:border-gray-700 pt-3">
+          <p class="text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Análise diária</p>
+          <label class="flex items-center gap-2 cursor-pointer text-sm mb-2">
+            <input type="checkbox" id="mp-route-toggle" class="w-4 h-4 accent-indigo-500">
+            <i data-lucide="route" class="w-3.5 h-3.5 text-indigo-500"></i>
+            <span class="text-gray-700 dark:text-gray-300">Rota do driver (cronológica) <span id="mp-route-hint" class="text-[10px] text-gray-400">(precisa filtrar 1 driver)</span></span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer text-sm mb-2">
+            <input type="checkbox" id="mp-route-optimal" class="w-4 h-4 accent-emerald-500">
+            <i data-lucide="sparkles" class="w-3.5 h-3.5 text-emerald-500"></i>
+            <span class="text-gray-700 dark:text-gray-300">Rota óptima (sugerida)</span>
+          </label>
+          <div id="mp-route-metrics" class="hidden mb-2 p-2 rounded bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700/50 text-[11px] space-y-1">
+            <div class="flex justify-between"><span class="text-gray-500">Paragens:</span><span id="mp-metric-stops" class="font-semibold"></span></div>
+            <div class="flex justify-between"><span class="text-gray-500">Distância (recta):</span><span id="mp-metric-dist" class="font-semibold"></span></div>
+            <div class="flex justify-between"><span class="text-gray-500">Tempo est. (30 km/h):</span><span id="mp-metric-time" class="font-semibold"></span></div>
+            <div id="mp-metric-real-row" class="hidden pt-1 border-t border-emerald-200 dark:border-emerald-700 space-y-0.5">
+              <div class="flex justify-between"><span class="text-gray-500">Distância real:</span><span id="mp-metric-real-dist" class="font-semibold text-emerald-700 dark:text-emerald-400"></span></div>
+              <div class="flex justify-between"><span class="text-gray-500">Duração real:</span><span id="mp-metric-real-dur" class="font-semibold text-emerald-700 dark:text-emerald-400"></span></div>
+            </div>
+            <div class="flex gap-1 pt-1">
+              <button id="mp-metric-real-btn" onclick="_mpComputeRealMetrics()"
+                class="flex-1 px-2 py-1 text-[10px] font-medium rounded bg-emerald-600 hover:bg-emerald-700 text-white">
+                📏 Calcular real
+              </button>
+              <button onclick="_mpExportGPX()"
+                class="flex-1 px-2 py-1 text-[10px] font-medium rounded bg-indigo-600 hover:bg-indigo-700 text-white">
+                📥 GPX
+              </button>
+            </div>
+          </div>
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-xs text-gray-500 dark:text-gray-400">Até: <span id="mp-playback-label" class="font-mono font-semibold text-indigo-600 dark:text-indigo-400">23:59</span></span>
+              <button onclick="_mpResetPlayback()" class="text-[10px] text-gray-400 hover:text-gray-600">Reset</button>
+            </div>
+            <input type="range" id="mp-playback" min="0" max="1440" value="1440" step="1"
+              class="w-full accent-indigo-500">
+          </div>
+        </div>
+
+        {# Toggles de visualização #}
+        <div>
+          <p class="text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Opções de visualização</p>
+          <div class="space-y-1.5">
+            <label class="flex items-center gap-2 cursor-pointer text-sm">
+              <input type="checkbox" id="mp-gap-toggle" class="w-4 h-4 accent-indigo-500">
+              <span class="text-gray-700 dark:text-gray-300">Mostrar gap de entrega</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer text-sm">
+              <input type="radio" name="mp-source" value="actual" checked class="w-4 h-4 accent-indigo-500">
+              <span class="text-gray-700 dark:text-gray-300">Posição real da entrega</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer text-sm">
+              <input type="radio" name="mp-source" value="receiver" class="w-4 h-4 accent-indigo-500">
+              <span class="text-gray-700 dark:text-gray-300">Morada do destinatário</span>
+            </label>
+          </div>
+        </div>
+
+        <button onclick="_mpReload()"
+          class="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg">
+          Aplicar Filtros
+        </button>
+
+        {# Info box #}
+        <div id="mp-info" class="hidden text-xs p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50 text-amber-800 dark:text-amber-300"></div>
+      </div>
+    </aside>
+
+    {# Map #}
+    <div id="mp-map" class="flex-1 relative">
+      <div id="mp-loading" class="absolute inset-0 z-[400] flex items-center justify-center bg-white/80 dark:bg-gray-900/80 pointer-events-none">
+        <div class="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+          <i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i>
+          A carregar pinos...
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# Modal: pacotes sem coordenadas #}
+<div id="mp-missing-modal" class="hidden fixed inset-0 z-[1000] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col overflow-hidden">
+    <div class="px-6 py-4 bg-gradient-to-r from-amber-600 to-orange-600 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <i data-lucide="map-pin-off" class="w-5 h-5 text-white"></i>
+        <h2 class="text-base font-bold text-white">Pacotes sem coordenadas</h2>
+      </div>
+      <button onclick="document.getElementById('mp-missing-modal').classList.add('hidden')"
+        class="text-white/70 hover:text-white p-1"><i data-lucide="x" class="w-5 h-5"></i></button>
+    </div>
+    <div class="p-4 text-xs text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">
+      Pacotes sem latitude/longitude (não podem ser mostrados no mapa). Respeitam os filtros actuais.
+    </div>
+    <div id="mp-missing-body" class="flex-1 overflow-y-auto">
+      <div class="p-8 text-center text-sm text-gray-500">A carregar...</div>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+{% include 'system_config/_leaflet_tiles.html' %}
+
+<script>
+lucide.createIcons();
+
+const _HUB_META = {{ hub_meta_json|default:"[]"|safe }};
+
+// ── Init map ──────────────────────────────────────────────────────────────
+const _mpMap = L.map('mp-map', { zoomControl: true })
+  .setView([41.504, -8.762], 9);
+window.addTileLayer(_mpMap);
+
+// Layers for gap lines, route, contextual overlays and user-drawn shapes
+const _mpGapLayer   = L.layerGroup().addTo(_mpMap);
+const _mpHubsLayer  = L.layerGroup();
+const _mpCp4Layer   = L.layerGroup();
+const _mpRouteLayer = L.layerGroup().addTo(_mpMap);
+const _mpDrawnItems = new L.FeatureGroup().addTo(_mpMap);
+let   _mpHeatLayer = null;
+let   _mpOverlaysCache = null;  // {hubs, cp4_centroids, failure_heat}
+let   _mpAllPins = [];          // snapshot of pins returned (used by playback + area filter)
+let   _mpAreaShape = null;      // user-drawn polygon/rectangle used to filter
+let   _mpPlaybackTouched = false; // true once the user drags the playback slider
+const _mpOptRouteLayer = L.layerGroup().addTo(_mpMap);
+let   _mpOptimalRoute = null;     // last optimized route (array of pins)
+let   _mpOptStart = null;         // start point [lat, lng] used for optimization
+let   _mpOptRoutePath = null;     // last road-following polyline for optimal route (for GPX)
+
+// Leaflet.draw control (polygon + rectangle)
+const _mpDrawCtrl = new L.Control.Draw({
+  draw: {
+    polyline: false, marker: false, circle: false, circlemarker: false,
+    polygon: { showArea: false, shapeOptions: { color: '#4f46e5', weight: 2 } },
+    rectangle: { shapeOptions: { color: '#4f46e5', weight: 2 } },
+  },
+  edit: { featureGroup: _mpDrawnItems, edit: false, remove: false },
+});
+_mpMap.addControl(_mpDrawCtrl);
+
+_mpMap.on(L.Draw.Event.CREATED, e => {
+  _mpDrawnItems.clearLayers();
+  _mpDrawnItems.addLayer(e.layer);
+  _mpAreaShape = e.layer;
+  document.getElementById('mp-clear-shape').classList.remove('hidden');
+  _mpRenderPins();
+});
+
+function _mpClearShape() {
+  _mpDrawnItems.clearLayers();
+  _mpAreaShape = null;
+  document.getElementById('mp-clear-shape').classList.add('hidden');
+  _mpRenderPins();
+}
+
+function _mpInShape(lat, lng) {
+  if (!_mpAreaShape) return true;
+  const latlng = L.latLng(lat, lng);
+  if (_mpAreaShape.getBounds) {
+    if (typeof _mpAreaShape.getLatLngs === 'function'
+        && _mpAreaShape.options.shape !== 'rectangle') {
+      // Polygon point-in-polygon test
+      return _mpPointInPolygon(latlng, _mpAreaShape.getLatLngs()[0]);
+    }
+    return _mpAreaShape.getBounds().contains(latlng);
+  }
+  return true;
+}
+
+function _mpPointInPolygon(pt, ring) {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const xi = ring[i].lng, yi = ring[i].lat;
+    const xj = ring[j].lng, yj = ring[j].lat;
+    const intersect = ((yi > pt.lat) !== (yj > pt.lat))
+      && (pt.lng < (xj - xi) * (pt.lat - yi) / ((yj - yi) || 1e-12) + xi);
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
+const _mpClusters = L.markerClusterGroup({
+  showCoverageOnHover: false,
+  chunkedLoading: false,
+  spiderfyOnMaxZoom: true,
+  zoomToBoundsOnClick: true,
+  maxClusterRadius: 55,
+  iconCreateFunction: c => {
+    const n = c.getChildCount();
+    let size = 'small', d = 40;
+    if (n >= 1000) { size = 'huge'; d = 60; }
+    else if (n >= 250) { size = 'large'; d = 50; }
+    else if (n >= 50)  { size = 'medium'; d = 44; }
+    return L.divIcon({
+      html: `<div style="width:${d}px;height:${d}px;border-radius:50%;
+              background:rgba(79,70,229,.85);color:white;border:3px solid white;
+              box-shadow:0 2px 6px rgba(0,0,0,.3);display:flex;align-items:center;
+              justify-content:center;font-weight:700;font-size:${n>=1000?13:14}px;">
+              ${n >= 1000 ? (n/1000).toFixed(1)+'k' : n}</div>`,
+      className: 'mp-cluster',
+      iconSize: [d, d],
+    });
+  },
+});
+_mpMap.addLayer(_mpClusters);
+
+// ── Icon per status (SVG inline — immune to CSS/cache issues) ─────────────
+const _STATUS_COLOR = {
+  'Delivered':       '#10b981',
+  'Driver_received': '#f59e0b',
+  'Assigned':        '#3b82f6',
+  'Unassign':        '#64748b',
+  'Attempt Failure': '#ef4444',
+};
+function _mpIcon(status) {
+  const color = _STATUS_COLOR[status] || '#6b7280';
+  const svg = `<svg width="16" height="16" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="8" cy="8" r="6" fill="${color}" stroke="white" stroke-width="2"/>
+  </svg>`;
+  return L.divIcon({
+    html: svg,
+    className: 'mp-pin-icon',
+    iconSize: [16, 16],
+    iconAnchor: [8, 8],
+  });
+}
+
+// ── Filters ───────────────────────────────────────────────────────────────
+function _mpSetPreset(p) {
+  const today = new Date();
+  const fmt = d => d.toISOString().slice(0, 10);
+  let from, to = fmt(today);
+  if (p === 'today') from = to;
+  else if (p === 'week') { const d = new Date(today); d.setDate(today.getDate()-6); from = fmt(d); }
+  else if (p === 'month') from = fmt(new Date(today.getFullYear(), today.getMonth(), 1));
+  document.getElementById('mp-date-from').value = from;
+  document.getElementById('mp-date-to').value = to;
+  _mpReload();
+}
+
+function _mpOnHubChange() {
+  // Fase B: populate drivers dropdown from current filters
+  _mpReloadDrivers();
+}
+
+async function _mpReloadDrivers() {
+  const hub = document.getElementById('mp-hub').value;
+  const df  = document.getElementById('mp-date-from').value;
+  const dt  = document.getElementById('mp-date-to').value;
+  const p = new URLSearchParams();
+  if (df) p.set('date_from', df);
+  if (dt) p.set('date_to', dt);
+  if (hub) p.set('hub_id', hub);
+  p.set('status', 'Delivered,Driver_received,Assigned,Unassign,Attempt Failure');
+  try {
+    const resp = await fetch(`/settlements/cainiao/drivers-by-status/?${p.toString()}`);
+    const data = await resp.json();
+    const sel = document.getElementById('mp-driver');
+    const current = sel.value;
+    sel.innerHTML = '<option value="">— Todos os drivers —</option>' +
+      (data.drivers || []).map(d =>
+        `<option value="${d.courier_name.replace(/"/g, '&quot;')}">${d.courier_name} (${d.focus_count})</option>`
+      ).join('');
+    if (current) sel.value = current;
+  } catch (e) { /* noop */ }
+}
+
+function _mpStatusList() {
+  return Array.from(document.querySelectorAll('.mp-status:checked')).map(c => c.value);
+}
+
+async function _mpReload() {
+  const loading = document.getElementById('mp-loading');
+  const info = document.getElementById('mp-info');
+  loading.classList.remove('hidden');
+  _mpClusters.clearLayers();
+
+  const p = new URLSearchParams();
+  const df = document.getElementById('mp-date-from').value;
+  const dt = document.getElementById('mp-date-to').value;
+  const hub = document.getElementById('mp-hub').value;
+  const driver = document.getElementById('mp-driver').value;
+  const statuses = _mpStatusList();
+  const source = document.querySelector('input[name="mp-source"]:checked')?.value || 'actual';
+  if (df) p.set('date_from', df);
+  if (dt) p.set('date_to', dt);
+  if (hub) p.set('hub_id', hub);
+  if (driver) p.set('courier', driver);
+  if (statuses.length) p.set('status', statuses.join(','));
+  p.set('source', source);
+
+  try {
+    const resp = await fetch(`/settlements/cainiao/map-pins/?${p.toString()}`);
+    const data = await resp.json();
+    loading.classList.add('hidden');
+    if (!data.success) {
+      document.getElementById('mp-stats').textContent = 'Erro ao carregar';
+      return;
+    }
+
+    _mpAllPins = data.pins || [];
+    _mpOptStart = data.start ? [data.start.lat, data.start.lng] : null;
+    _mpOptimalRoute = null;  // invalidate cache
+    _mpRenderPins();  // renders markers + gap + route honouring playback
+    _mpUpdateViewportStats();
+    _mpUpdateMissingBtn(data.missing_coords);
+
+    // Adjust playback UI visibility (only for single-day filter)
+    _mpUpdatePlaybackVisibility();
+
+    // Stats in top bar
+    document.getElementById('mp-stats').innerHTML =
+      `<strong>${data.returned}</strong> pinos · de ${data.total_filtered} filtrados` +
+      (data.missing_coords ? ` · <span class="text-amber-600">${data.missing_coords} sem coords</span>` : '');
+
+    // Info banner
+    if (data.truncated) {
+      info.textContent = `Mostrados apenas os primeiros ${data.limit} de ${data.total_filtered} pacotes. Refine os filtros para ver todos.`;
+      info.classList.remove('hidden');
+    } else {
+      info.classList.add('hidden');
+    }
+  } catch (e) {
+    loading.classList.add('hidden');
+    document.getElementById('mp-stats').textContent = 'Erro ao carregar';
+  }
+}
+
+function _escapeHtml(s) {
+  if (s == null) return '';
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function _fmtDateTime(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (isNaN(d)) return iso;
+  const p = n => String(n).padStart(2,'0');
+  return `${p(d.getDate())}/${p(d.getMonth()+1)} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+function _mpPopupHtml(pin) {
+  const statusColor = {
+    'Delivered':'text-emerald-600','Driver_received':'text-amber-600',
+    'Attempt Failure':'text-red-600','Assigned':'text-blue-600','Unassign':'text-slate-600',
+  }[pin.status] || 'text-gray-600';
+  const date = pin.date ? pin.date.split('-').reverse().join('/') : '';
+  const gmapsUrl = `https://www.google.com/maps/search/?api=1&query=${pin.lat},${pin.lng}`;
+  const streetUrl = `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${pin.lat},${pin.lng}`;
+  const navUrl = `https://www.google.com/maps/dir/?api=1&destination=${pin.lat},${pin.lng}`;
+  return `
+    <div class="map-popup">
+      <div class="pp-hdr">${_escapeHtml(pin.waybill)}</div>
+      <div class="pp-row"><span class="${statusColor} font-semibold">${_escapeHtml(pin.status)}</span> · ${date}</div>
+      ${pin.courier ? `<div class="pp-row">👤 ${_escapeHtml(pin.courier)}</div>` : ''}
+      ${pin.address ? `<div class="pp-row">📍 ${_escapeHtml(pin.address)}</div>` : ''}
+      <div class="pp-row">${_escapeHtml(pin.zip)} · ${_escapeHtml(pin.city)}</div>
+      ${pin.time ? `<div class="pp-row">🕐 ${_fmtDateTime(pin.time)}</div>` : ''}
+      ${pin.gap ? `<div class="pp-row">Gap: ${_escapeHtml(pin.gap)}</div>` : ''}
+      <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;">
+        <a class="detail" href="/settlements/cainiao/waybill/${encodeURIComponent(pin.waybill)}/">Detalhe</a>
+        <a class="detail" href="${streetUrl}" target="_blank" rel="noopener" style="color:#059669;">Street View</a>
+        <a class="detail" href="${navUrl}" target="_blank" rel="noopener" style="color:#dc2626;">Navegar</a>
+        <a class="detail" href="${gmapsUrl}" target="_blank" rel="noopener" style="color:#6b7280;">Google Maps</a>
+      </div>
+    </div>
+  `;
+}
+
+// ── Render pins + gap + route (applies playback filter) ───────────────────
+function _mpPinMinutes(pin) {
+  if (!pin.time) return null;
+  const d = new Date(pin.time);
+  if (isNaN(d)) return null;
+  return d.getHours() * 60 + d.getMinutes();
+}
+
+function _mpRenderPins() {
+  // Remove then re-add cluster to force repaint when markers change
+  if (_mpMap.hasLayer(_mpClusters)) _mpMap.removeLayer(_mpClusters);
+  _mpClusters.clearLayers();
+  _mpGapLayer.clearLayers();
+  _mpRouteLayer.clearLayers();
+  _mpOptRouteLayer.clearLayers();
+
+  const showGap  = document.getElementById('mp-gap-toggle').checked;
+  const doRoute  = document.getElementById('mp-route-toggle').checked
+                && _mpIsSingleDriverSingleDay();
+  const maxMin   = parseInt(document.getElementById('mp-playback').value, 10);
+  // Only apply the time filter once the user has actually interacted with the slider.
+  // Otherwise the browser's initial snap (step=5 + max=1439 → 1435) would silently
+  // filter out pins that have no `time` (Assigned / Unassign / Driver_received).
+  const useMax   = _mpIsSingleDay() && _mpPlaybackTouched && maxMin < 1439;
+
+  const markers = [];
+  const bounds = [];
+  const visible = [];
+
+  _mpAllPins.forEach(pin => {
+    if (useMax) {
+      const m = _mpPinMinutes(pin);
+      if (m == null || m > maxMin) return;
+    }
+    if (!_mpInShape(pin.lat, pin.lng)) return;
+    const mk = L.marker([pin.lat, pin.lng], { icon: _mpIcon(pin.status) });
+    mk.bindPopup(_mpPopupHtml(pin));
+    markers.push(mk);
+    bounds.push([pin.lat, pin.lng]);
+    visible.push(pin);
+
+    if (showGap && pin.rlat && pin.rlng && pin.alat && pin.alng) {
+      const c = pin.status === 'Attempt Failure' ? '#ef4444' : '#f59e0b';
+      L.polyline([[pin.rlat, pin.rlng], [pin.alat, pin.alng]], {
+        color: c, weight: 1.5, opacity: 0.6, dashArray: '4,4',
+      }).addTo(_mpGapLayer);
+    }
+  });
+  if (markers.length) _mpClusters.addLayers(markers);
+  _mpMap.addLayer(_mpClusters);
+
+  // Draw route when applicable
+  if (doRoute) _mpDrawRoute(visible);
+
+  // Draw optimal route when applicable
+  const doOpt = document.getElementById('mp-route-optimal').checked;
+  if (doOpt) _mpDrawOptimalRoute(visible);
+  else _mpHideMetrics();
+
+  if (bounds.length && !useMax) {
+    // Invalidate size first to ensure fitBounds works with the real container
+    _mpMap.invalidateSize();
+    _mpMap.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 });
+  }
+}
+
+function _mpIsSingleDay() {
+  const df = document.getElementById('mp-date-from').value;
+  const dt = document.getElementById('mp-date-to').value;
+  return df && dt && df === dt;
+}
+
+function _mpIsSingleDriverSingleDay() {
+  return _mpIsSingleDay() && !!document.getElementById('mp-driver').value;
+}
+
+function _mpUpdatePlaybackVisibility() {
+  const wrap = document.getElementById('mp-playback-wrap');
+  if (_mpIsSingleDay()) wrap.classList.remove('hidden');
+  else wrap.classList.add('hidden');
+  // Update route hint state
+  const hint = document.getElementById('mp-route-hint');
+  if (_mpIsSingleDriverSingleDay()) hint.textContent = '';
+  else hint.textContent = '(precisa filtrar 1 driver + 1 dia)';
+}
+
+function _mpResetPlayback() {
+  const sl = document.getElementById('mp-playback');
+  sl.value = sl.max;
+  _mpPlaybackTouched = false;
+  document.getElementById('mp-playback-label').textContent = '23:59';
+  _mpRenderPins();
+}
+
+let _mpRouteCache = { key: null, coords: null };
+
+function _mpDrawRoute(pins) {
+  // Order by order_time (delivery → failure → start → outbound → receipt → creation).
+  const ordered = pins
+    .filter(p => p.order_time)
+    .sort((a, b) => a.order_time.localeCompare(b.order_time));
+  if (ordered.length < 2) return;
+
+  // Number badges (always drawn immediately, straight-line fallback first)
+  _mpAddRouteNumbers(ordered);
+  const straight = L.polyline(ordered.map(p => [p.lat, p.lng]), {
+    color: '#4f46e5', weight: 2, opacity: 0.35, dashArray: '4,4',
+  }).addTo(_mpRouteLayer);
+
+  // Try to replace with road-following route via Mapbox Directions API
+  const token = window.MAP_CONFIG && window.MAP_CONFIG.mapbox_token;
+  if (!token) return;
+
+  const key = ordered.map(p => p.waybill).join('|');
+  if (_mpRouteCache.key === key && _mpRouteCache.coords) {
+    straight.remove();
+    L.polyline(_mpRouteCache.coords, {
+      color: '#4f46e5', weight: 3.5, opacity: 0.75,
+    }).addTo(_mpRouteLayer);
+    return;
+  }
+
+  _mpFetchRoadRoute(ordered, token).then(coords => {
+    if (!coords || !coords.length) return;
+    _mpRouteCache = { key, coords };
+    // Only replace if route toggle is still on and key is still current
+    if (!document.getElementById('mp-route-toggle').checked) return;
+    straight.remove();
+    L.polyline(coords, {
+      color: '#4f46e5', weight: 3.5, opacity: 0.75,
+    }).addTo(_mpRouteLayer);
+  }).catch(() => { /* keep the straight-line fallback */ });
+}
+
+function _mpAddRouteNumbers(ordered) {
+  ordered.forEach((p, i) => {
+    const m = L.marker([p.lat, p.lng], {
+      icon: L.divIcon({
+        html: `<span style="background:#4f46e5;color:white;border-radius:50%;
+                width:20px;height:20px;display:inline-flex;align-items:center;
+                justify-content:center;font-size:10px;font-weight:700;
+                border:2px solid white;box-shadow:0 1px 3px rgba(0,0,0,.3);cursor:pointer;">${i + 1}</span>`,
+        className: '', iconSize: [20, 20], iconAnchor: [10, 10],
+      }),
+      zIndexOffset: 500,
+      riseOnHover: true,
+    });
+    // Prefix popup with the route stop order for context
+    const popupHtml = `<div style="margin-bottom:6px;padding:3px 8px;background:#4f46e5;color:white;
+                        border-radius:4px;font-size:10px;font-weight:700;display:inline-block;">
+                        Parada ${i + 1} de ${ordered.length}
+                      </div>` + _mpPopupHtml(p);
+    m.bindPopup(popupHtml);
+    m.addTo(_mpRouteLayer);
+  });
+}
+
+async function _mpFetchRoadRoute(ordered, token) {
+  const stats = document.getElementById('mp-stats');
+  const origText = stats.innerHTML;
+  // Mapbox Directions accepts up to 25 coordinates per request.
+  // We chunk the route and overlap the last coord of each chunk with the first
+  // of the next so the segments connect seamlessly.
+  const CHUNK = 25;
+  const allCoords = [];
+  const totalChunks = Math.ceil((ordered.length - 1) / (CHUNK - 1));
+  let done = 0;
+
+  const fetchChunk = async (slice) => {
+    const coordsStr = slice.map(p => `${p.lng},${p.lat}`).join(';');
+    const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${coordsStr}` +
+                `?geometries=geojson&overview=full&access_token=${encodeURIComponent(token)}`;
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error(`Mapbox ${resp.status}`);
+    const data = await resp.json();
+    if (data.routes && data.routes[0] && data.routes[0].geometry) {
+      data.routes[0].geometry.coordinates.forEach(c => allCoords.push([c[1], c[0]]));
+    }
+  };
+
+  for (let i = 0; i < ordered.length - 1; i += CHUNK - 1) {
+    const slice = ordered.slice(i, i + CHUNK);
+    if (slice.length < 2) break;
+    stats.innerHTML = `${origText} · <span class="text-indigo-500">a calcular rota ${++done}/${totalChunks}...</span>`;
+    try { await fetchChunk(slice); }
+    catch (e) { /* skip this chunk; straight line remains */ }
+  }
+  stats.innerHTML = origText;
+  return allCoords;
+}
+
+// ── Contextual overlays (HUBs, CP4, Heatmap) ──────────────────────────────
+async function _mpLoadOverlays(force) {
+  if (_mpOverlaysCache && !force) return _mpOverlaysCache;
+  const p = new URLSearchParams();
+  const df = document.getElementById('mp-date-from').value;
+  const dt = document.getElementById('mp-date-to').value;
+  const hub = document.getElementById('mp-hub').value;
+  if (df) p.set('date_from', df);
+  if (dt) p.set('date_to', dt);
+  if (hub) p.set('hub_id', hub);
+  try {
+    const resp = await fetch(`/settlements/cainiao/map-overlays/?${p.toString()}`);
+    _mpOverlaysCache = await resp.json();
+  } catch (e) {
+    _mpOverlaysCache = { hubs: [], cp4_centroids: [], failure_heat: [] };
+  }
+  return _mpOverlaysCache;
+}
+
+function _mpInvalidateOverlays() {
+  _mpOverlaysCache = null;
+  _mpHubsLayer.clearLayers();
+  _mpCp4Layer.clearLayers();
+  if (_mpHeatLayer) { _mpMap.removeLayer(_mpHeatLayer); _mpHeatLayer = null; }
+}
+
+async function _mpToggleHubs(visible) {
+  if (!visible) { _mpMap.removeLayer(_mpHubsLayer); _mpHubsLayer.clearLayers(); return; }
+  const data = await _mpLoadOverlays();
+  _mpHubsLayer.clearLayers();
+  (data.hubs || []).forEach(h => {
+    const icon = L.divIcon({
+      html: `<div style="background:#4f46e5;color:white;padding:4px 8px;border-radius:8px;
+              border:2px solid white;box-shadow:0 2px 4px rgba(0,0,0,.3);
+              font-size:11px;font-weight:700;white-space:nowrap;">
+              🏭 ${_escapeHtml(h.name)}</div>`,
+      className: '', iconAnchor: [30, 12],
+    });
+    L.marker([h.lat, h.lng], { icon, zIndexOffset: 1000 })
+      .bindPopup(`<strong>${_escapeHtml(h.name)}</strong><br>${h.count} pacotes no período`)
+      .addTo(_mpHubsLayer);
+  });
+  _mpMap.addLayer(_mpHubsLayer);
+}
+
+async function _mpToggleCp4(visible) {
+  if (!visible) { _mpMap.removeLayer(_mpCp4Layer); _mpCp4Layer.clearLayers(); return; }
+  const data = await _mpLoadOverlays();
+  _mpCp4Layer.clearLayers();
+  const rows = data.cp4_centroids || [];
+  if (!rows.length) { _mpMap.addLayer(_mpCp4Layer); return; }
+  const maxN = Math.max(...rows.map(r => r.count));
+  rows.forEach(c => {
+    const radius = 200 + Math.sqrt(c.count / maxN) * 1800;
+    L.circle([c.lat, c.lng], {
+      radius, color: '#6366f1', weight: 1, opacity: 0.5,
+      fillColor: '#6366f1', fillOpacity: 0.08,
+    }).bindPopup(`<strong>CP4 ${c.cp4}</strong><br>${c.count} pacotes`).addTo(_mpCp4Layer);
+    L.marker([c.lat, c.lng], {
+      icon: L.divIcon({
+        html: `<span style="background:rgba(99,102,241,.9);color:white;padding:2px 6px;
+                border-radius:4px;font-family:monospace;font-size:10px;font-weight:700;">
+                ${c.cp4}</span>`,
+        className: '', iconAnchor: [15, 8],
+      }),
+    }).addTo(_mpCp4Layer);
+  });
+  _mpMap.addLayer(_mpCp4Layer);
+}
+
+async function _mpToggleHeat(visible) {
+  if (!visible) {
+    if (_mpHeatLayer) { _mpMap.removeLayer(_mpHeatLayer); _mpHeatLayer = null; }
+    return;
+  }
+  const data = await _mpLoadOverlays();
+  const pts = (data.failure_heat || []);
+  if (!pts.length) return;
+  if (_mpHeatLayer) _mpMap.removeLayer(_mpHeatLayer);
+  _mpHeatLayer = L.heatLayer(pts, {
+    radius: 25, blur: 20, maxZoom: 17,
+    gradient: { 0.2: '#fbbf24', 0.5: '#f97316', 0.8: '#ef4444', 1.0: '#7f1d1d' },
+  }).addTo(_mpMap);
+}
+
+// ── Route optimizer (cluster-first + NN + 2-opt) ──────────────────────────
+function _mpHaversine(a, b) {
+  const R = 6371;  // km
+  const dLat = (b[0] - a[0]) * Math.PI / 180;
+  const dLng = (b[1] - a[1]) * Math.PI / 180;
+  const la1 = a[0] * Math.PI / 180;
+  const la2 = b[0] * Math.PI / 180;
+  const h = Math.sin(dLat/2) ** 2 + Math.cos(la1) * Math.cos(la2) * Math.sin(dLng/2) ** 2;
+  return R * 2 * Math.asin(Math.sqrt(h));
+}
+
+function _mpNearestNeighbor(points, startLL) {
+  const remaining = points.slice();
+  const order = [];
+  let cur = startLL;
+  while (remaining.length) {
+    let best = 0, bestD = Infinity;
+    for (let i = 0; i < remaining.length; i++) {
+      const d = _mpHaversine(cur, [remaining[i].lat, remaining[i].lng]);
+      if (d < bestD) { bestD = d; best = i; }
+    }
+    const p = remaining.splice(best, 1)[0];
+    order.push(p);
+    cur = [p.lat, p.lng];
+  }
+  return order;
+}
+
+function _mp2optImprove(route, startLL) {
+  if (route.length < 4) return route;
+  let r = route.slice();
+  // Work on an array of coords (including the start at index 0) for distance calc.
+  const coordsOf = arr => [startLL, ...arr.map(p => [p.lat, p.lng])];
+  let improved = true;
+  let iter = 0;
+  const maxIter = 20;
+  while (improved && iter < maxIter) {
+    improved = false;
+    iter++;
+    const c = coordsOf(r);
+    for (let i = 1; i < c.length - 2; i++) {
+      for (let k = i + 1; k < c.length - 1; k++) {
+        const a = c[i - 1], b = c[i], x = c[k], y = c[k + 1];
+        const d1 = _mpHaversine(a, b) + _mpHaversine(x, y);
+        const d2 = _mpHaversine(a, x) + _mpHaversine(b, y);
+        if (d2 < d1 - 1e-9) {
+          // Reverse the route slice corresponding to coords[i..k] → r[i-1..k-1]
+          const seg = r.slice(i - 1, k).reverse();
+          r.splice(i - 1, seg.length, ...seg);
+          improved = true;
+          break;
+        }
+      }
+      if (improved) break;
+    }
+  }
+  return r;
+}
+
+function _mpOptimize(pins, startLL) {
+  if (pins.length < 2) return pins.slice();
+  // Adaptive cluster granularity: less pins = more granular
+  const cpLen = pins.length > 150 ? 4 : pins.length > 50 ? 6 : 7;
+  const groups = {};
+  pins.forEach(p => {
+    const z = (p.zip || '').replace(/[^0-9]/g, '');
+    const key = z.substring(0, cpLen) || '____';
+    (groups[key] = groups[key] || []).push(p);
+  });
+  const clusters = Object.entries(groups).map(([key, pts]) => {
+    const lat = pts.reduce((a, p) => a + p.lat, 0) / pts.length;
+    const lng = pts.reduce((a, p) => a + p.lng, 0) / pts.length;
+    return { key, pts, centroid: [lat, lng] };
+  });
+
+  // Order clusters by NN from start
+  const ordered = [];
+  const seen = new Set();
+  let cur = startLL;
+  while (ordered.length < clusters.length) {
+    let best = -1, bestD = Infinity;
+    for (let i = 0; i < clusters.length; i++) {
+      if (seen.has(i)) continue;
+      const d = _mpHaversine(cur, clusters[i].centroid);
+      if (d < bestD) { bestD = d; best = i; }
+    }
+    if (best < 0) break;
+    seen.add(best);
+    ordered.push(clusters[best]);
+    cur = clusters[best].centroid;
+  }
+
+  // Within each cluster: NN + 2-opt using previous exit point as entry
+  const finalRoute = [];
+  let entry = startLL;
+  ordered.forEach(cl => {
+    let inner = _mpNearestNeighbor(cl.pts, entry);
+    inner = _mp2optImprove(inner, entry);
+    finalRoute.push(...inner);
+    const last = inner[inner.length - 1];
+    entry = [last.lat, last.lng];
+  });
+  return finalRoute;
+}
+
+function _mpRouteDistance(route, startLL) {
+  let d = 0;
+  let cur = startLL;
+  for (const p of route) {
+    d += _mpHaversine(cur, [p.lat, p.lng]);
+    cur = [p.lat, p.lng];
+  }
+  return d;
+}
+
+function _mpDrawOptimalRoute(visiblePins) {
+  _mpOptRouteLayer.clearLayers();
+  _mpHideMetrics();
+  if (visiblePins.length < 2 || !_mpOptStart) return;
+
+  // Compute or reuse cache
+  const key = visiblePins.map(p => p.waybill).sort().join('|');
+  if (!_mpOptimalRoute || _mpOptimalRoute._key !== key) {
+    const route = _mpOptimize(visiblePins, _mpOptStart);
+    route._key = key;
+    _mpOptimalRoute = route;
+  }
+
+  // Draw HUB marker
+  L.marker(_mpOptStart, {
+    icon: L.divIcon({
+      html: `<div style="width:22px;height:22px;border-radius:50%;background:#059669;
+              border:3px solid white;box-shadow:0 2px 4px rgba(0,0,0,.3);
+              display:flex;align-items:center;justify-content:center;color:white;font-size:11px;">🏭</div>`,
+      className: '', iconSize: [22, 22], iconAnchor: [11, 11],
+    }),
+    zIndexOffset: 1000,
+  }).bindPopup('<strong>Início da rota (HUB)</strong>').addTo(_mpOptRouteLayer);
+
+  // Straight-line preview (dashed) from HUB through all points
+  const pts = [_mpOptStart, ..._mpOptimalRoute.map(p => [p.lat, p.lng])];
+  L.polyline(pts, {
+    color: '#10b981', weight: 2.5, opacity: 0.45, dashArray: '6,4',
+  }).addTo(_mpOptRouteLayer);
+
+  // Numbered "opt-N" badges at each stop
+  _mpOptimalRoute.forEach((p, i) => {
+    const m = L.marker([p.lat, p.lng], {
+      icon: L.divIcon({
+        html: `<span style="background:#059669;color:white;border-radius:50%;
+                width:22px;height:22px;display:inline-flex;align-items:center;
+                justify-content:center;font-size:10px;font-weight:700;
+                border:2px solid white;box-shadow:0 1px 3px rgba(0,0,0,.3);cursor:pointer;">${i + 1}</span>`,
+        className: '', iconSize: [22, 22], iconAnchor: [11, 11],
+      }),
+      zIndexOffset: 600,
+      riseOnHover: true,
+    });
+    const popupHtml = `<div style="margin-bottom:6px;padding:3px 8px;background:#059669;color:white;
+                        border-radius:4px;font-size:10px;font-weight:700;display:inline-block;">
+                        Rota óptima · Parada ${i + 1} de ${_mpOptimalRoute.length}
+                      </div>` + _mpPopupHtml(p);
+    m.bindPopup(popupHtml);
+    m.addTo(_mpOptRouteLayer);
+  });
+
+  // Metrics (Haversine estimate)
+  const dKm = _mpRouteDistance(_mpOptimalRoute, _mpOptStart);
+  const estMin = (dKm / 30) * 60;  // assume 30 km/h average urban speed
+  document.getElementById('mp-metric-stops').textContent = _mpOptimalRoute.length;
+  document.getElementById('mp-metric-dist').textContent = dKm.toFixed(1) + ' km';
+  document.getElementById('mp-metric-time').textContent = _mpFmtDuration(estMin * 60);
+  document.getElementById('mp-route-metrics').classList.remove('hidden');
+  document.getElementById('mp-metric-real-row').classList.add('hidden');
+  document.getElementById('mp-metric-real-btn').disabled = false;
+  document.getElementById('mp-metric-real-btn').textContent = '📏 Calcular real';
+
+  // Kick off road-following route replacement in background
+  const token = window.MAP_CONFIG && window.MAP_CONFIG.mapbox_token;
+  if (token) _mpFetchOptRoadRoute(_mpOptimalRoute, _mpOptStart, token);
+}
+
+function _mpHideMetrics() {
+  document.getElementById('mp-route-metrics').classList.add('hidden');
+}
+
+function _mpFmtDuration(seconds) {
+  if (!seconds || isNaN(seconds)) return '—';
+  const m = Math.round(seconds / 60);
+  if (m < 60) return m + 'min';
+  const h = Math.floor(m / 60);
+  const rm = m % 60;
+  return `${h}h${String(rm).padStart(2, '0')}`;
+}
+
+async function _mpFetchOptRoadRoute(route, startLL, token) {
+  // Draw a road-following polyline over the dashed preview.
+  const CHUNK = 25;
+  const allCoords = [];
+  const stops = [{ lat: startLL[0], lng: startLL[1] }, ...route];
+  for (let i = 0; i < stops.length - 1; i += CHUNK - 1) {
+    const slice = stops.slice(i, i + CHUNK);
+    if (slice.length < 2) break;
+    const coordsStr = slice.map(p => `${p.lng},${p.lat}`).join(';');
+    const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${coordsStr}` +
+                `?geometries=geojson&overview=full&access_token=${encodeURIComponent(token)}`;
+    try {
+      const resp = await fetch(url);
+      if (!resp.ok) continue;
+      const data = await resp.json();
+      if (data.routes && data.routes[0] && data.routes[0].geometry) {
+        data.routes[0].geometry.coordinates.forEach(c => allCoords.push([c[1], c[0]]));
+      }
+    } catch (e) { /* skip chunk */ }
+  }
+  // Only apply if the toggle is still on
+  if (!document.getElementById('mp-route-optimal').checked) return;
+  if (allCoords.length) {
+    _mpOptRoutePath = allCoords;
+    L.polyline(allCoords, {
+      color: '#059669', weight: 3.5, opacity: 0.8,
+    }).addTo(_mpOptRouteLayer);
+  }
+}
+
+async function _mpComputeRealMetrics() {
+  if (!_mpOptimalRoute || !_mpOptStart) return;
+  const token = window.MAP_CONFIG && window.MAP_CONFIG.mapbox_token;
+  if (!token) { alert('Mapbox token não configurado em /system-config/'); return; }
+  const btn = document.getElementById('mp-metric-real-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ A calcular...';
+
+  const CHUNK = 25;
+  const stops = [{ lat: _mpOptStart[0], lng: _mpOptStart[1] }, ..._mpOptimalRoute];
+  let totalMeters = 0, totalSeconds = 0;
+  let chunks = 0, chunksDone = 0;
+  for (let i = 0; i < stops.length - 1; i += CHUNK - 1) chunks++;
+  for (let i = 0; i < stops.length - 1; i += CHUNK - 1) {
+    const slice = stops.slice(i, i + CHUNK);
+    if (slice.length < 2) break;
+    chunksDone++;
+    btn.textContent = `⏳ ${chunksDone}/${chunks}...`;
+    const coordsStr = slice.map(p => `${p.lng},${p.lat}`).join(';');
+    const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${coordsStr}` +
+                `?geometries=geojson&overview=simplified&access_token=${encodeURIComponent(token)}`;
+    try {
+      const resp = await fetch(url);
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data.routes && data.routes[0]) {
+          totalMeters  += data.routes[0].distance || 0;
+          totalSeconds += data.routes[0].duration || 0;
+        }
+      }
+    } catch (e) { /* skip */ }
+  }
+  document.getElementById('mp-metric-real-dist').textContent = (totalMeters / 1000).toFixed(1) + ' km';
+  document.getElementById('mp-metric-real-dur').textContent = _mpFmtDuration(totalSeconds);
+  document.getElementById('mp-metric-real-row').classList.remove('hidden');
+  btn.textContent = '✓ Real calculado';
+  btn.disabled = true;
+}
+
+function _mpExportGPX() {
+  if (!_mpOptimalRoute || !_mpOptStart) { alert('Activa a Rota óptima primeiro.'); return; }
+  const now = new Date().toISOString();
+  const esc = s => String(s || '').replace(/[<>&"']/g, c =>
+    ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&apos;'}[c]));
+
+  const wpts = [
+    `<wpt lat="${_mpOptStart[0]}" lon="${_mpOptStart[1]}"><name>Início (HUB)</name><sym>Residence</sym></wpt>`,
+    ..._mpOptimalRoute.map((p, i) =>
+      `<wpt lat="${p.lat}" lon="${p.lng}">
+        <name>${i + 1}: ${esc(p.waybill)}</name>
+        <desc>${esc(p.status)} · ${esc(p.address)}</desc>
+      </wpt>`)
+  ].join('\n  ');
+
+  const rtepts = [
+    `<rtept lat="${_mpOptStart[0]}" lon="${_mpOptStart[1]}"><name>Início</name></rtept>`,
+    ..._mpOptimalRoute.map((p, i) =>
+      `<rtept lat="${p.lat}" lon="${p.lng}"><name>${i + 1}: ${esc(p.waybill)}</name></rtept>`)
+  ].join('\n    ');
+
+  const gpx = `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="Leguas Franzinas" xmlns="http://www.topografix.com/GPX/1/1">
+  <metadata><name>Rota óptima Cainiao</name><time>${now}</time></metadata>
+  ${wpts}
+  <rte>
+    <name>Rota óptima</name>
+    ${rtepts}
+  </rte>
+</gpx>`;
+
+  const blob = new Blob([gpx], { type: 'application/gpx+xml' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `rota-optima-${new Date().toISOString().slice(0,16).replace(/[:T]/g,'-')}.gpx`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ── CSV export of visible pins ────────────────────────────────────────────
+function _mpExportCSV() {
+  if (!_mpAllPins.length) { alert('Nada para exportar.'); return; }
+  const b = _mpMap.getBounds();
+  const rows = _mpAllPins.filter(pin => b.contains([pin.lat, pin.lng]) && _mpInShape(pin.lat, pin.lng));
+  if (!rows.length) { alert('Sem pinos na vista actual.'); return; }
+  const headers = ['waybill','status','driver','dsp','date','time','zip','city','address','lat','lng','gap','exception'];
+  const esc = v => {
+    if (v == null) return '';
+    const s = String(v).replace(/"/g, '""');
+    return /[",;\n]/.test(s) ? `"${s}"` : s;
+  };
+  const lines = [headers.join(';')].concat(
+    rows.map(r => [
+      r.waybill, r.status, r.courier, r.dsp, r.date, r.time || '',
+      r.zip, r.city, r.address, r.lat, r.lng, r.gap, r.exception,
+    ].map(esc).join(';'))
+  );
+  const blob = new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const ts = new Date().toISOString().slice(0,16).replace(/[:T]/g, '-');
+  a.download = `cainiao-map-${ts}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ── Viewport stats (counters recomputed when map moves) ───────────────────
+function _mpUpdateViewportStats() {
+  if (!_mpAllPins.length) {
+    document.getElementById('mp-viewport-stats').textContent = '';
+    return;
+  }
+  const b = _mpMap.getBounds();
+  let total = 0, delivered = 0, drivers = new Set();
+  _mpAllPins.forEach(pin => {
+    if (!b.contains([pin.lat, pin.lng])) return;
+    if (!_mpInShape(pin.lat, pin.lng)) return;
+    total++;
+    if (pin.status === 'Delivered') delivered++;
+    if (pin.courier) drivers.add(pin.courier);
+  });
+  if (!total) {
+    document.getElementById('mp-viewport-stats').textContent = '';
+    return;
+  }
+  const rate = Math.round(delivered / total * 100);
+  document.getElementById('mp-viewport-stats').innerHTML =
+    `· Nesta vista: <strong>${total}</strong> · ${rate}% sucesso · ${drivers.size} drivers`;
+}
+_mpMap.on('moveend zoomend', _mpUpdateViewportStats);
+
+// ── Address search via Mapbox geocoding ───────────────────────────────────
+let _mpAddrTimer = null;
+async function _mpAddrSearch(q) {
+  clearTimeout(_mpAddrTimer);
+  q = (q || '').trim();
+  const panel = document.getElementById('mp-addr-results');
+  if (q.length < 3 || !(window.MAP_CONFIG && window.MAP_CONFIG.mapbox_token)) {
+    panel.classList.add('hidden');
+    panel.innerHTML = '';
+    return;
+  }
+  _mpAddrTimer = setTimeout(async () => {
+    try {
+      const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(q)}.json` +
+                  `?country=pt&limit=6&access_token=${encodeURIComponent(window.MAP_CONFIG.mapbox_token)}`;
+      const resp = await fetch(url);
+      const data = await resp.json();
+      const features = data.features || [];
+      if (!features.length) {
+        panel.innerHTML = `<div class="p-2 text-xs text-gray-500">Sem resultados</div>`;
+        panel.classList.remove('hidden'); return;
+      }
+      panel.innerHTML = features.map(f =>
+        `<button type="button" onclick="_mpAddrPick(${f.center[1]}, ${f.center[0]})"
+          class="w-full text-left px-3 py-2 text-xs hover:bg-indigo-50 dark:hover:bg-indigo-900/30 border-b border-gray-100 dark:border-gray-700/50 last:border-0">
+          <div class="font-medium text-gray-900 dark:text-white">${_escapeHtml(f.text || '')}</div>
+          <div class="text-gray-500 dark:text-gray-400 text-[11px]">${_escapeHtml(f.place_name || '')}</div>
+        </button>`).join('');
+      panel.classList.remove('hidden');
+    } catch (e) {
+      panel.innerHTML = `<div class="p-2 text-xs text-red-500">Erro na busca</div>`;
+      panel.classList.remove('hidden');
+    }
+  }, 300);
+}
+
+function _mpAddrPick(lat, lng) {
+  _mpMap.flyTo([lat, lng], 15, { duration: 0.8 });
+  document.getElementById('mp-addr-results').classList.add('hidden');
+  document.getElementById('mp-addr-search').value = '';
+}
+
+document.addEventListener('click', e => {
+  const wrap = document.getElementById('mp-addr-search').parentElement;
+  if (!wrap.contains(e.target)) {
+    document.getElementById('mp-addr-results').classList.add('hidden');
+  }
+});
+
+// ── Missing coordinates modal ─────────────────────────────────────────────
+async function _mpOpenMissing() {
+  const modal = document.getElementById('mp-missing-modal');
+  const body  = document.getElementById('mp-missing-body');
+  modal.classList.remove('hidden');
+  body.innerHTML = '<div class="p-8 text-center text-sm text-gray-500">A carregar...</div>';
+
+  const p = new URLSearchParams();
+  const df = document.getElementById('mp-date-from').value;
+  const dt = document.getElementById('mp-date-to').value;
+  const hub = document.getElementById('mp-hub').value;
+  const driver = document.getElementById('mp-driver').value;
+  const statuses = _mpStatusList();
+  if (df) p.set('date_from', df);
+  if (dt) p.set('date_to', dt);
+  if (hub) p.set('hub_id', hub);
+  if (driver) p.set('courier', driver);
+  if (statuses.length) p.set('status', statuses.join(','));
+
+  try {
+    const resp = await fetch(`/settlements/cainiao/map-missing-coords/?${p.toString()}`);
+    const data = await resp.json();
+    if (!data.rows || !data.rows.length) {
+      body.innerHTML = '<div class="p-8 text-center text-sm text-gray-500">Todos os pacotes têm coordenadas.</div>';
+      return;
+    }
+    body.innerHTML = `
+      <table class="w-full text-xs">
+        <thead class="bg-gray-50 dark:bg-gray-900/50 text-[10px] uppercase text-gray-500 sticky top-0">
+          <tr>
+            <th class="px-3 py-2 text-left">Data</th>
+            <th class="px-3 py-2 text-left">Waybill</th>
+            <th class="px-3 py-2 text-left">Status</th>
+            <th class="px-3 py-2 text-left">Driver</th>
+            <th class="px-3 py-2 text-left">Morada</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-700/50">
+          ${data.rows.map(r => `
+            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+              <td class="px-3 py-1.5 text-gray-500">${r.date ? r.date.split('-').reverse().join('/') : '—'}</td>
+              <td class="px-3 py-1.5">
+                <a href="/settlements/cainiao/waybill/${encodeURIComponent(r.waybill)}/"
+                  class="font-mono text-[11px] text-indigo-600 dark:text-indigo-400 hover:underline">${_escapeHtml(r.waybill)}</a>
+              </td>
+              <td class="px-3 py-1.5 text-gray-700 dark:text-gray-300">${_escapeHtml(r.status)}</td>
+              <td class="px-3 py-1.5 text-gray-500 dark:text-gray-400">${_escapeHtml(r.courier || '—')}</td>
+              <td class="px-3 py-1.5 text-gray-500 dark:text-gray-400">${_escapeHtml(r.address || '—')}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+  } catch (e) {
+    body.innerHTML = '<div class="p-8 text-center text-sm text-red-500">Erro ao carregar.</div>';
+  }
+}
+
+// Update missing counter in top bar based on last load
+function _mpUpdateMissingBtn(count) {
+  const btn = document.getElementById('mp-missing-btn');
+  const cnt = document.getElementById('mp-missing-count');
+  if (count && count > 0) {
+    cnt.textContent = ` (${count})`;
+    btn.classList.remove('hidden');
+  } else {
+    btn.classList.add('hidden');
+  }
+}
+
+// Auto-reload on status toggle or driver change
+document.querySelectorAll('.mp-status').forEach(cb => cb.addEventListener('change', _mpReload));
+document.getElementById('mp-driver').addEventListener('change', _mpReload);
+document.getElementById('mp-date-from').addEventListener('change', () => { _mpInvalidateOverlays(); _mpReloadDrivers(); _mpReload(); _mpRefreshOverlays(); });
+document.getElementById('mp-date-to').addEventListener('change',   () => { _mpInvalidateOverlays(); _mpReloadDrivers(); _mpReload(); _mpRefreshOverlays(); });
+document.getElementById('mp-hub').addEventListener('change',       () => { _mpInvalidateOverlays(); _mpRefreshOverlays(); });
+document.getElementById('mp-gap-toggle').addEventListener('change', _mpReload);
+document.querySelectorAll('input[name="mp-source"]').forEach(r => r.addEventListener('change', _mpReload));
+
+// Overlay toggles
+document.getElementById('mp-overlay-hubs').addEventListener('change', e => _mpToggleHubs(e.target.checked));
+document.getElementById('mp-overlay-cp4').addEventListener('change',  e => _mpToggleCp4(e.target.checked));
+document.getElementById('mp-overlay-heat').addEventListener('change', e => _mpToggleHeat(e.target.checked));
+
+// Playback slider (updates label + re-renders)
+const _mpSlider = document.getElementById('mp-playback');
+_mpSlider.addEventListener('input', () => {
+  _mpPlaybackTouched = true;
+  const m = Math.min(1439, parseInt(_mpSlider.value, 10));
+  const hh = String(Math.floor(m / 60)).padStart(2, '0');
+  const mm = String(m % 60).padStart(2, '0');
+  document.getElementById('mp-playback-label').textContent = `${hh}:${mm}`;
+  _mpRenderPins();
+});
+
+// Route toggle
+document.getElementById('mp-route-toggle').addEventListener('change', _mpRenderPins);
+document.getElementById('mp-route-optimal').addEventListener('change', _mpRenderPins);
+
+// Address search
+document.getElementById('mp-addr-search').addEventListener('input', e => _mpAddrSearch(e.target.value));
+
+// Close missing modal on backdrop click
+document.getElementById('mp-missing-modal').addEventListener('click', e => {
+  if (e.target.id === 'mp-missing-modal') e.target.classList.add('hidden');
+});
+
+// Re-apply active overlays when filters change
+async function _mpRefreshOverlays() {
+  const h = document.getElementById('mp-overlay-hubs').checked;
+  const c = document.getElementById('mp-overlay-cp4').checked;
+  const f = document.getElementById('mp-overlay-heat').checked;
+  if (h) await _mpToggleHubs(true);
+  if (c) await _mpToggleCp4(true);
+  if (f) await _mpToggleHeat(true);
+}
+
+// Ensure the map picks up the container size after the flex layout settles
+setTimeout(() => _mpMap.invalidateSize(), 100);
+
+// Initial load — default = today (lighter, one-day volume only)
+_mpSetPreset('today');
+_mpReloadDrivers();
+</script>
+
+{% endblock %}

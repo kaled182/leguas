@@ -11,6 +11,8 @@ urlpatterns = [
     # Lista e CRUD
     path("list/", views.order_list, name="order_list"),
     path("map/", views.orders_map, name="orders_map"),
+    path("geocoding-failures/", views.geocoding_failures_report, name="geocoding_failures_report"),
+    path("geocoding-failures/<int:failure_id>/resolve/", views.resolve_geocoding_failure, name="resolve_geocoding_failure"),
     path("<int:pk>/", views.order_detail, name="order_detail"),
     path("create/", views.order_create, name="order_create"),
     path("<int:pk>/edit/", views.order_edit, name="order_edit"),

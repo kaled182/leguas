@@ -1,0 +1,1885 @@
+{% extends 'paack_dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Empresas Parceiras{% endblock %}
+{% block sidebar_title %}Empresas Parceiras{% endblock %}
+
+{% block content %}
+<div x-data="empresasApp()" x-init="init()">
+<div class="p-6 space-y-6">
+
+  {% csrf_token %}
+
+  <!-- Header -->
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Empresas Parceiras</h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Empresas subcontratantes que fornecem motoristas à Léguas Franzinas</p>
+    </div>
+    <button @click="openCreate()"
+            class="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold text-sm transition-colors shadow-sm">
+      <i data-lucide="plus" class="w-4 h-4"></i> Nova Empresa
+    </button>
+  </div>
+
+  <!-- Cards de resumo -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 flex items-center gap-4">
+      <div class="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center">
+        <i data-lucide="building-2" class="w-5 h-5 text-purple-600"></i>
+      </div>
+      <div>
+        <div class="text-2xl font-bold text-gray-900 dark:text-white" x-text="empresas.length"></div>
+        <div class="text-xs text-gray-500">Total de Empresas</div>
+      </div>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 flex items-center gap-4">
+      <div class="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-xl flex items-center justify-center">
+        <i data-lucide="check-circle" class="w-5 h-5 text-green-600"></i>
+      </div>
+      <div>
+        <div class="text-2xl font-bold text-gray-900 dark:text-white" x-text="empresas.filter(e=>e.ativo).length"></div>
+        <div class="text-xs text-gray-500">Ativas</div>
+      </div>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 flex items-center gap-4">
+      <div class="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center">
+        <i data-lucide="users" class="w-5 h-5 text-blue-600"></i>
+      </div>
+      <div>
+        <div class="text-2xl font-bold text-gray-900 dark:text-white" x-text="empresas.reduce((s,e)=>s+e.num_motoristas,0)"></div>
+        <div class="text-xs text-gray-500">Motoristas de Frota</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabela de empresas -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm">
+    <div class="px-5 py-3 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+      <span class="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
+        <i data-lucide="building-2" class="w-4 h-4 text-purple-500"></i> Lista de Empresas
+      </span>
+      <input type="text" x-model="search" placeholder="Filtrar por nome ou NIF…"
+             class="px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm w-64">
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-gray-50 dark:bg-gray-700/50">
+          <tr>
+            <th class="px-4 py-3 text-left font-semibold text-gray-500">Empresa</th>
+            <th class="px-4 py-3 text-left font-semibold text-gray-500">NIF</th>
+            <th class="px-4 py-3 text-left font-semibold text-gray-500">Contacto</th>
+            <th class="px-4 py-3 text-center font-semibold text-gray-500">IVA (%)</th>
+            <th class="px-4 py-3 text-center font-semibold text-gray-500">Motoristas</th>
+            <th class="px-4 py-3 text-center font-semibold text-gray-500">Estado</th>
+            <th class="px-4 py-3 text-center font-semibold text-gray-500">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-if="filteredEmpresas().length === 0">
+            <tr><td colspan="7" class="px-4 py-8 text-center text-gray-400">
+              <i data-lucide="building-2" class="w-8 h-8 mx-auto mb-2 opacity-30"></i>
+              <div>Nenhuma empresa encontrada.</div>
+            </td></tr>
+          </template>
+          <template x-for="e in filteredEmpresas()" :key="e.id">
+            <tr class="border-t border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+              <td class="px-4 py-3">
+                <div class="font-semibold text-gray-900 dark:text-white" x-text="e.nome"></div>
+                <div class="text-xs text-gray-400" x-text="[e.cidade, e.codigo_postal].filter(Boolean).join(' — ')"></div>
+              </td>
+              <td class="px-4 py-3 font-mono text-gray-600 dark:text-gray-300" x-text="e.nif || '—'"></td>
+              <td class="px-4 py-3">
+                <div class="text-gray-700 dark:text-gray-300" x-text="e.contacto_nome || '—'"></div>
+                <div class="text-xs text-gray-400" x-text="e.email || ''"></div>
+                <div class="text-xs text-gray-400" x-text="e.telefone || ''"></div>
+              </td>
+              <td class="px-4 py-3 text-center">
+                <span class="px-2 py-0.5 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-full text-xs font-semibold" x-text="e.taxa_iva + '%'"></span>
+              </td>
+              <td class="px-4 py-3 text-center">
+                <button @click="openMotoristas(e)"
+                        class="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-lg text-xs font-semibold hover:bg-blue-200 transition-colors">
+                  <i data-lucide="users" class="w-3 h-3"></i>
+                  <span x-text="e.num_motoristas"></span>
+                </button>
+              </td>
+              <td class="px-4 py-3 text-center">
+                <span class="px-2 py-0.5 rounded-full text-xs font-semibold"
+                      :class="e.ativo ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-gray-200 text-gray-500 dark:bg-gray-700'"
+                      x-text="e.ativo ? 'Ativa' : 'Inativa'"></span>
+              </td>
+              <td class="px-4 py-3 text-center">
+                <div class="flex items-center justify-center gap-1">
+                  <button @click="openEdit(e)" class="w-7 h-7 flex items-center justify-center rounded-lg bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 hover:bg-indigo-200 transition-colors" title="Editar">
+                    <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                  </button>
+                  <button @click="deleteEmpresa(e)" class="w-7 h-7 flex items-center justify-center rounded-lg bg-red-100 dark:bg-red-900/30 text-red-600 hover:bg-red-200 transition-colors" title="Eliminar">
+                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ MODAL EMPRESA (TABS: Dados / Motoristas / Pré-faturas) ═══════════════════════ -->
+<!-- NOTE: modals are inside the outer x-data div -->
+<div x-show="showForm" x-cloak
+     class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+     @keydown.escape.window="showForm = false">
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[94vh] flex flex-col border border-gray-200 dark:border-gray-700">
+
+    <!-- Header -->
+    <div class="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-t-2xl px-6 py-4 flex items-center justify-between flex-shrink-0">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center">
+          <i data-lucide="building-2" class="w-5 h-5 text-white"></i>
+        </div>
+        <div>
+          <div class="text-white font-bold text-base" x-text="formMode === 'create' ? 'Nova Empresa Parceira' : form.nome || 'Editar Empresa'"></div>
+          <div x-show="formMode === 'edit'" class="text-purple-200 text-xs" x-text="'NIF: ' + (form.nif || '—')"></div>
+        </div>
+      </div>
+      <button @click="showForm = false" class="w-8 h-8 flex items-center justify-center bg-white/20 hover:bg-white/30 text-white rounded-lg">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+
+    <!-- Tabs (só no modo edição) -->
+    <div x-show="formMode === 'edit'" class="flex border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 flex-shrink-0">
+      <button @click="activeTab='dados'"
+              :class="activeTab==='dados' ? 'border-b-2 border-purple-500 text-purple-600 dark:text-purple-400 bg-white dark:bg-gray-800' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'"
+              class="px-5 py-3 text-sm font-semibold flex items-center gap-2 transition-colors">
+        <i data-lucide="file-text" class="w-4 h-4"></i> Dados
+      </button>
+      <button @click="activeTab='motoristas'; loadMotoristasFrota()"
+              :class="activeTab==='motoristas' ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400 bg-white dark:bg-gray-800' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'"
+              class="px-5 py-3 text-sm font-semibold flex items-center gap-2 transition-colors">
+        <i data-lucide="users" class="w-4 h-4"></i> Motoristas
+        <span class="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded-full" x-text="frotaDrivers.length"></span>
+      </button>
+      <button @click="activeTab='prefaturas'; loadPrefaturas()"
+              :class="activeTab==='prefaturas' ? 'border-b-2 border-emerald-500 text-emerald-600 dark:text-emerald-400 bg-white dark:bg-gray-800' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'"
+              class="px-5 py-3 text-sm font-semibold flex items-center gap-2 transition-colors">
+        <i data-lucide="receipt" class="w-4 h-4"></i> Pré-faturas
+      </button>
+    </div>
+
+    <!-- Body -->
+    <div class="overflow-y-auto flex-1">
+
+      <!-- ── TAB: DADOS ── -->
+      <div x-show="activeTab === 'dados'" class="p-6 space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="md:col-span-2">
+            <label class="text-xs font-semibold text-gray-500 block mb-1">Nome da Empresa *</label>
+            <input type="text" x-model="form.nome" placeholder="Ex: Transportes Silva Lda"
+                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
+          </div>
+          <div>
+            <label class="text-xs font-semibold text-gray-500 block mb-1">NIF</label>
+            <input type="text" x-model="form.nif" placeholder="PT123456789"
+                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
+          </div>
+          <div>
+            <label class="text-xs font-semibold text-gray-500 block mb-1">Taxa IVA (%)</label>
+            <input type="text" x-model="form.taxa_iva" placeholder="23.00"
+                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
+          </div>
+          <div class="md:col-span-2">
+            <label class="text-xs font-semibold text-gray-500 block mb-1 flex items-center gap-1.5">
+              <i data-lucide="badge-euro" class="w-3.5 h-3.5 text-violet-500"></i>
+              Valor por Pacote ao Driver — default da frota (€)
+              <span class="text-gray-400 font-normal">opcional</span>
+            </label>
+            <input type="number" step="0.0001" min="0" x-model="form.driver_default_price_per_package" placeholder="ex: 1.30 (vazio = usar default do parceiro)"
+                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
+            <p class="text-[10px] text-gray-400 mt-1">Cascata: Driver override → Frota → Parceiro</p>
+          </div>
+          <div class="md:col-span-2">
+            <label class="text-xs font-semibold text-gray-500 block mb-1">Morada</label>
+            <input type="text" x-model="form.morada" placeholder="Rua / Av…"
+                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
+          </div>
+          <div>
+            <label class="text-xs font-semibold text-gray-500 block mb-1">Código Postal</label>
+            <input type="text" x-model="form.codigo_postal" placeholder="4700-000"
+                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
+          </div>
+          <div>
+            <label class="text-xs font-semibold text-gray-500 block mb-1">Cidade</label>
+            <input type="text" x-model="form.cidade" placeholder="Braga"
+                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
+          </div>
+          <div>
+            <label class="text-xs font-semibold text-gray-500 block mb-1">Nome do Contacto</label>
+            <input type="text" x-model="form.contacto_nome" placeholder="João Silva"
+                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
+          </div>
+          <div>
+            <label class="text-xs font-semibold text-gray-500 block mb-1">Email</label>
+            <input type="email" x-model="form.email" placeholder="geral@empresa.pt"
+                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
+          </div>
+          <div>
+            <label class="text-xs font-semibold text-gray-500 block mb-1">Telefone</label>
+            <input type="text" x-model="form.telefone" placeholder="253 000 000"
+                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
+          </div>
+          <div>
+            <label class="text-xs font-semibold text-gray-500 block mb-1">IBAN</label>
+            <input type="text" x-model="form.iban" placeholder="PT50 0000 0000 0000 0000 0000 0"
+                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white font-mono text-sm">
+          </div>
+          <div class="flex items-center gap-3 pt-5">
+            <input type="checkbox" x-model="form.ativo" id="ativo_check" class="w-4 h-4 rounded accent-purple-600">
+            <label for="ativo_check" class="text-sm text-gray-700 dark:text-gray-300">Empresa ativa</label>
+          </div>
+          <div class="md:col-span-2">
+            <label class="text-xs font-semibold text-gray-500 block mb-1">Notas Internas</label>
+            <textarea x-model="form.notas" rows="2" placeholder="Observações internas…"
+                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm resize-none"></textarea>
+          </div>
+        </div>
+        <div x-show="formError" class="px-3 py-2 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-lg text-sm" x-text="formError"></div>
+
+        <!-- ───────── Auto-Emit (Fase 6.7) — só em modo edit ───────── -->
+        <div x-show="formMode === 'edit' && editId"
+             class="mt-6 pt-5 border-t border-gray-200 dark:border-gray-700 space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="text-sm font-bold text-gray-700 dark:text-gray-300 flex items-center gap-2">
+              <i data-lucide="zap" class="w-4 h-4 text-amber-500"></i>
+              Emissão Automática de Pré-faturas
+            </div>
+            <button @click="loadAutoEmitConfig()" type="button"
+                    class="text-xs px-2 py-1 rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 text-gray-600 dark:text-gray-300">
+              <i data-lucide="refresh-cw" class="w-3 h-3 inline"></i> Recarregar
+            </button>
+          </div>
+          <p class="text-xs text-gray-500 dark:text-gray-400">
+            O sistema dispara o lote de pré-faturas automaticamente segundo a regra abaixo. Corre 1×/dia às 06:30 e respeita idempotência (não emite duas vezes o mesmo período).
+          </p>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-700 rounded-lg p-3">
+            <label class="flex items-center gap-2 text-sm cursor-pointer md:col-span-2">
+              <input type="checkbox" x-model="autoEmit.enabled" class="w-4 h-4 rounded accent-amber-600">
+              <span class="font-semibold text-gray-700 dark:text-gray-300">Activar emissão automática</span>
+              <span class="text-xs text-gray-400" x-show="autoEmit.last_emitted_at" x-text="'Último: ' + autoEmit.last_emitted_at + ' (' + (autoEmit.last_emitted_period_from || '?') + ' → ' + (autoEmit.last_emitted_period_to || '?') + ')'"></span>
+            </label>
+
+            <div>
+              <label class="text-xs font-semibold text-gray-500 dark:text-gray-400 block mb-1">Tipo de período</label>
+              <select x-model="autoEmit.period_type" :disabled="!autoEmit.enabled"
+                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm disabled:opacity-50">
+                <option value="monthly">Mensal (mês anterior completo)</option>
+                <option value="weekly">Semanal (semana anterior, segunda a domingo)</option>
+              </select>
+            </div>
+
+            <div x-show="autoEmit.period_type === 'monthly'">
+              <label class="text-xs font-semibold text-gray-500 dark:text-gray-400 block mb-1">Dia do mês para emitir (1-28)</label>
+              <input type="number" min="1" max="28" x-model="autoEmit.day_of_month" :disabled="!autoEmit.enabled"
+                     class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm disabled:opacity-50">
+              <p class="text-[10px] text-gray-400 mt-1">Ex: dia 5 → emite mês passado completo no dia 5 deste mês</p>
+            </div>
+
+            <div x-show="autoEmit.period_type === 'weekly'">
+              <label class="text-xs font-semibold text-gray-500 dark:text-gray-400 block mb-1">Dia da semana para emitir</label>
+              <select x-model.number="autoEmit.weekday" :disabled="!autoEmit.enabled"
+                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm disabled:opacity-50">
+                <option value="0">Segunda-feira</option>
+                <option value="1">Terça-feira</option>
+                <option value="2">Quarta-feira</option>
+                <option value="3">Quinta-feira</option>
+                <option value="4">Sexta-feira</option>
+                <option value="5">Sábado</option>
+                <option value="6">Domingo</option>
+              </select>
+              <p class="text-[10px] text-gray-400 mt-1">Cobre semana anterior (Seg→Dom)</p>
+            </div>
+
+            <label class="flex items-center gap-2 text-sm cursor-pointer md:col-span-2">
+              <input type="checkbox" x-model="autoEmit.auto_send_whatsapp" :disabled="!autoEmit.enabled"
+                     class="w-4 h-4 rounded accent-green-600 disabled:opacity-50">
+              <i data-lucide="message-circle" class="w-3.5 h-3.5 text-green-500"></i>
+              <span class="text-gray-700 dark:text-gray-300">Enviar WhatsApp automaticamente após emitir</span>
+            </label>
+
+            <div class="md:col-span-2 flex justify-end gap-2">
+              <button @click="saveAutoEmitConfig()" type="button"
+                      class="px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white text-sm rounded-lg font-semibold flex items-center gap-2">
+                <i data-lucide="save" class="w-4 h-4"></i>
+                Guardar configuração auto-emit
+              </button>
+              <button @click="runAutoEmitNow()" type="button"
+                      :disabled="!autoEmit.enabled"
+                      class="px-3 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-40 text-white text-sm rounded-lg font-semibold flex items-center gap-2"
+                      title="Dispara agora (apenas se hoje for o dia configurado)">
+                <i data-lucide="play" class="w-4 h-4"></i>
+                Disparar agora
+              </button>
+            </div>
+          </div>
+
+          <div x-show="autoEmit.last_summary && Object.keys(autoEmit.last_summary).length > 0"
+               class="text-xs bg-gray-50 dark:bg-gray-900 rounded p-2 font-mono text-gray-600 dark:text-gray-400">
+            <strong>Última execução:</strong>
+            <span x-text="JSON.stringify(autoEmit.last_summary)"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── TAB: MOTORISTAS DA FROTA ── -->
+      <div x-show="activeTab === 'motoristas'" class="p-5 space-y-4">
+
+        <!-- Motoristas actuais -->
+        <div>
+          <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Motoristas desta frota (<span x-text="frotaDrivers.length"></span>)</div>
+          <div x-show="frotaLoading" class="flex items-center justify-center py-6">
+            <svg class="animate-spin w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+          </div>
+          <div x-show="!frotaLoading && frotaDrivers.length === 0" class="text-sm text-gray-400 py-4 text-center">Nenhum motorista associado.</div>
+          <div class="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+            <template x-for="d in frotaDrivers" :key="d.id">
+              <div class="flex items-center justify-between px-3 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                <div>
+                  <span class="font-semibold text-sm text-gray-800 dark:text-white" x-text="d.nome"></span>
+                  <span class="text-xs text-gray-400 font-mono ml-2" x-text="d.nif"></span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="text-xs px-2 py-0.5 rounded-full"
+                        :class="d.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-200 text-gray-500'"
+                        x-text="d.status_display"></span>
+                  <button @click="removeDriverFromFrota(d)"
+                          class="w-6 h-6 flex items-center justify-center rounded bg-red-100 dark:bg-red-900/30 text-red-600 hover:bg-red-200 transition-colors" title="Remover da frota">
+                    <i data-lucide="x" class="w-3 h-3"></i>
+                  </button>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <!-- Adicionar motorista -->
+        <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
+          <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Adicionar motorista à frota</div>
+          <input type="text" x-model="driverSearch" @input.debounce.400ms="searchDrivers()"
+                 placeholder="Pesquisar por nome ou NIF…"
+                 class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm mb-2">
+          <div class="space-y-1 max-h-48 overflow-y-auto pr-1">
+            <div x-show="searchLoading" class="text-center py-3 text-sm text-gray-400">A pesquisar…</div>
+            <template x-for="d in searchResults" :key="d.id">
+              <div class="flex items-center justify-between px-3 py-2 rounded-lg border"
+                   :class="d.nesta_empresa ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800' : 'bg-gray-50 dark:bg-gray-700/40 border-gray-200 dark:border-gray-600'">
+                <div>
+                  <span class="font-semibold text-sm text-gray-800 dark:text-white" x-text="d.nome"></span>
+                  <span class="text-xs text-gray-400 font-mono ml-2" x-text="d.nif"></span>
+                  <template x-if="d.empresa_atual && !d.nesta_empresa">
+                    <span class="text-xs text-orange-500 ml-2">• <span x-text="d.empresa_atual"></span></span>
+                  </template>
+                </div>
+                <div>
+                  <span x-show="d.nesta_empresa" class="text-xs text-blue-600 font-semibold">Na frota</span>
+                  <button x-show="!d.nesta_empresa" @click="assignDriverToFrota(d)"
+                          class="text-xs px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors">
+                    Adicionar
+                  </button>
+                </div>
+              </div>
+            </template>
+            <div x-show="driverSearch.length > 1 && !searchLoading && searchResults.length === 0" class="text-center py-3 text-sm text-gray-400">Nenhum motorista encontrado.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── TAB: PRÉ-FATURAS ── -->
+      <div x-show="activeTab === 'prefaturas'" class="p-5 space-y-4"
+           x-init="$watch('activeTab', v => { if (v === 'prefaturas') { loadFleetInvoices(); } }); $watch('pfMes', () => loadFleetInvoices()); $watch('pfAno', () => loadFleetInvoices())">
+
+        <!-- Dashboard agregado da frota -->
+        <div class="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border border-purple-200 dark:border-purple-800 rounded-xl p-4">
+          <div class="flex items-center justify-between mb-3 gap-3 flex-wrap">
+            <button @click="dashOpen = !dashOpen; if (dashOpen && !dashboard) loadDashboardStats(); $nextTick(() => lucide.createIcons())"
+                    class="flex items-center gap-2 text-sm font-bold text-gray-700 dark:text-gray-300 hover:text-purple-600">
+              <i :data-lucide="dashOpen ? 'chevron-down' : 'chevron-right'" class="w-4 h-4"></i>
+              <i data-lucide="bar-chart-3" class="w-5 h-5 text-purple-500"></i>
+              Dashboard da Frota
+              <span class="text-xs font-normal text-gray-500" x-text="'· ' + (['','Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'])[parseInt(dashMes) || 0] + '/' + dashAno"></span>
+            </button>
+            <div class="flex items-center gap-2">
+              <select x-show="dashOpen" x-model="dashMes" @change="loadDashboardStats()"
+                      class="px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                <option value="1">Janeiro</option><option value="2">Fevereiro</option><option value="3">Março</option>
+                <option value="4">Abril</option><option value="5">Maio</option><option value="6">Junho</option>
+                <option value="7">Julho</option><option value="8">Agosto</option><option value="9">Setembro</option>
+                <option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option>
+              </select>
+              <input x-show="dashOpen" type="number" x-model="dashAno" @change="loadDashboardStats()" min="2020" max="2030"
+                     class="w-20 px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+              <button x-show="dashOpen" @click="setDashCurrentMonth()" class="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded" title="Voltar ao mês actual">
+                Hoje
+              </button>
+              <div x-show="dashboard" class="flex items-center gap-2 text-xs ml-2">
+                <span class="text-gray-500">Entregas:</span>
+                <span class="font-bold text-emerald-600 dark:text-emerald-400" x-text="dashboard?.summary?.deliveries"></span>
+                <span class="text-gray-500">Margem:</span>
+                <span class="font-bold" :class="parseFloat(dashboard?.summary?.margem || 0) < 0 ? 'text-rose-600' : 'text-emerald-600'" x-text="'€' + parseFloat(dashboard?.summary?.margem || 0).toFixed(2)"></span>
+              </div>
+            </div>
+          </div>
+          <div x-show="dashOpen && dashboard">
+            <!-- Cards -->
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-3">
+              <div class="bg-white dark:bg-gray-800 rounded-lg p-2.5">
+                <div class="text-[10px] uppercase text-gray-500">Drivers activos</div>
+                <div class="text-xl font-bold" x-text="(dashboard?.summary?.drivers_with_deliveries || 0) + '/' + (dashboard?.summary?.drivers_active || 0)"></div>
+              </div>
+              <div class="bg-white dark:bg-gray-800 rounded-lg p-2.5">
+                <div class="text-[10px] uppercase text-gray-500">Entregas</div>
+                <div class="text-xl font-bold text-emerald-600" x-text="dashboard?.summary?.deliveries"></div>
+                <div class="text-[9px]"
+                     :class="dashboard?.delta?.deliveries_pct > 0 ? 'text-emerald-500' : (dashboard?.delta?.deliveries_pct < 0 ? 'text-rose-500' : 'text-gray-400')"
+                     x-text="((dashboard?.delta?.deliveries_pct >= 0 ? '+' : '') + (dashboard?.delta?.deliveries_pct ?? 0) + '% vs ant.')"></div>
+              </div>
+              <div class="bg-white dark:bg-gray-800 rounded-lg p-2.5">
+                <div class="text-[10px] uppercase text-gray-500">Receita (parceiro)</div>
+                <div class="text-xl font-bold text-blue-600" x-text="'€' + parseFloat(dashboard?.summary?.receita || 0).toFixed(2)"></div>
+              </div>
+              <div class="bg-white dark:bg-gray-800 rounded-lg p-2.5">
+                <div class="text-[10px] uppercase text-gray-500">Custo (drivers)</div>
+                <div class="text-xl font-bold text-amber-600" x-text="'€' + parseFloat(dashboard?.summary?.amount_driver || 0).toFixed(2)"></div>
+                <div class="text-[9px] text-gray-400" x-text="'média €' + parseFloat(dashboard?.summary?.avg_per_driver || 0).toFixed(2) + '/driver'"></div>
+              </div>
+              <div class="bg-white dark:bg-gray-800 rounded-lg p-2.5">
+                <div class="text-[10px] uppercase text-gray-500 flex items-center gap-1">
+                  Margem Léguas
+                  <span x-show="parseFloat(dashboard?.summary?.margem || 0) < 0" class="px-1 py-0.5 text-[8px] bg-rose-100 text-rose-700 rounded font-bold">⚠</span>
+                </div>
+                <div class="text-xl font-bold"
+                     :class="parseFloat(dashboard?.summary?.margem || 0) < 0 ? 'text-rose-600' : 'text-emerald-600'"
+                     x-text="'€' + parseFloat(dashboard?.summary?.margem || 0).toFixed(2)"></div>
+              </div>
+            </div>
+            <!-- Top 5 ranking -->
+            <div x-show="dashboard?.ranking?.length > 0">
+              <div class="text-[10px] uppercase text-gray-500 mb-1.5 font-semibold">Top 5 Motoristas</div>
+              <div class="space-y-1">
+                <template x-for="(r, idx) in dashboard?.ranking || []" :key="r.driver_id">
+                  <div class="flex items-center gap-2 bg-white dark:bg-gray-800 rounded px-2.5 py-1.5 text-xs">
+                    <span class="w-5 h-5 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 flex items-center justify-center font-bold text-[10px]" x-text="idx + 1"></span>
+                    <span class="font-semibold flex-1" x-text="r.name"></span>
+                    <span class="text-gray-500" x-text="r.deliveries + ' entregas'"></span>
+                    <span class="font-mono font-bold text-purple-600" x-text="'€' + parseFloat(r.amount).toFixed(2)"></span>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Selector de período + botão novo lançamento -->
+        <div class="flex items-center gap-3 flex-wrap">
+          <span class="text-xs font-medium text-gray-500 dark:text-gray-400" title="Filtra apenas pré-faturas já emitidas">
+            <i data-lucide="filter" class="w-3.5 h-3.5 inline"></i> Ver período:
+          </span>
+          <select x-model="pfMes" @change="loadPrefaturas()"
+                  class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
+            <option value="1">Janeiro</option><option value="2">Fevereiro</option><option value="3">Março</option>
+            <option value="4">Abril</option><option value="5">Maio</option><option value="6">Junho</option>
+            <option value="7">Julho</option><option value="8">Agosto</option><option value="9">Setembro</option>
+            <option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option>
+          </select>
+          <input type="number" x-model="pfAno" @change="loadPrefaturas()" min="2020" max="2030"
+                 class="w-24 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
+          <button @click="loadPrefaturas()" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold" title="Recarregar lista de pré-faturas já emitidas">Recarregar</button>
+          <div class="ml-auto flex items-center gap-2">
+            <a :href="`/driversapp/empresas-parceiras/${editId}/prefatura/pdf/?mes=${pfMes}&ano=${pfAno}`"
+               target="_blank"
+               x-show="(pfData?.pre_invoices?.length > 0) || (pfData?.lancamentos?.length > 0)"
+               class="inline-flex items-center gap-2 px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-semibold transition-colors">
+              <i data-lucide="file-down" class="w-4 h-4"></i> Exportar PDF
+            </a>
+            <button @click="openLotePreview()"
+                    :class="(fleetInvoices?.length === 0 && pfData?.pre_invoices?.length === 0) ? 'animate-pulse ring-2 ring-purple-300 dark:ring-purple-500 ring-offset-2 dark:ring-offset-gray-800' : ''"
+                    class="inline-flex items-center gap-2 px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-semibold transition-colors"
+                    title="Emitir pré-faturas em lote — escolher período (data início/fim)">
+              <i data-lucide="layers" class="w-4 h-4"></i> Emitir Lote
+            </button>
+            <button @click="sendWhatsAppLote()"
+                    x-show="pfData?.pre_invoices?.length > 0"
+                    class="inline-flex items-center gap-2 px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-semibold transition-colors"
+                    title="Enviar resumo das PFs deste mês por WhatsApp aos motoristas">
+              <i data-lucide="message-circle" class="w-4 h-4"></i> WhatsApp Lote
+            </button>
+            <button @click="openLancamentoForm()"
+                    class="inline-flex items-center gap-2 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold transition-colors">
+              <i data-lucide="plus" class="w-4 h-4"></i> Lançamento Manual
+            </button>
+          </div>
+        </div>
+
+        <!-- Formulário de lançamento manual (inline) -->
+        <div x-show="showLancamentoForm" x-cloak
+             class="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-700 rounded-xl p-4 space-y-3">
+          <div class="text-xs font-bold text-indigo-700 dark:text-indigo-300 uppercase flex items-center gap-2">
+            <i data-lucide="pencil-line" class="w-4 h-4"></i>
+            <span x-text="lancamentoEditId ? 'Editar Lançamento' : 'Novo Lançamento Manual'"></span>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div class="md:col-span-2">
+              <label class="text-xs font-semibold text-gray-500 block mb-1">Descrição do Serviço *</label>
+              <input type="text" x-model="lancamentoForm.descricao" placeholder="Ex: Serviço de distribuição — semana 14"
+                     class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
+            </div>
+
+            <!-- Cálculo automático -->
+            <div class="md:col-span-2 bg-gray-50 dark:bg-gray-700/40 rounded-lg p-3 space-y-2">
+              <!-- x-effect: recalcula base sempre que qtd ou valor_por_entrega mudam -->
+              <span x-effect="calcBaseFromQtd()" style="display:none"></span>
+              <div class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Cálculo de Entregas</div>
+              <div class="grid grid-cols-3 gap-2 items-end">
+                <div>
+                  <label class="text-xs text-gray-500 block mb-1">Qtd. Entregas</label>
+                  <input type="number" min="0" step="1" x-model="lancamentoForm.qtd_entregas"
+                         class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-600 text-gray-900 dark:text-white text-sm">
+                </div>
+                <div>
+                  <label class="text-xs text-gray-500 block mb-1">Valor / Entrega (€)</label>
+                  <input type="number" step="0.0001" min="0" x-model="lancamentoForm.valor_por_entrega"
+                         class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-600 text-gray-900 dark:text-white text-sm">
+                </div>
+                <div>
+                  <label class="text-xs text-gray-500 block mb-1">= Base (€)</label>
+                  <input type="number" step="0.01" x-model="lancamentoForm.valor_base"
+                         class="w-full px-3 py-2 border border-indigo-300 dark:border-indigo-500 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 text-gray-900 dark:text-white text-sm font-semibold">
+                </div>
+              </div>
+              <div class="text-xs text-gray-400">O campo Base é calculado automaticamente (Qtd × Valor) mas pode ser editado manualmente.</div>
+            </div>
+
+            <div>
+              <label class="text-xs font-semibold text-gray-500 block mb-1">Bónus (€)</label>
+              <input type="number" step="0.01" min="0" x-model="lancamentoForm.valor_bonus"
+                     placeholder="0.00"
+                     class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
+            </div>
+            <div>
+              <label class="text-xs font-semibold text-gray-500 block mb-1">Pacotes Perdidos (€)</label>
+              <input type="number" step="0.01" min="0" x-model="lancamentoForm.pacotes_perdidos"
+                     placeholder="0.00"
+                     class="w-full px-3 py-2 border border-orange-300 dark:border-orange-600 rounded-lg bg-orange-50 dark:bg-orange-900/20 text-gray-900 dark:text-white text-sm">
+            </div>
+            <div>
+              <label class="text-xs font-semibold text-gray-500 block mb-1">Adiantamentos / Combustível (€)</label>
+              <input type="number" step="0.01" min="0" x-model="lancamentoForm.adiantamentos"
+                     placeholder="0.00"
+                     class="w-full px-3 py-2 border border-orange-300 dark:border-orange-600 rounded-lg bg-orange-50 dark:bg-orange-900/20 text-gray-900 dark:text-white text-sm">
+            </div>
+
+            <!-- Preview do total com IVA -->
+            <div class="md:col-span-2 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 border border-emerald-200 dark:border-emerald-700 rounded-xl p-3">
+              <div class="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase mb-2">Resumo do Lançamento</div>
+              <div class="grid grid-cols-4 gap-2 text-center">
+                <div>
+                  <div class="text-xs text-gray-500">Subtotal Líquido</div>
+                  <div class="font-semibold text-sm text-gray-800 dark:text-white" x-text="calcTotalStr()"></div>
+                </div>
+                <div>
+                  <div class="text-xs text-gray-500">IVA (<span x-text="form.taxa_iva || '0'"></span>%)</div>
+                  <div class="font-semibold text-sm text-orange-600" x-text="calcIvaStr()"></div>
+                </div>
+                <div class="col-span-2 bg-emerald-600 rounded-lg py-2">
+                  <div class="text-xs text-emerald-100">TOTAL C/ IVA</div>
+                  <div class="font-bold text-white text-base" x-text="calcTotalComIvaStr()"></div>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label class="text-xs font-semibold text-gray-500 block mb-1">Data Início *</label>
+              <input type="date" x-model="lancamentoForm.periodo_inicio"
+                     class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
+            </div>
+            <div>
+              <label class="text-xs font-semibold text-gray-500 block mb-1">Data Fim *</label>
+              <input type="date" x-model="lancamentoForm.periodo_fim"
+                     class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
+            </div>
+            <div>
+              <label class="text-xs font-semibold text-gray-500 block mb-1">Estado</label>
+              <select x-model="lancamentoForm.status"
+                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
+                <option value="RASCUNHO">Rascunho</option>
+                <option value="APROVADO">Aprovado</option>
+                <option value="PENDENTE">Pendente Pagamento</option>
+                <option value="PAGO">Pago</option>
+                <option value="CANCELADO">Cancelado</option>
+              </select>
+            </div>
+            <div class="md:col-span-2">
+              <label class="text-xs font-semibold text-gray-500 block mb-1">Notas</label>
+              <input type="text" x-model="lancamentoForm.notas" placeholder="Observações opcionais…"
+                     class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
+            </div>
+          </div>
+          <div x-show="lancamentoError" class="text-xs text-red-600 dark:text-red-400 px-2" x-text="lancamentoError"></div>
+          <div class="flex items-center gap-2 pt-1">
+            <button @click="saveLancamento()"
+                    :disabled="lancamentoSaving"
+                    class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-lg text-sm font-semibold transition-colors flex items-center gap-2">
+              <svg x-show="lancamentoSaving" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+              </svg>
+              <span x-text="lancamentoEditId ? 'Guardar Alterações' : 'Criar Lançamento'"></span>
+            </button>
+            <button @click="closeLancamentoForm()" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-semibold hover:bg-gray-300 transition-colors">Cancelar</button>
+          </div>
+        </div>
+
+        <!-- Loading -->
+        <div x-show="pfLoading" class="flex items-center justify-center py-8">
+          <svg class="animate-spin w-6 h-6 text-emerald-500" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+        </div>
+
+        <!-- Sem dados — call-to-action para emitir lote -->
+        <div x-show="!pfLoading && (fleetInvoices?.length === 0) && (pfData?.pre_invoices?.length === 0) && (pfData?.lancamentos?.length === 0)"
+             class="bg-purple-50 dark:bg-purple-900/10 border-2 border-dashed border-purple-300 dark:border-purple-700 rounded-xl p-8 text-center">
+          <i data-lucide="layers" class="w-12 h-12 mx-auto text-purple-400 mb-3"></i>
+          <h4 class="text-base font-bold text-purple-900 dark:text-purple-200 mb-1">
+            Nenhuma pré-fatura emitida para este período
+          </h4>
+          <p class="text-sm text-purple-700 dark:text-purple-300 mb-4 max-w-md mx-auto">
+            O filtro <strong x-text="(['','Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'])[parseInt(pfMes) || 0]"></strong>/<strong x-text="pfAno"></strong> mostra apenas pré-faturas
+            <em>já emitidas</em>. Para gerar uma nova, ajuste o período abaixo
+            e clique no botão.
+          </p>
+          <button @click="openLotePreview()"
+                  class="inline-flex items-center gap-2 px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-semibold shadow-md hover:shadow-lg transition-all">
+            <i data-lucide="layers" class="w-4 h-4"></i>
+            Abrir Emissão de Lote — escolher período
+          </button>
+        </div>
+
+        <!-- Pré-faturas Globais da Frota (FleetInvoice) -->
+        <div x-show="fleetInvoices.length > 0">
+          <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-2">
+            <i data-lucide="layers" class="w-3.5 h-3.5 text-purple-500"></i>
+            <span class="text-purple-700 dark:text-purple-400">Pré-faturas Globais da Frota</span>
+            <span class="text-gray-400 font-normal">(uma fatura única por período, com detalhe por motorista)</span>
+          </div>
+          <div class="space-y-2 mb-4">
+            <template x-for="fi in fleetInvoices" :key="fi.id">
+              <div class="bg-white dark:bg-gray-800 rounded-xl border border-purple-200 dark:border-purple-800 overflow-hidden">
+                <div class="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                     @click="toggleFIDetail(fi)">
+                  <div class="flex items-center gap-3 flex-wrap">
+                    <i :data-lucide="expandedFI === fi.id ? 'chevron-down' : 'chevron-right'" class="w-4 h-4 text-gray-500"></i>
+                    <span class="font-mono font-bold text-purple-600 dark:text-purple-400" x-text="fi.numero"></span>
+                    <span class="text-sm text-gray-600 dark:text-gray-300" x-text="fi.periodo_display"></span>
+                    <span class="px-2 py-0.5 text-xs rounded-full font-semibold"
+                          :class="{
+                            'bg-gray-100 text-gray-700': fi.status === 'RASCUNHO',
+                            'bg-blue-100 text-blue-700': fi.status === 'CALCULADO',
+                            'bg-yellow-100 text-yellow-700': fi.status === 'APROVADO',
+                            'bg-emerald-100 text-emerald-700': fi.status === 'PAGO',
+                            'bg-rose-100 text-rose-700': fi.status === 'CANCELADO'
+                          }" x-text="fi.status_display"></span>
+                    <span class="text-xs text-gray-500" x-text="fi.n_drivers + ' drivers · ' + fi.total_deliveries + ' entregas'"></span>
+                  </div>
+                  <div class="flex items-center gap-3">
+                    <span class="font-bold text-lg" x-text="'€' + parseFloat(fi.total_a_receber).toFixed(2)"></span>
+                    <button @click.stop="changeFIStatus(fi, 'APROVADO')" x-show="fi.status === 'CALCULADO'"
+                            class="px-2 py-1 bg-yellow-500 hover:bg-yellow-600 text-white text-xs rounded font-semibold" title="Aprovar">
+                      <i data-lucide="check" class="w-3 h-3 inline"></i>
+                    </button>
+                    <button @click.stop="changeFIStatus(fi, 'PAGO')" x-show="fi.status === 'APROVADO'"
+                            class="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs rounded font-semibold" title="Marcar Pago">
+                      <i data-lucide="banknote" class="w-3 h-3 inline"></i>
+                    </button>
+                    <button @click.stop="changeFIStatus(fi, 'CANCELADO')" x-show="['RASCUNHO','CALCULADO'].includes(fi.status)"
+                            class="px-2 py-1 bg-gray-400 hover:bg-rose-500 text-white text-xs rounded" title="Cancelar">
+                      <i data-lucide="x" class="w-3 h-3 inline"></i>
+                    </button>
+                    <button @click.stop="deleteFI(fi)" x-show="['RASCUNHO','CANCELADO'].includes(fi.status)"
+                            class="px-2 py-1 bg-rose-600 hover:bg-rose-700 text-white text-xs rounded" title="Apagar">
+                      <i data-lucide="trash-2" class="w-3 h-3 inline"></i>
+                    </button>
+                  </div>
+                </div>
+                <div x-show="expandedFI === fi.id && fleetInvoiceDetail" x-cloak class="border-t border-purple-200 dark:border-purple-800 p-4 bg-gray-50 dark:bg-gray-900/30">
+                  <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                    <div class="bg-white dark:bg-gray-800 rounded p-2.5 text-center">
+                      <div class="text-[10px] uppercase text-gray-500">Entregas</div>
+                      <div class="text-lg font-bold" x-text="fleetInvoiceDetail?.total_deliveries"></div>
+                    </div>
+                    <div class="bg-white dark:bg-gray-800 rounded p-2.5 text-center">
+                      <div class="text-[10px] uppercase text-gray-500">Base €</div>
+                      <div class="text-lg font-bold" x-text="'€' + parseFloat(fleetInvoiceDetail?.total_base || 0).toFixed(2)"></div>
+                    </div>
+                    <div class="bg-white dark:bg-gray-800 rounded p-2.5 text-center">
+                      <div class="text-[10px] uppercase text-gray-500">Bónus €</div>
+                      <div class="text-lg font-bold text-amber-600" x-text="'€' + parseFloat(fleetInvoiceDetail?.total_bonus || 0).toFixed(2)"></div>
+                    </div>
+                    <div class="bg-white dark:bg-gray-800 rounded p-2.5 text-center">
+                      <div class="text-[10px] uppercase text-gray-500">Claims €</div>
+                      <div class="text-lg font-bold text-rose-600" x-text="'-€' + parseFloat(fleetInvoiceDetail?.total_claims || 0).toFixed(2)"></div>
+                    </div>
+                  </div>
+                  <div class="text-[10px] uppercase text-gray-500 mb-1.5 font-semibold">Detalhe por Motorista</div>
+                  <div class="space-y-2">
+                    <template x-for="line in (fleetInvoiceDetail?.lines || [])" :key="line.id">
+                      <div class="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
+                        <div class="flex items-center justify-between flex-wrap gap-2 mb-2">
+                          <div class="flex items-center gap-2">
+                            <span class="font-bold" x-text="line.driver_name"></span>
+                            <span class="text-xs text-gray-400 font-mono" x-text="line.courier_id"></span>
+                          </div>
+                          <span class="font-bold text-purple-600" x-text="'€' + parseFloat(line.subtotal).toFixed(2)"></span>
+                        </div>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                          <div>
+                            <span class="text-gray-500">Entregas:</span>
+                            <span class="font-mono font-bold" x-text="line.deliveries"></span>
+                            <span class="text-gray-400" x-text="' × €' + parseFloat(line.price_per_package).toFixed(2)"></span>
+                          </div>
+                          <div>
+                            <span class="text-gray-500">Base:</span>
+                            <span class="font-mono" x-text="'€' + parseFloat(line.base_amount).toFixed(2)"></span>
+                          </div>
+                          <div>
+                            <span class="text-gray-500">Bónus:</span>
+                            <span class="font-mono text-amber-600" x-text="'€' + parseFloat(line.bonus_amount).toFixed(2)"></span>
+                            <span class="text-[10px] text-gray-400" x-text="'(' + line.bonus_days_count + ' dias)'"></span>
+                          </div>
+                          <div>
+                            <span class="text-gray-500">Claims:</span>
+                            <span class="font-mono text-rose-600" x-text="'-€' + parseFloat(line.claims_amount).toFixed(2)"></span>
+                            <span class="text-[10px] text-gray-400" x-text="'(' + line.claims_count + ')'"></span>
+                          </div>
+                        </div>
+                        <div x-show="line.bonus_days?.length > 0" class="mt-2 text-[11px] bg-amber-50 dark:bg-amber-900/20 rounded p-2 space-y-0.5">
+                          <template x-for="bd in line.bonus_days" :key="bd.data">
+                            <div class="flex items-center gap-2">
+                              <i data-lucide="award" class="w-3 h-3 text-amber-600"></i>
+                              <span x-text="bd.data"></span>
+                              <span class="px-1 py-0.5 rounded bg-amber-200 text-amber-800 font-semibold" x-text="bd.tipo"></span>
+                              <span class="text-gray-400" x-text="bd.feriado_nome"></span>
+                              <span class="text-gray-500" x-text="bd.deliveries + ' ent.'"></span>
+                              <span class="ml-auto font-mono font-bold" x-text="'€' + parseFloat(bd.bonus).toFixed(2)"></span>
+                            </div>
+                          </template>
+                        </div>
+                        <div x-show="line.claims?.length > 0" class="mt-2 text-[11px] bg-rose-50 dark:bg-rose-900/20 rounded p-2 space-y-0.5">
+                          <template x-for="(c, idx) in line.claims" :key="idx">
+                            <div class="flex items-center gap-2">
+                              <i data-lucide="alert-circle" class="w-3 h-3 text-rose-600"></i>
+                              <a x-show="c.waybill_number" :href="'/settlements/cainiao/waybill/' + encodeURIComponent(c.waybill_number) + '/'" target="_blank"
+                                 class="font-mono text-blue-600 hover:underline" x-text="c.waybill_number"></a>
+                              <span class="text-gray-400 truncate" x-text="c.descricao"></span>
+                              <span class="ml-auto font-mono text-rose-600" x-text="'-€' + parseFloat(c.valor).toFixed(2)"></span>
+                            </div>
+                          </template>
+                        </div>
+                      </div>
+                    </template>
+                  </div>
+                  <div class="flex justify-end gap-2 mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                    <a :href="'/settlements/fleet-invoices/' + fi.id + '/pdf/'" target="_blank"
+                       class="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs rounded font-semibold flex items-center gap-1">
+                      <i data-lucide="file-down" class="w-3 h-3"></i> PDF
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <!-- Tabela de pré-faturas dos motoristas (legacy DriverPreInvoice) -->
+        <div x-show="!pfLoading && (pfData?.pre_invoices?.length > 0)">
+          <div class="flex items-center justify-between mb-2 flex-wrap gap-2">
+            <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-2">
+              <i data-lucide="users" class="w-3.5 h-3.5"></i> Pré-faturas dos Motoristas
+            </div>
+            <div class="flex items-center gap-2" x-show="pfBulkSelected.length > 0">
+              <span class="text-xs text-gray-500">
+                <strong x-text="pfBulkSelected.length"></strong> selecionada(s)
+              </span>
+              <button @click="bulkChangeStatus('APROVADO')"
+                      class="px-2.5 py-1 text-xs rounded-md bg-yellow-500 hover:bg-yellow-600 text-white font-semibold flex items-center gap-1">
+                <i data-lucide="check-check" class="w-3 h-3"></i> Aprovar
+              </button>
+              <button @click="bulkChangeStatus('PAGO')"
+                      class="px-2.5 py-1 text-xs rounded-md bg-emerald-600 hover:bg-emerald-700 text-white font-semibold flex items-center gap-1">
+                <i data-lucide="banknote" class="w-3 h-3"></i> Marcar Pago
+              </button>
+              <button @click="pfBulkSelected = []; pfBulkSelectAll = false;"
+                      class="px-2 py-1 text-xs rounded-md bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+                Limpar
+              </button>
+            </div>
+          </div>
+          <div class="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
+            <table class="w-full text-sm">
+              <thead class="bg-gray-50 dark:bg-gray-700/50">
+                <tr>
+                  <th class="px-3 py-2 text-center w-8">
+                    <input type="checkbox" x-model="pfBulkSelectAll" @change="togglePfBulkAll()" class="rounded">
+                  </th>
+                  <th class="px-3 py-2 text-left font-semibold text-gray-500 text-xs">Motorista</th>
+                  <th class="px-3 py-2 text-left font-semibold text-gray-500 text-xs">Período</th>
+                  <th class="px-3 py-2 text-right font-semibold text-gray-500 text-xs">Base €</th>
+                  <th class="px-3 py-2 text-right font-semibold text-gray-500 text-xs">Bónus €</th>
+                  <th class="px-3 py-2 text-right font-semibold text-gray-500 text-xs">Total €</th>
+                  <th class="px-3 py-2 text-center font-semibold text-gray-500 text-xs">Status</th>
+                  <th class="px-3 py-2 text-center font-semibold text-gray-500 text-xs">Acções</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="pf in (pfData?.pre_invoices || [])" :key="pf.id">
+                  <tr class="border-t border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/30"
+                      :class="pfBulkSelected.includes(pf.id) ? 'bg-purple-50 dark:bg-purple-900/20' : ''">
+                    <td class="px-3 py-2 text-center">
+                      <input type="checkbox"
+                             :checked="pfBulkSelected.includes(pf.id)"
+                             @change="togglePfBulk(pf.id)"
+                             class="rounded">
+                    </td>
+                    <td class="px-3 py-2">
+                      <div class="font-semibold text-gray-800 dark:text-white text-xs" x-text="pf.driver_nome"></div>
+                      <div class="text-gray-400 font-mono text-xs" x-text="pf.driver_nif"></div>
+                    </td>
+                    <td class="px-3 py-2 text-xs text-gray-600 dark:text-gray-300" x-text="pf.periodo"></td>
+                    <td class="px-3 py-2 text-right text-xs font-mono text-gray-700 dark:text-gray-300" x-text="'€' + parseFloat(pf.base_entregas).toFixed(2)"></td>
+                    <td class="px-3 py-2 text-right text-xs font-mono text-gray-700 dark:text-gray-300" x-text="'€' + parseFloat(pf.total_bonus).toFixed(2)"></td>
+                    <td class="px-3 py-2 text-right text-xs font-mono font-bold text-gray-900 dark:text-white" x-text="'€' + parseFloat(pf.total_a_receber).toFixed(2)"></td>
+                    <td class="px-3 py-2 text-center">
+                      <span :class="{
+                        'bg-gray-100 text-gray-700': pf.status === 'RASCUNHO',
+                        'bg-blue-100 text-blue-700': pf.status === 'CALCULADO',
+                        'bg-yellow-100 text-yellow-700': pf.status === 'APROVADO',
+                        'bg-emerald-100 text-emerald-700': pf.status === 'PAGO',
+                        'bg-rose-100 text-rose-700': pf.status === 'CANCELADO'
+                      }" class="text-xs px-1.5 py-0.5 rounded-full font-semibold" x-text="pf.status_display"></span>
+                    </td>
+                    <td class="px-3 py-2 text-center flex items-center justify-center gap-1">
+                      <a :href="'/settlements/pre-invoices/' + pf.id + '/pdf/'" target="_blank"
+                         class="inline-flex items-center gap-1 text-xs px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-600 hover:bg-red-200 rounded-lg font-semibold transition-colors">
+                        <i data-lucide="file-text" class="w-3 h-3"></i>
+                      </a>
+                      <button @click="sendPFWhatsApp(pf)"
+                              class="inline-flex items-center gap-1 text-xs px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-600 hover:bg-green-200 rounded-lg font-semibold transition-colors"
+                              title="Enviar por WhatsApp">
+                        <i data-lucide="message-circle" class="w-3 h-3"></i>
+                      </button>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Tabela de lançamentos manuais -->
+        <div x-show="!pfLoading && (pfData?.lancamentos?.length > 0)">
+          <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-2">
+            <i data-lucide="pencil-line" class="w-3.5 h-3.5 text-indigo-500"></i>
+            <span class="text-indigo-600 dark:text-indigo-400">Lançamentos Manuais</span>
+          </div>
+          <div class="overflow-x-auto rounded-xl border border-indigo-200 dark:border-indigo-800">
+            <table class="w-full text-sm">
+              <thead class="bg-indigo-50 dark:bg-indigo-900/20">
+                <tr>
+                  <th class="px-3 py-2 text-left font-semibold text-gray-500 text-xs">Descrição</th>
+                  <th class="px-3 py-2 text-left font-semibold text-gray-500 text-xs">Período</th>
+                  <th class="px-3 py-2 text-right font-semibold text-gray-500 text-xs">Qtd.</th>
+                  <th class="px-3 py-2 text-right font-semibold text-gray-500 text-xs">Base €</th>
+                  <th class="px-3 py-2 text-right font-semibold text-gray-500 text-xs">Bónus €</th>
+                  <th class="px-3 py-2 text-right font-semibold text-orange-500 text-xs">Perdidos €</th>
+                  <th class="px-3 py-2 text-right font-semibold text-orange-500 text-xs">Adiant. €</th>
+                  <th class="px-3 py-2 text-right font-semibold text-gray-500 text-xs">Total €</th>
+                  <th class="px-3 py-2 text-center font-semibold text-gray-500 text-xs">Estado</th>
+                  <th class="px-3 py-2 text-center font-semibold text-gray-500 text-xs">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="lc in (pfData?.lancamentos || [])" :key="lc.id">
+                  <tr class="border-t border-indigo-100 dark:border-indigo-800 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/10">
+                    <td class="px-3 py-2">
+                      <div class="font-semibold text-gray-800 dark:text-white text-xs" x-text="lc.descricao"></div>
+                      <div x-show="lc.notas" class="text-gray-400 text-xs italic" x-text="lc.notas"></div>
+                    </td>
+                    <td class="px-3 py-2 text-xs text-gray-600 dark:text-gray-300" x-text="lc.periodo"></td>
+                    <td class="px-3 py-2 text-right text-xs font-mono text-gray-500" x-text="lc.qtd_entregas > 0 ? lc.qtd_entregas : '—'"></td>
+                    <td class="px-3 py-2 text-right text-xs font-mono text-gray-700 dark:text-gray-300" x-text="'€' + parseFloat(lc.valor_base).toFixed(2)"></td>
+                    <td class="px-3 py-2 text-right text-xs font-mono text-gray-700 dark:text-gray-300" x-text="parseFloat(lc.valor_bonus) > 0 ? '€' + parseFloat(lc.valor_bonus).toFixed(2) : '—'"></td>
+                    <td class="px-3 py-2 text-right text-xs font-mono text-orange-600" x-text="parseFloat(lc.pacotes_perdidos) > 0 ? '-€' + parseFloat(lc.pacotes_perdidos).toFixed(2) : '—'"></td>
+                    <td class="px-3 py-2 text-right text-xs font-mono text-orange-600" x-text="parseFloat(lc.adiantamentos) > 0 ? '-€' + parseFloat(lc.adiantamentos).toFixed(2) : '—'"></td>
+                    <td class="px-3 py-2 text-right text-xs font-mono font-bold text-indigo-700 dark:text-indigo-300" x-text="'€' + parseFloat(lc.total_a_receber).toFixed(2)"></td>
+                    <td class="px-3 py-2 text-center">
+                      <span class="text-xs px-1.5 py-0.5 rounded-full"
+                            :class="{
+                              'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300': lc.status === 'RASCUNHO',
+                              'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400': lc.status === 'APROVADO',
+                              'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400': lc.status === 'PENDENTE',
+                              'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400': lc.status === 'PAGO',
+                              'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400': lc.status === 'CANCELADO',
+                            }"
+                            x-text="lc.status_display"></span>
+                    </td>
+                    <td class="px-3 py-2 text-center">
+                      <div class="flex items-center justify-center gap-1">
+                        <button @click="editLancamento(lc)"
+                                class="w-6 h-6 flex items-center justify-center rounded bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 hover:bg-indigo-200 transition-colors" title="Editar">
+                          <i data-lucide="pencil" class="w-3 h-3"></i>
+                        </button>
+                        <button @click="deleteLancamento(lc)"
+                                class="w-6 h-6 flex items-center justify-center rounded bg-red-100 dark:bg-red-900/30 text-red-600 hover:bg-red-200 transition-colors" title="Eliminar">
+                          <i data-lucide="trash-2" class="w-3 h-3"></i>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Totais da empresa com IVA -->
+        <div x-show="!pfLoading && (pfData?.pre_invoices?.length > 0) || (pfData?.lancamentos?.length > 0)"
+             class="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 rounded-xl border border-emerald-200 dark:border-emerald-800 p-4">
+          <div class="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase mb-3">Resumo da Empresa — Fatura Unificada</div>
+          <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+            <div class="text-center">
+              <div class="text-xs text-gray-500">Motoristas</div>
+              <div class="font-bold text-gray-900 dark:text-white text-sm" x-text="'€' + parseFloat(pfData?.totais?.total_liquido || 0).toFixed(2)"></div>
+            </div>
+            <div class="text-center">
+              <div class="text-xs text-gray-500">Lançamentos</div>
+              <div class="font-bold text-indigo-700 dark:text-indigo-300 text-sm" x-text="'€' + parseFloat(pfData?.totais?.total_lancamentos || 0).toFixed(2)"></div>
+            </div>
+            <div class="text-center">
+              <div class="text-xs text-gray-500">Subtotal</div>
+              <div class="font-bold text-gray-900 dark:text-white text-sm" x-text="'€' + parseFloat(pfData?.totais?.grand_total || 0).toFixed(2)"></div>
+            </div>
+            <div class="text-center">
+              <div class="text-xs text-gray-500">IVA (<span x-text="pfData?.taxa_iva"></span>%)</div>
+              <div class="font-bold text-orange-600 text-sm" x-text="'€' + parseFloat(pfData?.totais?.total_iva || 0).toFixed(2)"></div>
+            </div>
+            <div class="text-center bg-emerald-600 rounded-lg p-2">
+              <div class="text-xs text-emerald-100">TOTAL C/ IVA</div>
+              <div class="font-bold text-white text-base" x-text="'€' + parseFloat(pfData?.totais?.total_com_iva || 0).toFixed(2)"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /body -->
+
+    <!-- Footer -->
+    <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-between items-center flex-shrink-0">
+      <button @click="showForm = false" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-semibold hover:bg-gray-300 transition-colors">Fechar</button>
+      <button x-show="activeTab === 'dados'" @click="saveEmpresa()"
+              :disabled="saving"
+              class="px-5 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white rounded-lg text-sm font-semibold transition-colors flex items-center gap-2">
+        <svg x-show="saving" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+        </svg>
+        <span x-text="formMode === 'create' ? 'Criar Empresa' : 'Guardar Alterações'"></span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════ MODAL MOTORISTAS ═══════════════════════════════════ -->
+<div x-show="showMotoristas" x-cloak
+     class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+     @keydown.escape.window="showMotoristas = false">
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-xl max-h-[85vh] flex flex-col border border-gray-200 dark:border-gray-700">
+
+    <div class="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-t-2xl px-6 py-4 flex items-center justify-between flex-shrink-0">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center">
+          <i data-lucide="users" class="w-5 h-5 text-white"></i>
+        </div>
+        <div>
+          <div class="text-white font-bold text-sm" x-text="selectedEmpresa?.nome"></div>
+          <div class="text-blue-200 text-xs">Motoristas da frota</div>
+        </div>
+      </div>
+      <button @click="showMotoristas = false" class="w-8 h-8 flex items-center justify-center bg-white/20 hover:bg-white/30 text-white rounded-lg">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+
+    <div class="overflow-y-auto flex-1 p-4 space-y-2">
+      <div x-show="motoristasLoading" class="flex items-center justify-center py-8">
+        <svg class="animate-spin w-6 h-6 text-blue-500" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+        </svg>
+      </div>
+      <template x-if="!motoristasLoading && motoristas.length === 0">
+        <div class="text-center text-gray-400 py-8 text-sm">Nenhum motorista associado a esta empresa.</div>
+      </template>
+      <template x-for="m in motoristas" :key="m.id">
+        <div class="flex items-center justify-between px-3 py-2.5 bg-gray-50 dark:bg-gray-700/40 rounded-xl border border-gray-200 dark:border-gray-600">
+          <div>
+            <div class="font-semibold text-sm text-gray-800 dark:text-white" x-text="m.nome"></div>
+            <div class="text-xs text-gray-400 font-mono" x-text="m.nif"></div>
+          </div>
+          <span class="px-2 py-0.5 rounded-full text-xs font-semibold"
+                :class="m.is_active ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-gray-200 text-gray-500'"
+                x-text="m.status_display"></span>
+        </div>
+      </template>
+    </div>
+  </div>
+</div><!-- FIM do modal Motoristas (showMotoristas) -->
+
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <!-- Modal Lote de PFs por Frota — sibling do modal Motoristas -->
+  <!-- ════════════════════════════════════════════════════════════════ -->
+  <div x-show="loteOpen" x-cloak
+       class="fixed inset-0 bg-black/60 flex items-center justify-center p-4"
+       style="z-index: 9999;"
+       @click.self="loteOpen = false">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-y-auto">
+      <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between sticky top-0 bg-white dark:bg-gray-800 z-10">
+        <div>
+          <h3 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <i data-lucide="layers" class="w-5 h-5 text-purple-500"></i>
+            Lote de Pré-faturas — <span x-text="lotePreview?.empresa?.nome || ''"></span>
+          </h3>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+            Gera 1 pré-fatura por motorista activo da frota com entregas no período
+          </p>
+        </div>
+        <button @click="loteOpen = false" class="text-gray-400 hover:text-gray-600">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="p-6 space-y-4">
+        <!-- Período + presets -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div>
+            <label class="text-xs font-semibold text-gray-500 dark:text-gray-400 block mb-1">De</label>
+            <input type="date" x-model="loteFrom" @change="loadLotePreview()"
+                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
+          </div>
+          <div>
+            <label class="text-xs font-semibold text-gray-500 dark:text-gray-400 block mb-1">Até</label>
+            <input type="date" x-model="loteTo" @change="loadLotePreview()"
+                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
+          </div>
+          <div class="flex items-end gap-1">
+            <button @click="setLotePreset('lastweek')" class="px-2.5 py-2 text-xs rounded-md bg-gray-100 dark:bg-gray-700">Sem. Anterior</button>
+            <button @click="setLotePreset('lastmonth')" class="px-2.5 py-2 text-xs rounded-md bg-gray-100 dark:bg-gray-700">Mês Anterior</button>
+          </div>
+        </div>
+
+        <!-- Cards totais -->
+        <div x-show="lotePreview" class="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <div class="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-3">
+            <div class="text-xs text-gray-500">Drivers</div>
+            <div class="text-2xl font-bold" x-text="lotePreview?.totals?.drivers"></div>
+            <div class="text-[10px] text-gray-400" x-text="(lotePreview?.totals?.drivers_with_deliveries || 0) + ' c/ entregas'"></div>
+          </div>
+          <div class="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-3">
+            <div class="text-xs text-gray-500">Entregues (∑)</div>
+            <div class="text-2xl font-bold text-emerald-600" x-text="lotePreview?.totals?.deliveries"></div>
+          </div>
+          <div class="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-3">
+            <div class="text-xs text-gray-500">Bónus (∑)</div>
+            <div class="text-2xl font-bold text-amber-600" x-text="'€' + parseFloat(lotePreview?.totals?.bonus || 0).toFixed(2)"></div>
+          </div>
+          <div class="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-3 col-span-2">
+            <div class="text-xs text-gray-500">Total a pagar à frota</div>
+            <div class="text-2xl font-bold text-purple-600 dark:text-purple-400" x-text="'€' + parseFloat(lotePreview?.totals?.amount || 0).toFixed(2)"></div>
+          </div>
+        </div>
+
+        <!-- Aviso overlap -->
+        <div x-show="lotePreview?.has_any_overlap"
+             class="bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 rounded-lg p-3 text-xs text-amber-800 dark:text-amber-300 flex items-start gap-2">
+          <i data-lucide="alert-triangle" class="w-4 h-4 mt-0.5 flex-shrink-0"></i>
+          <div>
+            Alguns motoristas já têm PFs que sobrepõem este período. Por defeito serão <strong>ignorados</strong> na emissão (mantém o checkbox "Pular overlaps" abaixo).
+          </div>
+        </div>
+
+        <!-- Tabela drivers -->
+        <div x-show="lotePreview?.rows?.length > 0" class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-x-auto">
+          <table class="w-full text-xs">
+            <thead class="bg-gray-50 dark:bg-gray-900/50">
+              <tr class="text-left text-[10px] uppercase text-gray-500 dark:text-gray-400">
+                <th class="px-2 py-1.5">
+                  <input type="checkbox" x-model="loteSelectAll" @change="toggleSelectAll()" class="rounded">
+                </th>
+                <th class="px-2 py-1.5">Driver</th>
+                <th class="px-2 py-1.5 text-right">Entregas</th>
+                <th class="px-2 py-1.5 text-right">€/pacote</th>
+                <th class="px-2 py-1.5 text-right">Base</th>
+                <th class="px-2 py-1.5 text-right">Bónus dias</th>
+                <th class="px-2 py-1.5 text-right">Bónus €</th>
+                <th class="px-2 py-1.5 text-right">Total</th>
+                <th class="px-2 py-1.5">Status</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+              <template x-for="r in lotePreview?.rows || []" :key="r.driver_id">
+                <tr :class="r.deliveries === 0 ? 'opacity-50' : (r.has_overlap ? 'bg-amber-50/50 dark:bg-amber-900/10' : '')">
+                  <td class="px-2 py-1.5">
+                    <input type="checkbox"
+                           :checked="loteSelected.includes(r.driver_id)"
+                           @change="toggleDriver(r.driver_id)"
+                           :disabled="r.deliveries === 0 || r.has_overlap"
+                           class="rounded">
+                  </td>
+                  <td class="px-2 py-1.5">
+                    <div class="font-semibold flex items-center gap-1.5">
+                      <span x-text="r.name"></span>
+                      <span x-show="(r.n_logins || 0) > 1" class="px-1.5 py-0.5 text-[9px] bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 rounded font-bold" x-text="r.n_logins + ' logins'" :title="(r.login_breakdown || []).map(l => l.label + ' (' + l.deliveries + ' entregas, €' + parseFloat(l.bonus_amount).toFixed(2) + ' bónus)').join(' · ')"></span>
+                    </div>
+                    <div class="text-[10px] text-gray-400" x-text="r.apelido || '—'"></div>
+                    <!-- Breakdown inline dos logins quando >1 -->
+                    <template x-if="(r.n_logins || 0) > 1">
+                      <div class="mt-1 space-y-0.5">
+                        <template x-for="ln in (r.login_breakdown || [])" :key="ln.label">
+                          <div class="text-[10px] text-purple-700 dark:text-purple-300 flex items-center gap-1">
+                            <span>↳</span>
+                            <span class="font-medium" x-text="ln.label"></span>
+                            <span class="text-gray-500" x-text="'· ' + ln.deliveries + ' entregas'"></span>
+                            <span x-show="parseFloat(ln.bonus_amount) > 0" class="text-amber-600 font-semibold" x-text="'· bónus €' + parseFloat(ln.bonus_amount).toFixed(2) + ' (' + ln.bonus_days + 'd)'"></span>
+                          </div>
+                        </template>
+                      </div>
+                    </template>
+                  </td>
+                  <td class="px-2 py-1.5 text-right font-mono" x-text="r.deliveries"></td>
+                  <td class="px-2 py-1.5 text-right">
+                    <span x-text="'€' + parseFloat(r.price_per_package).toFixed(4)"></span>
+                    <span :class="{
+                      'bg-violet-100 text-violet-700': r.price_source === 'driver_override',
+                      'bg-purple-100 text-purple-700': r.price_source === 'fleet_default',
+                      'bg-blue-100 text-blue-700': r.price_source === 'partner_default',
+                      'bg-rose-100 text-rose-700': r.price_source === 'none'
+                    }" class="ml-1 px-1 py-0.5 rounded text-[9px]" x-text="r.price_source"></span>
+                  </td>
+                  <td class="px-2 py-1.5 text-right font-mono" x-text="'€' + parseFloat(r.base).toFixed(2)"></td>
+                  <td class="px-2 py-1.5 text-right" x-text="r.bonus_days"></td>
+                  <td class="px-2 py-1.5 text-right font-mono text-amber-600" x-text="'€' + parseFloat(r.bonus_amount).toFixed(2)"></td>
+                  <td class="px-2 py-1.5 text-right font-mono font-bold text-purple-600" x-text="'€' + parseFloat(r.subtotal).toFixed(2)"></td>
+                  <td class="px-2 py-1.5">
+                    <span x-show="r.has_overlap" class="px-1.5 py-0.5 text-[9px] bg-amber-100 text-amber-700 rounded">overlap</span>
+                    <span x-show="r.skip_reason && !r.has_overlap" class="text-[10px] text-gray-400" x-text="r.skip_reason"></span>
+                    <span x-show="!r.has_overlap && !r.skip_reason" class="px-1.5 py-0.5 text-[9px] bg-emerald-100 text-emerald-700 rounded">pronto</span>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Loading -->
+        <div x-show="loteLoading" class="text-center py-6 text-gray-500">
+          <i data-lucide="loader" class="w-6 h-6 animate-spin mx-auto mb-2"></i>
+          A calcular...
+        </div>
+
+        <!-- Sem dados -->
+        <div x-show="!loteLoading && lotePreview && lotePreview.rows.length === 0" class="text-center py-6 text-gray-400 text-sm">
+          Frota sem motoristas activos.
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between gap-3 sticky bottom-0 bg-white dark:bg-gray-800">
+        <div class="flex items-center gap-3 text-xs">
+          <label class="flex items-center gap-1.5">
+            <input type="checkbox" x-model="loteSkipOverlap" class="rounded">
+            <span class="text-gray-700 dark:text-gray-300">Pular overlaps</span>
+          </label>
+          <span class="text-gray-500 dark:text-gray-400">
+            Selecionados: <strong x-text="loteSelected.length"></strong> / <span x-text="(lotePreview?.rows || []).filter(r => r.deliveries > 0).length"></span>
+          </span>
+        </div>
+        <div class="flex gap-2">
+          <button @click="loteOpen = false"
+                  class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-sm rounded-lg">Cancelar</button>
+          <button @click="emitLote()"
+                  :disabled="loteSelected.length === 0 || loteEmitting"
+                  class="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-40 text-white text-sm font-semibold rounded-lg flex items-center gap-2">
+            <i :data-lucide="loteEmitting ? 'loader' : 'send'" :class="loteEmitting ? 'w-4 h-4 animate-spin' : 'w-4 h-4'"></i>
+            <span x-text="loteEmitting ? 'A emitir...' : 'Emitir ' + loteSelected.length + ' Pré-fatura(s)'"></span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+function empresasApp() {
+  const csrf = () => document.querySelector('[name=csrfmiddlewaretoken]').value;
+  const POST_JSON = body => ({
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf() },
+    body: JSON.stringify(body),
+  });
+
+  const emptyForm = () => ({
+    nome: '', nif: '', morada: '', codigo_postal: '', cidade: '',
+    email: '', telefone: '', contacto_nome: '', iban: '',
+    taxa_iva: '23.00', driver_default_price_per_package: '',
+    ativo: true, notas: '',
+  });
+
+  const now = new Date();
+
+  return {
+    empresas: {{ empresas_json|safe }},
+    search: '',
+    showForm: false,
+    formMode: 'create',
+    activeTab: 'dados',
+    form: emptyForm(),
+    editId: null,
+    saving: false,
+    formError: '',
+    // Modal de motoristas da lista (viewer rápido)
+    showMotoristas: false,
+    motoristasLoading: false,
+    selectedEmpresa: null,
+    motoristas: [],
+    // Tab Motoristas no edit modal
+    frotaDrivers: [],
+    frotaLoading: false,
+    driverSearch: '',
+    searchResults: [],
+    searchLoading: false,
+    // Tab Pré-faturas
+    pfMes: now.getMonth() + 1,
+    pfAno: now.getFullYear(),
+    pfLoading: false,
+    pfData: null,
+    // Lançamentos manuais
+    showLancamentoForm: false,
+    lancamentoEditId: null,
+    lancamentoSaving: false,
+    lancamentoError: '',
+    lancamentoForm: { descricao: '', qtd_entregas: 0, valor_por_entrega: '0', valor_base: '', valor_bonus: '0', pacotes_perdidos: '0', adiantamentos: '0', periodo_inicio: '', periodo_fim: '', status: 'RASCUNHO', notas: '' },
+
+    // Dashboard frota (Fase 6.6) — selector de mês/ano
+    dashboard: null,
+    dashOpen: false,
+    dashMes: now.getMonth() + 1,
+    dashAno: now.getFullYear(),
+
+    // Auto-emit (Fase 6.7)
+    autoEmit: {
+      enabled: false,
+      period_type: 'monthly',
+      day_of_month: 1,
+      weekday: 0,
+      auto_send_whatsapp: false,
+      last_emitted_at: null,
+      last_emitted_period_from: null,
+      last_emitted_period_to: null,
+      last_summary: {},
+    },
+
+    // Aprovação batch
+    pfBulkSelected: [],
+    pfBulkSelectAll: false,
+
+    // Lote de PFs
+    loteOpen: false,
+    loteFrom: '',
+    loteTo: '',
+    loteLoading: false,
+    lotePreview: null,
+    loteSelected: [],
+    loteSelectAll: false,
+    loteSkipOverlap: true,
+    loteEmitting: false,
+
+    init() {
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    filteredEmpresas() {
+      const q = this.search.trim().toLowerCase();
+      if (!q) return this.empresas;
+      return this.empresas.filter(e =>
+        e.nome.toLowerCase().includes(q) || (e.nif || '').toLowerCase().includes(q)
+      );
+    },
+
+    openCreate() {
+      this.form = emptyForm();
+      this.formMode = 'create';
+      this.activeTab = 'dados';
+      this.editId = null;
+      this.formError = '';
+      this.showForm = true;
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    openEdit(e) {
+      this.form = { ...e };
+      this.formMode = 'edit';
+      this.activeTab = 'dados';
+      this.editId = e.id;
+      this.formError = '';
+      this.frotaDrivers = [];
+      this.searchResults = [];
+      this.driverSearch = '';
+      this.pfData = null;
+      this.dashboard = null;
+      this.dashOpen = false;
+      this.showLancamentoForm = false;
+      this.lancamentoEditId = null;
+      this.lancamentoError = '';
+      // Carrega config auto-emit ao abrir
+      this.loadAutoEmitConfig();
+      this.showForm = true;
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    // ── Motoristas da frota (tab edit) ──
+    async loadMotoristasFrota() {
+      if (!this.editId) return;
+      this.frotaLoading = true;
+      const resp = await fetch(`/driversapp/api/empresas-parceiras/${this.editId}/motoristas/`);
+      const data = await resp.json();
+      this.frotaDrivers = data.motoristas || [];
+      this.frotaLoading = false;
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    async searchDrivers() {
+      if (this.driverSearch.length < 2) { this.searchResults = []; return; }
+      this.searchLoading = true;
+      const resp = await fetch(`/driversapp/api/empresas-parceiras/${this.editId}/motoristas/search/?q=${encodeURIComponent(this.driverSearch)}`);
+      const data = await resp.json();
+      this.searchResults = data.drivers || [];
+      this.searchLoading = false;
+    },
+
+    async assignDriverToFrota(d) {
+      const resp = await fetch(`/driversapp/api/empresas-parceiras/${this.editId}/motoristas/${d.id}/assign/`, {
+        method: 'POST', headers: { 'X-CSRFToken': csrf() }
+      });
+      const data = await resp.json();
+      if (data.success) {
+        d.nesta_empresa = true;
+        if (!this.frotaDrivers.find(x => x.id === d.id)) {
+          this.frotaDrivers.push(data.driver);
+        }
+        // update card count
+        const idx = this.empresas.findIndex(e => e.id === this.editId);
+        if (idx !== -1) this.empresas[idx].num_motoristas = this.frotaDrivers.length;
+        this.$nextTick(() => lucide.createIcons());
+      }
+    },
+
+    async removeDriverFromFrota(d) {
+      if (!confirm(`Remover ${d.nome} desta frota?`)) return;
+      const resp = await fetch(`/driversapp/api/empresas-parceiras/${this.editId}/motoristas/${d.id}/remove/`, {
+        method: 'POST', headers: { 'X-CSRFToken': csrf() }
+      });
+      const data = await resp.json();
+      if (data.success) {
+        this.frotaDrivers = this.frotaDrivers.filter(x => x.id !== d.id);
+        const sr = this.searchResults.find(x => x.id === d.id);
+        if (sr) sr.nesta_empresa = false;
+        const idx = this.empresas.findIndex(e => e.id === this.editId);
+        if (idx !== -1) this.empresas[idx].num_motoristas = this.frotaDrivers.length;
+      }
+    },
+
+    // ── Pré-faturas (tab edit) ──
+    async loadPrefaturas() {
+      if (!this.editId) return;
+      this.pfLoading = true;
+      this.pfData = null;
+      const resp = await fetch(`/driversapp/api/empresas-parceiras/${this.editId}/prefaturas/?mes=${this.pfMes}&ano=${this.pfAno}`);
+      this.pfData = await resp.json();
+      this.pfLoading = false;
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    // ── Lançamentos manuais ──
+    openLancamentoForm() {
+      this.lancamentoEditId = null;
+      const y = this.pfAno, m = String(this.pfMes).padStart(2, '0');
+      const lastDay = new Date(y, this.pfMes, 0).getDate();
+      this.lancamentoForm = {
+        descricao: '', qtd_entregas: 0, valor_por_entrega: '0',
+        valor_base: '0', valor_bonus: '0', pacotes_perdidos: '0', adiantamentos: '0',
+        periodo_inicio: `${y}-${m}-01`,
+        periodo_fim: `${y}-${m}-${String(lastDay).padStart(2, '0')}`,
+        status: 'RASCUNHO', notas: '',
+      };
+      this.lancamentoError = '';
+      this.showLancamentoForm = true;
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    // ────────── Lote de PFs por Frota ──────────
+    openLotePreview() {
+      console.log('[LOTE] openLotePreview called, editId=', this.editId);
+      // Default: mês actualmente seleccionado na tab
+      const y = parseInt(this.pfAno) || new Date().getFullYear();
+      const mNum = parseInt(this.pfMes) || 1;
+      const m = String(mNum).padStart(2, '0');
+      const lastDay = new Date(y, mNum, 0).getDate();
+      this.loteFrom = `${y}-${m}-01`;
+      this.loteTo = `${y}-${m}-${String(lastDay).padStart(2, '0')}`;
+      this.lotePreview = null;
+      this.loteSelected = [];
+      this.loteOpen = true;
+      console.log('[LOTE] loteOpen=', this.loteOpen, 'from=', this.loteFrom, 'to=', this.loteTo);
+      this.loadLotePreview();
+    },
+
+    setLotePreset(p) {
+      const today = new Date();
+      const fmt = d => d.toISOString().slice(0, 10);
+      if (p === 'lastweek') {
+        const ref = new Date(); ref.setDate(ref.getDate() - 7);
+        const dow = ref.getDay() === 0 ? 6 : ref.getDay() - 1;
+        const start = new Date(ref); start.setDate(start.getDate() - dow);
+        const end = new Date(start); end.setDate(end.getDate() + 6);
+        this.loteFrom = fmt(start); this.loteTo = fmt(end);
+      } else if (p === 'lastmonth') {
+        const first = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        const last = new Date(today.getFullYear(), today.getMonth(), 0);
+        this.loteFrom = fmt(first); this.loteTo = fmt(last);
+      }
+      this.loadLotePreview();
+    },
+
+    async loadLotePreview() {
+      if (!this.editId || !this.loteFrom || !this.loteTo) return;
+      this.loteLoading = true;
+      try {
+        const r = await fetch(`/settlements/empresas/${this.editId}/lote-preview/?from=${this.loteFrom}&to=${this.loteTo}`);
+        this.lotePreview = await r.json();
+        // Auto-seleccionar drivers válidos (com entregas e sem overlap)
+        this.loteSelected = (this.lotePreview.rows || [])
+          .filter(r => r.deliveries > 0 && !r.has_overlap)
+          .map(r => r.driver_id);
+        this.loteSelectAll = this.loteSelected.length > 0;
+        this.$nextTick(() => lucide.createIcons());
+      } catch (e) {
+        console.error(e); alert('Erro ao carregar preview');
+      } finally {
+        this.loteLoading = false;
+      }
+    },
+
+    toggleSelectAll() {
+      if (this.loteSelectAll) {
+        this.loteSelected = (this.lotePreview?.rows || [])
+          .filter(r => r.deliveries > 0 && !r.has_overlap)
+          .map(r => r.driver_id);
+      } else {
+        this.loteSelected = [];
+      }
+    },
+
+    toggleDriver(id) {
+      const i = this.loteSelected.indexOf(id);
+      if (i >= 0) this.loteSelected.splice(i, 1);
+      else this.loteSelected.push(id);
+    },
+
+    // ────────── Auto-Emit ──────────
+    async loadAutoEmitConfig() {
+      if (!this.editId) return;
+      try {
+        const r = await fetch(`/driversapp/api/empresas-parceiras/${this.editId}/auto-emit/`);
+        const j = await r.json();
+        if (j.success) {
+          // Merge respeitando defaults (backend pode devolver sem config)
+          this.autoEmit = {
+            enabled: !!j.config.enabled,
+            period_type: j.config.period_type || 'monthly',
+            day_of_month: j.config.day_of_month || 1,
+            weekday: j.config.weekday ?? 0,
+            auto_send_whatsapp: !!j.config.auto_send_whatsapp,
+            last_emitted_at: j.config.last_emitted_at || null,
+            last_emitted_period_from: j.config.last_emitted_period_from || null,
+            last_emitted_period_to: j.config.last_emitted_period_to || null,
+            last_summary: j.config.last_summary || {},
+          };
+        }
+        this.$nextTick(() => lucide.createIcons());
+      } catch (e) { console.error(e); }
+    },
+
+    async saveAutoEmitConfig() {
+      if (!this.editId) return;
+      try {
+        const r = await fetch(`/driversapp/api/empresas-parceiras/${this.editId}/auto-emit/`, POST_JSON({
+          enabled: this.autoEmit.enabled,
+          period_type: this.autoEmit.period_type,
+          day_of_month: parseInt(this.autoEmit.day_of_month) || 1,
+          weekday: parseInt(this.autoEmit.weekday) || 0,
+          auto_send_whatsapp: this.autoEmit.auto_send_whatsapp,
+        }));
+        const j = await r.json();
+        if (j.success) {
+          alert('✓ Configuração auto-emit guardada');
+        } else {
+          alert('Erro: ' + (j.error || ''));
+        }
+      } catch (e) { alert('Erro de rede'); }
+    },
+
+    async runAutoEmitNow() {
+      if (!confirm('Disparar emissão automática agora?\n(Só emite se hoje for o dia configurado e o período ainda não foi emitido)')) return;
+      try {
+        const r = await fetch(`/driversapp/api/empresas-parceiras/${this.editId}/auto-emit/run-now/`, { method: 'POST', headers: { 'X-CSRFToken': csrf() } });
+        const j = await r.json();
+        if (!j.success) { alert('Erro: ' + (j.error || '')); return; }
+        alert(`✓ Disparado!\n\n${j.message || JSON.stringify(j.summary || {})}`);
+        this.loadAutoEmitConfig();
+      } catch (e) { alert('Erro de rede'); }
+    },
+
+    async loadDashboardStats() {
+      if (!this.editId) return;
+      try {
+        const y = parseInt(this.dashAno) || new Date().getFullYear();
+        const mNum = parseInt(this.dashMes) || 1;
+        const m = String(mNum).padStart(2, '0');
+        const lastDay = new Date(y, mNum, 0).getDate();
+        const dFrom = `${y}-${m}-01`;
+        const dTo = `${y}-${m}-${String(lastDay).padStart(2, '0')}`;
+        const r = await fetch(`/settlements/empresas/${this.editId}/dashboard-stats/?from=${dFrom}&to=${dTo}`);
+        this.dashboard = await r.json();
+        this.$nextTick(() => lucide.createIcons());
+      } catch (e) { console.error(e); }
+    },
+    setDashCurrentMonth() {
+      const today = new Date();
+      this.dashMes = today.getMonth() + 1;
+      this.dashAno = today.getFullYear();
+      this.loadDashboardStats();
+    },
+
+    togglePfBulk(id) {
+      const i = this.pfBulkSelected.indexOf(id);
+      if (i >= 0) this.pfBulkSelected.splice(i, 1);
+      else this.pfBulkSelected.push(id);
+      this.pfBulkSelectAll = this.pfBulkSelected.length === (this.pfData?.pre_invoices?.length || 0);
+    },
+
+    togglePfBulkAll() {
+      if (this.pfBulkSelectAll) {
+        this.pfBulkSelected = (this.pfData?.pre_invoices || []).map(p => p.id);
+      } else {
+        this.pfBulkSelected = [];
+      }
+    },
+
+    async bulkChangeStatus(novoStatus) {
+      if (!this.pfBulkSelected.length) return;
+      const labels = {APROVADO: 'aprovar', PAGO: 'marcar como pago'};
+      const action = labels[novoStatus] || `mudar para ${novoStatus}`;
+      if (!confirm(`${action.charAt(0).toUpperCase() + action.slice(1)} ${this.pfBulkSelected.length} pré-fatura(s)?`)) return;
+      try {
+        const r = await fetch('/settlements/pre-invoices/bulk-status/', POST_JSON({
+          ids: this.pfBulkSelected,
+          status: novoStatus,
+        }));
+        const j = await r.json();
+        if (!j.success) { alert('Erro: ' + (j.error || '')); return; }
+        alert(`✓ ${j.updated || 0} pré-faturas actualizadas para ${novoStatus}`);
+        this.pfBulkSelected = []; this.pfBulkSelectAll = false;
+        this.loadPrefaturas();
+      } catch (e) { console.error(e); alert('Erro de rede'); }
+    },
+
+    async sendPFWhatsApp(pf) {
+      if (!confirm(`Enviar pré-fatura ${pf.numero || '#' + pf.id} por WhatsApp?`)) return;
+      try {
+        const r = await fetch(`/settlements/pre-invoices/${pf.id}/whatsapp/`, { method: 'POST', headers: { 'X-CSRFToken': csrf() } });
+        const j = await r.json();
+        if (j.success) alert(`✓ Enviado para ${j.phone}`);
+        else alert(`Erro: ${j.error || ''}`);
+      } catch (e) { alert('Erro de rede'); }
+    },
+
+    async sendWhatsAppLote() {
+      if (!this.editId) return;
+      const y = this.pfAno, m = String(this.pfMes).padStart(2, '0');
+      const lastDay = new Date(y, this.pfMes, 0).getDate();
+      const from = `${y}-${m}-01`;
+      const to = `${y}-${m}-${String(lastDay).padStart(2, '0')}`;
+      if (!confirm(`Enviar resumo das PFs (${from} → ${to}) por WhatsApp aos motoristas da frota?`)) return;
+      try {
+        const r = await fetch(`/settlements/empresas/${this.editId}/whatsapp-lote/`, POST_JSON({ from, to }));
+        const j = await r.json();
+        if (!j.success) { alert('Erro: ' + (j.error || '')); return; }
+        const s = j.summary;
+        alert(`✓ Enviadas: ${s.n_sent}\n⚠ Sem telefone: ${s.n_no_phone}\n✗ Falhas: ${s.n_failed}`);
+      } catch (e) { console.error(e); alert('Erro de rede'); }
+    },
+
+    async emitLote() {
+      if (!this.loteSelected.length) return;
+      const msg = `Vou criar UMA pré-fatura global da frota com ${this.loteSelected.length} motoristas. Confirmar?`;
+      if (!confirm(msg)) return;
+      this.loteEmitting = true;
+      try {
+        const r = await fetch(`/settlements/empresas/${this.editId}/lote-emit/`, POST_JSON({
+          from: this.loteFrom,
+          to: this.loteTo,
+          skip_overlap: this.loteSkipOverlap,
+          driver_ids: this.loteSelected,
+        }));
+        const j = await r.json();
+        if (!j.success) {
+          alert('Erro: ' + (j.error || 'desconhecido'));
+          return;
+        }
+        const fi = j.fleet_invoice || {};
+        const s = j.summary;
+        alert(
+          `✓ Pré-fatura global criada!\n\n` +
+          `Número: ${fi.numero}\n` +
+          `Drivers: ${fi.n_drivers}\n` +
+          `Total entregas: ${fi.total_deliveries}\n` +
+          `Total: €${parseFloat(fi.total_a_receber).toFixed(2)}\n\n` +
+          `Saltados: ${s.n_skipped}`
+        );
+        this.loteOpen = false;
+        // Recarregar lista de FleetInvoices
+        this.loadFleetInvoices();
+      } catch (e) {
+        console.error(e); alert('Erro de rede');
+      } finally {
+        this.loteEmitting = false;
+      }
+    },
+
+    // ────────── FleetInvoices listing ──────────
+    fleetInvoices: [],
+    expandedFI: null,
+    fleetInvoiceDetail: null,
+
+    async loadFleetInvoices() {
+      if (!this.editId) return;
+      try {
+        const r = await fetch(`/settlements/empresas/${this.editId}/fleet-invoices/?mes=${this.pfMes}&ano=${this.pfAno}`);
+        const j = await r.json();
+        if (j.success) {
+          this.fleetInvoices = j.rows || [];
+        }
+        this.$nextTick(() => lucide.createIcons());
+      } catch (e) { console.error(e); }
+    },
+
+    async toggleFIDetail(fi) {
+      if (this.expandedFI === fi.id) {
+        this.expandedFI = null;
+        this.fleetInvoiceDetail = null;
+        return;
+      }
+      this.expandedFI = fi.id;
+      try {
+        const r = await fetch(`/settlements/fleet-invoices/${fi.id}/`);
+        const j = await r.json();
+        if (j.success) this.fleetInvoiceDetail = j.fleet_invoice;
+        this.$nextTick(() => lucide.createIcons());
+      } catch (e) { console.error(e); }
+    },
+
+    async changeFIStatus(fi, novoStatus) {
+      if (!confirm(`Mudar ${fi.numero} para ${novoStatus}?`)) return;
+      try {
+        const r = await fetch(`/settlements/fleet-invoices/${fi.id}/status/`, POST_JSON({status: novoStatus}));
+        const j = await r.json();
+        if (!j.success) { alert('Erro: ' + j.error); return; }
+        this.loadFleetInvoices();
+      } catch (e) { alert('Erro de rede'); }
+    },
+
+    async deleteFI(fi) {
+      if (!confirm(`Apagar FleetInvoice ${fi.numero}? (apenas se cancelada/rascunho)`)) return;
+      try {
+        const r = await fetch(`/settlements/fleet-invoices/${fi.id}/delete/`, { method: 'POST', headers: { 'X-CSRFToken': csrf() } });
+        const j = await r.json();
+        if (!j.success) { alert('Erro: ' + j.error); return; }
+        this.loadFleetInvoices();
+      } catch (e) { alert('Erro de rede'); }
+    },
+
+    editLancamento(lc) {
+      this.lancamentoEditId = lc.id;
+      this.lancamentoForm = {
+        descricao: lc.descricao,
+        qtd_entregas: lc.qtd_entregas || 0,
+        valor_por_entrega: lc.valor_por_entrega || '0',
+        valor_base: lc.valor_base,
+        valor_bonus: lc.valor_bonus,
+        pacotes_perdidos: lc.pacotes_perdidos || '0',
+        adiantamentos: lc.adiantamentos || '0',
+        periodo_inicio: lc.periodo_inicio_iso,
+        periodo_fim: lc.periodo_fim_iso,
+        status: lc.status,
+        notas: lc.notas || '',
+      };
+      this.lancamentoError = '';
+      this.showLancamentoForm = true;
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    calcBaseFromQtd() {
+      const qtd = Number(this.lancamentoForm.qtd_entregas) || 0;
+      const vpe = Number(this.lancamentoForm.valor_por_entrega) || 0;
+      if (qtd > 0 && vpe > 0) {
+        this.lancamentoForm.valor_base = (qtd * vpe).toFixed(2);
+      }
+    },
+
+    _n(v) { const x = Number(v); return isNaN(x) ? 0 : x; },
+
+    calcTotal() {
+      return this._n(this.lancamentoForm.valor_base)
+           + this._n(this.lancamentoForm.valor_bonus)
+           - this._n(this.lancamentoForm.pacotes_perdidos)
+           - this._n(this.lancamentoForm.adiantamentos);
+    },
+
+    calcTotalStr() {
+      return '€' + this.calcTotal().toFixed(2);
+    },
+
+    calcIvaStr() {
+      const taxa = this._n(this.form.taxa_iva);
+      return '€' + (this.calcTotal() * taxa / 100).toFixed(2);
+    },
+
+    calcTotalComIvaStr() {
+      const taxa = this._n(this.form.taxa_iva);
+      const t = this.calcTotal();
+      return '€' + (t + t * taxa / 100).toFixed(2);
+    },
+
+    closeLancamentoForm() {
+      this.showLancamentoForm = false;
+      this.lancamentoEditId = null;
+      this.lancamentoError = '';
+    },
+
+    async saveLancamento() {
+      if (!this.lancamentoForm.descricao.trim()) { this.lancamentoError = 'Descrição obrigatória.'; return; }
+      if (!this.lancamentoForm.periodo_inicio || !this.lancamentoForm.periodo_fim) { this.lancamentoError = 'Datas obrigatórias.'; return; }
+      this.lancamentoSaving = true;
+      this.lancamentoError = '';
+      try {
+        const url = this.lancamentoEditId
+          ? `/driversapp/api/empresas-parceiras/lancamentos/${this.lancamentoEditId}/update/`
+          : `/driversapp/api/empresas-parceiras/${this.editId}/lancamentos/create/`;
+        const resp = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf() },
+          body: JSON.stringify(this.lancamentoForm),
+        });
+        const data = await resp.json();
+        if (data.success) {
+          this.closeLancamentoForm();
+          await this.loadPrefaturas();
+        } else {
+          this.lancamentoError = data.error || 'Erro ao guardar.';
+        }
+      } catch(e) {
+        this.lancamentoError = 'Erro de ligação.';
+      }
+      this.lancamentoSaving = false;
+    },
+
+    async deleteLancamento(lc) {
+      if (!confirm(`Eliminar lançamento "${lc.descricao}"?`)) return;
+      const resp = await fetch(`/driversapp/api/empresas-parceiras/lancamentos/${lc.id}/delete/`, {
+        method: 'POST', headers: { 'X-CSRFToken': csrf() }
+      });
+      const data = await resp.json();
+      if (data.success) {
+        await this.loadPrefaturas();
+      } else {
+        alert(data.error || 'Erro ao eliminar.');
+      }
+    },
+
+    async saveEmpresa() {
+      if (!this.form.nome.trim()) { this.formError = 'O nome é obrigatório.'; return; }
+      this.saving = true;
+      this.formError = '';
+      try {
+        const url = this.formMode === 'create'
+          ? '/driversapp/api/empresas-parceiras/create/'
+          : `/driversapp/api/empresas-parceiras/${this.editId}/update/`;
+        const resp = await fetch(url, POST_JSON(this.form));
+        const data = await resp.json();
+        if (data.success) {
+          if (this.formMode === 'create') {
+            this.empresas.push(data.empresa);
+          } else {
+            const idx = this.empresas.findIndex(e => e.id === this.editId);
+            if (idx !== -1) this.empresas[idx] = data.empresa;
+          }
+          this.showForm = false;
+          this.$nextTick(() => lucide.createIcons());
+        } else {
+          this.formError = data.error || 'Erro ao guardar.';
+        }
+      } catch(e) {
+        this.formError = 'Erro de ligação.';
+      }
+      this.saving = false;
+    },
+
+    async deleteEmpresa(e) {
+      if (!confirm(`Eliminar "${e.nome}"?`)) return;
+      const resp = await fetch(`/driversapp/api/empresas-parceiras/${e.id}/delete/`, {
+        method: 'POST', headers: { 'X-CSRFToken': csrf() }
+      });
+      const data = await resp.json();
+      if (data.success) {
+        this.empresas = this.empresas.filter(ep => ep.id !== e.id);
+      } else {
+        alert(data.error || 'Erro ao eliminar.');
+      }
+    },
+
+    async openMotoristas(e) {
+      this.selectedEmpresa = e;
+      this.motoristas = [];
+      this.motoristasLoading = true;
+      this.showMotoristas = true;
+      const resp = await fetch(`/driversapp/api/empresas-parceiras/${e.id}/motoristas/`);
+      const data = await resp.json();
+      this.motoristas = data.motoristas || [];
+      this.motoristasLoading = false;
+      this.$nextTick(() => lucide.createIcons());
+    },
+  };
+}
+</script>
+</div>{# closes outer x-data div #}
+{% endblock %}

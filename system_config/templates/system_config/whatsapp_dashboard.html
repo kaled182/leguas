@@ -476,28 +476,60 @@
         return data;
     }
 
+    let _qrPollTimer = null;
+
+    function stopQrPolling() {
+        if (_qrPollTimer) {
+            clearInterval(_qrPollTimer);
+            _qrPollTimer = null;
+        }
+    }
+
+    function startQrPolling() {
+        stopQrPolling();
+        let attempts = 0;
+        const maxAttempts = 30; // 30 × 3s = 90 segundos
+        console.log('[WhatsApp] Iniciando polling de QR Code...');
+        _qrPollTimer = setInterval(async () => {
+            attempts++;
+            try {
+                const qrData = await callEndpoint(endpoints.qrcode, { method: 'GET' });
+                const hasQr = qrData && (qrData.qrcode || qrData.qrCode || qrData.base64 || qrData.pairingCode);
+                if (hasQr) {
+                    console.log('[WhatsApp] ✅ QR Code obtido no polling (tentativa ' + attempts + ')');
+                    renderQr(qrData);
+                    stopQrPolling();
+                } else if (attempts >= maxAttempts) {
+                    console.warn('[WhatsApp] Timeout: QR Code não disponível após 90 segundos');
+                    stopQrPolling();
+                }
+            } catch (e) {
+                if (attempts >= maxAttempts) {
+                    console.warn('[WhatsApp] Polling QR abandonado após timeout:', e.message);
+                    stopQrPolling();
+                }
+            }
+        }, 3000);
+    }
+
     async function startSession() {
         setButtonsLoading(true, [buttons.start, buttons.refreshQr]);
+        stopQrPolling();
         try {
             console.log('[WhatsApp] Iniciando sessão...');
             const data = await callEndpoint(endpoints.start, { method: 'POST', body: '{}' });
             console.log('[WhatsApp] Resposta do start:', data);
-            
+
             if (data.qrcode || data.pairingCode) {
                 renderQr(data);
                 console.log('[WhatsApp] QR Code renderizado a partir do start');
             } else {
-                // Se não retornou QR no start, tentar obter
-                console.log('[WhatsApp] Tentando obter QR Code...');
-                try {
-                    const qrData = await callEndpoint(endpoints.qrcode, { method: 'GET' });
-                    renderQr(qrData);
-                    console.log('[WhatsApp] QR Code obtido com sucesso');
-                } catch (qrError) {
-                    console.warn('[WhatsApp] Não foi possível obter QR Code:', qrError.message);
-                }
+                // WPPConnect demora ~30-60s a carregar o Chromium — fazer polling até o QR aparecer
+                console.log('[WhatsApp] QR não disponível ainda — iniciando polling (até 90s)...');
+                renderQr({}); // mostra placeholder "Gerando QR Code..."
+                startQrPolling();
             }
-            
+
             if (data.status) {
                 renderStatus(data.status);
             }

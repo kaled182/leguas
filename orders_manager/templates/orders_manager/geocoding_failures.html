@@ -1,0 +1,311 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Relatório de Falhas de Geocodificação - Leguas{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .stat-card {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .stat-value {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #333;
+    }
+    
+    .stat-label {
+        color: #666;
+        font-size: 0.9rem;
+        margin-top: 0.5rem;
+    }
+    
+    .stat-card.danger .stat-value { color: #dc3545; }
+    .stat-card.success .stat-value { color: #28a745; }
+    .stat-card.warning .stat-value { color: #ffc107; }
+    .stat-card.info .stat-value { color: #17a2b8; }
+    
+    .filters {
+        background: white;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .failure-row {
+        background: white;
+        padding: 1rem;
+        margin-bottom: 0.5rem;
+        border-radius: 4px;
+        border-left: 4px solid #dc3545;
+    }
+    
+    .failure-row.resolved {
+        border-left-color: #28a745;
+        opacity: 0.7;
+    }
+    
+    .address-original {
+        font-family: monospace;
+        background: #f8f9fa;
+        padding: 0.5rem;
+        border-radius: 4px;
+        margin: 0.5rem 0;
+    }
+    
+    .address-normalized {
+        font-family: monospace;
+        background: #e9ecef;
+        padding: 0.5rem;
+        border-radius: 4px;
+        margin: 0.5rem 0;
+    }
+    
+    .retry-badge {
+        display: inline-block;
+        padding: 0.25rem 0.5rem;
+        background: #ffc107;
+        color: #000;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        font-weight: bold;
+    }
+    
+    .top-postal-codes {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 2rem;
+    }
+    
+    .postal-code-bar {
+        margin: 0.5rem 0;
+    }
+    
+    .postal-code-progress {
+        background: #e9ecef;
+        height: 30px;
+        border-radius: 4px;
+        overflow: hidden;
+        position: relative;
+    }
+    
+    .postal-code-fill {
+        background: linear-gradient(90deg, #dc3545, #ff6b6b);
+        height: 100%;
+        display: flex;
+        align-items: center;
+        padding: 0 10px;
+        color: white;
+        font-weight: bold;
+        font-size: 0.9rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-3">
+        <div class="col">
+            <h2><i class="fas fa-exclamation-triangle text-danger"></i> Relatório de Falhas de Geocodificação</h2>
+            <p class="text-muted">Endereços que não foram geocodificados automaticamente</p>
+        </div>
+    </div>
+    
+    <!-- Estatísticas -->
+    <div class="stats-grid">
+        <div class="stat-card danger">
+            <div class="stat-value">{{ stats.unresolved }}</div>
+            <div class="stat-label">Não Resolvidos</div>
+        </div>
+        <div class="stat-card success">
+            <div class="stat-value">{{ stats.resolved }}</div>
+            <div class="stat-label">Resolvidos</div>
+        </div>
+        <div class="stat-card info">
+            <div class="stat-value">{{ stats.total_geocoded }}</div>
+            <div class="stat-label">Total Geocodificados</div>
+        </div>
+        <div class="stat-card {% if stats.success_rate >= 90 %}success{% elif stats.success_rate >= 70 %}warning{% else %}danger{% endif %}">
+            <div class="stat-value">{{ stats.success_rate }}%</div>
+            <div class="stat-label">Taxa de Sucesso</div>
+        </div>
+    </div>
+    
+    <!-- Top Códigos Postais com Falhas -->
+    {% if top_postal_codes %}
+    <div class="top-postal-codes">
+        <h4><i class="fas fa-chart-bar"></i> Top 10 Códigos Postais com Falhas</h4>
+        {% for item in top_postal_codes %}
+        <div class="postal-code-bar">
+            <div class="postal-code-progress">
+                <div class="postal-code-fill" style="width: {% widthratio item.count top_postal_codes.0.count 100 %}%">
+                    {{ item.postal_code }} - {{ item.count }} falha{{ item.count|pluralize:"s" }}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    
+    <!-- Filtros -->
+    <div class="filters">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">Parceiro</label>
+                <input type="text" name="partner" class="form-control" 
+                       value="{{ partner_filter }}" placeholder="Ex: Delnext">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Mostrar Resolvidos</label>
+                <select name="show_resolved" class="form-select">
+                    <option value="false" {% if not show_resolved %}selected{% endif %}>Não</option>
+                    <option value="true" {% if show_resolved %}selected{% endif %}>Sim</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">&nbsp;</label>
+                <button type="submit" class="btn btn-primary d-block w-100">
+                    <i class="fas fa-filter"></i> Filtrar
+                </button>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">&nbsp;</label>
+                <a href="{% url 'orders:geocoding_failures_report' %}" class="btn btn-secondary d-block w-100">
+                    <i class="fas fa-redo"></i> Limpar Filtros
+                </a>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Lista de Falhas -->
+    <div class="row">
+        <div class="col-12">
+            {% if failures %}
+                {% for failure in failures %}
+                <div class="failure-row {% if failure.resolved %}resolved{% endif %}">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1">
+                            <h5>
+                                {% if failure.resolved %}
+                                    <i class="fas fa-check-circle text-success"></i>
+                                {% else %}
+                                    <i class="fas fa-times-circle text-danger"></i>
+                                {% endif %}
+                                Pedido: <a href="{% url 'orders:order_detail' failure.order.id %}">{{ failure.order.external_reference }}</a>
+                                {% if failure.retry_count > 1 %}
+                                    <span class="retry-badge">{{ failure.retry_count }} tentativas</span>
+                                {% endif %}
+                            </h5>
+                            
+                            <div class="row mt-2">
+                                <div class="col-md-6">
+                                    <strong>Endereço Original:</strong>
+                                    <div class="address-original">{{ failure.original_address }}</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <strong>Endereço Normalizado:</strong>
+                                    <div class="address-normalized">{{ failure.normalized_address }}</div>
+                                </div>
+                            </div>
+                            
+                            <div class="row mt-2">
+                                <div class="col-md-4">
+                                    <small><strong>Código Postal:</strong> {{ failure.postal_code }}</small>
+                                </div>
+                                <div class="col-md-4">
+                                    <small><strong>Localidade:</strong> {{ failure.locality|default:"N/A" }}</small>
+                                </div>
+                                <div class="col-md-4">
+                                    <small><strong>Parceiro:</strong> {{ failure.order.partner.name }}</small>
+                                </div>
+                            </div>
+                            
+                            {% if failure.failure_reason %}
+                            <div class="mt-2">
+                                <small class="text-muted"><strong>Motivo:</strong> {{ failure.failure_reason }}</small>
+                            </div>
+                            {% endif %}
+                            
+                            <div class="mt-2">
+                                <small class="text-muted">
+                                    Primeira tentativa: {{ failure.attempted_at|date:"d/m/Y H:i" }} | 
+                                    Última tentativa: {{ failure.last_retry_at|date:"d/m/Y H:i" }}
+                                    {% if failure.resolved %}
+                                        | Resolvido em: {{ failure.resolved_at|date:"d/m/Y H:i" }}
+                                        {% if failure.resolved_by %}por {{ failure.resolved_by.get_full_name }}{% endif %}
+                                    {% endif %}
+                                </small>
+                            </div>
+                        </div>
+                        
+                        {% if not failure.resolved %}
+                        <div class="ms-3">
+                            <button class="btn btn-sm btn-warning" onclick="retryGeocode({{ failure.id }})">
+                                <i class="fas fa-redo"></i> Retentar
+                            </button>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+                
+                <!-- Paginação -->
+                {% if failures.has_other_pages %}
+                <nav aria-label="Page navigation" class="mt-4">
+                    <ul class="pagination justify-content-center">
+                        {% if failures.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ failures.previous_page_number }}{% if partner_filter %}&partner={{ partner_filter }}{% endif %}{% if show_resolved %}&show_resolved=true{% endif %}">
+                                Anterior
+                            </a>
+                        </li>
+                        {% endif %}
+                        
+                        <li class="page-item disabled">
+                            <span class="page-link">Página {{ failures.number }} de {{ failures.paginator.num_pages }}</span>
+                        </li>
+                        
+                        {% if failures.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ failures.next_page_number }}{% if partner_filter %}&partner={{ partner_filter }}{% endif %}{% if show_resolved %}&show_resolved=true{% endif %}">
+                                Próxima
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+            {% else %}
+                <div class="alert alert-success">
+                    <i class="fas fa-check-circle"></i> Nenhuma falha de geocodificação encontrada!
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+function retryGeocode(failureId) {
+    if (!confirm('Deseja retentar a geocodificação deste endereço?')) {
+        return;
+    }
+    
+    // TODO: Implementar endpoint para retentar geocodificação
+    alert('Funcionalidade em desenvolvimento');
+}
+</script>
+{% endblock %}

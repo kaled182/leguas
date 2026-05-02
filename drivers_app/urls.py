@@ -33,6 +33,33 @@ urlpatterns = [
         views.admin_active_drivers,
         name="admin_active_drivers",
     ),
+    # Bulk actions na página Motoristas Ativos
+    path(
+        "admin/bulk/block/",
+        views.bulk_block_drivers,
+        name="bulk_block_drivers",
+    ),
+    path(
+        "admin/bulk/unblock/",
+        views.bulk_unblock_drivers,
+        name="bulk_unblock_drivers",
+    ),
+    path(
+        "admin/bulk/whatsapp/",
+        views.bulk_whatsapp_drivers,
+        name="bulk_whatsapp_drivers",
+    ),
+    path(
+        "admin/bulk/export-csv/",
+        views.bulk_export_drivers_csv,
+        name="bulk_export_drivers_csv",
+    ),
+    # Drawer / quick-view API
+    path(
+        "admin/quickview/<int:driver_id>/",
+        views.driver_quickview,
+        name="driver_quickview",
+    ),
     # Admin - Gestão Completa (Edição, Documentos, Veículos)
     path(
         "admin/editar/<int:driver_id>/pessoal/",
@@ -94,5 +121,86 @@ urlpatterns = [
         "api/register-typebot/",
         views.register_driver_typebot,
         name="register_driver_typebot",
+    ),
+    # Indicações / Referrals
+    path("api/referrals/search/", views.referral_search_drivers, name="referral-search"),
+    path("api/referrals/<int:driver_id>/", views.referral_list, name="referral-list"),
+    path("api/referrals/<int:driver_id>/add/", views.referral_add, name="referral-add"),
+    path("api/referrals/item/<int:referral_id>/update/", views.referral_update, name="referral-update"),
+    path("api/referrals/item/<int:referral_id>/delete/", views.referral_delete, name="referral-delete"),
+    # Empresas Parceiras
+    path("empresas-parceiras/", views.empresas_parceiras_list, name="empresas-parceiras"),
+    path("api/empresas-parceiras/create/", views.empresa_parceira_create, name="empresa-parceira-create"),
+    path("api/empresas-parceiras/<int:empresa_id>/update/", views.empresa_parceira_update, name="empresa-parceira-update"),
+    path("api/empresas-parceiras/<int:empresa_id>/delete/", views.empresa_parceira_delete, name="empresa-parceira-delete"),
+    path("api/empresas-parceiras/<int:empresa_id>/motoristas/", views.empresa_parceira_motoristas, name="empresa-parceira-motoristas"),
+    path("api/empresas-parceiras/<int:empresa_id>/motoristas/search/", views.empresa_parceira_search_drivers, name="empresa-parceira-search-drivers"),
+    path("api/empresas-parceiras/<int:empresa_id>/motoristas/<int:driver_id>/assign/", views.empresa_parceira_assign_driver, name="empresa-parceira-assign-driver"),
+    path("api/empresas-parceiras/<int:empresa_id>/motoristas/<int:driver_id>/remove/", views.empresa_parceira_remove_driver, name="empresa-parceira-remove-driver"),
+    path("api/empresas-parceiras/<int:empresa_id>/prefaturas/", views.empresa_parceira_prefaturas, name="empresa-parceira-prefaturas"),
+    # Auto-emit config (Fase 6.7)
+    path("api/empresas-parceiras/<int:empresa_id>/auto-emit/", views.empresa_auto_emit_config, name="empresa-auto-emit-config"),
+    path("api/empresas-parceiras/<int:empresa_id>/auto-emit/run-now/", views.empresa_auto_emit_run_now, name="empresa-auto-emit-run-now"),
+    # Lançamentos manuais
+    path("api/empresas-parceiras/<int:empresa_id>/lancamentos/create/", views.empresa_lancamento_create, name="empresa-lancamento-create"),
+    path("api/empresas-parceiras/lancamentos/<int:lancamento_id>/update/", views.empresa_lancamento_update, name="empresa-lancamento-update"),
+    path("api/empresas-parceiras/lancamentos/<int:lancamento_id>/delete/", views.empresa_lancamento_delete, name="empresa-lancamento-delete"),
+    # PDF Pré-fatura Empresa Parceira
+    path(
+        "empresas-parceiras/<int:empresa_id>/prefatura/pdf/",
+        views.empresa_parceira_prefatura_pdf,
+        name="empresa-parceira-prefatura-pdf",
+    ),
+    # Painel Global de Reclamações
+    path(
+        "admin/reclamacoes/",
+        views.admin_complaints_dashboard,
+        name="admin_complaints_dashboard",
+    ),
+    path(
+        "api/admin/reclamacoes/list/",
+        views.admin_complaints_list_api,
+        name="admin_complaints_list_api",
+    ),
+    path(
+        "api/admin/reclamacoes/driver-search/",
+        views.admin_complaints_driver_search,
+        name="admin_complaints_driver_search",
+    ),
+    # Reclamações de Clientes
+    path(
+        "api/complaints/<int:driver_id>/",
+        views.driver_complaints_api,
+        name="driver-complaints-api",
+    ),
+    path(
+        "api/complaints/<int:driver_id>/create/",
+        views.driver_complaint_create,
+        name="driver-complaint-create",
+    ),
+    path(
+        "api/complaints/item/<int:complaint_id>/update/",
+        views.driver_complaint_update,
+        name="driver-complaint-update",
+    ),
+    path(
+        "api/complaints/item/<int:complaint_id>/delete/",
+        views.driver_complaint_delete,
+        name="driver-complaint-delete",
+    ),
+    path(
+        "api/complaints/item/<int:complaint_id>/attachment/add/",
+        views.driver_complaint_add_attachment,
+        name="driver-complaint-attachment-add",
+    ),
+    path(
+        "api/complaints/attachment/<int:attachment_id>/delete/",
+        views.driver_complaint_delete_attachment,
+        name="driver-complaint-attachment-delete",
+    ),
+    path(
+        "complaints/<int:complaint_id>/pdf/",
+        views.driver_complaint_pdf,
+        name="driver-complaint-pdf",
     ),
 ]

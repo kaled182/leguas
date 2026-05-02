@@ -1,0 +1,213 @@
+{% extends 'settlements/base.html' %}
+{% block title %}Comparar Mapas{% endblock %}
+{% block content %}
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
+
+<style>
+  .cmp-pin { display: inline-block; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white; box-shadow: 0 1px 2px rgba(0,0,0,.4); }
+  .cmp-pin-delivered { background: #10b981; }
+  .cmp-pin-driver    { background: #f59e0b; }
+  .cmp-pin-assigned  { background: #3b82f6; }
+  .cmp-pin-unassign  { background: #64748b; }
+  .cmp-pin-failure   { background: #ef4444; }
+</style>
+
+<div class="h-screen w-full flex flex-col bg-gray-50 dark:bg-gray-900">
+
+  {# Top bar #}
+  <div class="flex items-center gap-3 px-4 py-2.5 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shrink-0">
+    <a href="{% url 'cainiao-map' %}" class="inline-flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400 hover:text-indigo-600">
+      <i data-lucide="arrow-left" class="w-4 h-4"></i>Voltar ao Mapa
+    </a>
+    <div class="h-5 w-px bg-gray-200 dark:bg-gray-700"></div>
+    <h1 class="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+      <i data-lucide="columns-2" class="w-4 h-4 text-indigo-500"></i>
+      Comparar Dois Dias
+    </h1>
+
+    <div class="ml-auto flex items-center gap-4">
+      {# Shared filters #}
+      <div class="flex items-center gap-2">
+        <label class="text-xs text-gray-500 dark:text-gray-400">HUB:</label>
+        <select id="cmp-hub"
+          class="text-xs border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg px-2 py-1">
+          <option value="">— Todos —</option>
+          {% for h in hubs %}<option value="{{ h.id }}">{{ h.name }}</option>{% endfor %}
+        </select>
+      </div>
+
+      <div class="flex items-center gap-1.5" id="cmp-status-group">
+        <label class="flex items-center gap-1 text-xs cursor-pointer">
+          <input type="checkbox" class="cmp-status w-3.5 h-3.5 accent-emerald-500" value="Delivered" checked>
+          <span class="text-emerald-600">Delivered</span>
+        </label>
+        <label class="flex items-center gap-1 text-xs cursor-pointer">
+          <input type="checkbox" class="cmp-status w-3.5 h-3.5 accent-amber-500" value="Driver_received" checked>
+          <span class="text-amber-600">Driver Rec.</span>
+        </label>
+        <label class="flex items-center gap-1 text-xs cursor-pointer">
+          <input type="checkbox" class="cmp-status w-3.5 h-3.5 accent-red-500" value="Attempt Failure" checked>
+          <span class="text-red-600">Failures</span>
+        </label>
+      </div>
+
+      <label class="flex items-center gap-1 text-xs cursor-pointer">
+        <input type="checkbox" id="cmp-sync" checked class="w-4 h-4 accent-indigo-500">
+        <i data-lucide="link" class="w-3.5 h-3.5"></i>
+        <span class="text-gray-600 dark:text-gray-400">Sincronizar</span>
+      </label>
+    </div>
+  </div>
+
+  {# Two maps side by side #}
+  <div class="flex-1 flex overflow-hidden">
+
+    {# LEFT #}
+    <div class="flex-1 flex flex-col border-r border-gray-200 dark:border-gray-700 min-w-0">
+      <div class="px-4 py-2 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700/50 flex items-center gap-3">
+        <span class="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">Mapa A</span>
+        <input type="date" id="cmp-date-a"
+          class="text-xs border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded px-2 py-1">
+        <span id="cmp-stats-a" class="ml-auto text-xs text-gray-500 dark:text-gray-400">—</span>
+      </div>
+      <div id="cmp-map-a" class="flex-1 relative bg-gray-100 dark:bg-gray-900"></div>
+    </div>
+
+    {# RIGHT #}
+    <div class="flex-1 flex flex-col min-w-0">
+      <div class="px-4 py-2 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700/50 flex items-center gap-3">
+        <span class="text-xs font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider">Mapa B</span>
+        <input type="date" id="cmp-date-b"
+          class="text-xs border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded px-2 py-1">
+        <span id="cmp-stats-b" class="ml-auto text-xs text-gray-500 dark:text-gray-400">—</span>
+      </div>
+      <div id="cmp-map-b" class="flex-1 relative bg-gray-100 dark:bg-gray-900"></div>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+{% include 'system_config/_leaflet_tiles.html' %}
+
+<script>
+lucide.createIcons();
+
+const _STATUS_COLOR = {
+  'Delivered':       '#10b981',
+  'Driver_received': '#f59e0b',
+  'Assigned':        '#3b82f6',
+  'Unassign':        '#64748b',
+  'Attempt Failure': '#ef4444',
+};
+function _cmpIcon(s) {
+  const color = _STATUS_COLOR[s] || '#6b7280';
+  return L.divIcon({
+    html: `<div style="width:12px;height:12px;border-radius:50%;background:${color};border:2px solid white;box-shadow:0 1px 2px rgba(0,0,0,.4);"></div>`,
+    className: '', iconSize: [12, 12], iconAnchor: [6, 6],
+  });
+}
+
+function _cmpMkMap(elId) {
+  const map = L.map(elId, { zoomControl: true }).setView([41.504, -8.762], 9);
+  window.addTileLayer(map);
+  const cluster = L.markerClusterGroup({
+    showCoverageOnHover: false,
+    chunkedLoading: true,
+    maxClusterRadius: 55,
+    iconCreateFunction: c => {
+      const n = c.getChildCount();
+      let d = 36;
+      if (n >= 1000) d = 52;
+      else if (n >= 250) d = 46;
+      else if (n >= 50)  d = 40;
+      return L.divIcon({
+        html: `<div style="width:${d}px;height:${d}px;border-radius:50%;
+                background:rgba(79,70,229,.85);color:white;border:3px solid white;
+                box-shadow:0 2px 6px rgba(0,0,0,.3);display:flex;align-items:center;
+                justify-content:center;font-weight:700;font-size:${n>=1000?12:13}px;">
+                ${n >= 1000 ? (n/1000).toFixed(1)+'k' : n}</div>`,
+        className: '', iconSize: [d, d],
+      });
+    },
+  });
+  map.addLayer(cluster);
+  return { map, cluster };
+}
+
+const A = _cmpMkMap('cmp-map-a');
+const B = _cmpMkMap('cmp-map-b');
+
+// Sync: when one moves, the other follows
+let _cmpSyncBusy = false;
+function _cmpSync(src, dst) {
+  if (_cmpSyncBusy || !document.getElementById('cmp-sync').checked) return;
+  _cmpSyncBusy = true;
+  dst.setView(src.getCenter(), src.getZoom(), { animate: false });
+  _cmpSyncBusy = false;
+}
+A.map.on('move', () => _cmpSync(A.map, B.map));
+B.map.on('move', () => _cmpSync(B.map, A.map));
+
+function _cmpStatuses() {
+  return Array.from(document.querySelectorAll('.cmp-status:checked')).map(c => c.value);
+}
+
+async function _cmpLoad(side) {
+  const dateInput = document.getElementById(side === 'a' ? 'cmp-date-a' : 'cmp-date-b');
+  const stats = document.getElementById(side === 'a' ? 'cmp-stats-a' : 'cmp-stats-b');
+  const inst = side === 'a' ? A : B;
+  const d = dateInput.value;
+  inst.cluster.clearLayers();
+  if (!d) { stats.textContent = 'Selecciona uma data'; return; }
+  stats.textContent = 'A carregar...';
+  const p = new URLSearchParams();
+  p.set('date_from', d);
+  p.set('date_to', d);
+  const hub = document.getElementById('cmp-hub').value;
+  if (hub) p.set('hub_id', hub);
+  const st = _cmpStatuses();
+  if (st.length) p.set('status', st.join(','));
+  try {
+    const resp = await fetch(`/settlements/cainiao/map-pins/?${p.toString()}`);
+    const data = await resp.json();
+    const markers = [];
+    let delivered = 0;
+    (data.pins || []).forEach(pin => {
+      if (pin.status === 'Delivered') delivered++;
+      const m = L.marker([pin.lat, pin.lng], { icon: _cmpIcon(pin.status) });
+      m.bindPopup(`<div style="font-family:monospace;font-size:11px;"><b>${pin.waybill}</b><br>${pin.status}<br>${pin.courier || ''}<br><a href="/settlements/cainiao/waybill/${encodeURIComponent(pin.waybill)}/" target="_blank">Ver detalhe →</a></div>`);
+      markers.push(m);
+    });
+    inst.cluster.addLayers(markers);
+    const total = data.returned;
+    const rate = total ? Math.round(delivered / total * 100) : 0;
+    stats.innerHTML = `<strong>${total}</strong> pinos · ${rate}% entregues`;
+  } catch (e) { stats.textContent = 'Erro'; }
+}
+
+document.getElementById('cmp-date-a').addEventListener('change', () => _cmpLoad('a'));
+document.getElementById('cmp-date-b').addEventListener('change', () => _cmpLoad('b'));
+document.getElementById('cmp-hub').addEventListener('change', () => { _cmpLoad('a'); _cmpLoad('b'); });
+document.querySelectorAll('.cmp-status').forEach(cb =>
+  cb.addEventListener('change', () => { _cmpLoad('a'); _cmpLoad('b'); }));
+
+// Default: today and yesterday
+const _today = new Date();
+const _yesterday = new Date();
+_yesterday.setDate(_today.getDate() - 1);
+const _fmt = d => d.toISOString().slice(0, 10);
+document.getElementById('cmp-date-a').value = _fmt(_yesterday);
+document.getElementById('cmp-date-b').value = _fmt(_today);
+_cmpLoad('a');
+_cmpLoad('b');
+</script>
+
+{% endblock %}

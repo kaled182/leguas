@@ -13,6 +13,21 @@ class SystemConfiguration(models.Model):
     company_name = models.CharField(
         "Nome da Empresa", max_length=255, blank=True, null=True
     )
+    company_nif = models.CharField(
+        "NIF", max_length=20, blank=True, null=True
+    )
+    company_morada = models.CharField(
+        "Morada", max_length=300, blank=True, null=True
+    )
+    company_localidade = models.CharField(
+        "Localidade (Código Postal + Cidade)", max_length=200, blank=True, null=True
+    )
+    company_telefone = models.CharField(
+        "Telefone", max_length=30, blank=True, null=True
+    )
+    company_email = models.EmailField(
+        "Email", max_length=200, blank=True, null=True
+    )
     logo = models.ImageField(
         "Logotipo", upload_to="system_config/logos/", null=True, blank=True
     )
@@ -521,6 +536,47 @@ class ConfigurationAudit(models.Model):
 
     def __str__(self):
         return f"{self.user} - {self.action} - {self.timestamp}"
+
+    @classmethod
+    def log_change(
+        cls,
+        user=None,
+        action="",
+        section=None,
+        field_name=None,
+        old_value=None,
+        new_value=None,
+        request=None,
+        success=True,
+    ):
+        """Convenience classmethod to create an audit record.
+
+        ``section`` is stored in ``field_name`` (legacy parameter name kept
+        for backwards-compatibility with backup_views and other callers).
+        ``success`` is appended to ``action`` when False so failures are
+        distinguishable without requiring a schema change.
+        """
+        ip = None
+        if request is not None:
+            x_forwarded = request.META.get("HTTP_X_FORWARDED_FOR", "")
+            ip = (
+                x_forwarded.split(",")[0].strip()
+                if x_forwarded
+                else request.META.get("REMOTE_ADDR")
+            )
+
+        effective_action = action if success else f"{action}_failed"
+        try:
+            cls.objects.create(
+                user=user,
+                action=effective_action,
+                field_name=field_name or section,
+                old_value=old_value,
+                new_value=str(new_value) if new_value is not None else None,
+                ip_address=ip,
+            )
+        except Exception:
+            pass  # Audit failure must never break the main flow
 
 
 class CronJobExecution(models.Model):

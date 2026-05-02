@@ -1,55 +1,83 @@
-const form = document.getElementById("formSyncApiPaack");
-const loader = document.getElementById("loader");
+(function () {
+  "use strict";
 
-form.addEventListener("submit", function (e) {
-  e.preventDefault(); // Prevenir o submit normal do formulário
-  
-  loader.classList.remove("hidden");
-  
-  // Limpar o log box antes de iniciar
-  const logBox = document.getElementById("logBox");
-  logBox.innerText = "";
-  
-  // Iniciar o streaming de status
-  fetch("/paackos/real-time-sync-status/")
-    .then(response => {
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
+  // Elements may not exist on all pages — guard silently.
+  var syncBtn = document.getElementById("syncButtonaApiPaack");
+  var loader  = document.getElementById("loader");
 
-      function read() {
-        reader.read().then(({ done, value }) => {
-          if (done) {
-            // Sincronização finalizada
-            setTimeout(() => {
-              logBox.innerText += "\n🔄 Recarregando página em 3 segundos...\n";
-              setTimeout(() => {
-                window.location.reload();
-              }, 3000);
-            }, 1000);
-            return;
-          }
-          
-          // Adicionar novo conteúdo ao log
-          logBox.innerText += decoder.decode(value);
-          logBox.scrollTop = logBox.scrollHeight; // auto scroll
-          read();
-        }).catch(error => {
-          console.error('Erro no streaming:', error);
-          logBox.innerText += `\n❌ Erro no streaming: ${error.message}\n`;
-        });
-      }
-      read();
+  if (!syncBtn || !loader) return;
+
+  var logBox = document.getElementById("logBox");
+
+  syncBtn.addEventListener("click", function () {
+    var csrfToken = syncBtn.dataset.csrf || "";
+    var syncUrl   = syncBtn.dataset.syncUrl || "/paackos/sync/";
+
+    syncBtn.disabled = true;
+    loader.classList.remove("hidden");
+    if (logBox) logBox.innerText = "";
+
+    // POST to kick off the sync, then stream real-time status.
+    fetch(syncUrl, {
+      method: "POST",
+      headers: {
+        "X-CSRFToken": csrfToken,
+        "X-Requested-With": "XMLHttpRequest",
+      },
     })
-    .catch(error => {
-      console.error('Erro na requisição:', error);
-      logBox.innerText += `\n❌ Erro na requisição: ${error.message}\n`;
-      // Esconder loader em caso de erro
-      setTimeout(() => {
-        loader.classList.add("hidden");
-      }, 3000);
-    });
-});
+      .then(function () {
+        return fetch("/paackos/real-time-sync-status/");
+      })
+      .then(function (response) {
+        if (!response.ok) {
+          throw new Error("HTTP " + response.status);
+        }
+
+        var reader  = response.body.getReader();
+        var decoder = new TextDecoder();
+
+        function read() {
+          reader
+            .read()
+            .then(function (chunk) {
+              if (chunk.done) {
+                setTimeout(function () {
+                  if (logBox) {
+                    logBox.innerText += "\n🔄 Recarregando em 3 segundos...\n";
+                  }
+                  setTimeout(function () {
+                    window.location.reload();
+                  }, 3000);
+                }, 1000);
+                return;
+              }
+              if (logBox) {
+                logBox.innerText += decoder.decode(chunk.value);
+                logBox.scrollTop = logBox.scrollHeight;
+              }
+              read();
+            })
+            .catch(function (err) {
+              console.error("Erro no streaming:", err);
+              if (logBox) {
+                logBox.innerText += "\n❌ Erro no streaming: " + err.message + "\n";
+              }
+              loader.classList.add("hidden");
+              syncBtn.disabled = false;
+            });
+        }
+
+        read();
+      })
+      .catch(function (err) {
+        console.error("Erro na sincronização:", err);
+        if (logBox) {
+          logBox.innerText += "\n❌ Erro: " + err.message + "\n";
+        }
+        setTimeout(function () {
+          loader.classList.add("hidden");
+          syncBtn.disabled = false;
+        }, 3000);
+      });
+  });
+})();

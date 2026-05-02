@@ -4,6 +4,8 @@ from datetime import timedelta
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import never_cache
 
 # from api_paack import models
 from django.db.models import Case, Count, F, FloatField, IntegerField, When
@@ -682,6 +684,7 @@ class DashboardDataService:
 
 
 @method_decorator(login_required, name="dispatch")
+@method_decorator(never_cache, name="dispatch")
 class DashboardView(TemplateView):
 
     template_name = "paack_dashboard/dashboard.html"

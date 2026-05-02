@@ -89,13 +89,127 @@
         </div>
       </div>
       
+      <!-- Configuração de Autenticação -->
+      <div class="space-y-4">
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2 pb-2 border-b border-gray-200 dark:border-gray-700">
+          <i data-lucide="key" class="w-5 h-5 text-blue-600 dark:text-blue-400"></i>
+          Configuração de Autenticação
+        </h2>
+        
+        <div class="grid grid-cols-1 gap-4">
+          <div>
+            <label for="{{ form.auth_type.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Tipo de Autenticação
+            </label>
+            {{ form.auth_type }}
+            {% if form.auth_type.errors %}
+            <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ form.auth_type.errors.0 }}</p>
+            {% endif %}
+          </div>
+          
+          <!-- Campos genéricos (Bearer Token / API Key) -->
+          <div id="generic-auth-fields" style="display:none;">
+            <div class="space-y-4 p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
+              <div>
+                <label for="{{ form.api_key.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  API Key
+                </label>
+                {{ form.api_key }}
+                {% if form.api_key.errors %}
+                <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ form.api_key.errors.0 }}</p>
+                {% endif %}
+              </div>
+              
+              <div>
+                <label for="{{ form.api_secret.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  API Secret (opcional)
+                </label>
+                {{ form.api_secret }}
+                {% if form.api_secret.errors %}
+                <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ form.api_secret.errors.0 }}</p>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          
+          <!-- Campos Basic Auth -->
+          <div id="basic-auth-fields" style="display:none;">
+            <div class="space-y-4 p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
+              <div>
+                <label for="{{ form.username.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Usuário
+                </label>
+                {{ form.username }}
+                {% if form.username.errors %}
+                <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ form.username.errors.0 }}</p>
+                {% endif %}
+              </div>
+              
+              <div>
+                <label for="{{ form.password.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Senha
+                </label>
+                {{ form.password }}
+                {% if form.password.errors %}
+                <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ form.password.errors.0 }}</p>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          
+          <!-- Campos Paack/AppSheet -->
+          <div id="paack-auth-fields" style="display:none;">
+            <div class="space-y-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+              <div class="flex items-start gap-2 mb-2">
+                <i data-lucide="info" class="w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5"></i>
+                <p class="text-xs text-blue-800 dark:text-blue-200">
+                  Configuração específica para integração Paack via AppSheet. Obtenha as credenciais no <a href="https://www.appsheet.com" target="_blank" class="underline">AppSheet Portal</a>.
+                </p>
+              </div>
+              
+              <div>
+                <label for="{{ form.paack_api_url.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  API URL (AppSheet)
+                </label>
+                {{ form.paack_api_url }}
+                {% if form.paack_api_url.errors %}
+                <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ form.paack_api_url.errors.0 }}</p>
+                {% endif %}
+              </div>
+              
+              <div>
+                <label for="{{ form.paack_cookie_key.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Cookie Key
+                </label>
+                {{ form.paack_cookie_key }}
+                {% if form.paack_cookie_key.errors %}
+                <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ form.paack_cookie_key.errors.0 }}</p>
+                {% endif %}
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Cookie de autenticação (.JEENEEATH-3P=...)</p>
+              </div>
+              
+              <div>
+                <label for="{{ form.paack_sync_token.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Sync Token (JWT)
+                </label>
+                {{ form.paack_sync_token }}
+                {% if form.paack_sync_token.errors %}
+                <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ form.paack_sync_token.errors.0 }}</p>
+                {% endif %}
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Token JWT para sincronização (eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...)</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
       <!-- Informação Adicional -->
-      <div class="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+      <div class="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
         <div class="flex items-start gap-3">
-          <i data-lucide="info" class="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5"></i>
-          <div class="text-sm text-blue-800 dark:text-blue-200">
-            <p class="font-medium mb-1">Nota sobre Credenciais de Autenticação</p>
-            <p>As credenciais de autenticação (API keys, tokens, etc.) devem ser configuradas separadamente via Django Admin por questões de segurança.</p>
+          <i data-lucide="alert-triangle" class="w-5 h-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5"></i>
+          <div class="text-sm text-yellow-800 dark:text-yellow-200">
+            <p class="font-medium mb-1">Segurança de Credenciais</p>
+            <p>As credenciais são armazenadas criptografadas no banco de dados. Nunca compartilhe tokens ou senhas com terceiros.</p>
           </div>
         </div>
       </div>
@@ -115,6 +229,31 @@
 </div>
 
 <script>
+  // Função para mostrar/esconder campos de autenticação baseado no tipo selecionado
+  function toggleAuthFields(authType) {
+    // Esconder todos os campos primeiro
+    document.getElementById('generic-auth-fields').style.display = 'none';
+    document.getElementById('basic-auth-fields').style.display = 'none';
+    document.getElementById('paack-auth-fields').style.display = 'none';
+    
+    // Mostrar campos específicos baseado no tipo
+    if (authType === 'bearer' || authType === 'api_key') {
+      document.getElementById('generic-auth-fields').style.display = 'block';
+    } else if (authType === 'basic') {
+      document.getElementById('basic-auth-fields').style.display = 'block';
+    } else if (authType === 'custom_paack') {
+      document.getElementById('paack-auth-fields').style.display = 'block';
+    }
+  }
+  
+  // Executar ao carregar a página
+  document.addEventListener('DOMContentLoaded', function() {
+    const authTypeSelect = document.getElementById('{{ form.auth_type.id_for_label }}');
+    if (authTypeSelect) {
+      toggleAuthFields(authTypeSelect.value);
+    }
+  });
+  
   lucide.createIcons();
 </script>
 {% endblock %}

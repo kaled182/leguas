@@ -1,0 +1,258 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Falhas de Geocodificação - Leguas{% endblock %}
+
+{% block content %}
+<main class="flex-1 p-4 lg:p-8">
+    <!-- Header -->
+    <div class="mb-6">
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+            <i data-lucide="map-pin-off" class="inline-block w-8 h-8 text-red-500 mr-2"></i>
+            Relatório de Falhas de Geocodificação
+        </h1>
+        <p class="text-gray-600 dark:text-gray-400">
+            Endereços que não foram geocodificados automaticamente
+        </p>
+    </div>
+    
+    <!-- Estatísticas -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <!-- Não Resolvidos -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border-l-4 border-red-500">
+            <div class="text-3xl font-bold text-red-600 dark:text-red-400 mb-2">
+                {{ stats.unresolved }}
+            </div>
+            <div class="text-sm text-gray-600 dark:text-gray-400">
+                Não Resolvidos
+            </div>
+        </div>
+        
+        <!-- Resolvidos -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border-l-4 border-green-500">
+            <div class="text-3xl font-bold text-green-600 dark:text-green-400 mb-2">
+                {{ stats.resolved }}
+            </div>
+            <div class="text-sm text-gray-600 dark:text-gray-400">
+                Resolvidos
+            </div>
+        </div>
+        
+        <!-- Total Geocodificados -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border-l-4 border-blue-500">
+            <div class="text-3xl font-bold text-blue-600 dark:text-blue-400 mb-2">
+                {{ stats.total_geocoded }}
+            </div>
+            <div class="text-sm text-gray-600 dark:text-gray-400">
+                Geocodificados
+            </div>
+        </div>
+        
+        <!-- Taxa de Sucesso -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border-l-4 {% if stats.success_rate >= 90 %}border-green-500{% elif stats.success_rate >= 70 %}border-yellow-500{% else %}border-red-500{% endif %}">
+            <div class="text-3xl font-bold {% if stats.success_rate >= 90 %}text-green-600 dark:text-green-400{% elif stats.success_rate >= 70 %}text-yellow-600 dark:text-yellow-400{% else %}text-red-600 dark:text-red-400{% endif %} mb-2">
+                {{ stats.success_rate }}%
+            </div>
+            <div class="text-sm text-gray-600 dark:text-gray-400">
+                Taxa de Sucesso
+            </div>
+        </div>
+    </div>
+    
+    <!-- Top Códigos Postais com Falhas -->
+    {% if top_postal_codes %}
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            <i data-lucide="bar-chart-3" class="inline-block w-5 h-5 mr-2"></i>
+            Top 10 Códigos Postais com Falhas
+        </h3>
+        <div class="space-y-3">
+            {% for item in top_postal_codes %}
+            <div>
+                <div class="flex justify-between text-sm mb-1">
+                    <span class="font-medium text-gray-700 dark:text-gray-300">{{ item.postal_code }}</span>
+                    <span class="text-gray-600 dark:text-gray-400">{{ item.count }} falha{{ item.count|pluralize:"s" }}</span>
+                </div>
+                <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                    <div class="bg-gradient-to-r from-red-500 to-red-600 h-2 rounded-full" style="width: {% widthratio item.count top_postal_codes.0.count 100 %}%"></div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Filtros -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-6">
+        <form method="get" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Parceiro
+                </label>
+                <input type="text" name="partner" 
+                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white" 
+                       value="{{ partner_filter }}" 
+                       placeholder="Ex: Delnext">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Mostrar Resolvidos
+                </label>
+                <select name="show_resolved" 
+                        class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 dark:bg-gray-700 dark:text-white">
+                    <option value="false" {% if not show_resolved %}selected{% endif %}>Não</option>
+                    <option value="true" {% if show_resolved %}selected{% endif %}>Sim</option>
+                </select>
+            </div>
+            <div class="flex items-end">
+                <button type="submit" 
+                        class="w-full px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors">
+                    <i data-lucide="filter" class="inline-block w-4 h-4 mr-1"></i>
+                    Filtrar
+                </button>
+            </div>
+            <div class="flex items-end">
+                <a href="{% url 'orders:geocoding_failures_report' %}" 
+                   class="w-full px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors text-center">
+                    <i data-lucide="rotate-ccw" class="inline-block w-4 h-4 mr-1"></i>
+                    Limpar
+                </a>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Lista de Falhas -->
+    {% if failures %}
+        <div class="space-y-4">
+            {% for failure in failures %}
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden border-l-4 {% if failure.resolved %}border-green-500{% else %}border-red-500{% endif %}">
+                <div class="p-5">
+                    <!-- Header -->
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2 mb-2">
+                                {% if failure.resolved %}
+                                    <i data-lucide="check-circle" class="w-5 h-5 text-green-500"></i>
+                                    <span class="text-sm font-medium text-green-600 dark:text-green-400">RESOLVIDO</span>
+                                {% else %}
+                                    <i data-lucide="alert-triangle" class="w-5 h-5 text-red-500"></i>
+                                    <span class="text-sm font-medium text-red-600 dark:text-red-400">NÃO RESOLVIDO</span>
+                                {% endif %}
+                            </div>
+                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+                                Pedido: <a href="{% url 'orders:order_detail' failure.order.id %}" 
+                                          class="text-primary-600 hover:text-primary-700 dark:text-primary-400">
+                                    {{ failure.order.external_reference }}
+                                </a>
+                                {% if failure.retry_count > 1 %}
+                                    <span class="ml-2 px-2 py-1 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 text-xs font-bold rounded">
+                                        {{ failure.retry_count }} tentativas
+                                    </span>
+                                {% endif %}
+                            </h3>
+                        </div>
+                    </div>
+                    
+                    <!-- Endereços -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                Endereço Original:
+                            </label>
+                            <div class="bg-gray-100 dark:bg-gray-900 rounded p-3 font-mono text-sm text-gray-800 dark:text-gray-200">
+                                {{ failure.original_address }}
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                Endereço Normalizado:
+                            </label>
+                            <div class="bg-yellow-50 dark:bg-yellow-900/20 rounded p-3 font-mono text-sm text-gray-800 dark:text-gray-200">
+                                {{ failure.normalized_address }}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Detalhes -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">
+                        <div class="text-sm">
+                            <span class="font-semibold text-gray-700 dark:text-gray-300">CP:</span>
+                            <span class="text-gray-600 dark:text-gray-400">{{ failure.postal_code }}</span>
+                        </div>
+                        <div class="text-sm">
+                            <span class="font-semibold text-gray-700 dark:text-gray-300">Localidade:</span>
+                            <span class="text-gray-600 dark:text-gray-400">{{ failure.locality|default:"N/A" }}</span>
+                        </div>
+                        <div class="text-sm">
+                            <span class="font-semibold text-gray-700 dark:text-gray-300">Parceiro:</span>
+                            <span class="text-gray-600 dark:text-gray-400">{{ failure.order.partner.name }}</span>
+                        </div>
+                    </div>
+                    
+                    {% if failure.failure_reason %}
+                    <div class="mb-3">
+                        <span class="text-xs font-semibold text-gray-700 dark:text-gray-300">Motivo:</span>
+                        <span class="text-xs text-gray-600 dark:text-gray-400">{{ failure.failure_reason }}</span>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Timestamps -->
+                    <div class="text-xs text-gray-500 dark:text-gray-400 border-t dark:border-gray-700 pt-3">
+                        Primeira tentativa: {{ failure.attempted_at|date:"d/m/Y H:i" }} | 
+                        Última tentativa: {{ failure.last_retry_at|date:"d/m/Y H:i" }}
+                        {% if failure.resolved %}
+                            | Resolvido em: {{ failure.resolved_at|date:"d/m/Y H:i" }}
+                            {% if failure.resolved_by %}por {{ failure.resolved_by.get_full_name }}{% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <!-- Paginação -->
+        {% if failures.has_other_pages %}
+        <div class="flex justify-center mt-6">
+            <nav class="inline-flex rounded-md shadow-sm">
+                {% if failures.has_previous %}
+                <a href="?page={{ failures.previous_page_number }}{% if partner_filter %}&partner={{ partner_filter }}{% endif %}{% if show_resolved %}&show_resolved=true{% endif %}" 
+                   class="px-4 py-2 text-sm font-medium text-gray-700 bg-white dark:bg-gray-800 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-l-lg hover:bg-gray-50 dark:hover:bg-gray-700">
+                    « Anterior
+                </a>
+                {% endif %}
+                
+                <span class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 dark:bg-gray-900 dark:text-gray-300 border-t border-b border-gray-300 dark:border-gray-600">
+                    Página {{ failures.number }} de {{ failures.paginator.num_pages }}
+                </span>
+                
+                {% if failures.has_next %}
+                <a href="?page={{ failures.next_page_number }}{% if partner_filter %}&partner={{ partner_filter }}{% endif %}{% if show_resolved %}&show_resolved=true{% endif %}" 
+                   class="px-4 py-2 text-sm font-medium text-gray-700 bg-white dark:bg-gray-800 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-r-lg hover:bg-gray-50 dark:hover:bg-gray-700">
+                    Próxima »
+                </a>
+                {% endif %}
+            </nav>
+        </div>
+        {% endif %}
+    {% else %}
+        <div class="bg-green-50 dark:bg-green-900/20 border-l-4 border-green-500 p-4 rounded-lg">
+            <div class="flex items-center">
+                <i data-lucide="check-circle" class="w-6 h-6 text-green-500 mr-3"></i>
+                <div>
+                    <h3 class="text-lg font-semibold text-green-800 dark:text-green-300">
+                        Nenhuma falha encontrada!
+                    </h3>
+                    <p class="text-green-700 dark:text-green-400">
+                        Todos os endereços foram geocodificados com sucesso.
+                    </p>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</main>
+
+<script>
+  // Inicializa os ícones Lucide
+  lucide.createIcons();
+</script>
+{% endblock %}

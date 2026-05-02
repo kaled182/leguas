@@ -1,0 +1,175 @@
+{% extends 'settlements/base.html' %}
+{% load static %}
+{% block title %}{% if is_create %}Nova{% else %}Editar{% endif %} Conta a Pagar{% endblock %}
+{% block content %}
+<style>
+  .fld { width:100%; padding:0.5rem 0.75rem; border:1px solid #d1d5db; border-radius:0.5rem; font-size:0.875rem; background:#fff; }
+  .dark .fld { background:#1f2937; border-color:#374151; color:#fff; }
+</style>
+<div class="max-w-4xl mx-auto px-4 py-6">
+  <div class="flex items-center gap-3 mb-4">
+    <a href="{% url 'accounting:bill_list' %}" class="text-gray-500 hover:text-gray-700">
+      <i data-lucide="arrow-left" class="w-5 h-5"></i>
+    </a>
+    <h1 class="text-2xl font-bold flex items-center gap-2">
+      <i data-lucide="{% if is_create %}plus-circle{% else %}edit{% endif %}" class="w-6 h-6 text-rose-500"></i>
+      {% if is_create %}Nova Conta a Pagar{% else %}Editar Conta · {{ bill.description }}{% endif %}
+    </h1>
+  </div>
+
+  {% if form.errors %}
+  <div class="bg-rose-50 border border-rose-300 text-rose-700 rounded-lg p-3 mb-4 text-sm">
+    {{ form.non_field_errors }}
+    {% for field in form %}{% if field.errors %}<div><strong>{{ field.label }}:</strong> {{ field.errors|join:", " }}</div>{% endif %}{% endfor %}
+  </div>
+  {% endif %}
+
+  <form method="post" enctype="multipart/form-data" class="space-y-5">
+    {% csrf_token %}
+
+    <!-- Dados Principais -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-5">
+      <h2 class="text-sm font-bold text-gray-800 dark:text-white mb-3 flex items-center gap-2">
+        <i data-lucide="file-text" class="w-4 h-4 text-indigo-500"></i>
+        Dados da Conta
+      </h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div class="md:col-span-2">
+          <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Descrição *</label>
+          {{ form.description }}
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Fornecedor *</label>
+          {{ form.supplier }}
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">NIF do Fornecedor</label>
+          {{ form.supplier_nif }}
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Nº Factura</label>
+          {{ form.invoice_number }}
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Categoria *</label>
+          {{ form.category }}
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Centro de Custo *</label>
+          {{ form.cost_center }}
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Recorrência</label>
+          {{ form.recurrence }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Valores -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-5">
+      <h2 class="text-sm font-bold text-gray-800 dark:text-white mb-3 flex items-center gap-2">
+        <i data-lucide="euro" class="w-4 h-4 text-amber-500"></i>
+        Valores e Datas
+      </h2>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Valor sem IVA *</label>
+          {{ form.amount_net }}
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Taxa IVA %</label>
+          {{ form.iva_rate }}
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Valor com IVA *</label>
+          {{ form.amount_total }}
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Data de Emissão *</label>
+          {{ form.issue_date }}
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Data de Vencimento *</label>
+          {{ form.due_date }}
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Data de Pagamento</label>
+          {{ form.paid_date }}
+        </div>
+        <div class="md:col-span-3">
+          <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Estado</label>
+          {{ form.status }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Anexos -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-5">
+      <h2 class="text-sm font-bold text-gray-800 dark:text-white mb-3 flex items-center gap-2">
+        <i data-lucide="paperclip" class="w-4 h-4 text-violet-500"></i>
+        Anexos (PDF / JPG / PNG)
+      </h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Factura / Recibo</label>
+          <input type="file" name="attachments_invoice" multiple class="fld" accept=".pdf,.jpg,.jpeg,.png">
+          <p class="text-[10px] text-gray-500 mt-1">Podes anexar várias facturas se necessário.</p>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Comprovante de Pagamento</label>
+          <input type="file" name="attachments_proof" multiple class="fld" accept=".pdf,.jpg,.jpeg,.png">
+          <p class="text-[10px] text-gray-500 mt-1">Multibanco, transferência, recibo de pagamento…</p>
+        </div>
+      </div>
+      {% if not is_create and bill.attachments.exists %}
+      <div class="mt-4 border-t border-gray-200 dark:border-gray-700 pt-3">
+        <p class="text-xs font-semibold text-gray-600 mb-2">Anexos existentes ({{ bill.attachments.count }}):</p>
+        <ul class="space-y-1 text-sm">
+          {% for att in bill.attachments.all %}
+          <li class="flex items-center gap-2">
+            <i data-lucide="{% if att.is_image %}image{% elif att.is_pdf %}file-text{% else %}file{% endif %}" class="w-4 h-4 text-gray-500"></i>
+            <a href="{{ att.file.url }}" target="_blank" class="text-indigo-600 hover:underline">{{ att.filename }}</a>
+            <span class="text-[10px] px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded">{{ att.get_kind_display }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Notas -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-5">
+      <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Notas internas</label>
+      {{ form.notes }}
+    </div>
+
+    <!-- Acções -->
+    <div class="flex justify-end gap-2">
+      <a href="{% url 'accounting:bill_list' %}" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-sm">Cancelar</a>
+      <button type="submit" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold flex items-center gap-2">
+        <i data-lucide="save" class="w-4 h-4"></i>
+        {% if is_create %}Criar Conta{% else %}Guardar{% endif %}
+      </button>
+    </div>
+  </form>
+</div>
+
+<script>
+// Auto-calcular IVA: total = net * (1 + iva/100)
+document.addEventListener('DOMContentLoaded', () => {
+  if (window.lucide) lucide.createIcons();
+  const net = document.querySelector('[name=amount_net]');
+  const rate = document.querySelector('[name=iva_rate]');
+  const tot = document.querySelector('[name=amount_total]');
+  function recompute() {
+    const n = parseFloat(net?.value || '0');
+    const r = parseFloat(rate?.value || '0');
+    if (!isNaN(n) && !isNaN(r)) {
+      tot.value = (n * (1 + r/100)).toFixed(2);
+    }
+  }
+  net?.addEventListener('input', recompute);
+  rate?.addEventListener('input', recompute);
+});
+</script>
+{% endblock %}

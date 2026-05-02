@@ -1,0 +1,244 @@
+{% extends 'settlements/base.html' %}
+{% load static %}
+{% block title %}{{ bill.description }}{% endblock %}
+{% block content %}
+<style>
+  .pill { padding:0.125rem 0.5rem; border-radius:9999px; font-size:0.7rem; font-weight:600; }
+  .pill-pending { background:#fef3c7; color:#92400e; }
+  .pill-paid { background:#d1fae5; color:#065f46; }
+  .pill-overdue { background:#fee2e2; color:#991b1b; }
+  .pill-cancelled { background:#e5e7eb; color:#6b7280; }
+  .pill-awaiting { background:#ede9fe; color:#5b21b6; }
+  .pill-rejected { background:#fce7f3; color:#9d174d; }
+</style>
+<div class="max-w-5xl mx-auto px-4 py-6 space-y-4">
+  <div class="flex items-center justify-between">
+    <a href="{% url 'accounting:bill_list' %}" class="text-gray-500 hover:text-gray-700 flex items-center gap-1 text-sm">
+      <i data-lucide="arrow-left" class="w-4 h-4"></i> Voltar
+    </a>
+    <div class="flex gap-2 flex-wrap">
+      {% if bill.status == 'AWAITING' and can_approve %}
+      <button onclick="approveBill()" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold flex items-center gap-1.5"
+              title="Aprovar esta conta para pagamento">
+        <i data-lucide="check-check" class="w-4 h-4"></i> Aprovar
+      </button>
+      <button onclick="rejectBill()" class="px-3 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-sm font-semibold flex items-center gap-1.5"
+              title="Rejeitar esta conta">
+        <i data-lucide="x-circle" class="w-4 h-4"></i> Rejeitar
+      </button>
+      {% endif %}
+      <a href="{% url 'accounting:bill_edit' bill.pk %}" class="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold flex items-center gap-1.5">
+        <i data-lucide="edit" class="w-4 h-4"></i> Editar
+      </a>
+      {% if bill.status == 'PENDING' or bill.status == 'OVERDUE' %}
+      <button onclick="markPaid()" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold flex items-center gap-1.5">
+        <i data-lucide="check-circle" class="w-4 h-4"></i> Marcar Pago
+      </button>
+      {% endif %}
+      {% if bill.recurrence != 'NONE' %}
+      <button onclick="generateNext()" class="px-3 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg text-sm font-semibold flex items-center gap-1.5"
+              title="Cria a próxima conta nesta cadeia de recorrência">
+        <i data-lucide="repeat" class="w-4 h-4"></i> Gerar Próxima
+      </button>
+      {% endif %}
+      <form method="post" action="{% url 'accounting:bill_delete' bill.pk %}" onsubmit="return confirm('Apagar esta conta?')">
+        {% csrf_token %}
+        <button type="submit" class="px-3 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-sm font-semibold flex items-center gap-1.5">
+          <i data-lucide="trash-2" class="w-4 h-4"></i> Apagar
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Hero -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+    <div class="flex items-start justify-between flex-wrap gap-3 mb-4">
+      <div>
+        <p class="text-xs text-gray-500 uppercase">Descrição</p>
+        <h1 class="text-2xl font-bold">{{ bill.description }}</h1>
+        <p class="text-sm text-gray-600 dark:text-gray-300 mt-1">
+          <i data-lucide="building" class="w-3.5 h-3.5 inline"></i>
+          {{ bill.supplier }}{% if bill.supplier_nif %} · NIF {{ bill.supplier_nif }}{% endif %}
+        </p>
+        {% if bill.invoice_number %}
+        <p class="text-xs text-gray-500">Factura nº {{ bill.invoice_number }}</p>
+        {% endif %}
+      </div>
+      <div class="text-right">
+        <span class="pill pill-{{ bill.status|lower }}">{{ bill.get_status_display }}</span>
+        <p class="text-3xl font-bold mt-2 text-gray-900 dark:text-white">€{{ bill.amount_total|floatformat:2 }}</p>
+        <p class="text-xs text-gray-500">net €{{ bill.amount_net|floatformat:2 }} + IVA {{ bill.iva_rate|floatformat:2 }}% (€{{ bill.iva_amount|floatformat:2 }})</p>
+      </div>
+    </div>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div>
+        <p class="text-[10px] text-gray-500 uppercase">Centro de Custo</p>
+        <p class="text-sm font-medium">
+          <span class="px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs">
+            {{ bill.cost_center.name }}
+          </span>
+        </p>
+      </div>
+      <div>
+        <p class="text-[10px] text-gray-500 uppercase">Categoria</p>
+        <p class="text-sm">{{ bill.category.name }}</p>
+        <p class="text-[10px] text-gray-400">{{ bill.category.get_nature_display }}</p>
+      </div>
+      <div>
+        <p class="text-[10px] text-gray-500 uppercase">Vencimento</p>
+        <p class="text-sm font-mono">{{ bill.due_date|date:"d/m/Y" }}</p>
+        <p class="text-[10px] text-gray-400">Emissão: {{ bill.issue_date|date:"d/m/Y" }}</p>
+      </div>
+      <div>
+        <p class="text-[10px] text-gray-500 uppercase">Pago em</p>
+        <p class="text-sm font-mono">{% if bill.paid_date %}{{ bill.paid_date|date:"d/m/Y" }}{% else %}—{% endif %}</p>
+        {% if bill.recurrence != 'NONE' %}
+        <p class="text-[10px] text-violet-600">↻ {{ bill.get_recurrence_display }}</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Histórico de aprovações -->
+  {% if bill.approvals.exists or bill.status == 'AWAITING' %}
+  <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+    <h2 class="text-sm font-bold mb-3 flex items-center gap-2">
+      <i data-lucide="shield-check" class="w-4 h-4 text-violet-500"></i>
+      Aprovações
+      {% if bill.status == 'AWAITING' %}
+        <span class="pill pill-awaiting ml-1">A Aguardar</span>
+      {% endif %}
+    </h2>
+    {% if bill.status == 'AWAITING' and not can_approve %}
+    <p class="text-xs text-gray-500 italic mb-2">
+      Esta conta está a aguardar aprovação. Não tens permissão para aprovar bills neste valor —
+      contacta um aprovador autorizado.
+    </p>
+    {% endif %}
+    {% if bill.approvals.exists %}
+    <ul class="space-y-2">
+      {% for a in bill.approvals.all %}
+      <li class="flex items-start gap-2 p-2 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
+        <i data-lucide="{% if a.decision == 'APPROVED' %}check-circle{% else %}x-circle{% endif %}" class="w-4 h-4 mt-0.5 {% if a.decision == 'APPROVED' %}text-emerald-600{% else %}text-rose-600{% endif %}"></i>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-semibold {% if a.decision == 'APPROVED' %}text-emerald-700 dark:text-emerald-400{% else %}text-rose-700 dark:text-rose-400{% endif %}">
+            {{ a.get_decision_display }} por {{ a.approver|default:"—" }}
+            <span class="text-xs text-gray-400 font-normal">· {{ a.decided_at|date:"d/m/Y H:i" }}</span>
+          </p>
+          {% if a.comments %}<p class="text-xs text-gray-600 dark:text-gray-300 mt-1 whitespace-pre-wrap">{{ a.comments }}</p>{% endif %}
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <!-- Anexos -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+    <h2 class="text-sm font-bold mb-3 flex items-center gap-2">
+      <i data-lucide="paperclip" class="w-4 h-4 text-violet-500"></i>
+      Anexos ({{ bill.attachments.count }})
+    </h2>
+    {% if bill.attachments.exists %}
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+      {% for att in bill.attachments.all %}
+      <div class="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
+        <div class="w-10 h-10 rounded bg-{% if att.kind == 'INVOICE' %}amber{% elif att.kind == 'PROOF' %}emerald{% else %}gray{% endif %}-100 flex items-center justify-center">
+          <i data-lucide="{% if att.is_image %}image{% elif att.is_pdf %}file-text{% else %}file{% endif %}" class="w-5 h-5 text-{% if att.kind == 'INVOICE' %}amber{% elif att.kind == 'PROOF' %}emerald{% else %}gray{% endif %}-700"></i>
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="text-xs font-semibold truncate">
+            <span class="px-1.5 py-0.5 rounded text-[9px] bg-{% if att.kind == 'INVOICE' %}amber{% elif att.kind == 'PROOF' %}emerald{% else %}gray{% endif %}-100 text-{% if att.kind == 'INVOICE' %}amber{% elif att.kind == 'PROOF' %}emerald{% else %}gray{% endif %}-800">
+              {{ att.get_kind_display }}
+            </span>
+          </p>
+          <a href="{{ att.file.url }}" target="_blank" class="text-xs text-indigo-600 hover:underline block truncate">{{ att.filename }}</a>
+          <p class="text-[10px] text-gray-500">{{ att.uploaded_at|date:"d/m/Y H:i" }}</p>
+        </div>
+        <button onclick="deleteAttachment({{ att.pk }})" class="text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 p-1.5 rounded">
+          <i data-lucide="trash-2" class="w-4 h-4"></i>
+        </button>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-xs text-gray-400 italic">Sem anexos. Edita a conta para adicionar facturas/comprovantes.</p>
+    {% endif %}
+  </div>
+
+  {% if bill.notes %}
+  <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+    <h2 class="text-sm font-bold mb-2 flex items-center gap-2">
+      <i data-lucide="sticky-note" class="w-4 h-4 text-amber-500"></i> Notas
+    </h2>
+    <p class="text-sm whitespace-pre-wrap">{{ bill.notes }}</p>
+  </div>
+  {% endif %}
+</div>
+
+<script>
+function getCsrf() {
+  return document.querySelector('[name=csrfmiddlewaretoken]')?.value
+    || document.cookie.split(';').find(c => c.trim().startsWith('csrftoken='))?.split('=')[1];
+}
+async function markPaid() {
+  if (!confirm('Marcar como paga (data de hoje)?')) return;
+  const r = await fetch(`/accounting/contas-a-pagar/{{ bill.pk }}/marcar-paga/`, {
+    method: 'POST', headers: { 'X-CSRFToken': getCsrf() },
+  });
+  if ((await r.json()).success) location.reload();
+}
+async function deleteAttachment(pk) {
+  if (!confirm('Apagar este anexo?')) return;
+  const r = await fetch(`/accounting/contas-a-pagar/anexo/${pk}/apagar/`, {
+    method: 'POST', headers: { 'X-CSRFToken': getCsrf() },
+  });
+  if ((await r.json()).success) location.reload();
+}
+async function approveBill() {
+  const c = prompt('Comentário (opcional) para a aprovação:') ?? null;
+  if (c === null) return;
+  const fd = new FormData();
+  fd.append('comments', c);
+  const r = await fetch(`/accounting/contas-a-pagar/{{ bill.pk }}/aprovar/`, {
+    method: 'POST', body: fd,
+    headers: { 'X-CSRFToken': getCsrf() },
+  });
+  const d = await r.json();
+  if (d.success) location.reload(); else alert(d.error || 'Erro');
+}
+async function rejectBill() {
+  const c = prompt('Razão da rejeição:') ?? null;
+  if (c === null) return;
+  const fd = new FormData();
+  fd.append('comments', c);
+  const r = await fetch(`/accounting/contas-a-pagar/{{ bill.pk }}/rejeitar/`, {
+    method: 'POST', body: fd,
+    headers: { 'X-CSRFToken': getCsrf() },
+  });
+  const d = await r.json();
+  if (d.success) location.reload(); else alert(d.error || 'Erro');
+}
+async function generateNext() {
+  if (!confirm('Gerar a próxima instância desta conta recorrente?')) return;
+  const r = await fetch(`/accounting/contas-a-pagar/{{ bill.pk }}/gerar-proxima/`, {
+    method: 'POST', headers: { 'X-CSRFToken': getCsrf() },
+  });
+  const d = await r.json();
+  if (d.success) {
+    if (confirm(`Nova conta criada (vence em ${d.due_date}). Abrir?`)) {
+      location.href = d.redirect_url;
+    } else {
+      location.reload();
+    }
+  } else {
+    alert(d.error || 'Erro ao gerar próxima.');
+  }
+}
+document.addEventListener('DOMContentLoaded', () => {
+  if (window.lucide) lucide.createIcons();
+});
+</script>
+{% csrf_token %}
+{% endblock %}

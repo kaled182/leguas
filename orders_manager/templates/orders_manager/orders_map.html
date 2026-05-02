@@ -1,5 +1,6 @@
 {% extends 'settlements/base.html' %}
 {% load static %}
+{% load l10n %}
 
 {% block title %}Mapa de Pedidos em Tempo Real{% endblock %}
 
@@ -13,6 +14,7 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
      crossorigin=""></script>
+{% include 'system_config/_leaflet_tiles.html' %}
 
 <style>
     #map {
@@ -130,11 +132,12 @@
 
     <!-- Estat ísticas -->
     <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 cursor-pointer hover:shadow-md transition-shadow" 
+             onclick="toggleStatusFilter('all')">
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-sm text-gray-600 dark:text-gray-400">Total</p>
-                    <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ stats.total }}</p>
+                    <p class="text-2xl font-bold text-gray-900 dark:text-white" id="count-total">{{ stats.total }}</p>
                 </div>
                 <div class="p-3 bg-gray-100 dark:bg-gray-700/30 rounded-lg">
                     <i data-lucide="package" class="w-6 h-6 text-gray-600 dark:text-gray-400"></i>
@@ -142,38 +145,50 @@
             </div>
         </div>
         
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm text-gray-600 dark:text-gray-400">Pendente</p>
-                    <p class="text-2xl font-bold text-amber-600 dark:text-amber-400">{{ stats.pending }}</p>
-                </div>
-                <div class="p-3 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
-                    <i data-lucide="clock" class="w-6 h-6 text-amber-600 dark:text-amber-400"></i>
-                </div>
-            </div>
-        </div>
-        
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm text-gray-600 dark:text-gray-400">Atribuído</p>
-                    <p class="text-2xl font-bold text-blue-600 dark:text-blue-400">{{ stats.assigned }}</p>
-                </div>
-                <div class="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                    <i data-lucide="user-check" class="w-6 h-6 text-blue-600 dark:text-blue-400"></i>
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border-2 transition-all cursor-pointer hover:shadow-md" 
+             id="filter-pending"
+             onclick="toggleStatusFilter('pending')">
+            <div class="p-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">Pendente</p>
+                        <p class="text-2xl font-bold text-amber-600 dark:text-amber-400" id="count-pending">{{ stats.pending }}</p>
+                    </div>
+                    <div class="p-3 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
+                        <i data-lucide="clock" class="w-6 h-6 text-amber-600 dark:text-amber-400"></i>
+                    </div>
                 </div>
             </div>
         </div>
         
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm text-gray-600 dark:text-gray-400">Em Trânsito</p>
-                    <p class="text-2xl font-bold text-purple-600 dark:text-purple-400">{{ stats.in_transit }}</p>
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border-2 transition-all cursor-pointer hover:shadow-md" 
+             id="filter-assigned"
+             onclick="toggleStatusFilter('assigned')">
+            <div class="p-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">Atribuído</p>
+                        <p class="text-2xl font-bold text-blue-600 dark:text-blue-400" id="count-assigned">{{ stats.assigned }}</p>
+                    </div>
+                    <div class="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                        <i data-lucide="user-check" class="w-6 h-6 text-blue-600 dark:text-blue-400"></i>
+                    </div>
                 </div>
-                <div class="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
-                    <i data-lucide="truck" class="w-6 h-6 text-purple-600 dark:text-purple-400"></i>
+            </div>
+        </div>
+        
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border-2 transition-all cursor-pointer hover:shadow-md" 
+             id="filter-in_transit"
+             onclick="toggleStatusFilter('in_transit')">
+            <div class="p-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">Em Trânsito</p>
+                        <p class="text-2xl font-bold text-purple-600 dark:text-purple-400" id="count-in-transit">{{ stats.in_transit }}</p>
+                    </div>
+                    <div class="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                        <i data-lucide="truck" class="w-6 h-6 text-purple-600 dark:text-purple-400"></i>
+                    </div>
                 </div>
             </div>
         </div>
@@ -182,11 +197,56 @@
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-sm text-gray-600 dark:text-gray-400">No Mapa</p>
-                    <p class="text-2xl font-bold text-indigo-600 dark:text-indigo-400">{{ stats.with_coords }}</p>
+                    <p class="text-2xl font-bold text-indigo-600 dark:text-indigo-400" id="count-visible">{{ stats.with_coords }}</p>
                 </div>
                 <div class="p-3 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg">
                     <i data-lucide="map-pin" class="w-6 h-6 text-indigo-600 dark:text-indigo-400"></i>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros Adicionais -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-4 mb-6">
+        <div class="flex items-center justify-between flex-wrap gap-3">
+            <div class="flex items-center gap-3">
+                <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Filtros Adicionais:</h3>
+                <button onclick="toggleStatusFilter('delivered')" 
+                        id="filter-delivered"
+                        class="px-3 py-1.5 rounded-lg text-sm font-medium transition-all border-2">
+                    <i data-lucide="check-circle" class="w-4 h-4 inline mr-1"></i>
+                    Entregues
+                </button>
+                <button onclick="toggleStatusFilter('incident')" 
+                        id="filter-incident"
+                        class="px-3 py-1.5 rounded-lg text-sm font-medium transition-all border-2">
+                    <i data-lucide="alert-triangle" class="w-4 h-4 inline mr-1"></i>
+                    Incidentes
+                </button>
+                <button onclick="toggleStatusFilter('returned')" 
+                        id="filter-returned"
+                        class="px-3 py-1.5 rounded-lg text-sm font-medium transition-all border-2">
+                    <i data-lucide="rotate-ccw" class="w-4 h-4 inline mr-1"></i>
+                    Devolvidos
+                </button>
+                <button onclick="toggleStatusFilter('cancelled')" 
+                        id="filter-cancelled"
+                        class="px-3 py-1.5 rounded-lg text-sm font-medium transition-all border-2">
+                    <i data-lucide="x-circle" class="w-4 h-4 inline mr-1"></i>
+                    Cancelados
+                </button>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="showAllStatuses()" 
+                        class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-colors">
+                    <i data-lucide="eye" class="w-4 h-4 inline mr-1"></i>
+                    Mostrar Todos
+                </button>
+                <button onclick="resetFilters()" 
+                        class="px-3 py-1.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium transition-colors">
+                    <i data-lucide="rotate-cw" class="w-4 h-4 inline mr-1"></i>
+                    Resetar
+                </button>
             </div>
         </div>
     </div>
@@ -214,14 +274,115 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Inicializa o mapa
-    const map = L.map('map').setView({{ map_center }}, {{ map_zoom }});
+    // Estado dos filtros (por padrão mostra pending, assigned, in_transit)
+    const activeFilters = new Set(['pending', 'assigned', 'in_transit']);
     
-    // Adiciona tiles do OpenStreetMap
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors',
-        maxZoom: 19
-    }).addTo(map);
+    // Armazena todos os marcadores
+    const allMarkers = [];
+    
+    // Função para atualizar contadores visíveis
+    function updateVisibleCount() {
+        const visibleCount = allMarkers.filter(m => m.visible).length;
+        document.getElementById('count-visible').textContent = visibleCount;
+    }
+    
+    // Função para alternar filtro de status
+    window.toggleStatusFilter = function(status) {
+        if (status === 'all') {
+            // Mostrar filtros ativos (padrão)
+            activeFilters.clear();
+            activeFilters.add('pending');
+            activeFilters.add('assigned');
+            activeFilters.add('in_transit');
+        } else {
+            // Toggle do status específico
+            if (activeFilters.has(status)) {
+                activeFilters.delete(status);
+            } else {
+                activeFilters.add(status);
+            }
+        }
+        
+        applyFilters();
+        updateFilterUI();
+    };
+    
+    // Função para mostrar todos os status
+    window.showAllStatuses = function() {
+        activeFilters.clear();
+        ['pending', 'assigned', 'in_transit', 'delivered', 'incident', 'returned', 'cancelled'].forEach(s => {
+            activeFilters.add(s);
+        });
+        applyFilters();
+        updateFilterUI();
+    };
+    
+    // Função para resetar filtros (padrão)
+    window.resetFilters = function() {
+        activeFilters.clear();
+        activeFilters.add('pending');
+        activeFilters.add('assigned');
+        activeFilters.add('in_transit');
+        applyFilters();
+        updateFilterUI();
+    };
+    
+    // Aplicar filtros aos marcadores
+    function applyFilters() {
+        allMarkers.forEach(markerData => {
+            const shouldShow = activeFilters.has(markerData.status);
+            if (shouldShow) {
+                markerData.marker.addTo(map);
+                markerData.visible = true;
+            } else {
+                map.removeLayer(markerData.marker);
+                markerData.visible = false;
+            }
+        });
+        updateVisibleCount();
+    }
+    
+    // Atualizar UI dos filtros
+    function updateFilterUI() {
+        // Atualizar cards principais
+        ['pending', 'assigned', 'in_transit'].forEach(status => {
+            const elem = document.getElementById(`filter-${status}`);
+            if (elem) {
+                if (activeFilters.has(status)) {
+                    elem.classList.add('border-indigo-500', 'dark:border-indigo-400', 'bg-indigo-50', 'dark:bg-indigo-900/20');
+                    elem.classList.remove('border-gray-200', 'dark:border-gray-700');
+                } else {
+                    elem.classList.remove('border-indigo-500', 'dark:border-indigo-400', 'bg-indigo-50', 'dark:bg-indigo-900/20');
+                    elem.classList.add('border-gray-200', 'dark:border-gray-700');
+                }
+            }
+        });
+        
+        // Atualizar botões adicionais
+        ['delivered', 'incident', 'returned', 'cancelled'].forEach(status => {
+            const elem = document.getElementById(`filter-${status}`);
+            if (elem) {
+                if (activeFilters.has(status)) {
+                    elem.classList.add('bg-indigo-600', 'text-white', 'border-indigo-600');
+                    elem.classList.remove('bg-white', 'dark:bg-gray-800', 'text-gray-700', 'dark:text-gray-300', 'border-gray-300', 'dark:border-gray-600');
+                } else {
+                    elem.classList.remove('bg-indigo-600', 'text-white', 'border-indigo-600');
+                    elem.classList.add('bg-white', 'dark:bg-gray-800', 'text-gray-700', 'dark:text-gray-300', 'border-gray-300', 'dark:border-gray-600');
+                }
+            }
+        });
+        
+        // Recriar ícones
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+    }
+    
+    // Inicializa o mapa
+    const map = L.map('map').setView([{{ map_center.0|unlocalize }}, {{ map_center.1|unlocalize }}], {{ map_zoom }});
+
+    // Tile layer configurado no sistema (Mapbox/OSM/Esri)
+    window.addTileLayer(map);
     
     // Adiciona legenda
     const legend = L.control({position: 'bottomright'});
@@ -267,9 +428,9 @@ document.addEventListener('DOMContentLoaded', function() {
             status: "{{ item.order.current_status|lower|escapejs }}",
             status_display: "{{ item.order.get_current_status_display|escapejs }}",
             zone_name: "{{ item.zone.name|escapejs }}",
-            lat: {{ item.lat }},
-            lng: {{ item.lng }},
-            driver: "{{ item.order.assigned_driver.user.get_full_name|default:'Não atribuído'|escapejs }}",
+            lat: {{ item.lat|unlocalize }},
+            lng: {{ item.lng|unlocalize }},
+            driver: "{{ item.order.assigned_driver.nome_completo|default:'Não atribuído'|escapejs }}",
             scheduled: "{{ item.order.scheduled_delivery|date:'d/m/Y'|default:'N/A' }}",
             url: "{% url 'orders:order_detail' item.order.pk %}"
         }{% if not forloop.last %},{% endif %}
@@ -299,7 +460,7 @@ document.addEventListener('DOMContentLoaded', function() {
             iconAnchor: [14, 14]
         });
         
-        const marker = L.marker([order.lat, order.lng], {icon: markerIcon}).addTo(map);
+        const marker = L.marker([order.lat, order.lng], {icon: markerIcon});
         
         // Popup com informações
         const popupContent = `
@@ -324,7 +485,19 @@ document.addEventListener('DOMContentLoaded', function() {
         `;
         
         marker.bindPopup(popupContent, {maxWidth: 300});
+        
+        // Armazenar marcador para filtragem
+        allMarkers.push({
+            marker: marker,
+            status: order.status,
+            order: order,
+            visible: false
+        });
     });
+    
+    // Aplicar filtros iniciais (mostra apenas pending, assigned, in_transit)
+    applyFilters();
+    updateFilterUI();
     
     // Se não houver pedidos, mostra mensagem
     {% if not orders_with_coords %}

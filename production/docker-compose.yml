@@ -1,0 +1,192 @@
+# ════════════════════════════════════════════════════════════════════
+# Léguas Franzinas — Production Compose
+# ════════════════════════════════════════════════════════════════════
+# Stack: db (MySQL) + redis + web (Django) + celery_worker + celery_beat
+#        + wppconnect (WhatsApp) + caddy (reverse proxy + SSL automático)
+#
+# Uso:
+#   cd production/
+#   cp .env.example .env             # editar .env com credenciais
+#   docker compose up -d --build     # primeira vez
+#   docker compose logs -f web       # acompanhar logs
+#
+# SSL automático: definir DOMAIN= e LETSENCRYPT_EMAIL= em .env
+# Se DOMAIN vazio, Caddy serve em HTTP-only no IP do servidor.
+# ════════════════════════════════════════════════════════════════════
+
+services:
+  # ───────────────────────── BASE DE DADOS ─────────────────────────
+  db:
+    image: mysql:8.0
+    container_name: leguas_db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - leguas_net
+    # Não exposto ao host por defeito (segurança).
+    # Para aceder externamente, descomentar:
+    # ports:
+    #   - "127.0.0.1:3306:3306"
+
+  # ───────────────────────── CACHE / BROKER ────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: leguas_redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - leguas_net
+
+  # ───────────────────────── DJANGO WEB ────────────────────────────
+  web:
+    build:
+      context: ..
+      dockerfile: production/Dockerfile
+    image: leguas-web:production
+    container_name: leguas_web
+    restart: unless-stopped
+    environment:
+      ROLE: web
+    env_file:
+      - .env
+    volumes:
+      - media_volume:/app/media
+      - static_volume:/app/staticfiles
+      - logs_data:/app/logs
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/health/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+    networks:
+      - leguas_net
+
+  # ───────────────────────── CELERY WORKER ─────────────────────────
+  celery_worker:
+    image: leguas-web:production
+    container_name: leguas_celery_worker
+    restart: unless-stopped
+    command: celery -A my_project worker -l info --concurrency=2 --max-tasks-per-child=100
+    environment:
+      ROLE: celery_worker
+    env_file:
+      - .env
+    volumes:
+      - media_volume:/app/media
+      - logs_data:/app/logs
+    depends_on:
+      web:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A my_project inspect ping -d celery@$$HOSTNAME || exit 1"]
+      interval: 60s
+      timeout: 15s
+      retries: 3
+      start_period: 60s
+    networks:
+      - leguas_net
+
+  # ───────────────────────── CELERY BEAT ───────────────────────────
+  celery_beat:
+    image: leguas-web:production
+    container_name: leguas_celery_beat
+    restart: unless-stopped
+    command: celery -A my_project beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    environment:
+      ROLE: celery_beat
+    env_file:
+      - .env
+    volumes:
+      - logs_data:/app/logs
+    depends_on:
+      web:
+        condition: service_healthy
+    networks:
+      - leguas_net
+
+  # ───────────────────────── WPPCONNECT (WhatsApp) ─────────────────
+  wppconnect:
+    image: leguas_wppconnect_custom:latest
+    build:
+      context: ../wppconnect-server
+      dockerfile: Dockerfile
+    container_name: leguas_wppconnect
+    restart: unless-stopped
+    environment:
+      - SECRET_KEY=${WPPCONNECT_SECRET}
+    volumes:
+      - wppconnect_store:/usr/src/wpp-server/userDataDir
+      - wppconnect_tokens:/usr/src/wpp-server/tokens
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:21465/api/${WPPCONNECT_INSTANCE:-leguas_wppconnect}/check-connection-session"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+    networks:
+      - leguas_net
+
+  # ───────────────────────── CADDY (Reverse Proxy + SSL) ───────────
+  caddy:
+    image: caddy:2-alpine
+    container_name: leguas_caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DOMAIN: ${DOMAIN:-:80}
+      LETSENCRYPT_EMAIL: ${LETSENCRYPT_EMAIL:-internal}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+      - static_volume:/srv/static:ro
+      - media_volume:/srv/media:ro
+    depends_on:
+      web:
+        condition: service_healthy
+    networks:
+      - leguas_net
+
+# ═════════════════════════════════════════════════════════════════════
+networks:
+  leguas_net:
+    driver: bridge
+
+volumes:
+  mysql_data:
+  redis_data:
+  media_volume:    # mantém nome antigo para retro-compat na migração
+  static_volume:   # mantém nome antigo para retro-compat na migração
+  logs_data:
+  wppconnect_store:
+  wppconnect_tokens:
+  caddy_data:    # certificados Let's Encrypt persistem aqui
+  caddy_config:

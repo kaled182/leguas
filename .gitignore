@@ -1,4 +1,8 @@
-# Python
+# ════════════════════════════════════════════════════════════════════
+# Léguas Franzinas — .gitignore
+# ════════════════════════════════════════════════════════════════════
+
+# ── Python ──────────────────────────────────────────────────────────
 __pycache__/
 *.py[cod]
 *$py.class
@@ -11,48 +15,83 @@ ENV/
 *.egg-info/
 dist/
 build/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
 
-# Django
+# ── Django ──────────────────────────────────────────────────────────
 *.log
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
 media/
 staticfiles/
+celerybeat-schedule
+celerybeat-schedule.db
 
-# Environment variables
+# ── Environment variables (NUNCA commit) ────────────────────────────
 .env
-.env.local
-.env.docker
+.env.*
+!.env.example
+!production/.env.example
 
-# IDE
+# ── Production runtime ──────────────────────────────────────────────
+production/.env
+production/backups/
+production/caddy_data/
+
+# ── Backups ─────────────────────────────────────────────────────────
+backups/
+*.backup
+*_backup
+*.bak
+
+# ── IDE / Editor ────────────────────────────────────────────────────
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
+.cursor/
 
-# OS
+# ── Claude Code agent memory (privado) ──────────────────────────────
+.claude/
+
+# ── OS ──────────────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
+desktop.ini
 
-# Docker
+# ── Docker ──────────────────────────────────────────────────────────
 *.pid
+docker-compose.override.yml
 
-# Backup files
-*.backup
-*_backup
-
-# Debug files
+# ── Debug / temp / lixo ─────────────────────────────────────────────
 debug_files/
-
-# Files directory (dumps, old versions)
 files/
-
-# Node modules (se houver)
-node_modules/
-
-# Temporary files
 tmp/
 temp/
 *.tmp
+
+# ── Sessões scraping ────────────────────────────────────────────────
+delnext_session.pkl
+*.session
+*.pkl
+
+# ── Node modules (se houver) ────────────────────────────────────────
+node_modules/
+package-lock.json
+
+# ── Testes / coverage ───────────────────────────────────────────────
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+.hypothesis/
+
+# ── Outros ──────────────────────────────────────────────────────────
+.dump
+*.dump
+*.sql
+!init-db.sql

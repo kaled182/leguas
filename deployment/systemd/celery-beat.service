@@ -1,0 +1,23 @@
+[Unit]
+Description=Celery Beat Service for Léguas Franzinas (Task Scheduler)
+After=network.target redis.service mysql.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/path/to/project/app.leguasfranzinas.pt
+Environment="PATH=/path/to/venv/bin"
+ExecStart=/path/to/venv/bin/celery -A my_project beat -l info --logfile=/var/log/celery/beat.log --pidfile=/var/run/celery/beat.pid --scheduler django_celery_beat.schedulers:DatabaseScheduler
+Restart=always
+RestartSec=10s
+
+# Configurações de segurança
+PrivateTmp=true
+NoNewPrivileges=true
+
+# Limites de recursos
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

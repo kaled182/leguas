@@ -1,0 +1,3248 @@
+{% extends 'settlements/base.html' %}
+
+{% block title %}Gestão de Pré-Faturas{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-6">
+
+  <!-- Header -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6">
+    <div class="flex items-center justify-between flex-wrap gap-4">
+      <div class="flex items-center gap-4">
+        <div class="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center">
+          <i data-lucide="receipt" class="w-6 h-6 text-purple-600 dark:text-purple-400"></i>
+        </div>
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Pré-Faturas / Contas a Pagar</h1>
+          <p class="text-sm text-gray-500 dark:text-gray-400">Motoristas directos + Empresas Parceiras — aprovação, pagamento e comprovantes</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-3 flex-wrap">
+        <button onclick="openReportModal()"
+                class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold text-sm transition-colors shadow-sm">
+          <i data-lucide="bar-chart-2" class="w-4 h-4"></i> Relatório
+        </button>
+        <button onclick="document.getElementById('importModalGlobal').classList.remove('hidden')"
+                class="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold text-sm transition-colors shadow-sm">
+          <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Importar Planilha
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- KPI Cards -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-5 flex items-center gap-4">
+      <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center flex-shrink-0">
+        <i data-lucide="receipt" class="w-6 h-6 text-blue-600 dark:text-blue-400"></i>
+      </div>
+      <div>
+        <div class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total a Pagar</div>
+        <div class="text-2xl font-bold text-blue-700 dark:text-blue-300">€{{ kpis.total_a_pagar|floatformat:2 }}</div>
+        <div class="text-xs text-gray-400">Aprovadas + Pendentes</div>
+      </div>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-5 flex items-center gap-4">
+      <div class="w-12 h-12 bg-yellow-100 dark:bg-yellow-900/30 rounded-xl flex items-center justify-center flex-shrink-0">
+        <i data-lucide="clock" class="w-6 h-6 text-yellow-600 dark:text-yellow-400"></i>
+      </div>
+      <div>
+        <div class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Pendente de Pagamento</div>
+        <div class="text-2xl font-bold text-yellow-600 dark:text-yellow-400">€{{ kpis.pendente|floatformat:2 }}</div>
+        <div class="text-xs text-gray-400">Aguardam pagamento</div>
+      </div>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-5 flex items-center gap-4">
+      <div class="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl flex items-center justify-center flex-shrink-0">
+        <i data-lucide="check-circle-2" class="w-6 h-6 text-emerald-600 dark:text-emerald-400"></i>
+      </div>
+      <div>
+        <div class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total Pago</div>
+        <div class="text-2xl font-bold text-emerald-600 dark:text-emerald-400">€{{ kpis.pago|floatformat:2 }}</div>
+        <div class="text-xs text-gray-400">Pagamentos confirmados</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filtros -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 px-4 py-3">
+    <form method="get" class="flex flex-wrap items-center gap-2">
+      <select name="tipo" class="flex-none w-28 px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500">
+        <option value="" {% if not tipo_f %}selected{% endif %}>Tipo: Todos</option>
+        <option value="motorista" {% if tipo_f == 'motorista' %}selected{% endif %}>Motoristas</option>
+        <option value="empresa" {% if tipo_f == 'empresa' %}selected{% endif %}>Empresas</option>
+      </select>
+      <select name="status" class="flex-none w-40 px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500">
+        <option value="NAO_PAGO" {% if request.GET.status == 'NAO_PAGO' %}selected{% endif %}>Ocultar Pagas</option>
+        <option value="TODOS" {% if request.GET.status == 'TODOS' %}selected{% endif %}>Todos os Status</option>
+        {% for val, label in status_choices %}
+        <option value="{{ val }}" {% if request.GET.status == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      <select name="parceiro" class="flex-none w-36 px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500">
+        <option value="">Parceiro: Todos</option>
+        {% for p in parceiros %}
+        <option value="{{ p.id }}" {% if request.GET.parceiro == p.id|stringformat:"s" %}selected{% endif %}>{{ p.name }}</option>
+        {% endfor %}
+      </select>
+      <input type="text" name="driver" value="{{ request.GET.driver }}" placeholder="Motorista ou empresa..."
+        class="flex-1 min-w-32 px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500">
+      <div class="flex-none flex items-center gap-1">
+        <input type="month" name="month" id="monthInput" value="{{ month_f }}" title="Mês — deixe vazio para todos os meses"
+          class="w-36 px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500">
+        {% if month_f %}
+        <button type="button" onclick="document.getElementById('monthInput').value=''; this.closest('form').submit();"
+          title="Limpar filtro de mês"
+          class="p-1.5 text-gray-400 hover:text-red-500 transition-colors" tabindex="-1">
+          <i data-lucide="x-circle" class="w-4 h-4"></i>
+        </button>
+        {% endif %}
+      </div>
+      <button type="submit" class="flex-none px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium flex items-center gap-1.5 transition-colors">
+        <i data-lucide="search" class="w-3.5 h-3.5"></i> Filtrar
+      </button>
+      <a href="{% url 'pre-invoice-admin-list' %}" class="flex-none px-3 py-1.5 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-white rounded-lg text-sm font-medium transition-colors">
+        Limpar
+      </a>
+    </form>
+  </div>
+
+  {% if show_motoristas %}
+  <!-- Tabela Motoristas -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 overflow-hidden" x-data="bulkSelect()">
+    <!-- Section header -->
+    <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
+          <i data-lucide="user" class="w-4 h-4 text-purple-600 dark:text-purple-400"></i>
+        </div>
+        <h2 class="font-semibold text-gray-900 dark:text-white">Pré-Faturas de Motoristas</h2>
+        <span class="px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-xs rounded-full font-medium">{{ pre_invoices.paginator.count }}</span>
+      </div>
+      <!-- Bulk action bar -->
+      <div x-show="selected.length > 0" x-cloak class="flex items-center gap-3">
+        <span class="text-sm text-gray-600 dark:text-gray-300" x-text="selected.length + ' selecionado(s)'"></span>
+        <button @click="openBulkPay()" class="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold transition-colors">
+          <i data-lucide="banknote" class="w-4 h-4"></i> Marcar Pago em Lote
+        </button>
+      </div>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <thead class="bg-gray-50 dark:bg-gray-900">
+          <tr>
+            <th class="px-4 py-3">
+              <input type="checkbox" @change="toggleAll($event)" class="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500 cursor-pointer">
+            </th>
+            <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nº</th>
+            <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Motorista</th>
+            <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Período</th>
+            <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Parceiros</th>
+            <th class="px-5 py-3 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total (€)</th>
+            <th class="px-5 py-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+            <th class="px-5 py-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Ações</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700" id="pf-table-body">
+          {% for pf in pre_invoices %}
+          <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors" id="row-{{ pf.id }}">
+            <td class="px-4 py-4 whitespace-nowrap">
+              <input type="checkbox" :value="{{ pf.id }}" @change="toggle($event, {{ pf.id }})"
+                     class="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500 cursor-pointer">
+            </td>
+            <td class="px-5 py-4 whitespace-nowrap">
+              <span class="font-mono font-bold text-purple-600 dark:text-purple-400 text-sm">{{ pf.numero }}</span>
+            </td>
+            <td class="px-5 py-4 whitespace-nowrap">
+              <div class="text-sm font-medium text-gray-900 dark:text-white">{{ pf.driver.nome_completo }}</div>
+              <div class="text-xs text-gray-400">{{ pf.driver.numero_contribuinte|default:"—" }}</div>
+            </td>
+            <td class="px-5 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
+              {{ pf.periodo_inicio|date:"d/m/Y" }} → {{ pf.periodo_fim|date:"d/m/Y" }}
+            </td>
+            <td class="px-5 py-4">
+              <div class="flex flex-wrap gap-1">
+                {% for linha in pf.linhas.all %}
+                  {% if linha.parceiro %}
+                  <span class="px-1.5 py-0.5 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 rounded text-xs font-medium">
+                    {{ linha.parceiro.name }}
+                  </span>
+                  {% endif %}
+                {% empty %}
+                  <span class="text-xs text-gray-400">—</span>
+                {% endfor %}
+              </div>
+            </td>
+            <td class="px-5 py-4 whitespace-nowrap text-right">
+              <span class="text-sm font-bold text-gray-900 dark:text-white">€{{ pf.total_a_receber|floatformat:2 }}</span>
+            </td>
+            <td class="px-5 py-4 whitespace-nowrap text-center">
+              <span id="badge-{{ pf.id }}" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold
+                {% if pf.status == 'PAGO' %}bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400
+                {% elif pf.status == 'APROVADO' %}bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400
+                {% elif pf.status == 'PENDENTE' %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400
+                {% elif pf.status == 'CONTESTADO' %}bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400
+                {% elif pf.status == 'REPROVADO' %}bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400
+                {% elif pf.status == 'CALCULADO' %}bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-400
+                {% else %}bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300{% endif %}">
+                {{ pf.get_status_display }}
+              </span>
+            </td>
+            <td class="px-5 py-3">
+              <div x-data="pfActions({{ pf.id }}, '{{ pf.status }}')">
+
+                <!-- Acções principais -->
+                <div class="flex flex-wrap gap-1.5">
+                  {% if pf.status == 'RASCUNHO' %}
+                    <button @click="calcular()" class="inline-flex items-center gap-1 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm">
+                      <i data-lucide="calculator" class="w-3 h-3"></i> Calcular
+                    </button>
+
+                  {% elif pf.status == 'CALCULADO' %}
+                    <button @click="changeStatus('APROVADO')" class="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm">
+                      <i data-lucide="check-circle" class="w-3 h-3"></i> Aprovar
+                    </button>
+                    <button @click="changeStatus('CONTESTADO')" class="inline-flex items-center gap-1 px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm">
+                      <i data-lucide="message-circle-warning" class="w-3 h-3"></i> Contestar
+                    </button>
+                    <button @click="changeStatus('REPROVADO')" class="inline-flex items-center gap-1 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm">
+                      <i data-lucide="x-circle" class="w-3 h-3"></i> Reprovar
+                    </button>
+
+                  {% elif pf.status == 'APROVADO' %}
+                    <button @click="changeStatus('PENDENTE')" class="inline-flex items-center gap-1 px-3 py-1.5 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm">
+                      <i data-lucide="clock" class="w-3 h-3"></i> Pend. Pagamento
+                    </button>
+                    <button @click="changeStatus('CONTESTADO')" class="inline-flex items-center gap-1 px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm">
+                      <i data-lucide="message-circle-warning" class="w-3 h-3"></i> Contestar
+                    </button>
+
+                  {% elif pf.status == 'PENDENTE' %}
+                    <button @click="openPayModal()" class="inline-flex items-center gap-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm">
+                      <i data-lucide="banknote" class="w-3 h-3"></i> Marcar Pago
+                    </button>
+                    <button @click="changeStatus('APROVADO')" class="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-500 hover:bg-gray-600 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm">
+                      <i data-lucide="undo-2" class="w-3 h-3"></i> Reverter
+                    </button>
+
+                  {% elif pf.status == 'CONTESTADO' %}
+                    <button @click="changeStatus('CALCULADO')" class="inline-flex items-center gap-1 px-3 py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm">
+                      <i data-lucide="refresh-cw" class="w-3 h-3"></i> Enviar Revisão
+                    </button>
+                    <button @click="changeStatus('REPROVADO')" class="inline-flex items-center gap-1 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm">
+                      <i data-lucide="x-circle" class="w-3 h-3"></i> Reprovar
+                    </button>
+
+                  {% elif pf.status == 'REPROVADO' %}
+                    <button @click="changeStatus('CALCULADO')" class="inline-flex items-center gap-1 px-3 py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm">
+                      <i data-lucide="refresh-cw" class="w-3 h-3"></i> Reabrir
+                    </button>
+
+                  {% elif pf.status == 'PAGO' %}
+                    <span class="inline-flex items-center gap-1 px-3 py-1.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-lg text-xs font-semibold">
+                      <i data-lucide="check-check" class="w-3 h-3"></i> Concluído
+                    </span>
+                  {% endif %}
+
+                  <!-- Visualizar -->
+                  <button @click="openView({{ pf.id }}, {{ pf.driver.id }})"
+                     class="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-200 dark:bg-gray-700 hover:bg-violet-600 hover:text-white dark:hover:bg-violet-600 text-gray-700 dark:text-gray-300 rounded-lg text-xs font-semibold transition-colors shadow-sm">
+                    <i data-lucide="eye" class="w-3 h-3"></i> Ver
+                  </button>
+
+                  <!-- Editar — modal inline -->
+                  <button @click="$store.pfEdit.openPf({{ pf.id }}, {{ pf.driver.id }})"
+                     class="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-200 dark:bg-gray-700 hover:bg-indigo-600 hover:text-white dark:hover:bg-indigo-600 text-gray-700 dark:text-gray-300 rounded-lg text-xs font-semibold transition-colors shadow-sm">
+                    <i data-lucide="pencil" class="w-3 h-3"></i> Editar
+                  </button>
+
+                  <!-- PDF sempre visível -->
+                  <a href="{% url 'pre-invoice-pdf' pf.id %}" target="_blank"
+                     class="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-200 dark:bg-gray-700 hover:bg-red-600 hover:text-white dark:hover:bg-red-600 text-gray-700 dark:text-gray-300 rounded-lg text-xs font-semibold transition-colors shadow-sm">
+                    <i data-lucide="file-down" class="w-3 h-3"></i> PDF
+                  </a>
+                </div>
+
+                <!-- Modal de confirmação geral -->
+                <div x-show="showModal && pendingStatus !== 'PAGO'" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+                  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-md mx-4 space-y-4 border border-gray-200 dark:border-gray-700">
+                    <div class="flex items-center gap-3">
+                      <div :class="confirmIconBg" class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0">
+                        <i :data-lucide="confirmIcon" class="w-5 h-5 text-white"></i>
+                      </div>
+                      <div>
+                        <h3 class="text-base font-bold text-gray-900 dark:text-white" x-text="modalTitle"></h3>
+                        <p class="text-xs text-gray-500 dark:text-gray-400" x-text="modalDesc"></p>
+                      </div>
+                    </div>
+                    <div class="space-y-1">
+                      <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400">Nota <span class="font-normal text-gray-400">(opcional)</span></label>
+                      <textarea x-model="nota" rows="2" placeholder="Justificação ou observação…"
+                        class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-purple-500 resize-none"></textarea>
+                    </div>
+                    <div class="flex gap-2 justify-end pt-1">
+                      <button @click="showModal = false" class="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium">
+                        Cancelar
+                      </button>
+                      <button @click="confirmChange()" :class="confirmBtnClass" class="px-5 py-2 text-white rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 shadow-sm">
+                        <i :data-lucide="confirmIcon" class="w-4 h-4"></i>
+                        <span x-text="confirmBtnLabel"></span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Modal de Pagamento com Comprovante -->
+                <div x-show="showPayModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+                  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md mx-4 border border-gray-200 dark:border-gray-700 overflow-hidden">
+                    <div class="bg-gradient-to-r from-emerald-600 to-teal-600 px-6 py-4 flex items-center justify-between">
+                      <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center">
+                          <i data-lucide="banknote" class="w-5 h-5 text-white"></i>
+                        </div>
+                        <div>
+                          <h3 class="text-base font-bold text-white">Confirmar Pagamento</h3>
+                          <p class="text-xs text-emerald-100">Pré-fatura #{{ pf.numero }}</p>
+                        </div>
+                      </div>
+                      <button @click="showPayModal = false" class="text-white/70 hover:text-white hover:bg-white/20 rounded-lg p-1.5 transition-colors">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                      </button>
+                    </div>
+                    <div class="px-6 py-5 space-y-4">
+                      <div>
+                        <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Referência de Pagamento</label>
+                        <input type="text" x-model="refPagamento" placeholder="MB WAY, Transferência, Ref…"
+                          class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-emerald-500">
+                      </div>
+                      <div>
+                        <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Comprovante de Pagamento <span class="font-normal text-gray-400">(foto ou PDF)</span></label>
+                        <input type="file" x-ref="comprovanteFile" accept="image/*,.pdf"
+                          class="w-full text-sm text-gray-700 dark:text-gray-300 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-emerald-100 dark:file:bg-emerald-900/40 file:text-emerald-700 dark:file:text-emerald-300 file:font-semibold hover:file:bg-emerald-200 cursor-pointer">
+                      </div>
+                      <div>
+                        <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Observações <span class="font-normal text-gray-400">(opcional)</span></label>
+                        <textarea x-model="nota" rows="2" placeholder="Notas sobre o pagamento…"
+                          class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-emerald-500 resize-none"></textarea>
+                      </div>
+                    </div>
+                    <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex gap-2 justify-end">
+                      <button @click="showPayModal = false" class="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium">
+                        Cancelar
+                      </button>
+                      <button @click="confirmPay()" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold transition-colors flex items-center gap-2">
+                        <i data-lucide="check-circle" class="w-4 h-4"></i> Confirmar Pagamento
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="8" class="px-6 py-16 text-center">
+              <div class="flex flex-col items-center gap-3 text-gray-400">
+                <i data-lucide="file-x" class="w-12 h-12"></i>
+                <p class="text-lg font-medium">Nenhuma pré-fatura encontrada</p>
+                {% if month_f %}
+                <p class="text-sm text-amber-500 font-medium">Filtro de mês activo: <strong>{{ month_f }}</strong>. As faturas pagas podem estar noutro mês.</p>
+                <button type="button" onclick="location.href='?status={{ request.GET.status }}&tipo={{ request.GET.tipo }}&driver={{ request.GET.driver }}&parceiro={{ request.GET.parceiro }}'" class="px-3 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-800 rounded-lg text-sm font-medium transition-colors">
+                  Remover filtro de mês
+                </button>
+                {% else %}
+                <p class="text-sm">Ajuste os filtros ou crie pré-faturas no cadastro dos motoristas.</p>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Paginação -->
+    {% if pre_invoices.has_other_pages %}
+    <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
+      <div class="text-sm text-gray-500 dark:text-gray-400">
+        Página {{ pre_invoices.number }} de {{ pre_invoices.paginator.num_pages }}
+        — {{ pre_invoices.paginator.count }} pré-fatura{{ pre_invoices.paginator.count|pluralize:"s" }}
+      </div>
+      <div class="flex gap-1">
+        {% if pre_invoices.has_previous %}
+        <a href="?{% if request.GET.tipo %}tipo={{ request.GET.tipo }}&{% endif %}{% if request.GET.status %}status={{ request.GET.status }}&{% endif %}{% if request.GET.driver %}driver={{ request.GET.driver }}&{% endif %}page={{ pre_invoices.previous_page_number }}"
+           class="px-3 py-1 text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors">
+          ← Anterior
+        </a>
+        {% endif %}
+        {% if pre_invoices.has_next %}
+        <a href="?{% if request.GET.tipo %}tipo={{ request.GET.tipo }}&{% endif %}{% if request.GET.status %}status={{ request.GET.status }}&{% endif %}{% if request.GET.driver %}driver={{ request.GET.driver }}&{% endif %}page={{ pre_invoices.next_page_number }}"
+           class="px-3 py-1 text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors">
+          Próxima →
+        </a>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Bulk pay modal (inside bulkSelect x-data scope) -->
+    <div x-show="showBulkModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md mx-4 border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div class="bg-gradient-to-r from-emerald-600 to-teal-600 px-6 py-4 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center">
+              <i data-lucide="banknote" class="w-5 h-5 text-white"></i>
+            </div>
+            <div>
+              <h3 class="text-base font-bold text-white">Pagamento em Lote</h3>
+              <p class="text-xs text-emerald-100" x-text="selected.length + ' pré-faturas selecionadas'"></p>
+            </div>
+          </div>
+          <button @click="showBulkModal = false" class="text-white/70 hover:text-white hover:bg-white/20 rounded-lg p-1.5 transition-colors">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
+        <div class="px-6 py-5 space-y-4">
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Referência de Pagamento</label>
+            <input type="text" x-model="bulkRef" placeholder="MB WAY, Transferência, Ref…"
+              class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-emerald-500">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Observações <span class="font-normal text-gray-400">(opcional)</span></label>
+            <textarea x-model="bulkNota" rows="2" placeholder="Notas sobre o pagamento em lote…"
+              class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-emerald-500 resize-none"></textarea>
+          </div>
+          <div class="bg-amber-50 dark:bg-amber-900/20 rounded-lg px-4 py-3 text-xs text-amber-700 dark:text-amber-300">
+            Apenas pré-faturas no estado <strong>PENDENTE</strong> serão marcadas como pagas.
+          </div>
+        </div>
+        <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex gap-2 justify-end">
+          <button @click="showBulkModal = false" class="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium">
+            Cancelar
+          </button>
+          <button @click="confirmBulkPay()" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold transition-colors flex items-center gap-2">
+            <i data-lucide="check-circle" class="w-4 h-4"></i> Confirmar Lote
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  {% endif %}{# show_motoristas #}
+
+  {% if show_empresas %}
+  <!-- Tabela Empresas Parceiras Lançamentos -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
+    <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center gap-3">
+      <div class="w-8 h-8 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg flex items-center justify-center">
+        <i data-lucide="building-2" class="w-4 h-4 text-indigo-600 dark:text-indigo-400"></i>
+      </div>
+      <h2 class="font-semibold text-gray-900 dark:text-white">Lançamentos de Empresas Parceiras</h2>
+      <span class="px-2 py-0.5 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 text-xs rounded-full font-medium">{{ lancamentos|length }}</span>
+    </div>
+    <div>
+      <table class="w-full table-fixed divide-y divide-gray-200 dark:divide-gray-700">
+        <colgroup>
+          <col style="width:28%">
+          <col style="width:20%">
+          <col style="width:10%">
+          <col style="width:18%">
+          <col style="width:24%">
+        </colgroup>
+        <thead class="bg-gray-50 dark:bg-gray-900">
+          <tr>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Empresa</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Período</th>
+            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total</th>
+            <th class="px-4 py-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+            <th class="px-4 py-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Ações</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+          {% for lanc in lancamentos %}
+          <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors" id="lanc-row-{{ lanc.id }}">
+            <td class="px-4 py-4">
+              <div class="text-sm font-medium text-gray-900 dark:text-white truncate" title="{{ lanc.empresa.nome }}">{{ lanc.empresa.nome }}</div>
+              <div class="text-xs text-gray-400 truncate" title="{{ lanc.descricao }}">{{ lanc.descricao }}{% if lanc.qtd_entregas > 0 %} · {{ lanc.qtd_entregas }} × €{{ lanc.valor_por_entrega }}{% endif %}</div>
+            </td>
+            <td class="px-4 py-4 text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap">
+              <span data-lanc-periodo>{{ lanc.periodo_inicio|date:"d/m/Y" }} → {{ lanc.periodo_fim|date:"d/m/Y" }}</span>
+            </td>
+            <td class="px-4 py-4 text-right">
+              <span data-lanc-total class="text-sm font-bold text-gray-900 dark:text-white">€{{ lanc.total_a_receber|floatformat:2 }}</span>
+            </td>
+            <td class="px-4 py-4 text-center">
+              <span id="lanc-badge-{{ lanc.id }}" class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold leading-tight
+                {% if lanc.status == 'PAGO' %}bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400
+                {% elif lanc.status == 'APROVADO' %}bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400
+                {% elif lanc.status == 'PENDENTE' %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400
+                {% elif lanc.status == 'CANCELADO' %}bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400
+                {% else %}bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300{% endif %}">
+                {{ lanc.get_status_display }}
+              </span>
+              {% if lanc.comprovante_pagamento %}
+              <a href="{{ lanc.comprovante_pagamento.url }}" target="_blank" class="ml-1 text-emerald-600 hover:text-emerald-700" title="Ver comprovante">
+                <i data-lucide="paperclip" class="w-3 h-3 inline"></i>
+              </a>
+              {% endif %}
+            </td>
+            <td class="px-2 py-3 overflow-visible">
+              <div x-data="lancActions({{ lanc.id }}, '{{ lanc.status }}')">
+                <div class="flex flex-wrap gap-1 items-start">
+                  {% if lanc.status == 'RASCUNHO' %}
+                    <button @click="changeStatus('APROVADO')" class="inline-flex items-center gap-1 px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold whitespace-nowrap">
+                      <i data-lucide="check-circle" class="w-3 h-3 flex-shrink-0"></i> Aprovar
+                    </button>
+                  {% elif lanc.status == 'APROVADO' %}
+                    <button @click="changeStatus('PENDENTE')" class="inline-flex items-center gap-1 px-2.5 py-1.5 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg text-xs font-semibold whitespace-nowrap">
+                      <i data-lucide="clock" class="w-3 h-3 flex-shrink-0"></i> Pendente
+                    </button>
+                  {% elif lanc.status == 'PENDENTE' %}
+                    <button @click="openPayModal()" class="inline-flex items-center gap-1 px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold whitespace-nowrap">
+                      <i data-lucide="banknote" class="w-3 h-3 flex-shrink-0"></i> Marcar Pago
+                    </button>
+                    <button @click="changeStatus('APROVADO')" class="inline-flex items-center gap-1 px-2.5 py-1.5 bg-gray-500 hover:bg-gray-600 text-white rounded-lg text-xs whitespace-nowrap">
+                      <i data-lucide="undo-2" class="w-3 h-3 flex-shrink-0"></i> Reverter
+                    </button>
+                  {% elif lanc.status == 'PAGO' %}
+                    <span class="inline-flex items-center gap-1 px-2.5 py-1.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-lg text-xs font-semibold whitespace-nowrap">
+                      <i data-lucide="check-check" class="w-3 h-3 flex-shrink-0"></i> Pago
+                    </span>
+                  {% endif %}
+                  {% if lanc.status not in 'PAGO,CANCELADO' %}
+                  <button @click="changeStatus('CANCELADO')" class="inline-flex items-center justify-center w-7 h-7 bg-gray-100 dark:bg-gray-700 hover:bg-red-600 hover:text-white text-gray-400 rounded-lg text-xs flex-shrink-0">
+                    <i data-lucide="x" class="w-3 h-3"></i>
+                  </button>
+                  {% endif %}
+                </div>
+                <!-- Ver / Editar / PDF -->
+                <div class="flex flex-wrap gap-1 mt-1">
+                  <button @click="$store.lancView.open({{ lanc.id }})"
+                          class="inline-flex items-center gap-1 px-2.5 py-1.5 bg-gray-200 dark:bg-gray-700 hover:bg-indigo-600 hover:text-white dark:hover:bg-indigo-600 text-gray-700 dark:text-gray-300 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap">
+                    <i data-lucide="eye" class="w-3 h-3"></i> Ver
+                  </button>
+                  {% if lanc.status not in 'PAGO,CANCELADO' %}
+                  <button @click="$store.lancEdit.openLanc({{ lanc.id }})"
+                          class="inline-flex items-center gap-1 px-2.5 py-1.5 bg-gray-200 dark:bg-gray-700 hover:bg-blue-600 hover:text-white dark:hover:bg-blue-600 text-gray-700 dark:text-gray-300 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap">
+                    <i data-lucide="pencil" class="w-3 h-3"></i> Editar
+                  </button>
+                  {% endif %}
+                  <a href="{% url 'empresa-lancamento-pdf' lanc.id %}" target="_blank"
+                     class="inline-flex items-center gap-1 px-2.5 py-1.5 bg-gray-200 dark:bg-gray-700 hover:bg-red-600 hover:text-white dark:hover:bg-red-600 text-gray-700 dark:text-gray-300 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap">
+                    <i data-lucide="file-down" class="w-3 h-3"></i> PDF
+                  </a>
+                </div>
+
+                <!-- Modal pagamento empresa lancamento -->
+                <div x-show="showPayModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+                  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md mx-4 border border-gray-200 dark:border-gray-700 overflow-hidden">
+                    <div class="bg-gradient-to-r from-emerald-600 to-teal-600 px-6 py-4 flex items-center justify-between">
+                      <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center">
+                          <i data-lucide="banknote" class="w-5 h-5 text-white"></i>
+                        </div>
+                        <div>
+                          <h3 class="text-base font-bold text-white">Confirmar Pagamento</h3>
+                          <p class="text-xs text-emerald-100">{{ lanc.empresa.nome }} — {{ lanc.descricao|truncatechars:30 }}</p>
+                        </div>
+                      </div>
+                      <button @click="showPayModal = false" class="text-white/70 hover:text-white hover:bg-white/20 rounded-lg p-1.5 transition-colors">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                      </button>
+                    </div>
+                    <div class="px-6 py-5 space-y-4">
+                      <div>
+                        <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Referência de Pagamento</label>
+                        <input type="text" x-model="refPagamento" placeholder="MB WAY, Transferência, Ref…"
+                          class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-emerald-500">
+                      </div>
+                      <div>
+                        <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Comprovante de Pagamento <span class="font-normal text-gray-400">(foto ou PDF)</span></label>
+                        <input type="file" x-ref="comprovanteFile" accept="image/*,.pdf"
+                          class="w-full text-sm text-gray-700 dark:text-gray-300 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-emerald-100 dark:file:bg-emerald-900/40 file:text-emerald-700 dark:file:text-emerald-300 file:font-semibold hover:file:bg-emerald-200 cursor-pointer">
+                      </div>
+                      <div>
+                        <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Observações <span class="font-normal text-gray-400">(opcional)</span></label>
+                        <textarea x-model="nota" rows="2" placeholder="Notas sobre o pagamento…"
+                          class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-emerald-500 resize-none"></textarea>
+                      </div>
+                    </div>
+                    <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex gap-2 justify-end">
+                      <button @click="showPayModal = false" class="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium">
+                        Cancelar
+                      </button>
+                      <button @click="confirmPay()" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold transition-colors flex items-center gap-2">
+                        <i data-lucide="check-circle" class="w-4 h-4"></i> Confirmar Pagamento
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="5" class="px-6 py-12 text-center">
+              <div class="flex flex-col items-center gap-3 text-gray-400">
+                <i data-lucide="building-2" class="w-10 h-10"></i>
+                <p class="text-base font-medium">Nenhum lançamento encontrado</p>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}{# show_empresas #}
+
+</div>{# max-w-7xl #}
+
+<!-- ===== MODAL IMPORTAR PLANILHA (GLOBAL) ===== -->
+<div id="importModalGlobal" class="hidden fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[92vh] flex flex-col overflow-hidden">
+    <!-- Header -->
+    <div class="bg-gradient-to-r from-purple-600 to-indigo-600 px-6 py-4 flex items-center justify-between flex-shrink-0">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+          <i data-lucide="file-spreadsheet" class="w-5 h-5 text-white"></i>
+        </div>
+        <div>
+          <h2 class="text-base font-bold text-white">Importar Planilha de Parceiro</h2>
+          <p id="import-subtitle" class="text-xs text-purple-200">Etapa 1 de 2 — Configuração</p>
+        </div>
+      </div>
+      <button onclick="closeImportGlobal()" class="text-white/70 hover:text-white hover:bg-white/20 rounded-lg p-1.5 transition-colors">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+
+    <!-- ETAPA 1: Formulário -->
+    <div id="import-step1" class="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Parceiro</label>
+        <select id="g-parceiro" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-purple-500">
+          <option value="">— Selecionar parceiro —</option>
+          {% for p in parceiros %}
+          <option value="{{ p.id }}">{{ p.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Formato</label>
+        <select id="g-formato" onchange="updateFormatUI()"
+                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-purple-500">
+          <option value="CAINIAO">Cainiao (Courier Report) — Pré-Faturas</option>
+          <option value="CAINIAO_HELPER">Cainiao (Helper Report) — Entregas por Ajudante</option>
+          <option value="PAACK" disabled>Paack — em breve</option>
+          <option value="DELNEXT" disabled>Delnext — em breve</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Ficheiro (.xlsx)</label>
+        <input type="file" id="g-file" accept=".xlsx"
+               class="w-full text-sm text-gray-700 dark:text-gray-300 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-purple-100 dark:file:bg-purple-900/40 file:text-purple-700 dark:file:text-purple-300 file:font-semibold hover:file:bg-purple-200 cursor-pointer">
+      </div>
+      <!-- Taxa — apenas para Courier Report -->
+      <div id="g-taxa-row">
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Taxa por Entrega (€)</label>
+        <input type="text" id="g-taxa" inputmode="decimal" value="1.00" placeholder="Ex: 1.00"
+               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
+        <p class="text-xs text-gray-400 mt-0.5">Deixar 0 para preencher manualmente depois</p>
+      </div>
+      <!-- Período — apenas para Helper Report -->
+      <div id="g-period-row" class="hidden grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Período Início</label>
+          <input type="date" id="g-date-from"
+                 class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Período Fim</label>
+          <input type="date" id="g-date-to"
+                 class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
+        </div>
+      </div>
+      <!-- Hint dinâmico -->
+      <div id="g-hint-courier" class="bg-blue-50 dark:bg-blue-900/20 rounded-lg px-4 py-3 text-xs text-blue-700 dark:text-blue-300 space-y-1">
+        <div class="font-semibold">Mapeamento de colunas Cainiao:</div>
+        <div>📦 <strong>Signed Parcels</strong> → Pacotes faturados (entregues com sucesso)</div>
+        <div>📊 <strong>Delivery Success Rate</strong> → DSR (lido automaticamente)</div>
+        <div>📋 <strong>Total Parcels</strong> → Guardado nas observações (referência)</div>
+      </div>
+      <div id="g-hint-helper" class="hidden bg-teal-50 dark:bg-teal-900/20 rounded-lg px-4 py-3 text-xs text-teal-700 dark:text-teal-300 space-y-1">
+        <div class="font-semibold">Mapeamento de colunas Helper Report:</div>
+        <div>🆔 <strong>Courier ID</strong> → Identifica o driver principal</div>
+        <div>👤 <strong>Courier Helper</strong> → Nome do ajudante (pode estar vazio)</div>
+        <div>✅ <strong>Task Status = Delivered</strong> → Só estas linhas são contabilizadas</div>
+        <div>📦 <strong>Waybill / LP No.</strong> → Guardados por entrega para rastreio</div>
+      </div>
+    </div>
+
+    <!-- ETAPA 2: Preview de mapeamento de drivers -->
+    <div id="import-step2" class="hidden flex-1 overflow-y-auto">
+      <div class="px-6 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/30 flex-shrink-0 space-y-2">
+        <div class="flex items-center justify-between">
+          <div class="text-sm font-medium text-gray-700 dark:text-gray-300">
+            Confirme o mapeamento de cada motorista antes de importar
+          </div>
+          <div class="flex gap-2 text-xs">
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full">
+              <span id="preview-matched-count">0</span> identificados
+            </span>
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full">
+              <span id="preview-new-count">0</span> novos
+            </span>
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded-full">
+              <span id="preview-zero-count">0</span> ignorados
+            </span>
+          </div>
+        </div>
+        <!-- Toggle: ocultar drivers sem pacotes -->
+        <label class="inline-flex items-center gap-2 cursor-pointer select-none text-xs text-gray-600 dark:text-gray-400">
+          <div class="relative">
+            <input type="checkbox" id="toggle-zero-filter" class="sr-only peer" checked
+                   onchange="applyZeroParcelFilter()">
+            <div class="w-8 h-4 bg-gray-300 dark:bg-gray-600 peer-checked:bg-purple-500 rounded-full transition-colors"></div>
+            <div class="absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full shadow transition-transform peer-checked:translate-x-4"></div>
+          </div>
+          Ocultar motoristas sem pacotes contabilizados
+          <span class="text-gray-400">(serão ignorados na importação)</span>
+        </label>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+            <tr>
+              <th class="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase">ID/Nome no Parceiro</th>
+              <th class="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 uppercase">Pacotes</th>
+              <th class="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 uppercase">DSR</th>
+              <th class="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase w-56">Motorista no Sistema</th>
+            </tr>
+          </thead>
+          <tbody id="preview-tbody" class="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-800">
+          </tbody>
+        </table>
+      </div>
+      <div id="g-result" class="hidden mx-6 my-3 rounded-xl p-4 text-sm"></div>
+    </div>
+
+    <!-- ETAPA 2: Preview Helper Report -->
+    <div id="import-step2-helpers" class="hidden flex-1 overflow-y-auto">
+      <div class="px-6 py-3 border-b border-gray-200 dark:border-gray-700 bg-teal-50 dark:bg-teal-900/20 flex-shrink-0">
+        <div class="flex items-center justify-between">
+          <span class="text-sm font-medium text-teal-800 dark:text-teal-200">Helper Report — confirme antes de importar</span>
+          <div class="flex gap-2 text-xs">
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-teal-100 dark:bg-teal-800 text-teal-700 dark:text-teal-300 rounded-full">
+              <span id="helper-total-count">0</span> entregas
+            </span>
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded-full">
+              <span id="helper-mapped-count">0</span> drivers mapeados
+            </span>
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300 rounded-full">
+              <span id="helper-unmapped-count">0</span> não mapeados
+            </span>
+          </div>
+        </div>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+            <tr>
+              <th class="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase">Courier ID</th>
+              <th class="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase">Driver no Sistema</th>
+              <th class="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 uppercase">Total</th>
+              <th class="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 uppercase">Direto</th>
+              <th class="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase">Helpers</th>
+            </tr>
+          </thead>
+          <tbody id="helper-preview-tbody"></tbody>
+        </table>
+      </div>
+      <div id="g-result-helpers" class="hidden mx-6 my-3 rounded-xl p-4 text-sm"></div>
+    </div>
+
+    <!-- Footer -->
+    <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 flex justify-between flex-shrink-0">
+      <button onclick="closeImportGlobal()" class="px-4 py-2 text-gray-600 dark:text-gray-400 text-sm font-medium">Cancelar</button>
+      <div class="flex gap-2">
+        <button id="g-back-btn" onclick="importGoBack()" class="hidden px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium hover:bg-gray-300 transition-colors">
+          ← Voltar
+        </button>
+        <button id="g-preview-btn" onclick="runImportPreview()"
+                class="inline-flex items-center gap-2 px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold text-sm">
+          <i data-lucide="eye" class="w-4 h-4"></i> Pré-visualizar
+        </button>
+        <button id="g-import-btn" onclick="runImportGlobal()" class="hidden
+                inline-flex items-center gap-2 px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold text-sm">
+          <i data-lucide="upload" class="w-4 h-4"></i> Confirmar Importação
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL DE EDIÇÃO DE PRÉ-FATURA ===== -->
+<div x-data x-show="$store.pfEdit.open" x-cloak
+     class="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-3xl mx-4 flex flex-col overflow-hidden"
+       style="max-height:90vh" @click.outside="$store.pfEdit.close()">
+
+    <!-- Header com gradiente purple -->
+    <div class="bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-6 py-5 flex items-center justify-between flex-shrink-0">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+          <i data-lucide="file-edit" class="w-5 h-5 text-white"></i>
+        </div>
+        <div>
+          <h2 class="text-base font-bold text-white" x-text="$store.pfEdit.pf ? $store.pfEdit.pf.numero : '...'"></h2>
+          <p class="text-xs text-purple-200" x-text="$store.pfEdit.driverNome"></p>
+        </div>
+      </div>
+      <button @click="$store.pfEdit.close()" class="text-white/70 hover:text-white hover:bg-white/20 rounded-lg p-1.5 transition-colors">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+
+    <!-- Body scrollable -->
+    <div class="overflow-y-auto flex-1 px-6 py-5 space-y-5 bg-gray-50 dark:bg-gray-900/30">
+
+      <!-- Loading -->
+      <div x-show="$store.pfEdit.loading" class="flex items-center justify-center py-12">
+        <svg class="animate-spin w-8 h-8 text-indigo-500" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+        </svg>
+      </div>
+
+      <template x-if="!$store.pfEdit.loading && $store.pfEdit.pf">
+        <div class="space-y-6">
+
+          <!-- Totais rápidos -->
+          <div class="grid grid-cols-3 gap-3">
+            <div class="bg-indigo-50 dark:bg-indigo-900/20 rounded-xl p-3 text-center">
+              <div class="text-xs text-gray-500 mb-0.5">Base Entregas</div>
+              <div class="text-base font-bold text-indigo-700 dark:text-indigo-300" x-text="'€' + parseFloat($store.pfEdit.pf.base_entregas).toFixed(2)"></div>
+            </div>
+            <div class="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-3 text-center">
+              <div class="text-xs text-gray-500 mb-0.5">Deduções</div>
+              <div class="text-base font-bold text-amber-700 dark:text-amber-300"
+                   x-text="'- €' + (parseFloat($store.pfEdit.pf.total_pacotes_perdidos||0) + parseFloat($store.pfEdit.pf.total_adiantamentos||0) + parseFloat($store.pfEdit.pf.penalizacoes_gerais||0)).toFixed(2)"></div>
+            </div>
+            <div class="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-3 text-center">
+              <div class="text-xs text-gray-500 mb-0.5">Total a Receber</div>
+              <div class="text-base font-bold text-emerald-700 dark:text-emerald-300" x-text="'€' + parseFloat($store.pfEdit.pf.total_a_receber).toFixed(2)"></div>
+            </div>
+          </div>
+
+          <!-- Linhas de Trabalho -->
+          <div class="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden bg-white dark:bg-gray-800">
+            <div class="flex items-center justify-between px-4 py-3 bg-indigo-50 dark:bg-indigo-900/30 border-b border-indigo-100 dark:border-indigo-800/50">
+              <h3 class="text-sm font-semibold text-indigo-900 dark:text-indigo-200 flex items-center gap-2">
+                <i data-lucide="layers" class="w-4 h-4 text-indigo-500"></i> Linhas de Trabalho por Parceiro
+              </h3>
+              <button @click="$store.pfEdit.showLinhaForm = !$store.pfEdit.showLinhaForm"
+                      class="text-xs px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold transition-colors">
+                + Adicionar
+              </button>
+            </div>
+            <!-- Add form -->
+            <div x-show="$store.pfEdit.showLinhaForm" class="px-4 py-3 bg-indigo-50 dark:bg-indigo-900/20 border-b border-gray-200 dark:border-gray-700">
+              <div class="grid grid-cols-2 md:grid-cols-5 gap-2">
+                <div class="md:col-span-2">
+                  <label class="text-xs text-gray-500 mb-1 block">Parceiro</label>
+                  <select x-model="$store.pfEdit.linhaForm.parceiro_id" class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                    <option value="">— Sem parceiro —</option>
+                    <template x-for="p in $store.pfEdit.parceiros" :key="p.id">
+                      <option :value="p.id" x-text="p.name"></option>
+                    </template>
+                  </select>
+                </div>
+                <div>
+                  <label class="text-xs text-gray-500 mb-1 block">Pacotes</label>
+                  <input type="number" min="0" x-model.number="$store.pfEdit.linhaForm.total_pacotes" class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                </div>
+                <div>
+                  <label class="text-xs text-gray-500 mb-1 block">Taxa (€)</label>
+                  <input type="number" step="0.01" min="0" x-model.number="$store.pfEdit.linhaForm.taxa_por_entrega" class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                </div>
+                <div>
+                  <label class="text-xs text-gray-500 mb-1 block">DSR (%)</label>
+                  <input type="number" step="0.01" min="0" x-model.number="$store.pfEdit.linhaForm.dsr_percentual" class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                </div>
+              </div>
+              <div class="flex gap-2 mt-2">
+                <button @click="$store.pfEdit.addLinha()" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs rounded-lg font-semibold transition-colors">Guardar</button>
+                <button @click="$store.pfEdit.showLinhaForm = false" class="px-3 py-1.5 bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500 text-gray-800 dark:text-white text-xs rounded-lg transition-colors">Cancelar</button>
+              </div>
+            </div>
+            <!-- Lines list -->
+            <div>
+              <!-- Cabeçalho -->
+              <div class="flex items-center text-xs font-semibold text-gray-500 uppercase tracking-wide bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700 px-4 py-2">
+                <div style="width:33%;min-width:0">Parceiro</div>
+                <div style="width:12%" class="text-right">Pacotes</div>
+                <div style="width:12%" class="text-right">Taxa</div>
+                <div style="width:10%" class="text-right">DSR</div>
+                <div style="width:15%" class="text-right">Base</div>
+                <div style="width:18%"></div>
+              </div>
+              <!-- Empty state -->
+              <template x-if="$store.pfEdit.pf.linhas && $store.pfEdit.pf.linhas.length === 0">
+                <div class="px-4 py-4 text-sm text-gray-400 text-center">Nenhuma linha — clique em "+ Adicionar"</div>
+              </template>
+              <!-- Linhas -->
+              <template x-for="linha in ($store.pfEdit.pf.linhas || [])" :key="linha.id">
+                <div class="border-t border-gray-100 dark:border-gray-700">
+                  <!-- Modo leitura -->
+                  <div x-show="!linha._isEditing" class="flex items-center px-4 py-2.5 text-sm hover:bg-gray-50/50 dark:hover:bg-gray-700/30">
+                    <div style="width:33%;min-width:0" class="font-medium text-gray-800 dark:text-white truncate pr-2" x-text="linha.parceiro_nome || '—'"></div>
+                    <div style="width:12%" class="text-right text-gray-600 dark:text-gray-300" x-text="linha.total_pacotes"></div>
+                    <div style="width:12%" class="text-right text-gray-600 dark:text-gray-300" x-text="'€' + parseFloat(linha.taxa_por_entrega).toFixed(2)"></div>
+                    <div style="width:10%" class="text-right text-gray-500 dark:text-gray-400" x-text="parseFloat(linha.dsr_percentual) > 0 ? linha.dsr_percentual + '%' : '—'"></div>
+                    <div style="width:15%" class="text-right font-semibold text-indigo-600 dark:text-indigo-400" x-text="'€' + parseFloat(linha.base_entregas).toFixed(2)"></div>
+                    <div style="width:18%" class="flex items-center justify-end gap-1">
+                      <button @click="$store.pfEdit.editLinha(linha)" class="w-6 h-6 flex items-center justify-center text-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded transition-colors" title="Editar">
+                        <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                      </button>
+                      <button @click="$store.pfEdit.deleteLinha(linha.id)" class="w-6 h-6 flex items-center justify-center text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors" title="Remover">
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                      </button>
+                    </div>
+                  </div>
+                  <!-- Helpers breakdown -->
+                  <div x-show="!linha._isEditing && linha.api_source === 'cainiao' && linha.helpers && linha.helpers.length > 0"
+                       class="px-4 pb-3 bg-blue-50/20 dark:bg-blue-900/10">
+                    <div class="rounded-lg overflow-hidden border border-blue-200 dark:border-blue-800">
+                      <div class="bg-blue-700 px-3 py-1.5 flex items-center gap-2">
+                        <i data-lucide="users" class="w-3.5 h-3.5 text-blue-200"></i>
+                        <span class="text-xs font-semibold text-blue-100 uppercase tracking-wide">Detalhe de Assistentes (Helpers)</span>
+                      </div>
+                      <div class="flex text-xs font-semibold bg-blue-50 dark:bg-blue-900/30 px-3 py-1.5">
+                        <div style="width:55%;min-width:0" class="text-blue-700 dark:text-blue-300">Assistente</div>
+                        <div style="width:25%" class="text-right text-blue-700 dark:text-blue-300">Entregas</div>
+                        <div style="width:20%" class="text-right text-blue-700 dark:text-blue-300">% Total</div>
+                      </div>
+                      <template x-for="(h, idx) in linha.helpers" :key="idx">
+                        <div class="flex px-3 py-1.5 border-t border-gray-100 dark:border-gray-700/50 text-xs"
+                             :class="idx % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-blue-50/40 dark:bg-blue-900/10'">
+                          <div style="width:55%;min-width:0" :class="h.helper_name === 'Principal' ? 'font-semibold text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-gray-300'" x-text="h.helper_name"></div>
+                          <div style="width:25%" class="text-right font-mono font-semibold text-gray-800 dark:text-gray-100" x-text="h.count"></div>
+                          <div style="width:20%" class="text-right text-gray-500 dark:text-gray-400" x-text="linha.total_pacotes > 0 ? ((h.count / linha.total_pacotes) * 100).toFixed(1) + '%' : '—'"></div>
+                        </div>
+                      </template>
+                      <div class="flex px-3 py-1.5 border-t border-blue-200 dark:border-blue-700 bg-blue-100 dark:bg-blue-900/40 font-semibold text-xs">
+                        <div style="width:55%;min-width:0" class="text-blue-800 dark:text-blue-200 uppercase tracking-wide">Total</div>
+                        <div style="width:25%" class="text-right font-mono text-blue-800 dark:text-blue-200" x-text="linha.total_pacotes"></div>
+                        <div style="width:20%" class="text-right text-blue-800 dark:text-blue-200">100%</div>
+                      </div>
+                    </div>
+                  </div>
+                  <!-- Modo edição inline -->
+                  <div x-show="linha._isEditing" class="px-4 py-3 bg-indigo-50 dark:bg-indigo-900/20">
+                    <div class="grid grid-cols-2 gap-2">
+                      <div>
+                        <label class="text-xs text-gray-500 mb-1 block">Parceiro</label>
+                        <select x-model="linha._editForm.parceiro_id" class="w-full px-2 py-1 border border-indigo-300 dark:border-indigo-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-xs">
+                          <option value="">— Sem parceiro —</option>
+                          <template x-for="p in $store.pfEdit.parceiros" :key="p.id">
+                            <option :value="p.id" x-text="p.name" :selected="p.id == linha._editForm.parceiro_id"></option>
+                          </template>
+                        </select>
+                      </div>
+                      <div>
+                        <label class="text-xs text-gray-500 mb-1 block">Courier ID</label>
+                        <input type="text" x-model="linha._editForm.courier_id" class="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-xs">
+                      </div>
+                      <div>
+                        <label class="text-xs text-gray-500 mb-1 block">Pacotes</label>
+                        <input type="number" min="0" x-model.number="linha._editForm.total_pacotes" class="w-full px-2 py-1 border border-indigo-300 dark:border-indigo-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-xs">
+                      </div>
+                      <div>
+                        <label class="text-xs text-gray-500 mb-1 block">Taxa (€)</label>
+                        <input type="number" step="0.01" min="0" x-model.number="linha._editForm.taxa_por_entrega" class="w-full px-2 py-1 border border-indigo-300 dark:border-indigo-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-xs">
+                      </div>
+                      <div>
+                        <label class="text-xs text-gray-500 mb-1 block">DSR (%)</label>
+                        <input type="number" step="0.01" min="0" x-model.number="linha._editForm.dsr_percentual" class="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-xs">
+                      </div>
+                    </div>
+                    <div class="flex gap-2 pt-2">
+                      <button @click="$store.pfEdit.updateLinha(linha)" class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs rounded-lg font-semibold transition-colors flex items-center gap-1">
+                        <i data-lucide="check" class="w-3 h-3"></i> Guardar
+                      </button>
+                      <button @click="$store.pfEdit.cancelEditLinha(linha)" class="px-3 py-1 bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 text-gray-800 dark:text-white text-xs rounded-lg transition-colors">
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
+
+          <!-- Dados Gerais -->
+          <div class="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden bg-white dark:bg-gray-800">
+            <div class="px-4 py-3 bg-purple-50 dark:bg-purple-900/30 border-b border-purple-100 dark:border-purple-800/50">
+              <h3 class="text-sm font-semibold text-purple-900 dark:text-purple-200 flex items-center gap-2">
+                <i data-lucide="sliders-horizontal" class="w-4 h-4 text-purple-500"></i> Dados Gerais
+              </h3>
+            </div>
+            <div class="px-4 py-4 grid grid-cols-2 gap-4">
+              <div>
+                <label class="text-xs text-gray-500 mb-1 block">Ajuste Manual (€)</label>
+                <input type="number" step="0.01" x-model.number="$store.pfEdit.geral.ajuste_manual"
+                       @change="$store.pfEdit.saveGeral()"
+                       class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+              </div>
+              <div>
+                <label class="text-xs text-gray-500 mb-1 block">Penalizações (€)</label>
+                <input type="number" step="0.01" x-model.number="$store.pfEdit.geral.penalizacoes_gerais"
+                       @change="$store.pfEdit.saveGeral()"
+                       class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+              </div>
+              <div class="col-span-2">
+                <label class="text-xs text-gray-500 mb-1 block">Observações</label>
+                <textarea x-model="$store.pfEdit.geral.observacoes" rows="2"
+                          @change="$store.pfEdit.saveGeral()"
+                          class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"></textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bonificações -->
+          <div class="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden bg-white dark:bg-gray-800">
+            <div class="flex items-center justify-between px-4 py-3 bg-yellow-50 dark:bg-yellow-900/20 border-b border-yellow-100 dark:border-yellow-800/50">
+              <h3 class="text-sm font-semibold text-yellow-900 dark:text-yellow-200 flex items-center gap-2">
+                <i data-lucide="sun" class="w-4 h-4 text-yellow-500"></i> Bonificações Dom/Feriado
+              </h3>
+              <button @click="$store.pfEdit.showBonusForm = !$store.pfEdit.showBonusForm"
+                      class="text-xs px-3 py-1.5 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg font-semibold transition-colors">
+                + Adicionar
+              </button>
+            </div>
+            <div x-show="$store.pfEdit.showBonusForm" class="px-4 py-3 bg-yellow-50 dark:bg-yellow-900/20 border-b border-gray-200 dark:border-gray-700">
+              <div class="grid grid-cols-3 gap-2">
+                <div>
+                  <label class="text-xs text-gray-500 mb-1 block">Data</label>
+                  <input type="date" x-model="$store.pfEdit.bonusForm.data" class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                </div>
+                <div>
+                  <label class="text-xs text-gray-500 mb-1 block">Tipo</label>
+                  <select x-model="$store.pfEdit.bonusForm.tipo" class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                    <option value="DOMINGO">Domingo</option>
+                    <option value="FERIADO">Feriado</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="text-xs text-gray-500 mb-1 block">Qtd. Entregas</label>
+                  <input type="number" min="0" x-model.number="$store.pfEdit.bonusForm.qtd" class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                </div>
+              </div>
+              <div class="flex gap-2 mt-2">
+                <button @click="$store.pfEdit.addBonus()" class="px-3 py-1.5 bg-yellow-500 hover:bg-yellow-600 text-white text-xs rounded-lg font-semibold transition-colors">Guardar</button>
+                <button @click="$store.pfEdit.showBonusForm = false" class="px-3 py-1.5 bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500 text-gray-800 dark:text-white text-xs rounded-lg transition-colors">Cancelar</button>
+              </div>
+            </div>
+            <div class="divide-y divide-gray-100 dark:divide-gray-700">
+              <template x-if="!$store.pfEdit.pf.bonificacoes || $store.pfEdit.pf.bonificacoes.length === 0">
+                <div class="px-4 py-3 text-sm text-gray-400 text-center">Nenhuma bonificação</div>
+              </template>
+              <template x-for="b in ($store.pfEdit.pf.bonificacoes || [])" :key="b.id">
+                <div class="flex items-center justify-between px-4 py-2 text-sm">
+                  <span class="text-gray-700 dark:text-gray-300" x-text="b.data + ' — ' + b.tipo_display + ' — ' + b.qtd_entregas_elegiveis + ' entregas'"></span>
+                  <div class="flex items-center gap-2">
+                    <span class="font-semibold text-yellow-600 dark:text-yellow-400" x-text="'€' + parseFloat(b.bonus_calculado).toFixed(2)"></span>
+                    <button @click="$store.pfEdit.deleteBonus(b.id)" class="w-6 h-6 flex items-center justify-center text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors">
+                      <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                    </button>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
+
+          <!-- Pacotes Perdidos -->
+          <div class="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden bg-white dark:bg-gray-800">
+            <div class="flex items-center justify-between px-4 py-3 bg-red-50 dark:bg-red-900/20 border-b border-red-100 dark:border-red-800/50">
+              <h3 class="text-sm font-semibold text-red-900 dark:text-red-200 flex items-center gap-2">
+                <i data-lucide="package-x" class="w-4 h-4 text-red-500"></i> Pacotes Perdidos
+              </h3>
+              <button @click="$store.pfEdit.showLostForm = !$store.pfEdit.showLostForm"
+                      class="text-xs px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-lg font-semibold transition-colors">
+                + Adicionar
+              </button>
+            </div>
+            <div x-show="$store.pfEdit.showLostForm" class="px-4 py-3 bg-red-50 dark:bg-red-900/20 border-b border-gray-200 dark:border-gray-700">
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                <div>
+                  <label class="text-xs text-gray-500 mb-1 block">Nº Pacote</label>
+                  <input type="text" x-model="$store.pfEdit.lostForm.numero_pacote" class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                </div>
+                <div>
+                  <label class="text-xs text-gray-500 mb-1 block">Data</label>
+                  <input type="date" x-model="$store.pfEdit.lostForm.data" class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                </div>
+                <div>
+                  <label class="text-xs text-gray-500 mb-1 block">Valor Base (€)</label>
+                  <input type="number" step="0.01" x-model.number="$store.pfEdit.lostForm.valor" class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                </div>
+                <div>
+                  <label class="text-xs text-gray-500 mb-1 block">IVA (%)</label>
+                  <input type="number" step="0.01" min="0" max="100" x-model.number="$store.pfEdit.lostForm.iva_percentual" class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                </div>
+              </div>
+              <!-- Preview do total com IVA -->
+              <div class="mt-2 text-xs text-red-700 dark:text-red-300 font-medium" x-show="$store.pfEdit.lostForm.iva_percentual > 0">
+                Total c/ IVA: €<span x-text="(parseFloat($store.pfEdit.lostForm.valor || 0) * (1 + parseFloat($store.pfEdit.lostForm.iva_percentual || 0) / 100)).toFixed(2)"></span>
+              </div>
+              <div class="flex gap-2 mt-2">
+                <button @click="$store.pfEdit.addLostPackage()" class="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs rounded-lg font-semibold transition-colors">Guardar</button>
+                <button @click="$store.pfEdit.showLostForm = false" class="px-3 py-1.5 bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500 text-gray-800 dark:text-white text-xs rounded-lg transition-colors">Cancelar</button>
+              </div>
+            </div>
+            <div class="divide-y divide-gray-100 dark:divide-gray-700">
+              <template x-if="!$store.pfEdit.pf.pacotes_perdidos || $store.pfEdit.pf.pacotes_perdidos.length === 0">
+                <div class="px-4 py-3 text-sm text-gray-400 text-center">Nenhum pacote perdido</div>
+              </template>
+              <template x-for="pkg in ($store.pfEdit.pf.pacotes_perdidos || [])" :key="pkg.id">
+                <div class="flex items-center justify-between px-4 py-2 text-sm">
+                  <div>
+                    <span class="text-gray-700 dark:text-gray-300" x-text="pkg.numero_pacote + (pkg.data ? ' — ' + pkg.data : '')"></span>
+                    <span x-show="parseFloat(pkg.iva_percentual) > 0" class="ml-2 text-xs text-gray-400" x-text="'(base €' + parseFloat(pkg.valor).toFixed(2) + ' + ' + pkg.iva_percentual + '% IVA)'"></span>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <span class="font-semibold text-red-600 dark:text-red-400" x-text="'- €' + parseFloat(pkg.valor_com_iva).toFixed(2)"></span>
+                    <button @click="$store.pfEdit.deleteLostPackage(pkg.id)" class="w-6 h-6 flex items-center justify-center text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors">
+                      <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                    </button>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
+
+          <!-- Adiantamentos -->
+          <div class="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden bg-white dark:bg-gray-800">
+            <div class="flex items-center justify-between px-4 py-3 bg-orange-50 dark:bg-orange-900/20 border-b border-orange-100 dark:border-orange-800/50">
+              <h3 class="text-sm font-semibold text-orange-900 dark:text-orange-200 flex items-center gap-2">
+                <i data-lucide="wallet" class="w-4 h-4 text-orange-500"></i> Adiantamentos / Combustível
+              </h3>
+              <button @click="$store.pfEdit.showAdvForm = !$store.pfEdit.showAdvForm"
+                      class="text-xs px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-semibold transition-colors">
+                + Adicionar
+              </button>
+            </div>
+            <div x-show="$store.pfEdit.showAdvForm" class="px-4 py-3 bg-orange-50 dark:bg-orange-900/20 border-b border-gray-200 dark:border-gray-700">
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                <div>
+                  <label class="text-xs text-gray-500 mb-1 block">Tipo</label>
+                  <select x-model="$store.pfEdit.advForm.tipo" class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                    <option value="ADIANTAMENTO">Adiantamento</option>
+                    <option value="COMBUSTIVEL">Combustível</option>
+                    <option value="OUTRO">Outro</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="text-xs text-gray-500 mb-1 block">Data</label>
+                  <input type="date" x-model="$store.pfEdit.advForm.data" class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                </div>
+                <div>
+                  <label class="text-xs text-gray-500 mb-1 block">Valor (€)</label>
+                  <input type="number" step="0.01" x-model.number="$store.pfEdit.advForm.valor" class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                </div>
+                <div>
+                  <label class="text-xs text-gray-500 mb-1 block">Descrição</label>
+                  <input type="text" x-model="$store.pfEdit.advForm.descricao" class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                </div>
+              </div>
+              <div class="flex gap-2 mt-2">
+                <button @click="$store.pfEdit.addAdvance()" class="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-xs rounded-lg font-semibold transition-colors">Guardar</button>
+                <button @click="$store.pfEdit.showAdvForm = false" class="px-3 py-1.5 bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500 text-gray-800 dark:text-white text-xs rounded-lg transition-colors">Cancelar</button>
+              </div>
+            </div>
+            <div class="divide-y divide-gray-100 dark:divide-gray-700">
+              <template x-if="!$store.pfEdit.pf.adiantamentos || $store.pfEdit.pf.adiantamentos.length === 0">
+                <div class="px-4 py-3 text-sm text-gray-400 text-center">Nenhum adiantamento</div>
+              </template>
+              <template x-for="adv in ($store.pfEdit.pf.adiantamentos || [])" :key="adv.id">
+                <div class="flex items-center justify-between px-4 py-2 text-sm">
+                  <span class="text-gray-700 dark:text-gray-300" x-text="adv.tipo_display + ' — ' + adv.data + (adv.descricao ? ' — ' + adv.descricao : '')"></span>
+                  <div class="flex items-center gap-2">
+                    <span class="font-semibold text-orange-600 dark:text-orange-400" x-text="'- €' + parseFloat(adv.valor).toFixed(2)"></span>
+                    <button @click="$store.pfEdit.deleteAdvance(adv.id)" class="w-6 h-6 flex items-center justify-center text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors">
+                      <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                    </button>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
+
+        </div>
+      </template>
+    </div>
+
+    <!-- Footer -->
+    <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex items-center justify-between flex-shrink-0">
+      <a :href="'/settlements/pre-invoices/' + ($store.pfEdit.pfId || '') + '/pdf/'" target="_blank"
+         class="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-red-600 hover:text-white dark:hover:bg-red-600 text-gray-700 dark:text-gray-200 rounded-lg text-sm font-semibold transition-colors border border-gray-200 dark:border-gray-600">
+        <i data-lucide="file-down" class="w-4 h-4"></i> PDF
+      </a>
+      <button @click="$store.pfEdit.close()" class="px-5 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-800 dark:text-white rounded-lg text-sm font-semibold transition-colors border border-gray-200 dark:border-gray-600">
+        Fechar
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast de feedback -->
+<div id="toast" class="fixed bottom-6 right-6 z-50 hidden">
+  <div id="toast-inner" class="flex items-center gap-3 px-5 py-3 rounded-xl shadow-2xl text-white text-sm font-medium">
+    <i id="toast-icon" data-lucide="check-circle" class="w-5 h-5 flex-shrink-0"></i>
+    <span id="toast-msg"></span>
+  </div>
+</div>
+
+<script>
+const CSRF = document.querySelector('[name=csrfmiddlewaretoken]')?.value
+  || document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+
+const POST_JSON = body => ({
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+  body: JSON.stringify(body),
+});
+const POST_EMPTY = () => ({ method: 'POST', headers: { 'X-CSRFToken': CSRF } });
+
+document.addEventListener('alpine:init', () => {
+  Alpine.store('pfEdit', {
+    open: false,
+    loading: false,
+    pfId: null,
+    driverId: null,
+    pf: null,
+    driverNome: '',
+    parceiros: [],
+    showLinhaForm: false,
+    showBonusForm: false,
+    showLostForm: false,
+    showAdvForm: false,
+    linhaForm: { parceiro_id: '', courier_id: '', total_pacotes: 0, taxa_por_entrega: 0, dsr_percentual: 0 },
+    bonusForm: { data: '', tipo: 'DOMINGO', qtd: 0 },
+    lostForm: { numero_pacote: '', data: '', valor: 50.00, iva_percentual: 23 },
+    advForm: { tipo: 'ADIANTAMENTO', data: '', valor: 0, descricao: '' },
+    geral: { ajuste_manual: 0, penalizacoes_gerais: 0, observacoes: '' },
+
+    async openPf(pfId, driverId) {
+      this.pfId = pfId;
+      this.driverId = driverId;
+      this.open = true;
+      this.loading = true;
+      this.showLinhaForm = false;
+      this.showBonusForm = false;
+      this.showLostForm = false;
+      this.showAdvForm = false;
+      await this.reload();
+      this.loading = false;
+      setTimeout(() => lucide.createIcons(), 100);
+    },
+
+    close() {
+      this.open = false;
+      this.pf = null;
+    },
+
+    async reload() {
+      try {
+        const resp = await fetch(`/settlements/pre-invoices/driver/${this.driverId}/`);
+        const data = await resp.json();
+        this.parceiros = data.parceiros || [];
+        this.driverNome = data.driver_nome || '';
+        const raw = (data.pre_invoices || []).find(p => p.id === this.pfId) || null;
+        if (raw) raw.linhas = (raw.linhas || []).map(l => ({ ...l, _isEditing: false, _editForm: {} }));
+        this.pf = raw;
+        if (this.pf) {
+          this.geral = {
+            ajuste_manual: parseFloat(this.pf.ajuste_manual) || 0,
+            penalizacoes_gerais: parseFloat(this.pf.penalizacoes_gerais) || 0,
+            observacoes: this.pf.observacoes || '',
+          };
+        }
+      } catch (e) {
+        console.error('Erro ao carregar pré-fatura:', e);
+      }
+      setTimeout(() => lucide.createIcons(), 100);
+    },
+
+    async addLinha() {
+      if (!this.linhaForm.total_pacotes || !this.linhaForm.taxa_por_entrega) {
+        showToast('Pacotes e Taxa são obrigatórios.', false); return;
+      }
+      const resp = await fetch(`/settlements/pre-invoices/${this.pfId}/linha/add/`, POST_JSON(this.linhaForm));
+      const data = await resp.json();
+      if (data.success) {
+        this.showLinhaForm = false;
+        this.linhaForm = { parceiro_id: '', courier_id: '', total_pacotes: 0, taxa_por_entrega: 0, dsr_percentual: 0 };
+        await this.reload();
+        showToast('Linha adicionada.');
+      } else { showToast(data.error || 'Erro ao adicionar linha.', false); }
+    },
+
+    async deleteLinha(lineId) {
+      await fetch(`/settlements/pre-invoices/linha/${lineId}/delete/`, POST_EMPTY());
+      await this.reload();
+      showToast('Linha removida.');
+    },
+
+    editLinha(linha) {
+      linha._editForm = {
+        parceiro_id: linha.parceiro_id || '',
+        courier_id: linha.courier_id || '',
+        total_pacotes: linha.total_pacotes,
+        taxa_por_entrega: linha.taxa_por_entrega,
+        dsr_percentual: linha.dsr_percentual,
+      };
+      linha._isEditing = true;
+    },
+
+    cancelEditLinha(linha) {
+      linha._isEditing = false;
+    },
+
+    async updateLinha(linha) {
+      if (!linha._editForm.total_pacotes || !linha._editForm.taxa_por_entrega) {
+        showToast('Pacotes e Taxa são obrigatórios.', false); return;
+      }
+      const resp = await fetch(`/settlements/pre-invoices/linha/${linha.id}/update/`, POST_JSON(linha._editForm));
+      const data = await resp.json();
+      if (data.success) {
+        await this.reload();
+        showToast('Linha actualizada.');
+      } else { showToast(data.error || 'Erro ao actualizar.', false); }
+    },
+
+    async saveGeral() {
+      const resp = await fetch(`/settlements/pre-invoices/${this.pfId}/update/`, POST_JSON(this.geral));
+      const data = await resp.json();
+      if (data.success) {
+        await this.reload();
+        showToast('Dados guardados.');
+      } else { showToast(data.error || 'Erro ao guardar.', false); }
+    },
+
+    async addBonus() {
+      const resp = await fetch(`/settlements/pre-invoices/${this.pfId}/bonus/add/`, POST_JSON({
+        data: this.bonusForm.data, tipo: this.bonusForm.tipo, qtd_entregas_elegiveis: this.bonusForm.qtd,
+      }));
+      const data = await resp.json();
+      if (data.success) {
+        this.showBonusForm = false;
+        this.bonusForm = { data: '', tipo: 'DOMINGO', qtd: 0 };
+        await this.reload();
+        showToast('Bonificação adicionada.');
+      } else { showToast(data.error || 'Erro.', false); }
+    },
+
+    async deleteBonus(id) {
+      await fetch(`/settlements/pre-invoices/bonus/${id}/delete/`, POST_EMPTY());
+      await this.reload();
+      showToast('Bonificação removida.');
+    },
+
+    async addLostPackage() {
+      const resp = await fetch(`/settlements/pre-invoices/${this.pfId}/pacote-perdido/add/`, POST_JSON(this.lostForm));
+      const data = await resp.json();
+      if (data.success) {
+        this.showLostForm = false;
+        this.lostForm = { numero_pacote: '', data: '', valor: 50.00, iva_percentual: 23 };
+        await this.reload();
+        showToast('Pacote perdido adicionado.');
+      } else { showToast(data.error || 'Erro.', false); }
+    },
+
+    async deleteLostPackage(id) {
+      await fetch(`/settlements/pre-invoices/pacote-perdido/${id}/delete/`, POST_EMPTY());
+      await this.reload();
+      showToast('Pacote perdido removido.');
+    },
+
+    async addAdvance() {
+      const resp = await fetch(`/settlements/pre-invoices/${this.pfId}/adiantamento/add/`, POST_JSON(this.advForm));
+      const data = await resp.json();
+      if (data.success) {
+        this.showAdvForm = false;
+        this.advForm = { tipo: 'ADIANTAMENTO', data: '', valor: 0, descricao: '' };
+        await this.reload();
+        showToast('Adiantamento adicionado.');
+      } else { showToast(data.error || 'Erro.', false); }
+    },
+
+    async deleteAdvance(id) {
+      await fetch(`/settlements/pre-invoices/adiantamento/${id}/delete/`, POST_EMPTY());
+      await this.reload();
+      showToast('Adiantamento removido.');
+    },
+  });
+});
+
+// Badge colour map
+const BADGE_CLASSES = {
+  PAGO:       'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400',
+  APROVADO:   'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+  PENDENTE:   'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
+  CONTESTADO: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400',
+  REPROVADO:  'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
+  CALCULADO:  'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-400',
+  RASCUNHO:   'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
+};
+
+const LABEL_MAP = {
+  APROVADO: 'Aprovar', PENDENTE: 'Marcar Pendente', PAGO: 'Marcar como Pago',
+  CONTESTADO: 'Contestar', REPROVADO: 'Reprovar', CALCULADO: 'Enviar para Revisão',
+};
+const BTN_CLASS = {
+  APROVADO: 'bg-blue-600 hover:bg-blue-700', PENDENTE: 'bg-yellow-500 hover:bg-yellow-600',
+  PAGO: 'bg-emerald-600 hover:bg-emerald-700', CONTESTADO: 'bg-orange-500 hover:bg-orange-600',
+  REPROVADO: 'bg-red-600 hover:bg-red-700', CALCULADO: 'bg-cyan-600 hover:bg-cyan-700',
+};
+const ICON_MAP = {
+  APROVADO: 'check-circle', PENDENTE: 'clock', PAGO: 'banknote',
+  CONTESTADO: 'message-circle-warning', REPROVADO: 'x-circle', CALCULADO: 'refresh-cw',
+};
+const ICON_BG_MAP = {
+  APROVADO: 'bg-blue-500', PENDENTE: 'bg-yellow-500', PAGO: 'bg-emerald-500',
+  CONTESTADO: 'bg-orange-500', REPROVADO: 'bg-red-500', CALCULADO: 'bg-cyan-500',
+};
+
+// ── Import wizard state ────────────────────────────────────────────────────
+let _importPreviewData = null;   // rows from preview
+let _importAllDrivers = [];      // all active drivers for selector
+
+function closeImportGlobal() {
+  document.getElementById('importModalGlobal').classList.add('hidden');
+  importGoBack();
+  _importPreviewData = null;
+  _importAllDrivers = [];
+}
+
+function applyZeroParcelFilter() {
+  const toggle = document.getElementById('toggle-zero-filter');
+  const hide = toggle ? toggle.checked : true;
+  document.querySelectorAll('#preview-table-body tr[data-zero-packages="1"]').forEach(function(tr) {
+    tr.style.display = hide ? 'none' : '';
+  });
+}
+
+function importGoBack() {
+  document.getElementById('import-step1').classList.remove('hidden');
+  document.getElementById('import-step2').classList.add('hidden');
+  document.getElementById('import-step2-helpers').classList.add('hidden');
+  document.getElementById('g-preview-btn').classList.remove('hidden');
+  document.getElementById('g-import-btn').classList.add('hidden');
+  document.getElementById('g-back-btn').classList.add('hidden');
+  document.getElementById('import-subtitle').textContent = 'Etapa 1 de 2 — Configuração';
+  const rd = document.getElementById('g-result');
+  rd.classList.add('hidden');
+  rd.innerHTML = '';
+  const rdh = document.getElementById('g-result-helpers');
+  rdh.classList.add('hidden');
+  rdh.innerHTML = '';
+  const toggle = document.getElementById('toggle-zero-filter');
+  if (toggle) toggle.checked = true;
+}
+
+function updateFormatUI() {
+  const fmt = document.getElementById('g-formato').value;
+  const isHelper = fmt === 'CAINIAO_HELPER';
+  // Taxa visível sempre (para Helper é usada para gerar pré-fatura)
+  document.getElementById('g-taxa-row').classList.remove('hidden');
+  const taxaLabel = document.querySelector('#g-taxa-row label');
+  if (taxaLabel) taxaLabel.textContent = isHelper ? 'Taxa por Entrega (€) — para pré-fatura' : 'Taxa por Entrega (€)';
+  // Período oculto para Helper — detetado automaticamente do ficheiro
+  document.getElementById('g-period-row').classList.add('hidden');
+  document.getElementById('g-hint-courier').classList.toggle('hidden', isHelper);
+  document.getElementById('g-hint-helper').classList.toggle('hidden', !isHelper);
+  // Pré-preencher datas do mês corrente
+  if (isHelper) {
+    const now = new Date();
+    const y = now.getFullYear(), m = String(now.getMonth()+1).padStart(2,'0');
+    const last = new Date(y, now.getMonth()+1, 0).getDate();
+    const fi = document.getElementById('g-date-from');
+    const ft = document.getElementById('g-date-to');
+    if (fi && !fi.value) fi.value = `${y}-${m}-01`;
+    if (ft && !ft.value) ft.value = `${y}-${m}-${String(last).padStart(2,'0')}`;
+  }
+}
+
+async function runImportPreview() {
+  const fmt = document.getElementById('g-formato').value;
+
+  if (fmt === 'CAINIAO_HELPER') {
+    return runHelperPreview();
+  }
+
+  const partnerId = document.getElementById('g-parceiro').value;
+  const file = document.getElementById('g-file').files[0];
+  if (!partnerId) { showToast('Seleciona um parceiro.', false); return; }
+  if (!file) { showToast('Seleciona um ficheiro .xlsx.', false); return; }
+
+  const btn = document.getElementById('g-preview-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg> A analisar...';
+
+  const fd = new FormData();
+  fd.append('planilha', file);
+  fd.append('formato', fmt);
+  fd.append('csrfmiddlewaretoken', CSRF);
+
+  try {
+    const resp = await fetch(`/settlements/pre-invoices/import/${partnerId}/preview/`, { method: 'POST', body: fd });
+    const data = await resp.json();
+    if (!data.success) { showToast(data.error, false); return; }
+
+    _importPreviewData = data.rows;
+    _importAllDrivers = data.all_drivers;
+
+    // Render preview table
+    const tbody = document.getElementById('preview-tbody');
+    tbody.innerHTML = '';
+    let matchedCount = 0, newCount = 0, zeroCount = 0;
+
+    data.rows.forEach(row => {
+      const isZero = !row.signed_parcels || row.signed_parcels === 0;
+      if (isZero) {
+        zeroCount++;
+      } else {
+        if (row.matched) matchedCount++; else newCount++;
+      }
+
+      const driverOptions = _importAllDrivers.map(d =>
+        `<option value="${d.id}" ${row.driver_id === d.id ? 'selected' : ''}>${d.nome_completo}</option>`
+      ).join('');
+
+      const matchBadge = isZero
+        ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded-full text-xs font-medium">
+             <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+             Ignorado
+           </span>`
+        : row.matched
+          ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-full text-xs font-medium">
+               <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+               Identificado
+             </span>`
+          : `<span class="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-full text-xs font-medium">
+               <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M12 3a9 9 0 100 18 9 9 0 000-18z"/></svg>
+               Novo
+             </span>`;
+
+      const tr = document.createElement('tr');
+      tr.dataset.zeroPackages = isZero ? '1' : '0';
+      tr.className = isZero
+        ? 'bg-gray-50/50 dark:bg-gray-900/20 opacity-60'
+        : 'hover:bg-gray-50 dark:hover:bg-gray-700/40';
+      tr.innerHTML = `
+        <td class="px-4 py-3">
+          <div class="font-medium text-gray-900 dark:text-white text-xs">${row.courier_name || '—'}</div>
+          <div class="text-gray-400 text-xs font-mono">${row.courier_id}</div>
+          <div class="text-gray-400 text-xs mt-0.5">${row.periodo}</div>
+        </td>
+        <td class="px-4 py-3 text-center">
+          <span class="font-bold ${isZero ? 'text-gray-400' : 'text-gray-900 dark:text-white'} text-sm">${row.signed_parcels ?? '—'}</span>
+          <div class="text-gray-400 text-xs">/ ${row.total_parcels ?? '?'} tot.</div>
+        </td>
+        <td class="px-4 py-3 text-center text-xs text-gray-600 dark:text-gray-300">${row.dsr ?? '—'}%</td>
+        <td class="px-4 py-3">
+          <div class="flex items-center gap-2 flex-wrap">
+            ${matchBadge}
+            ${isZero
+              ? `<span class="text-xs text-gray-400 italic">não será importado</span>`
+              : `<select data-courier-id="${row.courier_id}"
+                        class="import-driver-select flex-1 min-w-0 px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500">
+                   <option value="">— Criar novo motorista —</option>
+                   ${driverOptions}
+                 </select>`
+            }
+          </div>
+        </td>`;
+      tbody.appendChild(tr);
+    });
+
+    document.getElementById('preview-matched-count').textContent = matchedCount;
+    document.getElementById('preview-new-count').textContent = newCount;
+    document.getElementById('preview-zero-count').textContent = zeroCount;
+
+    // Aplicar filtro inicial (toggle ligado por padrão)
+    applyZeroParcelFilter();
+
+    // Switch to step 2
+    document.getElementById('import-step1').classList.add('hidden');
+    document.getElementById('import-step2').classList.remove('hidden');
+    document.getElementById('g-preview-btn').classList.add('hidden');
+    document.getElementById('g-import-btn').classList.remove('hidden');
+    document.getElementById('g-back-btn').classList.remove('hidden');
+    document.getElementById('import-subtitle').textContent = 'Etapa 2 de 2 — Confirmar mapeamento';
+    lucide.createIcons();
+  } catch(e) {
+    showToast('Erro: ' + e.message, false);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i data-lucide="eye" class="w-4 h-4"></i> Pré-visualizar';
+    lucide.createIcons();
+  }
+}
+
+// Cache de drivers carregados para o dropdown de mapeamento
+let _cainiaoDriversCache = null;
+
+async function loadCainiaoDrivers() {
+  if (_cainiaoDriversCache) return _cainiaoDriversCache;
+  const r = await fetch('/settlements/cainiao/drivers/');
+  const d = await r.json();
+  _cainiaoDriversCache = d.success ? d.drivers : [];
+  return _cainiaoDriversCache;
+}
+
+function renderHelperTable(rows) {
+  const tbody = document.getElementById('helper-preview-tbody');
+  tbody.innerHTML = '';
+  let totalDeliveries = 0, mapped = 0, unmapped = 0;
+
+  rows.forEach(row => {
+    totalDeliveries += row.total || 0;
+    if (row.mapped) mapped++; else unmapped++;
+
+    const helperBadges = (row.helpers || []).map(h =>
+      `<span class="px-1.5 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full text-xs">${h.name} (${h.qty})</span>`
+    ).join('');
+
+    const safeId = CSS.escape(row.courier_id);
+    const tr = document.createElement('tr');
+    tr.id = `hrow-${row.courier_id}`;
+    tr.className = row.mapped ? 'hover:bg-gray-50 dark:hover:bg-gray-700/40' : 'bg-orange-50/50 dark:bg-orange-900/10';
+    tr.innerHTML = `
+      <td class="px-4 py-3 font-mono text-xs text-gray-500">${row.courier_id}${row.courier_name ? `<br><span class="text-gray-400">${row.courier_name}</span>` : ''}</td>
+      <td class="px-4 py-3" id="hrow-driver-${row.courier_id}">
+        ${row.mapped
+          ? `<span class="font-medium text-gray-900 dark:text-white text-sm">${row.driver_name}</span>`
+          : `<div class="flex flex-col gap-1.5">
+               <span class="text-xs text-orange-600 font-medium">⚠ Não mapeado</span>
+               <button type="button" onclick="showMapDriverPanel('${row.courier_id}','${(row.courier_name||'').replace(/'/g,"\\'")}','${safeId}')"
+                 class="text-xs px-2 py-1 rounded bg-blue-600 hover:bg-blue-700 text-white w-fit">
+                 Associar Driver
+               </button>
+             </div>`}
+      </td>
+      <td class="px-4 py-3 text-center">
+        <span class="px-2 py-0.5 bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 rounded-full text-xs font-bold">${row.total}</span>
+      </td>
+      <td class="px-4 py-3 text-center text-xs text-gray-500">${row.direct}</td>
+      <td class="px-4 py-3">
+        <div class="flex flex-wrap gap-1">${helperBadges || '<span class="text-xs text-gray-400">—</span>'}</div>
+      </td>`;
+    tbody.appendChild(tr);
+
+    // Painel expandido de associar driver (inicialmente oculto)
+    if (!row.mapped) {
+      const panelTr = document.createElement('tr');
+      panelTr.id = `hpanel-${row.courier_id}`;
+      panelTr.className = 'hidden bg-blue-50/60 dark:bg-blue-900/10';
+      panelTr.innerHTML = `
+        <td colspan="5" class="px-6 py-4">
+          <div class="flex flex-col gap-3">
+            <!-- Associar driver existente -->
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="text-xs font-medium text-gray-600 dark:text-gray-300 w-28">Driver existente:</span>
+              <select id="hselect-${row.courier_id}"
+                class="flex-1 min-w-[200px] text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-1.5 bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
+                <option value="">— Selecionar driver —</option>
+              </select>
+              <button type="button" onclick="confirmMapDriver('${row.courier_id}')"
+                class="px-3 py-1.5 text-xs rounded-lg bg-green-600 hover:bg-green-700 text-white font-medium">
+                Confirmar
+              </button>
+            </div>
+            <!-- Ou criar novo driver -->
+            <div>
+              <button type="button" onclick="toggleCreateDriverForm('${row.courier_id}')"
+                class="text-xs text-blue-600 dark:text-blue-400 hover:underline">
+                + Criar novo driver com este courier ID
+              </button>
+              <div id="hcreate-${row.courier_id}" class="hidden mt-3 grid grid-cols-2 gap-2 max-w-xl">
+                <p class="col-span-2 text-xs text-gray-500 dark:text-gray-400">NIF, telefone e email podem ser preenchidos depois no perfil do driver.</p>
+                <input type="text" placeholder="Nome completo *" id="hnome-${row.courier_id}"
+                  value="${row.courier_name || ''}"
+                  class="col-span-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-1.5 bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
+                <input type="text" placeholder="NIF (9 dígitos) — opcional" id="hnif-${row.courier_id}"
+                  maxlength="9"
+                  class="text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-1.5 bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
+                <input type="text" placeholder="Telefone — opcional" id="htel-${row.courier_id}"
+                  class="text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-1.5 bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
+                <input type="email" placeholder="Email — opcional" id="hemail-${row.courier_id}"
+                  class="col-span-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-1.5 bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
+                <button type="button" onclick="confirmCreateDriver('${row.courier_id}')"
+                  class="col-span-2 px-3 py-1.5 text-xs rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium">
+                  Criar Driver e Associar
+                </button>
+              </div>
+            </div>
+          </div>
+        </td>`;
+      tbody.appendChild(panelTr);
+    }
+  });
+
+  document.getElementById('helper-total-count').textContent    = totalDeliveries;
+  document.getElementById('helper-mapped-count').textContent   = mapped;
+  document.getElementById('helper-unmapped-count').textContent = unmapped;
+}
+
+async function showMapDriverPanel(courierId, courierName, safeId) {
+  const panelTr = document.getElementById(`hpanel-${courierId}`);
+  if (!panelTr) return;
+  const isHidden = panelTr.classList.contains('hidden');
+  panelTr.classList.toggle('hidden', !isHidden);
+  if (!isHidden) return;
+
+  // Preencher select com drivers
+  const sel = document.getElementById(`hselect-${courierId}`);
+  if (sel && sel.options.length <= 1) {
+    const drivers = await loadCainiaoDrivers();
+    drivers.forEach(d => {
+      const opt = document.createElement('option');
+      opt.value = d.id;
+      opt.textContent = d.nome_completo;
+      sel.appendChild(opt);
+    });
+  }
+}
+
+function toggleCreateDriverForm(courierId) {
+  const el = document.getElementById(`hcreate-${courierId}`);
+  if (el) el.classList.toggle('hidden');
+}
+
+async function confirmMapDriver(courierId) {
+  const sel = document.getElementById(`hselect-${courierId}`);
+  if (!sel || !sel.value) { showToast('Seleciona um driver.', false); return; }
+
+  const r = await fetch('/settlements/cainiao/link-driver/', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF},
+    body: JSON.stringify({courier_id: courierId, driver_id: parseInt(sel.value)}),
+  });
+  const d = await r.json();
+  if (!d.success) { showToast(d.error, false); return; }
+
+  // Actualizar célula do driver na linha principal
+  const driverCell = document.getElementById(`hrow-driver-${courierId}`);
+  if (driverCell) {
+    driverCell.innerHTML = `<span class="font-medium text-gray-900 dark:text-white text-sm">${d.driver_name}</span>`;
+  }
+  const mainTr = document.getElementById(`hrow-${courierId}`);
+  if (mainTr) mainTr.className = 'hover:bg-gray-50 dark:hover:bg-gray-700/40';
+  document.getElementById(`hpanel-${courierId}`)?.remove();
+
+  // Actualizar contadores
+  const mappedEl = document.getElementById('helper-mapped-count');
+  const unmappedEl = document.getElementById('helper-unmapped-count');
+  mappedEl.textContent   = parseInt(mappedEl.textContent)   + 1;
+  unmappedEl.textContent = parseInt(unmappedEl.textContent) - 1;
+
+  showToast(`${d.driver_name} associado com sucesso.`, true);
+}
+
+async function confirmCreateDriver(courierId) {
+  const nome     = document.getElementById(`hnome-${courierId}`)?.value.trim();
+  const nif      = document.getElementById(`hnif-${courierId}`)?.value.trim();
+  const telefone = document.getElementById(`htel-${courierId}`)?.value.trim();
+  const email    = document.getElementById(`hemail-${courierId}`)?.value.trim();
+
+  if (!nome) {
+    showToast('O nome do driver é obrigatório.', false); return;
+  }
+
+  const r = await fetch('/settlements/cainiao/create-driver/', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF},
+    body: JSON.stringify({courier_id: courierId, nome, nif, telefone, email}),
+  });
+  const d = await r.json();
+  if (!d.success) { showToast(d.error, false); return; }
+
+  // Actualizar linha
+  const driverCell = document.getElementById(`hrow-driver-${courierId}`);
+  if (driverCell) {
+    driverCell.innerHTML = `<span class="font-medium text-gray-900 dark:text-white text-sm">${d.driver_name}</span>`;
+  }
+  const mainTr = document.getElementById(`hrow-${courierId}`);
+  if (mainTr) mainTr.className = 'hover:bg-gray-50 dark:hover:bg-gray-700/40';
+  document.getElementById(`hpanel-${courierId}`)?.remove();
+  _cainiaoDriversCache = null; // invalidar cache
+
+  const mappedEl = document.getElementById('helper-mapped-count');
+  const unmappedEl = document.getElementById('helper-unmapped-count');
+  mappedEl.textContent   = parseInt(mappedEl.textContent)   + 1;
+  unmappedEl.textContent = parseInt(unmappedEl.textContent) - 1;
+
+  showToast(`Driver ${d.driver_name} criado e associado.`, true);
+}
+
+async function runHelperPreview() {
+  const file = document.getElementById('g-file').files[0];
+  const dateFrom = document.getElementById('g-date-from').value;
+  const dateTo   = document.getElementById('g-date-to').value;
+  if (!file)              { showToast('Seleciona um ficheiro .xlsx.', false); return; }
+  if (!dateFrom || !dateTo) { showToast('Define o período.', false); return; }
+
+  const btn = document.getElementById('g-preview-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg> A analisar...';
+
+  const fd = new FormData();
+  fd.append('file', file);
+  fd.append('date_from', dateFrom);
+  fd.append('date_to', dateTo);
+  fd.append('csrfmiddlewaretoken', CSRF);
+
+  try {
+    const resp = await fetch('/settlements/cainiao/import/preview/', { method: 'POST', body: fd });
+    const data = await resp.json();
+    if (!data.success) { showToast(data.error, false); return; }
+
+    renderHelperTable(data.rows || []);
+
+    document.getElementById('import-step1').classList.add('hidden');
+    document.getElementById('import-step2-helpers').classList.remove('hidden');
+    document.getElementById('g-preview-btn').classList.add('hidden');
+    document.getElementById('g-import-btn').classList.remove('hidden');
+    document.getElementById('g-back-btn').classList.remove('hidden');
+    document.getElementById('import-subtitle').textContent = 'Etapa 2 de 2 — Confirmar helpers';
+    lucide.createIcons();
+  } catch(e) {
+    showToast('Erro: ' + e.message, false);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i data-lucide="eye" class="w-4 h-4"></i> Pré-visualizar';
+    lucide.createIcons();
+  }
+}
+
+async function runImportGlobal() {
+  const fmt = document.getElementById('g-formato').value;
+  if (fmt === 'CAINIAO_HELPER') {
+    return runHelperConfirm();
+  }
+
+  const partnerId = document.getElementById('g-parceiro').value;
+  const file = document.getElementById('g-file').files[0];
+  if (!partnerId || !file) { showToast('Dados em falta.', false); return; }
+
+  // Recolher overrides do selector de cada linha
+  const overrides = {};
+  document.querySelectorAll('.import-driver-select').forEach(sel => {
+    if (sel.value) overrides[sel.dataset.courierId] = sel.value;
+  });
+
+  const btn = document.getElementById('g-import-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg> A importar...';
+
+  const fd = new FormData();
+  fd.append('planilha', file);
+  fd.append('formato', fmt);
+  fd.append('taxa_por_entrega', document.getElementById('g-taxa').value);
+  fd.append('driver_overrides', JSON.stringify(overrides));
+  fd.append('csrfmiddlewaretoken', CSRF);
+
+  try {
+    const resp = await fetch(`/settlements/pre-invoices/import/${partnerId}/`, { method: 'POST', body: fd });
+    const data = await resp.json();
+    const rd = document.getElementById('g-result');
+    rd.classList.remove('hidden');
+
+    if (data.success) {
+      rd.className = 'rounded-xl p-4 text-sm bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700 text-emerald-800 dark:text-emerald-300 space-y-1';
+      rd.innerHTML = `<div class="font-semibold">✅ Importação concluída</div>
+        <div>📋 Linhas: <strong>${data.linhas_processadas}</strong> &nbsp;|&nbsp;
+             👤 Drivers criados: <strong>${data.drivers_criados}</strong>${data.drivers_criados > 0 ? ' <span class="text-amber-600 dark:text-amber-400">(dados pendentes)</span>' : ''} &nbsp;|&nbsp;
+             📄 Criadas: <strong>${data.prefaturas_criadas}</strong> &nbsp;|&nbsp;
+             🔄 Atualizadas: <strong>${data.prefaturas_atualizadas}</strong></div>
+        ${data.erros.length > 0 ? `<div class="text-red-600 dark:text-red-400">⚠️ ${data.erros.join(', ')}</div>` : ''}`;
+      setTimeout(() => location.reload(), 3000);
+    } else {
+      rd.className = 'rounded-xl p-4 text-sm bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 text-red-800 dark:text-red-300';
+      rd.innerHTML = `❌ ${data.error}`;
+    }
+  } catch(e) {
+    showToast('Erro: ' + e.message, false);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i data-lucide="upload" class="w-4 h-4"></i> Confirmar Importação';
+    lucide.createIcons();
+  }
+}
+
+async function runHelperConfirm() {
+  const file = document.getElementById('g-file').files[0];
+  const dateFrom = document.getElementById('g-date-from').value;
+  const dateTo   = document.getElementById('g-date-to').value;
+
+  const btn = document.getElementById('g-import-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg> A importar...';
+
+  const taxa = document.getElementById('g-taxa')?.value || '0';
+
+  const fd = new FormData();
+  fd.append('file', file);
+  fd.append('date_from', dateFrom);
+  fd.append('date_to', dateTo);
+  fd.append('taxa_por_entrega', taxa);
+  fd.append('csrfmiddlewaretoken', CSRF);
+
+  try {
+    const resp = await fetch('/settlements/cainiao/import/confirm/', { method: 'POST', body: fd });
+    const data = await resp.json();
+    const rd = document.getElementById('g-result-helpers');
+    rd.classList.remove('hidden');
+
+    if (data.success) {
+      rd.className = 'rounded-xl p-4 text-sm bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700 text-emerald-800 dark:text-emerald-300 space-y-1';
+      const pfList = (data.pre_invoices || []).map(n => `<strong>${n}</strong>`).join(', ');
+      const skipTxt = data.skipped ? ` &nbsp;|&nbsp; ⏭ Ignorados (duplicados): <strong>${data.skipped}</strong>` : '';
+      const periodoTxt = data.periodo_inicio ? `<div>📅 Período detetado: <strong>${data.periodo_inicio}</strong> → <strong>${data.periodo_fim}</strong></div>` : '';
+      rd.innerHTML = `<div class="font-semibold">✅ Helper Report importado</div>
+        <div>📦 Novos pacotes guardados: <strong>${data.saved}</strong>${skipTxt}</div>
+        ${periodoTxt}
+        ${pfList ? `<div>🧾 Pré-faturas geradas/atualizadas: ${pfList}</div>` : ''}`;
+      setTimeout(() => { closeImportGlobal(); location.reload(); }, 4000);
+    } else {
+      rd.className = 'rounded-xl p-4 text-sm bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 text-red-800 dark:text-red-300';
+      rd.innerHTML = `❌ ${data.error}`;
+    }
+  } catch(e) {
+    showToast('Erro: ' + e.message, false);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i data-lucide="upload" class="w-4 h-4"></i> Confirmar Importação';
+    lucide.createIcons();
+  }
+}
+
+function showToast(msg, ok = true) {
+  const t = document.getElementById('toast');
+  const inner = document.getElementById('toast-inner');
+  document.getElementById('toast-msg').textContent = msg;
+  inner.className = `flex items-center gap-3 px-5 py-3 rounded-xl shadow-2xl text-white text-sm font-medium ${ok ? 'bg-emerald-600' : 'bg-red-600'}`;
+  t.classList.remove('hidden');
+  setTimeout(() => t.classList.add('hidden'), 3500);
+}
+
+function pfActions(pfId, initialStatus) {
+  return {
+    pfId,
+    status: initialStatus,
+    showModal: false,
+    showPayModal: false,
+    pendingStatus: '',
+    nota: '',
+    refPagamento: '',
+    showRefField: false,
+    modalTitle: '',
+    modalDesc: '',
+    confirmBtnLabel: '',
+    confirmBtnClass: '',
+    confirmIconBg: 'bg-purple-500',
+    confirmIcon: 'alert-circle',
+
+    changeStatus(newStatus) {
+      this.pendingStatus = newStatus;
+      this.nota = '';
+      this.refPagamento = '';
+      this.showRefField = false;
+      this.modalTitle = LABEL_MAP[newStatus] || newStatus;
+      this.modalDesc = `Confirmar a transição para "${newStatus}"?`;
+      this.confirmBtnLabel = LABEL_MAP[newStatus] || 'Confirmar';
+      this.confirmBtnClass = BTN_CLASS[newStatus] || 'bg-purple-600 hover:bg-purple-700';
+      this.confirmIcon = ICON_MAP[newStatus] || 'alert-circle';
+      this.confirmIconBg = ICON_BG_MAP[newStatus] || 'bg-purple-500';
+      this.showModal = true;
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    openPayModal() {
+      this.nota = '';
+      this.refPagamento = '';
+      this.showPayModal = true;
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    async confirmPay() {
+      const fd = new FormData();
+      fd.append('status', 'PAGO');
+      fd.append('nota', this.nota);
+      fd.append('referencia_pagamento', this.refPagamento);
+      if (this.$refs.comprovanteFile && this.$refs.comprovanteFile.files[0]) {
+        fd.append('comprovante', this.$refs.comprovanteFile.files[0]);
+      }
+      fd.append('csrfmiddlewaretoken', CSRF);
+
+      const resp = await fetch(`/settlements/pre-invoices/${this.pfId}/status/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': CSRF },
+        body: fd,
+      });
+      const data = await resp.json();
+      if (data.success) {
+        this.showPayModal = false;
+        const badge = document.getElementById(`badge-${this.pfId}`);
+        if (badge) {
+          badge.className = `inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${BADGE_CLASSES.PAGO}`;
+          badge.textContent = 'Pago';
+        }
+        showToast('Pagamento confirmado!');
+        setTimeout(() => location.reload(), 1500);
+      } else {
+        showToast(data.error || 'Erro ao confirmar pagamento.', false);
+      }
+    },
+
+    async confirmChange() {
+      const payload = { status: this.pendingStatus, nota: this.nota };
+      if (this.refPagamento) payload.referencia_pagamento = this.refPagamento;
+
+      const resp = await fetch(`/settlements/pre-invoices/${this.pfId}/status/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+        body: JSON.stringify(payload),
+      });
+      const data = await resp.json();
+
+      if (data.success) {
+        this.status = data.status;
+        this.showModal = false;
+        const badge = document.getElementById(`badge-${this.pfId}`);
+        if (badge) {
+          badge.className = `inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${BADGE_CLASSES[data.status] || BADGE_CLASSES.RASCUNHO}`;
+          badge.textContent = data.status_display;
+        }
+        showToast(`Pré-fatura atualizada: ${data.status_display}`);
+        setTimeout(() => location.reload(), 1500);
+      } else {
+        showToast(data.error || 'Erro ao atualizar estado.', false);
+        this.showModal = false;
+      }
+    },
+
+    async calcular() {
+      const resp = await fetch(`/settlements/pre-invoices/${this.pfId}/status/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+        body: JSON.stringify({ status: 'CALCULAR' }),
+      });
+      const data = await resp.json();
+      if (data.success) {
+        showToast(`Pré-fatura calculada: ${data.status_display}`);
+        setTimeout(() => location.reload(), 1200);
+      } else {
+        showToast(data.error || 'Erro ao calcular.', false);
+      }
+    },
+
+    openView(pfId, driverId) {
+      Alpine.store('pfView').open(pfId, driverId);
+    },
+  };
+}
+
+// Bulk select for driver pre-invoices
+function bulkSelect() {
+  return {
+    selected: [],
+    showBulkModal: false,
+    bulkRef: '',
+    bulkNota: '',
+
+    toggle(event, id) {
+      if (event.target.checked) {
+        this.selected.push(id);
+      } else {
+        this.selected = this.selected.filter(x => x !== id);
+      }
+    },
+
+    toggleAll(event) {
+      const boxes = document.querySelectorAll('#pf-table-body input[type=checkbox]');
+      boxes.forEach(cb => {
+        cb.checked = event.target.checked;
+        const id = parseInt(cb.value);
+        if (event.target.checked) {
+          if (!this.selected.includes(id)) this.selected.push(id);
+        } else {
+          this.selected = this.selected.filter(x => x !== id);
+        }
+      });
+    },
+
+    openBulkPay() {
+      this.bulkRef = '';
+      this.bulkNota = '';
+      this.showBulkModal = true;
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    async confirmBulkPay() {
+      const resp = await fetch('/settlements/pre-invoices/bulk-status/', POST_JSON({
+        ids: this.selected,
+        status: 'PAGO',
+        referencia_pagamento: this.bulkRef,
+        nota: this.bulkNota,
+      }));
+      const data = await resp.json();
+      if (data.success) {
+        this.showBulkModal = false;
+        this.selected = [];
+        showToast(`${data.updated} pré-fatura(s) marcada(s) como pagas.`);
+        setTimeout(() => location.reload(), 1500);
+      } else {
+        showToast(data.error || 'Erro ao processar lote.', false);
+      }
+    },
+  };
+}
+
+// Actions for empresa parceira lancamentos
+function lancActions(lancId, initialStatus) {
+  return {
+    lancId,
+    status: initialStatus,
+    showPayModal: false,
+    nota: '',
+    refPagamento: '',
+
+    async changeStatus(newStatus) {
+      const resp = await fetch(`/settlements/pre-invoices/empresa-lancamento/${this.lancId}/status/`, POST_JSON({
+        status: newStatus,
+      }));
+      const data = await resp.json();
+      if (data.success) {
+        this.status = data.status;
+        const badge = document.getElementById(`lanc-badge-${this.lancId}`);
+        if (badge) {
+          badge.textContent = data.status_display;
+          badge.className = `inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${BADGE_CLASSES[data.status] || BADGE_CLASSES.RASCUNHO}`;
+        }
+        showToast(`Lançamento atualizado: ${data.status_display}`);
+        setTimeout(() => location.reload(), 1500);
+      } else {
+        showToast(data.error || 'Erro ao atualizar estado.', false);
+      }
+    },
+
+    openPayModal() {
+      this.nota = '';
+      this.refPagamento = '';
+      this.showPayModal = true;
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    async confirmPay() {
+      const fd = new FormData();
+      fd.append('status', 'PAGO');
+      fd.append('nota', this.nota);
+      fd.append('referencia_pagamento', this.refPagamento);
+      if (this.$refs.comprovanteFile && this.$refs.comprovanteFile.files[0]) {
+        fd.append('comprovante', this.$refs.comprovanteFile.files[0]);
+      }
+      fd.append('csrfmiddlewaretoken', CSRF);
+
+      const resp = await fetch(`/settlements/pre-invoices/empresa-lancamento/${this.lancId}/status/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': CSRF },
+        body: fd,
+      });
+      const data = await resp.json();
+      if (data.success) {
+        this.showPayModal = false;
+        showToast('Pagamento confirmado!');
+        setTimeout(() => location.reload(), 1500);
+      } else {
+        showToast(data.error || 'Erro ao confirmar pagamento.', false);
+      }
+    },
+  };
+}
+</script>
+
+<!-- Modal Visualização Pré-Fatura -->
+<div x-data x-cloak x-show="$store.pfView.show"
+     class="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+     @keydown.escape.window="$store.pfView.show = false">
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col border border-gray-200 dark:border-gray-700">
+    <!-- Header -->
+    <div class="bg-gradient-to-r from-violet-600 to-purple-600 rounded-t-2xl px-6 py-4 flex items-center justify-between flex-shrink-0">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center">
+          <i data-lucide="file-text" class="w-5 h-5 text-white"></i>
+        </div>
+        <div>
+          <div class="text-white font-bold text-base" x-text="$store.pfView.pf ? $store.pfView.pf.numero : '...'"></div>
+          <div class="text-violet-200 text-xs" x-text="$store.pfView.pf ? $store.pfView.pf.driver_nome : ''"></div>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button @click="$store.pfView.recalculate()"
+                :disabled="$store.pfView.recalculating"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 disabled:opacity-50 text-white rounded-lg text-xs font-semibold transition-colors">
+          <svg x-show="$store.pfView.recalculating" class="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+          </svg>
+          <i x-show="!$store.pfView.recalculating" data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+          <span x-text="$store.pfView.recalculating ? 'A recalcular...' : 'Recalcular'"></span>
+        </button>
+        <a :href="$store.pfView.pdfUrl" target="_blank"
+           class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded-lg text-xs font-semibold transition-colors">
+          <i data-lucide="file-down" class="w-3.5 h-3.5"></i> PDF
+        </a>
+        <button @click="$store.pfView.show = false" class="w-8 h-8 flex items-center justify-center bg-white/20 hover:bg-white/30 text-white rounded-lg transition-colors">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Loading -->
+    <div x-show="$store.pfView.loading" class="flex-1 flex items-center justify-center py-12">
+      <svg class="animate-spin w-8 h-8 text-violet-500" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+      </svg>
+    </div>
+
+    <!-- Content -->
+    <div x-show="!$store.pfView.loading && $store.pfView.pf" class="overflow-y-auto flex-1 p-6 space-y-5">
+      <!-- Resumo topo -->
+      <div class="grid grid-cols-3 gap-3">
+        <div class="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-3 text-center">
+          <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">Base Entregas</div>
+          <div class="font-bold text-gray-800 dark:text-white text-sm" x-text="'€' + parseFloat($store.pfView.pf?.base_entregas || 0).toFixed(2)"></div>
+        </div>
+        <div class="bg-yellow-50 dark:bg-yellow-900/20 rounded-xl p-3 text-center">
+          <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">Bónus Dom/Feriado</div>
+          <div class="font-bold text-yellow-600 dark:text-yellow-400 text-sm" x-text="'€' + parseFloat($store.pfView.pf?.total_bonus || 0).toFixed(2)"></div>
+        </div>
+        <div class="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-3 text-center">
+          <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">Total a Receber</div>
+          <div class="font-bold text-emerald-600 dark:text-emerald-400 text-base" x-text="'€' + parseFloat($store.pfView.pf?.total_a_receber || 0).toFixed(2)"></div>
+        </div>
+        <div class="bg-red-50 dark:bg-red-900/20 rounded-xl p-3 text-center">
+          <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">Pacotes Perdidos</div>
+          <div class="font-bold text-red-500 dark:text-red-400 text-sm" x-text="'-€' + parseFloat($store.pfView.pf?.total_pacotes_perdidos || 0).toFixed(2)"></div>
+        </div>
+        <div class="bg-orange-50 dark:bg-orange-900/20 rounded-xl p-3 text-center">
+          <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">Adiantamentos</div>
+          <div class="font-bold text-orange-500 dark:text-orange-400 text-sm" x-text="'-€' + parseFloat($store.pfView.pf?.total_adiantamentos || 0).toFixed(2)"></div>
+        </div>
+        <div class="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-3 text-center">
+          <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">Penalizações</div>
+          <div class="font-bold text-gray-600 dark:text-gray-300 text-sm" x-text="'-€' + parseFloat($store.pfView.pf?.penalizacoes_gerais || 0).toFixed(2)"></div>
+        </div>
+        <template x-if="parseFloat($store.pfView.pf?.total_comissoes_indicacao || 0) > 0">
+          <div class="bg-teal-50 dark:bg-teal-900/20 rounded-xl p-3 text-center col-span-3">
+            <div class="text-xs text-teal-600 dark:text-teal-400 mb-1 flex items-center justify-center gap-1">
+              <i data-lucide="users" class="w-3 h-3"></i> Comissões de Indicação
+            </div>
+            <div class="font-bold text-teal-700 dark:text-teal-300 text-sm" x-text="'+€' + parseFloat($store.pfView.pf?.total_comissoes_indicacao || 0).toFixed(2)"></div>
+          </div>
+        </template>
+      </div>
+
+      <!-- Período e Status -->
+      <div class="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-300">
+        <i data-lucide="calendar" class="w-4 h-4 text-violet-400"></i>
+        <span x-text="$store.pfView.pf?.periodo_inicio + ' → ' + $store.pfView.pf?.periodo_fim"></span>
+        <span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-400"
+              x-text="$store.pfView.pf?.status_display || $store.pfView.pf?.status"></span>
+      </div>
+
+      <!-- Linhas de trabalho -->
+      <div class="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
+        <div class="px-4 py-2.5 bg-indigo-50 dark:bg-indigo-900/30 border-b border-indigo-100 dark:border-indigo-800/50">
+          <span class="text-xs font-semibold text-indigo-700 dark:text-indigo-300 flex items-center gap-2">
+            <i data-lucide="layers" class="w-3.5 h-3.5"></i> Linhas de Trabalho
+          </span>
+        </div>
+        <!-- Cabeçalho das colunas -->
+        <div class="flex items-center text-xs font-semibold text-gray-500 uppercase tracking-wide bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700 px-3 py-2">
+          <div style="width:35%;min-width:0">Parceiro</div>
+          <div style="width:13%" class="text-right">Pacotes</div>
+          <div style="width:13%" class="text-right">Taxa</div>
+          <div style="width:11%" class="text-right">DSR</div>
+          <div style="width:28%" class="text-right">Base</div>
+        </div>
+        <!-- Empty state -->
+        <div x-show="!$store.pfView.pf?.linhas?.length" class="px-3 py-3 text-center text-xs text-gray-400">Sem linhas</div>
+        <!-- Linhas -->
+        <template x-for="l in ($store.pfView.pf?.linhas || [])" :key="l.id">
+          <div class="border-t border-gray-100 dark:border-gray-700">
+            <!-- Linha de dados -->
+            <div class="flex items-center px-3 py-2 text-xs">
+              <div style="width:35%;min-width:0" class="font-medium text-gray-800 dark:text-white truncate pr-2" x-text="l.parceiro_nome || '—'"></div>
+              <div style="width:13%" class="text-right text-gray-600 dark:text-gray-300" x-text="l.total_pacotes"></div>
+              <div style="width:13%" class="text-right text-gray-600 dark:text-gray-300" x-text="'€' + parseFloat(l.taxa_por_entrega).toFixed(2)"></div>
+              <div style="width:11%" class="text-right text-gray-500" x-text="parseFloat(l.dsr_percentual).toFixed(1) + '%'"></div>
+              <div style="width:28%" class="text-right font-bold text-indigo-600 dark:text-indigo-400" x-text="'€' + parseFloat(l.base_entregas).toFixed(2)"></div>
+            </div>
+            <!-- Helpers -->
+            <div x-show="l.api_source === 'cainiao' && l.helpers && l.helpers.length > 0" class="px-3 pb-3">
+              <div class="rounded-lg overflow-hidden border border-blue-200 dark:border-blue-800">
+                <div class="bg-blue-700 px-3 py-1.5 flex items-center gap-2">
+                  <i data-lucide="users" class="w-3 h-3 text-blue-200"></i>
+                  <span class="text-xs font-semibold text-blue-100 uppercase tracking-wide">Detalhe de Assistentes</span>
+                </div>
+                <div class="flex text-xs font-semibold bg-blue-50 dark:bg-blue-900/30 px-3 py-1.5">
+                  <div style="width:55%;min-width:0" class="text-blue-700 dark:text-blue-300">Assistente</div>
+                  <div style="width:25%" class="text-right text-blue-700 dark:text-blue-300">Entregas</div>
+                  <div style="width:20%" class="text-right text-blue-700 dark:text-blue-300">% Total</div>
+                </div>
+                <template x-for="(h, idx) in l.helpers" :key="idx">
+                  <div class="flex px-3 py-1.5 border-t border-gray-100 dark:border-gray-700/50 text-xs"
+                       :class="idx % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-blue-50/40 dark:bg-blue-900/10'">
+                    <div style="width:55%;min-width:0" :class="h.helper_name === 'Principal' ? 'font-semibold text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-gray-300'" x-text="h.helper_name"></div>
+                    <div style="width:25%" class="text-right font-mono font-semibold text-gray-800 dark:text-gray-100" x-text="h.count"></div>
+                    <div style="width:20%" class="text-right text-gray-500 dark:text-gray-400" x-text="l.total_pacotes > 0 ? ((h.count / l.total_pacotes) * 100).toFixed(1) + '%' : '—'"></div>
+                  </div>
+                </template>
+                <div class="flex px-3 py-1.5 border-t border-blue-200 dark:border-blue-700 bg-blue-100 dark:bg-blue-900/40 font-semibold text-xs">
+                  <div style="width:55%;min-width:0" class="text-blue-800 dark:text-blue-200 uppercase tracking-wide">Total</div>
+                  <div style="width:25%" class="text-right font-mono text-blue-800 dark:text-blue-200" x-text="l.total_pacotes"></div>
+                  <div style="width:20%" class="text-right text-blue-800 dark:text-blue-200">100%</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </template>
+      </div>
+
+      <!-- Bonificações -->
+      <template x-if="$store.pfView.pf?.bonificacoes?.length">
+        <div class="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
+          <div class="px-4 py-2.5 bg-yellow-50 dark:bg-yellow-900/30 border-b border-yellow-100 dark:border-yellow-800/50">
+            <span class="text-xs font-semibold text-yellow-700 dark:text-yellow-300 flex items-center gap-2">
+              <i data-lucide="sun" class="w-3.5 h-3.5"></i> Bonificações Dom/Feriado
+            </span>
+          </div>
+          <table class="w-full text-xs">
+            <thead class="bg-gray-50 dark:bg-gray-700/50">
+              <tr>
+                <th class="px-3 py-2 text-left font-semibold text-gray-500">Data</th>
+                <th class="px-3 py-2 text-left font-semibold text-gray-500">Tipo</th>
+                <th class="px-3 py-2 text-right font-semibold text-gray-500">Qtd</th>
+                <th class="px-3 py-2 text-right font-semibold text-gray-500">Bónus</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="b in ($store.pfView.pf?.bonificacoes || [])" :key="b.id">
+                <tr class="border-t border-gray-100 dark:border-gray-700">
+                  <td class="px-3 py-2 text-gray-600 dark:text-gray-300" x-text="b.data || '—'"></td>
+                  <td class="px-3 py-2 text-gray-600 dark:text-gray-300" x-text="b.tipo_display || b.tipo"></td>
+                  <td class="px-3 py-2 text-right text-gray-600 dark:text-gray-300" x-text="b.qtd_entregas_elegiveis"></td>
+                  <td class="px-3 py-2 text-right font-bold text-yellow-600 dark:text-yellow-400" x-text="'€' + parseFloat(b.bonus_calculado).toFixed(2)"></td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </template>
+
+      <!-- Comissões de Indicação (detalhe) -->
+      <template x-if="$store.pfView.pf?.comissoes_indicacao_detalhe?.length">
+        <div class="border border-teal-200 dark:border-teal-700 rounded-xl overflow-hidden">
+          <div class="px-4 py-2.5 bg-teal-50 dark:bg-teal-900/30 border-b border-teal-100 dark:border-teal-800/50">
+            <span class="text-xs font-semibold text-teal-700 dark:text-teal-300 flex items-center gap-2">
+              <i data-lucide="users" class="w-3.5 h-3.5"></i> Comissões de Indicação
+            </span>
+          </div>
+          <table class="w-full text-xs">
+            <thead class="bg-gray-50 dark:bg-gray-700/50">
+              <tr>
+                <th class="px-3 py-2 text-left font-semibold text-gray-500">Motorista Indicado</th>
+                <th class="px-3 py-2 text-right font-semibold text-gray-500">Pacotes</th>
+                <th class="px-3 py-2 text-right font-semibold text-gray-500">€/pacote</th>
+                <th class="px-3 py-2 text-right font-semibold text-gray-500">Comissão</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="(c, idx) in ($store.pfView.pf?.comissoes_indicacao_detalhe || [])" :key="idx">
+                <tr class="border-t border-gray-100 dark:border-gray-700">
+                  <td class="px-3 py-2 font-medium text-gray-800 dark:text-white" x-text="c.referred_nome"></td>
+                  <td class="px-3 py-2 text-right text-gray-600 dark:text-gray-300" x-text="c.total_pacotes"></td>
+                  <td class="px-3 py-2 text-right text-gray-500" x-text="'€' + parseFloat(c.comissao_por_pacote).toFixed(4)"></td>
+                  <td class="px-3 py-2 text-right font-bold text-teal-600 dark:text-teal-400" x-text="'+€' + parseFloat(c.valor_total).toFixed(2)"></td>
+                </tr>
+              </template>
+            </tbody>
+            <tfoot>
+              <tr class="border-t-2 border-teal-200 dark:border-teal-700 bg-teal-50 dark:bg-teal-900/20">
+                <td colspan="3" class="px-3 py-2 font-semibold text-teal-700 dark:text-teal-300 text-xs">Total Comissões</td>
+                <td class="px-3 py-2 text-right font-bold text-teal-700 dark:text-teal-300" x-text="'+€' + ($store.pfView.pf?.comissoes_indicacao_detalhe || []).reduce(function(s,c){ return s + parseFloat(c.valor_total); }, 0).toFixed(2)"></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </template>
+
+      <!-- Observações -->
+      <template x-if="$store.pfView.pf?.observacoes">
+        <div class="bg-gray-50 dark:bg-gray-700/30 rounded-xl px-4 py-3 text-xs text-gray-600 dark:text-gray-300">
+          <span class="font-semibold text-gray-700 dark:text-gray-200 block mb-1">Observações</span>
+          <span x-text="$store.pfView.pf.observacoes"></span>
+        </div>
+      </template>
+
+      <!-- Comprovante de Pagamento + Fatura -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+
+        <!-- Comprovante -->
+        <div class="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
+          <div class="bg-gray-50 dark:bg-gray-700/50 px-4 py-2.5 flex items-center gap-2 border-b border-gray-200 dark:border-gray-700">
+            <i data-lucide="receipt" class="w-4 h-4 text-emerald-500"></i>
+            <span class="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Comprovante de Pagamento</span>
+          </div>
+          <div class="px-4 py-3 flex items-center gap-2 flex-wrap">
+            <template x-if="$store.pfView.pf?.comprovante_url">
+              <a :href="$store.pfView.pf.comprovante_url" target="_blank"
+                 class="flex items-center gap-1.5 px-3 py-2 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-400 rounded-lg text-xs font-semibold hover:bg-emerald-100 transition-colors">
+                <i data-lucide="file-check" class="w-4 h-4"></i> Ver Comprovante
+              </a>
+            </template>
+            <template x-if="!$store.pfView.pf?.comprovante_url">
+              <span class="text-xs text-gray-400 italic">Nenhum comprovante anexado.</span>
+            </template>
+            <label class="flex items-center gap-1.5 px-3 py-2 bg-white dark:bg-gray-700 border border-dashed border-gray-400 dark:border-gray-500 text-gray-600 dark:text-gray-400 rounded-lg text-xs font-medium hover:border-emerald-400 hover:text-emerald-600 transition-colors cursor-pointer">
+              <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+              <span x-text="$store.pfView.pf?.comprovante_url ? 'Substituir' : 'Anexar'"></span>
+              <input type="file" accept="image/*,.pdf" class="hidden"
+                     @change="$store.pfView.uploadComprovante($event)">
+            </label>
+            <span x-show="$store.pfView.uploading" class="text-xs text-gray-400 flex items-center gap-1">
+              <i data-lucide="loader" class="w-3.5 h-3.5 animate-spin"></i> A enviar...
+            </span>
+          </div>
+        </div>
+
+        <!-- Fatura -->
+        <div class="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
+          <div class="bg-gray-50 dark:bg-gray-700/50 px-4 py-2.5 flex items-center gap-2 border-b border-gray-200 dark:border-gray-700">
+            <i data-lucide="file-text" class="w-4 h-4 text-blue-500"></i>
+            <span class="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Fatura</span>
+          </div>
+          <div class="px-4 py-3 flex items-center gap-2 flex-wrap">
+            <template x-if="$store.pfView.pf?.fatura_url">
+              <a :href="$store.pfView.pf.fatura_url" target="_blank"
+                 class="flex items-center gap-1.5 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-400 rounded-lg text-xs font-semibold hover:bg-blue-100 transition-colors">
+                <i data-lucide="file-text" class="w-4 h-4"></i> Ver Fatura
+              </a>
+            </template>
+            <template x-if="!$store.pfView.pf?.fatura_url">
+              <span class="text-xs text-gray-400 italic">Nenhuma fatura anexada.</span>
+            </template>
+            <label class="flex items-center gap-1.5 px-3 py-2 bg-white dark:bg-gray-700 border border-dashed border-gray-400 dark:border-gray-500 text-gray-600 dark:text-gray-400 rounded-lg text-xs font-medium hover:border-blue-400 hover:text-blue-600 transition-colors cursor-pointer">
+              <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+              <span x-text="$store.pfView.pf?.fatura_url ? 'Substituir' : 'Anexar'"></span>
+              <input type="file" accept=".pdf,image/*" class="hidden"
+                     @change="$store.pfView.uploadFatura($event)">
+            </label>
+            <span x-show="$store.pfView.uploadingFatura" class="text-xs text-gray-400 flex items-center gap-1">
+              <i data-lucide="loader" class="w-3.5 h-3.5 animate-spin"></i> A enviar...
+            </span>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('alpine:init', () => {
+  Alpine.store('pfView', {
+    show: false,
+    loading: false,
+    recalculating: false,
+    uploading: false,
+    uploadingFatura: false,
+    pf: null,
+    pdfUrl: '',
+
+    async open(pfId, driverId) {
+      this.loading = true;
+      this.pf = null;
+      this.pdfUrl = `/settlements/pre-invoices/${pfId}/pdf/`;
+      this.show = true;
+      try {
+        const resp = await fetch(`/settlements/pre-invoices/driver/${driverId}/`);
+        const data = await resp.json();
+        this.pf = (data.pre_invoices || []).find(p => p.id === pfId) || null;
+      } catch(e) {
+        this.show = false;
+      } finally {
+        this.loading = false;
+        setTimeout(() => lucide.createIcons(), 80);
+      }
+    },
+
+    async recalculate() {
+      if (!this.pf) return;
+      this.recalculating = true;
+      try {
+        const resp = await fetch(`/settlements/pre-invoices/${this.pf.id}/recalculate/`, {
+          method: 'POST',
+          headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value },
+        });
+        const data = await resp.json();
+        if (data.success) {
+          this.pf.base_entregas = data.base_entregas;
+          this.pf.total_bonus = data.total_bonus;
+          this.pf.penalizacoes_gerais = data.penalizacoes_gerais;
+          this.pf.total_pacotes_perdidos = data.total_pacotes_perdidos;
+          this.pf.total_adiantamentos = data.total_adiantamentos;
+          this.pf.subtotal_bruto = data.subtotal_bruto;
+          this.pf.total_a_receber = data.total_a_receber;
+          this.pf.total_comissoes_indicacao = data.total_comissoes_indicacao;
+          this.pf.comissoes_indicacao_detalhe = data.comissoes_indicacao_detalhe;
+          // Atualizar badge e total na linha da tabela
+          const row = document.getElementById(`row-${this.pf.id}`);
+          if (row) {
+            const totalEl = row.querySelector('[data-total]');
+            if (totalEl) totalEl.textContent = '€' + parseFloat(data.total_a_receber).toFixed(2);
+          }
+          setTimeout(() => lucide.createIcons(), 80);
+        }
+      } catch(e) {
+        alert('Erro ao recalcular.');
+      } finally {
+        this.recalculating = false;
+      }
+    },
+
+    async uploadFatura(event) {
+      const file = event.target.files[0];
+      if (!file || !this.pf) return;
+      this.uploadingFatura = true;
+      const fd = new FormData();
+      fd.append('fatura', file);
+      try {
+        const resp = await fetch(`/settlements/pre-invoices/${this.pf.id}/upload-fatura/`, {
+          method: 'POST',
+          headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value },
+          body: fd,
+        });
+        const data = await resp.json();
+        if (data.success) {
+          this.pf.fatura_url = data.fatura_url;
+          setTimeout(() => lucide.createIcons(), 80);
+        } else {
+          alert(data.error || 'Erro ao enviar fatura.');
+        }
+      } catch(e) {
+        alert('Erro de rede ao enviar fatura.');
+      } finally {
+        this.uploadingFatura = false;
+        event.target.value = '';
+      }
+    },
+
+    async uploadComprovante(event) {
+      const file = event.target.files[0];
+      if (!file || !this.pf) return;
+      this.uploading = true;
+      const fd = new FormData();
+      fd.append('status', 'PAGO');
+      fd.append('comprovante', file);
+      try {
+        const resp = await fetch(`/settlements/pre-invoices/${this.pf.id}/status/`, {
+          method: 'POST',
+          headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value },
+          body: fd,
+        });
+        const data = await resp.json();
+        if (data.success) {
+          this.pf.comprovante_url = data.comprovante_url;
+          if (data.status) { this.pf.status = data.status; this.pf.status_display = data.status_display; }
+          setTimeout(() => lucide.createIcons(), 80);
+        } else {
+          alert(data.error || 'Erro ao enviar comprovante.');
+        }
+      } catch(e) {
+        alert('Erro de rede ao enviar comprovante.');
+      } finally {
+        this.uploading = false;
+        event.target.value = '';
+      }
+    },
+  });
+});
+</script>
+
+<!-- ════════════════════════════════════════════════════════════════════════
+     PAINEL VISUALIZAÇÃO LANÇAMENTO EMPRESA PARCEIRA
+     ════════════════════════════════════════════════════════════════════════ -->
+<div x-data x-cloak x-show="$store.lancView.show"
+     class="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+     @keydown.escape.window="$store.lancView.show = false">
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col border border-gray-200 dark:border-gray-700">
+    <!-- Header -->
+    <div class="bg-gradient-to-r from-indigo-600 to-blue-600 rounded-t-2xl px-6 py-4 flex items-center justify-between flex-shrink-0">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center">
+          <i data-lucide="building-2" class="w-5 h-5 text-white"></i>
+        </div>
+        <div>
+          <div class="text-white font-bold text-base" x-text="$store.lancView.lanc ? $store.lancView.lanc.empresa_nome : '...'"></div>
+          <div class="text-indigo-200 text-xs" x-text="$store.lancView.lanc ? ($store.lancView.lanc.periodo_inicio + ' → ' + $store.lancView.lanc.periodo_fim) : ''"></div>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <template x-if="$store.lancView.lanc">
+          <a :href="$store.lancView.pdfUrl" target="_blank"
+             class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded-lg text-xs font-semibold transition-colors">
+            <i data-lucide="file-down" class="w-3.5 h-3.5"></i> PDF
+          </a>
+        </template>
+        <button @click="$store.lancView.show = false" class="text-white/70 hover:text-white hover:bg-white/20 rounded-lg p-1.5 transition-colors">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+    </div>
+    <!-- Loading -->
+    <div x-show="$store.lancView.loading" class="flex-1 flex items-center justify-center py-12">
+      <div class="flex flex-col items-center gap-3 text-gray-400">
+        <svg class="animate-spin w-8 h-8" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+        </svg>
+        <span class="text-sm">A carregar...</span>
+      </div>
+    </div>
+    <!-- Content -->
+    <div x-show="!$store.lancView.loading && $store.lancView.lanc" class="flex-1 overflow-y-auto p-6 space-y-5">
+      <template x-if="$store.lancView.lanc">
+        <div class="space-y-5">
+          <!-- Status badge -->
+          <div class="flex items-center gap-3">
+            <span class="px-3 py-1 rounded-full text-xs font-semibold"
+              :class="{
+                'bg-gray-100 text-gray-700': $store.lancView.lanc.status==='RASCUNHO',
+                'bg-blue-100 text-blue-700': $store.lancView.lanc.status==='APROVADO',
+                'bg-yellow-100 text-yellow-700': $store.lancView.lanc.status==='PENDENTE',
+                'bg-emerald-100 text-emerald-700': $store.lancView.lanc.status==='PAGO',
+                'bg-red-100 text-red-700': $store.lancView.lanc.status==='CANCELADO',
+              }" x-text="$store.lancView.lanc.status_display"></span>
+            <span x-show="$store.lancView.lanc.data_pagamento" class="text-xs text-gray-500">
+              Pago em <span x-text="$store.lancView.lanc.data_pagamento" class="font-medium"></span>
+            </span>
+          </div>
+          <!-- Dados empresa -->
+          <div class="bg-indigo-50 dark:bg-indigo-900/20 rounded-xl p-4 space-y-2">
+            <h3 class="text-xs font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">Empresa Parceira</h3>
+            <div class="grid grid-cols-2 gap-x-6 gap-y-1 text-sm">
+              <div><span class="text-gray-500 text-xs">Nome</span><div class="font-medium text-gray-900 dark:text-white" x-text="$store.lancView.lanc.empresa_nome"></div></div>
+              <div><span class="text-gray-500 text-xs">NIF</span><div class="font-medium text-gray-900 dark:text-white" x-text="$store.lancView.lanc.empresa_nif || '—'"></div></div>
+              <div class="col-span-2"><span class="text-gray-500 text-xs">IBAN</span><div class="font-mono text-xs text-gray-700 dark:text-gray-300" x-text="$store.lancView.lanc.empresa_iban || '—'"></div></div>
+            </div>
+          </div>
+          <!-- Descrição + período -->
+          <div class="grid grid-cols-2 gap-4">
+            <div class="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4">
+              <div class="text-xs text-gray-500 mb-1">Descrição</div>
+              <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="$store.lancView.lanc.descricao"></div>
+            </div>
+            <div class="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4">
+              <div class="text-xs text-gray-500 mb-1">Período</div>
+              <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="$store.lancView.lanc.periodo_inicio + ' → ' + $store.lancView.lanc.periodo_fim"></div>
+            </div>
+          </div>
+          <!-- Valores -->
+          <div class="rounded-xl overflow-hidden border border-gray-200 dark:border-gray-600">
+            <div class="bg-indigo-600 px-4 py-2">
+              <span class="text-white text-xs font-semibold uppercase tracking-wider">Detalhe Financeiro</span>
+            </div>
+            <div class="divide-y divide-gray-100 dark:divide-gray-700">
+              <template x-if="parseFloat($store.lancView.lanc.qtd_entregas) > 0">
+                <div class="flex justify-between items-center px-4 py-2.5 bg-white dark:bg-gray-800">
+                  <span class="text-sm text-gray-600 dark:text-gray-300">Entregas (<span x-text="$store.lancView.lanc.qtd_entregas"></span> × €<span x-text="$store.lancView.lanc.valor_por_entrega"></span>)</span>
+                  <span class="text-sm font-medium text-gray-900 dark:text-white">€<span x-text="parseFloat($store.lancView.lanc.valor_base).toFixed(2)"></span></span>
+                </div>
+              </template>
+              <template x-if="parseFloat($store.lancView.lanc.qtd_entregas) === 0">
+                <div class="flex justify-between items-center px-4 py-2.5 bg-white dark:bg-gray-800">
+                  <span class="text-sm text-gray-600 dark:text-gray-300">Base</span>
+                  <span class="text-sm font-medium text-gray-900 dark:text-white">€<span x-text="parseFloat($store.lancView.lanc.valor_base).toFixed(2)"></span></span>
+                </div>
+              </template>
+              <template x-if="parseFloat($store.lancView.lanc.valor_bonus) > 0">
+                <div class="flex justify-between items-center px-4 py-2.5 bg-white dark:bg-gray-800">
+                  <span class="text-sm text-gray-600 dark:text-gray-300">Bónus</span>
+                  <span class="text-sm font-medium text-emerald-600">+ €<span x-text="parseFloat($store.lancView.lanc.valor_bonus).toFixed(2)"></span></span>
+                </div>
+              </template>
+              <template x-if="parseFloat($store.lancView.lanc.pacotes_perdidos) > 0">
+                <div class="flex justify-between items-center px-4 py-2.5 bg-white dark:bg-gray-800">
+                  <span class="text-sm text-gray-600 dark:text-gray-300">Pacotes Perdidos</span>
+                  <span class="text-sm font-medium text-red-600">- €<span x-text="parseFloat($store.lancView.lanc.pacotes_perdidos).toFixed(2)"></span></span>
+                </div>
+              </template>
+              <template x-if="parseFloat($store.lancView.lanc.adiantamentos) > 0">
+                <div class="flex justify-between items-center px-4 py-2.5 bg-white dark:bg-gray-800">
+                  <span class="text-sm text-gray-600 dark:text-gray-300">Adiantamentos / Combustível</span>
+                  <span class="text-sm font-medium text-red-600">- €<span x-text="parseFloat($store.lancView.lanc.adiantamentos).toFixed(2)"></span></span>
+                </div>
+              </template>
+              <div class="flex justify-between items-center px-4 py-2.5 bg-gray-50 dark:bg-gray-700/50">
+                <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">Subtotal (sem IVA)</span>
+                <span class="text-sm font-semibold text-gray-900 dark:text-white">€<span x-text="parseFloat($store.lancView.lanc.total_a_receber).toFixed(2)"></span></span>
+              </div>
+              <template x-if="parseFloat($store.lancView.lanc.taxa_iva) > 0">
+                <div class="flex justify-between items-center px-4 py-2.5 bg-white dark:bg-gray-800">
+                  <span class="text-sm text-gray-600 dark:text-gray-300">IVA (<span x-text="$store.lancView.lanc.taxa_iva"></span>%)</span>
+                  <span class="text-sm font-medium text-gray-900 dark:text-white">€<span x-text="parseFloat($store.lancView.lanc.valor_iva).toFixed(2)"></span></span>
+                </div>
+              </template>
+              <div class="flex justify-between items-center px-4 py-3 bg-indigo-600">
+                <span class="text-sm font-bold text-white">Total com IVA</span>
+                <span class="text-lg font-bold text-white">€<span x-text="parseFloat($store.lancView.lanc.total_com_iva).toFixed(2)"></span></span>
+              </div>
+            </div>
+          </div>
+          <!-- Referência pagamento + comprovante -->
+          <template x-if="$store.lancView.lanc.referencia_pagamento || $store.lancView.lanc.comprovante_url">
+            <div class="grid grid-cols-2 gap-4">
+              <template x-if="$store.lancView.lanc.referencia_pagamento">
+                <div class="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4">
+                  <div class="text-xs text-gray-500 mb-1">Referência de Pagamento</div>
+                  <div class="text-sm font-medium text-gray-900 dark:text-white" x-text="$store.lancView.lanc.referencia_pagamento"></div>
+                </div>
+              </template>
+              <template x-if="$store.lancView.lanc.comprovante_url">
+                <div class="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-4">
+                  <div class="text-xs text-gray-500 mb-2">Comprovante</div>
+                  <a :href="$store.lancView.lanc.comprovante_url" target="_blank"
+                     class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold transition-colors">
+                    <i data-lucide="paperclip" class="w-3 h-3"></i> Ver Comprovante
+                  </a>
+                </div>
+              </template>
+            </div>
+          </template>
+          <!-- Notas -->
+          <template x-if="$store.lancView.lanc.notas">
+            <div class="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4">
+              <div class="text-xs font-semibold text-amber-600 mb-1">Notas</div>
+              <p class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-line" x-text="$store.lancView.lanc.notas"></p>
+            </div>
+          </template>
+        </div>
+      </template>
+    </div>
+    <!-- Footer -->
+    <div class="border-t border-gray-200 dark:border-gray-700 px-6 py-3 flex justify-between items-center flex-shrink-0">
+      <span class="text-xs text-gray-400" x-text="$store.lancView.lanc ? ('Criado em ' + $store.lancView.lanc.created_at + ($store.lancView.lanc.created_by ? ' por ' + $store.lancView.lanc.created_by : '')) : ''"></span>
+      <div class="flex gap-2">
+        <template x-if="$store.lancView.lanc && $store.lancView.lanc.status !== 'PAGO' && $store.lancView.lanc.status !== 'CANCELADO'">
+          <button @click="$store.lancEdit.open($store.lancView.lanc.id); $store.lancView.show = false;"
+                  class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold transition-colors">
+            <i data-lucide="pencil" class="w-3.5 h-3.5"></i> Editar
+          </button>
+        </template>
+        <button @click="$store.lancView.show = false" class="px-4 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+          Fechar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════════
+     MODAL EDITAR LANÇAMENTO EMPRESA PARCEIRA
+     ════════════════════════════════════════════════════════════════════════ -->
+<div x-data x-cloak x-show="$store.lancEdit.open"
+     class="fixed inset-0 z-[65] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+     @keydown.escape.window="$store.lancEdit.open = false">
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col border border-gray-200 dark:border-gray-700">
+    <!-- Header -->
+    <div class="bg-gradient-to-r from-indigo-600 to-blue-600 rounded-t-2xl px-6 py-4 flex items-center justify-between flex-shrink-0">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center">
+          <i data-lucide="pencil" class="w-5 h-5 text-white"></i>
+        </div>
+        <div>
+          <div class="text-white font-bold text-base">Editar Lançamento</div>
+          <div class="text-indigo-200 text-xs" x-text="$store.lancEdit.form.empresa_nome || ''"></div>
+        </div>
+      </div>
+      <button @click="$store.lancEdit.open = false" class="text-white/70 hover:text-white hover:bg-white/20 rounded-lg p-1.5">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+    <!-- Body -->
+    <div class="flex-1 overflow-y-auto p-6 space-y-4">
+      <div>
+        <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Descrição do Serviço</label>
+        <input type="text" x-model="$store.lancEdit.form.descricao"
+               class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-indigo-500">
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Período Início</label>
+          <input type="date" x-model="$store.lancEdit.form.periodo_inicio"
+                 class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-indigo-500">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Período Fim</label>
+          <input type="date" x-model="$store.lancEdit.form.periodo_fim"
+                 class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-indigo-500">
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Qtd. Entregas</label>
+          <input type="number" min="0" x-model="$store.lancEdit.form.qtd_entregas"
+                 class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-indigo-500">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Valor por Entrega (€)</label>
+          <input type="number" step="0.0001" min="0" x-model="$store.lancEdit.form.valor_por_entrega"
+                 class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-indigo-500">
+        </div>
+      </div>
+      <div class="grid grid-cols-3 gap-3">
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Bónus (€)</label>
+          <input type="number" step="0.01" min="0" x-model="$store.lancEdit.form.valor_bonus"
+                 class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-indigo-500">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Pct. Perdidos (€)</label>
+          <input type="number" step="0.01" min="0" x-model="$store.lancEdit.form.pacotes_perdidos"
+                 class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-indigo-500">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Adiantamentos (€)</label>
+          <input type="number" step="0.01" min="0" x-model="$store.lancEdit.form.adiantamentos"
+                 class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-indigo-500">
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Taxa IVA (%)</label>
+          <input type="number" step="0.01" min="0" max="100" x-model="$store.lancEdit.form.taxa_iva"
+                 class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-indigo-500">
+        </div>
+        <div class="flex items-end pb-1">
+          <div class="bg-indigo-50 dark:bg-indigo-900/20 rounded-lg px-3 py-2 text-sm w-full">
+            <div class="text-xs text-gray-500 mb-0.5">Total com IVA</div>
+            <div class="font-bold text-indigo-700 dark:text-indigo-300">
+              €<span x-text="(parseFloat($store.lancEdit.form.valor_base || 0) + parseFloat($store.lancEdit.form.valor_bonus || 0) - parseFloat($store.lancEdit.form.pacotes_perdidos || 0) - parseFloat($store.lancEdit.form.adiantamentos || 0) + (parseFloat($store.lancEdit.form.valor_base || 0) + parseFloat($store.lancEdit.form.valor_bonus || 0) - parseFloat($store.lancEdit.form.pacotes_perdidos || 0) - parseFloat($store.lancEdit.form.adiantamentos || 0)) * parseFloat($store.lancEdit.form.taxa_iva || 0) / 100).toFixed(2)"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Notas Internas</label>
+        <textarea rows="3" x-model="$store.lancEdit.form.notas"
+                  class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-indigo-500 resize-none"></textarea>
+      </div>
+    </div>
+    <!-- Footer -->
+    <div class="border-t border-gray-200 dark:border-gray-700 px-6 py-4 flex gap-2 justify-end flex-shrink-0">
+      <button @click="$store.lancEdit.open = false" class="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-sm hover:bg-gray-200 transition-colors font-medium">
+        Cancelar
+      </button>
+      <button @click="$store.lancEdit.save()"
+              :disabled="$store.lancEdit.saving"
+              class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white rounded-lg text-sm font-semibold transition-colors flex items-center gap-2">
+        <svg x-show="$store.lancEdit.saving" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+        </svg>
+        <i x-show="!$store.lancEdit.saving" data-lucide="save" class="w-4 h-4"></i>
+        Guardar
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('alpine:init', () => {
+  Alpine.store('lancView', {
+    show: false,
+    loading: false,
+    lanc: null,
+    pdfUrl: '',
+
+    async open(lancId) {
+      this.loading = true;
+      this.lanc = null;
+      this.pdfUrl = `/settlements/pre-invoices/empresa-lancamento/${lancId}/pdf/`;
+      this.show = true;
+      try {
+        const resp = await fetch(`/settlements/pre-invoices/empresa-lancamento/${lancId}/detail/`);
+        this.lanc = await resp.json();
+      } catch(e) {
+        this.show = false;
+      } finally {
+        this.loading = false;
+        setTimeout(() => lucide.createIcons(), 80);
+      }
+    },
+  });
+
+  Alpine.store('lancEdit', {
+    open: false,
+    saving: false,
+    lancId: null,
+    form: {
+      empresa_nome: '',
+      descricao: '',
+      qtd_entregas: 0,
+      valor_por_entrega: 0,
+      valor_base: 0,
+      valor_bonus: 0,
+      pacotes_perdidos: 0,
+      adiantamentos: 0,
+      taxa_iva: 23,
+      periodo_inicio: '',
+      periodo_fim: '',
+      notas: '',
+    },
+
+    async openLanc(lancId) {
+      this.lancId = lancId;
+      this.open = false;
+      try {
+        const resp = await fetch(`/settlements/pre-invoices/empresa-lancamento/${lancId}/detail/`);
+        const data = await resp.json();
+        this.form.empresa_nome = data.empresa_nome;
+        this.form.descricao = data.descricao;
+        this.form.qtd_entregas = data.qtd_entregas;
+        this.form.valor_por_entrega = data.valor_por_entrega;
+        this.form.valor_base = data.valor_base;
+        this.form.valor_bonus = data.valor_bonus;
+        this.form.pacotes_perdidos = data.pacotes_perdidos;
+        this.form.adiantamentos = data.adiantamentos;
+        this.form.taxa_iva = data.taxa_iva;
+        this.form.periodo_inicio = data.periodo_inicio_iso;
+        this.form.periodo_fim = data.periodo_fim_iso;
+        this.form.notas = data.notas;
+        this.open = true;
+        setTimeout(() => lucide.createIcons(), 80);
+      } catch(e) {
+        alert('Erro ao carregar lançamento.');
+      }
+    },
+
+    async save() {
+      this.saving = true;
+      try {
+        const resp = await fetch(`/settlements/pre-invoices/empresa-lancamento/${this.lancId}/update/`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+          },
+          body: JSON.stringify(this.form),
+        });
+        const data = await resp.json();
+        if (data.success) {
+          // Actualizar linha na tabela
+          const row = document.getElementById(`lanc-row-${this.lancId}`);
+          if (row) {
+            const totalEl = row.querySelector('[data-lanc-total]');
+            if (totalEl) totalEl.textContent = '€' + parseFloat(data.total_a_receber).toFixed(2);
+            const periodoEl = row.querySelector('[data-lanc-periodo]');
+            if (periodoEl) periodoEl.textContent = data.periodo_inicio + ' → ' + data.periodo_fim;
+          }
+          this.open = false;
+          showToast('Lançamento actualizado com sucesso.');
+        } else {
+          alert(data.error || 'Erro ao guardar.');
+        }
+      } catch(e) {
+        alert('Erro de rede.');
+      } finally {
+        this.saving = false;
+      }
+    },
+  });
+});
+</script>
+
+<!-- ════════════════════════════════════════════════════════════════════════
+     MODAL RELATÓRIO DE PRÉ-FATURAS
+     ════════════════════════════════════════════════════════════════════════ -->
+<div id="reportModal" class="hidden fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[92vh] flex flex-col border border-gray-200 dark:border-gray-700">
+
+    <!-- Header -->
+    <div class="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-t-2xl px-6 py-4 flex items-center justify-between flex-shrink-0">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center">
+          <i data-lucide="bar-chart-2" class="w-5 h-5 text-white"></i>
+        </div>
+        <div>
+          <div class="text-white font-bold text-base">Relatório de Pré-Faturas</div>
+          <div class="text-indigo-200 text-xs">Totais e detalhe por motorista — filtros actuais</div>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button id="reportPdfBtn"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded-lg text-xs font-semibold transition-colors">
+          <i data-lucide="file-down" class="w-3.5 h-3.5"></i> Exportar PDF
+        </button>
+        <button onclick="closeReportModal()" class="w-8 h-8 flex items-center justify-center bg-white/20 hover:bg-white/30 text-white rounded-lg">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Loading -->
+    <div id="reportLoading" class="flex-1 flex items-center justify-center py-16">
+      <svg class="animate-spin w-8 h-8 text-indigo-500" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+      </svg>
+    </div>
+
+    <!-- Content -->
+    <div id="reportContent" class="hidden overflow-y-auto flex-1 p-4 space-y-4">
+
+      <!-- Cards de totais motoristas -->
+      <div id="reportCards" class="grid grid-cols-2 sm:grid-cols-4 gap-2"></div>
+
+      <!-- Tabela por motorista -->
+      <div class="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
+        <div class="px-4 py-2.5 bg-indigo-50 dark:bg-indigo-900/30 border-b border-indigo-100 dark:border-indigo-800/50">
+          <span class="text-xs font-semibold text-indigo-700 dark:text-indigo-300 flex items-center gap-2">
+            <i data-lucide="users" class="w-3.5 h-3.5"></i> Detalhe por Motorista
+          </span>
+        </div>
+        <div>
+          <table class="w-full text-xs table-fixed">
+            <colgroup>
+              <col style="width:20%">
+              <col style="width:12%">
+              <col style="width:15%">
+              <col style="width:6%">
+              <col style="width:9%">
+              <col style="width:9%">
+              <col style="width:9%">
+              <col style="width:9%">
+              <col style="width:11%">
+            </colgroup>
+            <thead class="bg-gray-50 dark:bg-gray-700/50">
+              <tr>
+                <th class="px-2 py-2 text-left font-semibold text-gray-500">Motorista</th>
+                <th class="px-2 py-2 text-left font-semibold text-gray-500">Pré-Fatura</th>
+                <th class="px-2 py-2 text-left font-semibold text-gray-500">Período</th>
+                <th class="px-2 py-2 text-right font-semibold text-gray-500">Pcts</th>
+                <th class="px-2 py-2 text-right font-semibold text-gray-500">Base</th>
+                <th class="px-2 py-2 text-right font-semibold text-gray-500">Bónus</th>
+                <th class="px-2 py-2 text-right font-semibold text-gray-500">Indic.</th>
+                <th class="px-2 py-2 text-right font-semibold text-gray-500">Desc.</th>
+                <th class="px-2 py-2 text-right font-semibold text-gray-500">A Receber</th>
+              </tr>
+            </thead>
+            <tbody id="reportTableBody"></tbody>
+            <tfoot id="reportTableFoot" class="bg-gray-50 dark:bg-gray-700/50 font-bold border-t-2 border-indigo-300"></tfoot>
+          </table>
+        </div>
+      </div>
+
+      <!-- Tabela Empresas Parceiras -->
+      <div id="reportEmpresasSection" class="hidden border border-teal-200 dark:border-teal-700 rounded-xl overflow-hidden">
+        <div class="px-4 py-2.5 bg-teal-50 dark:bg-teal-900/30 border-b border-teal-100 dark:border-teal-800/50 flex items-center justify-between">
+          <span class="text-xs font-semibold text-teal-700 dark:text-teal-300 flex items-center gap-2">
+            <i data-lucide="building-2" class="w-3.5 h-3.5"></i> Lançamentos de Empresas Parceiras
+          </span>
+          <span id="reportEmpresasTotal" class="text-xs font-bold text-teal-700 dark:text-teal-300"></span>
+        </div>
+        <table class="w-full text-xs table-fixed">
+          <colgroup>
+            <col style="width:35%">
+            <col style="width:25%">
+            <col style="width:22%">
+            <col style="width:10%">
+            <col style="width:8%">
+          </colgroup>
+          <thead class="bg-gray-50 dark:bg-gray-700/50">
+            <tr>
+              <th class="px-3 py-2 text-left font-semibold text-gray-500">Empresa</th>
+              <th class="px-3 py-2 text-left font-semibold text-gray-500">Descrição</th>
+              <th class="px-3 py-2 text-left font-semibold text-gray-500">Período</th>
+              <th class="px-3 py-2 text-right font-semibold text-gray-500">Total</th>
+              <th class="px-3 py-2 text-center font-semibold text-gray-500">Status</th>
+            </tr>
+          </thead>
+          <tbody id="reportEmpresasBody"></tbody>
+        </table>
+      </div>
+
+      <!-- Grand Total -->
+      <div id="reportGrandTotal" class="hidden rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 p-4 flex items-center justify-between">
+        <span class="text-white font-semibold text-sm">TOTAL GERAL (Motoristas + Empresas Parceiras)</span>
+        <span id="reportGrandTotalValue" class="text-white font-bold text-xl"></span>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+function getReportQueryString() {
+  const params = new URLSearchParams(window.location.search);
+  // remover página — relatório é sempre de todos os resultados filtrados
+  params.delete('page');
+  return params.toString();
+}
+
+function openReportModal() {
+  document.getElementById('reportModal').classList.remove('hidden');
+  document.getElementById('reportLoading').classList.remove('hidden');
+  document.getElementById('reportContent').classList.add('hidden');
+
+  const qs = getReportQueryString();
+  fetch('/settlements/pre-invoices/report/summary/?' + qs)
+    .then(r => r.json())
+    .then(data => {
+      renderReport(data);
+      setTimeout(() => lucide.createIcons(), 80);
+    });
+
+  document.getElementById('reportPdfBtn').onclick = function() {
+    window.open('/settlements/pre-invoices/report/pdf/?' + qs, '_blank');
+  };
+}
+
+function closeReportModal() {
+  document.getElementById('reportModal').classList.add('hidden');
+}
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeReportModal();
+});
+
+function fmt(v) { return '€' + parseFloat(v || 0).toFixed(2); }
+
+function renderReport(data) {
+  const t = data.totais;
+
+  // Cards
+  const cardsEl = document.getElementById('reportCards');
+  const cards = [
+    { label: 'Pré-Faturas', value: t.num_prefaturas, color: 'indigo' },
+    { label: 'Total Pacotes', value: t.total_pacotes, color: 'blue' },
+    { label: 'Base Entregas', value: fmt(t.total_base), color: 'gray' },
+    { label: 'Bónus Dom/Feriado', value: fmt(t.total_bonus), color: 'yellow' },
+    { label: 'Comissões Indicação', value: '+' + fmt(t.total_comissoes), color: 'teal' },
+    { label: 'Descontos / Perdidos', value: '-' + fmt(t.total_descontos), color: 'red' },
+    { label: 'Adiantamentos', value: '-' + fmt(t.total_adiantamentos), color: 'orange' },
+    { label: 'Motoristas', value: fmt(t.total_a_receber), color: 'green', big: true },
+    { label: 'Empresas Parceiras', value: fmt(t.total_empresas || 0), color: 'teal', big: false },
+  ];
+  const colorMap = {
+    indigo: 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300',
+    blue:   'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300',
+    gray:   'bg-gray-50 dark:bg-gray-700/40 text-gray-700 dark:text-gray-300',
+    yellow: 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300',
+    teal:   'bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-300',
+    red:    'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400',
+    orange: 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400',
+    green:  'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300',
+  };
+  cardsEl.innerHTML = cards.map(c => `
+    <div class="rounded-xl p-3 text-center ${colorMap[c.color]}">
+      <div class="text-xs mb-1 opacity-70">${c.label}</div>
+      <div class="font-bold ${c.big ? 'text-lg' : 'text-sm'}">${c.value}</div>
+    </div>
+  `).join('');
+
+  // Tabela motoristas
+  const statusColors = {
+    'CALCULADO': 'bg-cyan-100 text-cyan-800',
+    'APROVADO':  'bg-blue-100 text-blue-800',
+    'PAGO':      'bg-emerald-100 text-emerald-800',
+    'PENDENTE':  'bg-yellow-100 text-yellow-800',
+    'REPROVADO': 'bg-red-100 text-red-800',
+    'CONTESTADO':'bg-orange-100 text-orange-800',
+  };
+  const tbody = document.getElementById('reportTableBody');
+  tbody.innerHTML = data.motoristas.map((m, i) => `
+    <tr class="${i % 2 === 0 ? '' : 'bg-gray-50 dark:bg-gray-700/20'}">
+      <td class="px-2 py-2 font-semibold text-gray-800 dark:text-white truncate overflow-hidden" title="${m.nome}">${m.nome}</td>
+      <td class="px-2 py-2 font-mono text-purple-600 dark:text-purple-400 truncate overflow-hidden text-xs">${m.numero}</td>
+      <td class="px-2 py-2 text-gray-500 text-xs">${m.periodo}</td>
+      <td class="px-2 py-2 text-right font-medium">${m.pacotes}</td>
+      <td class="px-2 py-2 text-right text-gray-600 dark:text-gray-300 text-xs">${fmt(m.base_entregas)}</td>
+      <td class="px-2 py-2 text-right text-yellow-600 text-xs">${fmt(m.total_bonus)}</td>
+      <td class="px-2 py-2 text-right text-teal-600 text-xs">${parseFloat(m.total_comissoes) > 0 ? '+' + fmt(m.total_comissoes) : '—'}</td>
+      <td class="px-2 py-2 text-right text-red-500 text-xs">${parseFloat(m.descontos) > 0 ? '-' + fmt(m.descontos) : '—'}</td>
+      <td class="px-2 py-2 text-right font-bold text-emerald-600 dark:text-emerald-400 text-xs">${fmt(m.total_a_receber)}</td>
+    </tr>
+  `).join('');
+
+  // Footer com totais motoristas
+  const tfoot = document.getElementById('reportTableFoot');
+  tfoot.innerHTML = `
+    <tr>
+      <td colspan="3" class="px-2 py-2 font-bold text-gray-700 dark:text-gray-200 text-xs">TOTAIS (${t.num_prefaturas})</td>
+      <td class="px-2 py-2 text-right font-bold text-xs">${t.total_pacotes}</td>
+      <td class="px-2 py-2 text-right font-bold text-xs">${fmt(t.total_base)}</td>
+      <td class="px-2 py-2 text-right font-bold text-yellow-600 text-xs">${fmt(t.total_bonus)}</td>
+      <td class="px-2 py-2 text-right font-bold text-teal-600 text-xs">${parseFloat(t.total_comissoes) > 0 ? '+' + fmt(t.total_comissoes) : '—'}</td>
+      <td class="px-2 py-2 text-right font-bold text-red-500 text-xs">-${fmt(t.total_descontos)}</td>
+      <td class="px-2 py-2 text-right font-bold text-emerald-600 text-xs">${fmt(t.total_a_receber)}</td>
+    </tr>
+  `;
+
+  // Tabela Empresas Parceiras
+  const lancamentos = data.lancamentos || [];
+  const empSection  = document.getElementById('reportEmpresasSection');
+  const grandTotalEl = document.getElementById('reportGrandTotal');
+  if (lancamentos.length > 0) {
+    const empStatusColors = {
+      'PENDENTE':  'bg-yellow-100 text-yellow-800',
+      'APROVADO':  'bg-blue-100 text-blue-800',
+      'PAGO':      'bg-emerald-100 text-emerald-800',
+      'CANCELADO': 'bg-red-100 text-red-800',
+    };
+    document.getElementById('reportEmpresasBody').innerHTML = lancamentos.map((l, i) => `
+      <tr class="${i % 2 === 0 ? '' : 'bg-gray-50 dark:bg-gray-700/20'}">
+        <td class="px-3 py-2 font-semibold text-gray-800 dark:text-white truncate overflow-hidden" title="${l.empresa}">${l.empresa}</td>
+        <td class="px-3 py-2 text-gray-500 truncate overflow-hidden" title="${l.descricao}">${l.descricao}</td>
+        <td class="px-3 py-2 text-gray-500 text-xs">${l.periodo}</td>
+        <td class="px-3 py-2 text-right font-bold text-teal-600 whitespace-nowrap">${fmt(l.total)}</td>
+        <td class="px-3 py-2 text-center">
+          <span class="inline-block px-1.5 py-0.5 rounded-full text-xs font-semibold leading-tight ${empStatusColors[l.status_code] || 'bg-gray-100 text-gray-600'}">${l.status}</span>
+        </td>
+      </tr>
+    `).join('');
+    document.getElementById('reportEmpresasTotal').textContent = 'Total: ' + fmt(t.total_empresas);
+    empSection.classList.remove('hidden');
+    document.getElementById('reportGrandTotalValue').textContent = fmt(t.grand_total);
+    grandTotalEl.classList.remove('hidden');
+  } else {
+    empSection.classList.add('hidden');
+    grandTotalEl.classList.add('hidden');
+  }
+
+  document.getElementById('reportLoading').classList.add('hidden');
+  document.getElementById('reportContent').classList.remove('hidden');
+}
+</script>
+{% endblock %}

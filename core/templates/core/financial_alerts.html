@@ -1,0 +1,44 @@
+{% extends 'settlements/base.html' %}
+{% block title %}Alertas Financeiros{% endblock %}
+{% block content %}
+<div class="max-w-6xl mx-auto p-6 space-y-4">
+  <div class="flex items-center justify-between">
+    <h1 class="text-2xl font-bold">Alertas Financeiros</h1>
+    <a href="?{% if only_unresolved %}all=1{% endif %}" class="text-sm text-indigo-600 hover:underline">
+      {% if only_unresolved %}Ver todos{% else %}Ver só pendentes{% endif %}
+    </a>
+  </div>
+
+  {% csrf_token %}
+  <div class="space-y-2">
+    {% for a in alerts %}
+    <div class="p-4 rounded-xl border flex items-start gap-3
+      {% if a.level == 'DANGER' %}bg-red-50 border-red-200
+      {% elif a.level == 'WARN' %}bg-amber-50 border-amber-200
+      {% else %}bg-blue-50 border-blue-200{% endif %}">
+      <div class="flex-1 min-w-0">
+        <p class="text-sm font-semibold">{{ a.title }}</p>
+        <p class="text-xs text-gray-600 mt-0.5">{{ a.description }}</p>
+        <p class="text-[10px] text-gray-400 mt-1">{{ a.get_kind_display }} · {{ a.created_at|date:"d/m/Y H:i" }}</p>
+      </div>
+      {% if not a.resolved %}
+      <button onclick="_resolveAlert({{ a.id }})" class="text-xs text-indigo-600 hover:underline shrink-0">Resolver</button>
+      {% else %}
+      <span class="text-xs text-emerald-600 shrink-0">✓ Resolvido</span>
+      {% endif %}
+    </div>
+    {% empty %}
+    <div class="p-8 text-center text-gray-400 text-sm">Sem alertas.</div>
+    {% endfor %}
+  </div>
+</div>
+<script>
+async function _resolveAlert(id) {
+  const csrf = document.querySelector('input[name=csrfmiddlewaretoken]').value;
+  await fetch(`/financial-alerts/${id}/resolve/`, {
+    method: 'POST', headers: {'X-CSRFToken': csrf},
+  });
+  location.reload();
+}
+</script>
+{% endblock %}

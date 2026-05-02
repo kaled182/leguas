@@ -1,7 +1,78 @@
 ﻿from django import forms
 from django.core.exceptions import ValidationError
 
-from .models import Expenses, Revenues
+from .models import Bill, BillAttachment, Expenses, Revenues
+
+
+class BillForm(forms.ModelForm):
+    class Meta:
+        model = Bill
+        fields = [
+            "description", "supplier", "supplier_nif", "invoice_number",
+            "category", "cost_center",
+            "amount_net", "iva_rate", "amount_total",
+            "issue_date", "due_date", "paid_date",
+            "status", "recurrence", "notes",
+        ]
+        widgets = {
+            "description": forms.TextInput(attrs={
+                "class": "fld",
+                "placeholder": "ex: Aluguer Setembro 2026",
+            }),
+            "supplier": forms.TextInput(attrs={"class": "fld"}),
+            "supplier_nif": forms.TextInput(attrs={"class": "fld"}),
+            "invoice_number": forms.TextInput(attrs={"class": "fld"}),
+            "category": forms.Select(attrs={"class": "fld"}),
+            "cost_center": forms.Select(attrs={"class": "fld"}),
+            "amount_net": forms.NumberInput(attrs={
+                "class": "fld", "step": "0.01", "min": "0",
+            }),
+            "iva_rate": forms.NumberInput(attrs={
+                "class": "fld", "step": "0.01", "min": "0", "max": "30",
+            }),
+            "amount_total": forms.NumberInput(attrs={
+                "class": "fld", "step": "0.01", "min": "0",
+            }),
+            "issue_date": forms.DateInput(
+                attrs={"class": "fld", "type": "date"},
+            ),
+            "due_date": forms.DateInput(
+                attrs={"class": "fld", "type": "date"},
+            ),
+            "paid_date": forms.DateInput(
+                attrs={"class": "fld", "type": "date"},
+            ),
+            "status": forms.Select(attrs={"class": "fld"}),
+            "recurrence": forms.Select(attrs={"class": "fld"}),
+            "notes": forms.Textarea(attrs={"class": "fld", "rows": 2}),
+        }
+
+    def clean(self):
+        cleaned = super().clean()
+        net = cleaned.get("amount_net") or 0
+        total = cleaned.get("amount_total") or 0
+        if total < net:
+            raise ValidationError(
+                "Valor com IVA não pode ser menor que valor sem IVA.",
+            )
+        status = cleaned.get("status")
+        paid = cleaned.get("paid_date")
+        if status == Bill.STATUS_PAID and not paid:
+            raise ValidationError(
+                "Conta marcada como paga precisa ter Data de Pagamento.",
+            )
+        return cleaned
+
+
+class BillAttachmentForm(forms.ModelForm):
+    class Meta:
+        model = BillAttachment
+        fields = ["kind", "file", "description"]
+        widgets = {
+            "kind": forms.Select(attrs={"class": "fld"}),
+            "file": forms.ClearableFileInput(attrs={"class": "fld"}),
+            "description": forms.TextInput(attrs={"class": "fld"}),
+        }
 
 
 class RevenueForm(forms.ModelForm):

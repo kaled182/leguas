@@ -54,6 +54,17 @@ SYNC_TOKEN = env("SYNC_TOKEN")
 API_URL = env("API_URL")
 GEOAPI_TOKEN = os.getenv("GEOAPI_TOKEN")
 
+# WhatsApp Reports
+AUTHENTICATION_API_KEY = env("AUTHENTICATION_API_KEY", default="")
+WHATSAPP_API_URL = env("WHATSAPP_API_URL", default="")
+WHATSAPP_REPORT_GROUP = env("WHATSAPP_REPORT_GROUP", default="")
+
+# WPPConnect Server (Leguas)
+WPPCONNECT_URL = env("WPPCONNECT_URL", default="")
+WPPCONNECT_SESSION = env("WPPCONNECT_SESSION", default="leguas_wppconnect")
+WPPCONNECT_TOKEN = env("WPPCONNECT_TOKEN", default="")
+WPPCONNECT_SECRET = env("WPPCONNECT_SECRET", default="THISISMYSECURETOKEN")
+
 # Tailwind
 TAILWIND_APP_NAME = "theme"
 
@@ -72,6 +83,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",  # Django REST Framework
     "import_export",  # Django Import Export
+    "django_celery_beat",  # Celery Beat com DatabaseScheduler
     "tailwind",
     "theme",
     "customauth",
@@ -126,6 +138,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "drivers_app.context_processors.drivers_counts",
+                "system_config.context_processors.map_config",
             ],
         },
     },
@@ -304,3 +317,41 @@ MESSAGE_TAGS = {
 # ============================================================================
 # Importa feature flags para controlar rollout gradual da nova arquitetura
 # Referência: system_config/feature_flags.py e docs/MIGRATION_GUIDE.md
+
+
+# ============================================================================
+# CELERY CONFIGURATION
+# ============================================================================
+# Configurações para processamento assíncrono de tasks e sincronizações automáticas
+
+# Broker (usando Redis - recomendado para produção)
+# Se não tiver Redis instalado, pode usar RabbitMQ ou mesmo Django DB como broker
+CELERY_BROKER_URL = env('CELERY_BROKER_URL', default=REDIS_URL)
+
+# Backend para armazenar resultados das tasks
+CELERY_RESULT_BACKEND = env('CELERY_RESULT_BACKEND', default=REDIS_URL)
+
+# Aceitar conteúdo JSON apenas (segurança)
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+
+# Timezone
+CELERY_TIMEZONE = 'Europe/Lisbon'
+CELERY_ENABLE_UTC = True
+
+# Expiração de resultados (7 dias)
+CELERY_RESULT_EXPIRES = 60 * 60 * 24 * 7
+
+# Configurações de retry
+CELERY_TASK_ACKS_LATE = True  # Task só é marcada como concluída após terminar
+CELERY_TASK_REJECT_ON_WORKER_LOST = True  # Re-executar se worker morrer
+
+# Limite de memória (prevenir memory leaks)
+CELERY_WORKER_MAX_MEMORY_PER_CHILD = 200000  # 200MB
+
+# Logging
+CELERY_WORKER_HIJACK_ROOT_LOGGER = False  # Deixar Django lidar com logging
+
+# Email para notificações de erros em tasks
+CELERY_SEND_TASK_ERROR_EMAILS = True

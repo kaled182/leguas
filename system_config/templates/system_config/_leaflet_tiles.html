@@ -1,0 +1,63 @@
+{% comment %}
+  Include this partial AFTER Leaflet is loaded. It exposes window.addTileLayer(map)
+  which attaches the tile layer configured in /system-config/ to the given map.
+{% endcomment %}
+{{ map_config|json_script:"__map_config__" }}
+<script>
+(function(){
+  var el = document.getElementById('__map_config__');
+  var CFG = {};
+  try { CFG = el ? JSON.parse(el.textContent) : {}; } catch(e) { CFG = {}; }
+  window.MAP_CONFIG = CFG;
+
+  /**
+   * Add the configured tile layer to a Leaflet map instance.
+   * @param {L.Map} map        Leaflet map.
+   * @param {Object} [opts]    { maxZoom, attribution, forceProvider }.
+   * @returns {L.TileLayer} the layer that was added.
+   */
+  window.addTileLayer = function(map, opts) {
+    opts = opts || {};
+    var provider = (opts.forceProvider || CFG.provider || 'osm').toLowerCase();
+    var maxZoom = opts.maxZoom || 19;
+
+    // Mapbox — raster tiles via Styles API
+    if (provider === 'mapbox' && CFG.mapbox_token) {
+      var styleUrl = ((CFG.mapbox_custom || CFG.mapbox_style || 'mapbox://styles/mapbox/streets-v12') + '').trim();
+      var m = styleUrl.match(/^mapbox:\/\/styles\/([^\/]+)\/([^\/?#]+)/);
+      var user, styleId;
+      if (m) { user = m[1]; styleId = m[2]; }
+      else if (styleUrl.indexOf('/') !== -1) {
+        var parts = styleUrl.split('/');
+        user = parts[0]; styleId = parts[1];
+      } else { user = 'mapbox'; styleId = 'streets-v12'; }
+
+      var url = 'https://api.mapbox.com/styles/v1/' + user + '/' + styleId +
+                '/tiles/{z}/{x}/{y}?access_token=' + encodeURIComponent(CFG.mapbox_token);
+      return L.tileLayer(url, {
+        maxZoom: maxZoom,
+        tileSize: 512,
+        zoomOffset: -1,
+        attribution: opts.attribution || '&copy; <a href="https://www.mapbox.com/about/maps/">Mapbox</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+      }).addTo(map);
+    }
+
+    // Esri — ArcGIS basemaps (raster fallback)
+    if (provider === 'esri' && CFG.esri_api_key) {
+      var esriRasterUrl = 'https://services.arcgisonline.com/ArcGIS/rest/services/' +
+                          'World_Street_Map/MapServer/tile/{z}/{y}/{x}';
+      return L.tileLayer(esriRasterUrl, {
+        maxZoom: maxZoom,
+        attribution: opts.attribution || '&copy; Esri &mdash; Source: Esri'
+      }).addTo(map);
+    }
+
+    // OSM / default (also fallback when Google is configured — Leaflet has no native Google tiles)
+    var osmUrl = CFG.osm_tile_server || 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+    return L.tileLayer(osmUrl, {
+      maxZoom: maxZoom,
+      attribution: opts.attribution || '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+  };
+})();
+</script>

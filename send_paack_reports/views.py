@@ -1,8 +1,7 @@
-﻿import logging
-from pathlib import Path
+import logging
+from datetime import datetime
 
-import environ
-import requests
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.shortcuts import render
@@ -10,13 +9,9 @@ from django.utils import timezone
 
 from management.views import DashboardCalculator
 from ordersmanager_paack.sync_service import SyncService
+from system_config.whatsapp_helper import WhatsAppWPPConnectAPI
 
 logger = logging.getLogger(__name__)
-
-# Configuração do ambiente
-BASE_DIR = Path(__file__).resolve().parent.parent
-env = environ.Env()
-environ.Env.read_env(BASE_DIR / ".env")
 
 
 def sync_before_report():
@@ -27,7 +22,9 @@ def sync_before_report():
         dict: Resultado da sincronização
     """
     try:
-        logger.info("🔄 Executando sincronização automática antes do relatório...")
+        logger.info(
+            "🔄 Executando sincronização automática antes do relatório..."
+        )
         sync_service = SyncService()
         result = sync_service.sync_data(force_refresh=True)
 
@@ -35,7 +32,8 @@ def sync_before_report():
             logger.info("✅ Sincronização concluída com sucesso!")
         else:
             logger.warning(
-                f"⚠️ Sincronização falhou: {result.get('error', 'Erro desconhecido')}"
+                "⚠️ Sincronização falhou: "
+                f"{result.get('error', 'Erro desconhecido')}"
             )
 
         return result
@@ -44,19 +42,25 @@ def sync_before_report():
         return {"success": False, "error": str(e)}
 
 
-def generate_report_text(target_date=None, include_sync_info=False):
+def generate_report_text(
+    target_date=None, include_sync_info=False, sync=True
+):
     """
     Gera um relatório em texto com as informações atualizadas do dashboard.
 
     Args:
-        target_date (date, optional): Data específica para o relatório. Se None, usa data atual.
-        include_sync_info (bool): Se True, inclui informações sobre a sincronização
+        target_date (date, optional): Data específica. Se None, usa data atual.
+        include_sync_info (bool): Se True, inclui informações da sincronização.
+        sync (bool): Se True, sincroniza antes de gerar. False para preview.
 
     Returns:
         str: Relatório formatado em texto
     """
-    # Executar sincronização automática
-    sync_result = sync_before_report()
+    # Executar sincronização automática (apenas quando sync=True)
+    if sync:
+        sync_result = sync_before_report()
+    else:
+        sync_result = {"success": True}
 
     # Inicializar calculadora com dados atualizados
     calculator = DashboardCalculator(target_date)
@@ -73,9 +77,8 @@ def generate_report_text(target_date=None, include_sync_info=False):
     formatted_time = now.strftime("%H:%M:%S")
 
     # Preparar valor de recuperadas (se não houver, mostrar "—")
-    recovered_text = (
-        str(daily_metrics["recovered"]) if daily_metrics["recovered"] > 0 else "—"
-    )
+    recovered = daily_metrics["recovered"]
+    recovered_text = str(recovered) if recovered > 0 else "—"
 
     # Gerar relatório formatado
     report = f"""📋 Relatório Automático
@@ -93,7 +96,9 @@ def generate_report_text(target_date=None, include_sync_info=False):
     # Adicionar informações de sincronização se solicitado
     if include_sync_info:
         sync_status = (
-            "✅ Dados sincronizados" if sync_result["success"] else "⚠️ Sync parcial"
+            "✅ Dados sincronizados"
+            if sync_result["success"]
+            else "⚠️ Sync parcial"
         )
         report += f"\n\n🔄 Status: {sync_status}"
 
@@ -103,7 +108,7 @@ def generate_report_text(target_date=None, include_sync_info=False):
 @login_required
 def send_paack_reports(request):
     """
-    View para gerar e enviar relatórios automáticos via API.
+    View para gerar e enviar relatórios automáticos via WPPConnect.
     """
     try:
         # Verificar se há filtro de data
@@ -112,49 +117,53 @@ def send_paack_reports(request):
 
         if date_filter:
             try:
-                from datetime import datetime
-
-                target_date = datetime.strptime(date_filter, "%Y-%m-%d").date()
+                target_date = datetime.strptime(
+                    date_filter, "%Y-%m-%d"
+                ).date()
             except ValueError:
                 pass
 
         # Gerar relatório com dados atualizados
         report_text = generate_report_text(target_date)
 
-        # Carregar configurações da API
-        api_key = env("AUTHENTICATION_API_KEY")
-        url = "http://45.160.176.150:9090/message/sendText/leguasreports"
-
-        # Preparar payload para API
-        payload = {
-            "number": "120363418429414442@g.us",
-            "textMessage": {"text": report_text},
-        }
-        headers = {"apikey": api_key, "Content-Type": "application/json"}
-
-        # Enviar via API
-        response = requests.post(url, json=payload, headers=headers)
-
-        # Aceitar qualquer código de sucesso (2xx)
-        if 200 <= response.status_code < 300:
-            return JsonResponse(
-                {
-                    "success": True,
-                    "message": "Relatório enviado com sucesso!",
-                    "report": report_text,
-                    "api_response": response.text,
-                    "status_code": response.status_code,
-                }
-            )
-        else:
+        # Validar configuração WPPConnect
+        if not settings.WPPCONNECT_URL:
             return JsonResponse(
                 {
                     "success": False,
-                    "error": f"Erro na API: {response.status_code}",
-                    "report": report_text,
+                    "error": "WPPCONNECT_URL não configurado",
                 },
-                status=400,
+                status=500,
             )
+        if not settings.WHATSAPP_REPORT_GROUP:
+            return JsonResponse(
+                {
+                    "success": False,
+                    "error": "WHATSAPP_REPORT_GROUP não configurado",
+                },
+                status=500,
+            )
+
+        # Enviar via WPPConnect (servidor WhatsApp do projeto Leguas)
+        whatsapp = WhatsAppWPPConnectAPI(
+            base_url=settings.WPPCONNECT_URL,
+            session_name=settings.WPPCONNECT_SESSION,
+            auth_token=settings.WPPCONNECT_TOKEN,
+            secret_key=settings.WPPCONNECT_SECRET,
+        )
+        result = whatsapp.send_text(
+            number=settings.WHATSAPP_REPORT_GROUP,
+            text=report_text,
+        )
+
+        return JsonResponse(
+            {
+                "success": True,
+                "message": "Relatório enviado com sucesso!",
+                "report": report_text,
+                "api_response": result,
+            }
+        )
 
     except Exception as e:
         return JsonResponse({"success": False, "error": str(e)}, status=500)
@@ -172,14 +181,14 @@ def generate_report_preview(request):
 
         if date_filter:
             try:
-                from datetime import datetime
-
-                target_date = datetime.strptime(date_filter, "%Y-%m-%d").date()
+                target_date = datetime.strptime(
+                    date_filter, "%Y-%m-%d"
+                ).date()
             except ValueError:
                 pass
 
-        # Gerar relatório
-        report_text = generate_report_text(target_date)
+        # Gerar relatório sem sincronização (preview rápido)
+        report_text = generate_report_text(target_date, sync=False)
 
         return JsonResponse(
             {

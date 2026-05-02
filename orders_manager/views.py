@@ -6,9 +6,12 @@ from django.core.paginator import Paginator
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+import json
 
 from .forms import AssignDriverForm, OrderForm, OrderIncidentForm
-from .models import Order, OrderIncident, OrderStatusHistory
+from .models import Order, OrderIncident, OrderStatusHistory, GeocodingFailure
 
 
 @login_required
@@ -315,18 +318,17 @@ def order_report_incident(request, pk):
 
 @login_required
 def orders_map(request):
-    """Mapa visual de pedidos em tempo real (Leaflet.js)"""
+    """Mapa visual de pedidos em tempo real (Leaflet.js) com geocodificação"""
     from pricing.models import PostalZone
+    from .geocoding import GeocodingService, AddressNormalizer
+    from .models import GeocodedAddress
 
-    # Filtros de status
-    status_filter = request.GET.getlist("status")
-    if not status_filter:
-        # Por padrão, mostrar apenas pedidos ativos
-        status_filter = ["PENDING", "ASSIGNED", "IN_TRANSIT"]
+    # Filtros de status - agora busca todos os status para permitir filtragem no frontend
+    all_statuses = ["PENDING", "ASSIGNED", "IN_TRANSIT", "DELIVERED", "INCIDENT", "RETURNED", "CANCELLED"]
 
-    # Buscar pedidos ativos (sem slice ainda para poder filtrar)
+    # Buscar pedidos com todos os status (sem slice ainda para poder filtrar)
     orders_qs_full = (
-        Order.objects.filter(current_status__in=status_filter)
+        Order.objects.filter(current_status__in=all_statuses)
         .select_related("partner", "assigned_driver")
         .order_by("-created_at")
     )
@@ -336,31 +338,74 @@ def orders_map(request):
     pending_count = orders_qs_full.filter(current_status="PENDING").count()
     assigned_count = orders_qs_full.filter(current_status="ASSIGNED").count()
     in_transit_count = orders_qs_full.filter(current_status="IN_TRANSIT").count()
+    delivered_count = orders_qs_full.filter(current_status="DELIVERED").count()
+    incident_count = orders_qs_full.filter(current_status="INCIDENT").count()
+    returned_count = orders_qs_full.filter(current_status="RETURNED").count()
+    cancelled_count = orders_qs_full.filter(current_status="CANCELLED").count()
 
-    # Limitar aos últimos 500 pedidos para performance
-    orders_qs = orders_qs_full[:500]
+    # Limitar aos últimos 300 pedidos para performance (reduzido devido a geocodificação)
+    orders_qs = orders_qs_full[:300]
 
-    # Tentar geolocalizar pedidos usando PostalZone
+    # Carregar coordenadas (usar cache, sem geocodificação em tempo real)
     orders_with_coords = []
     orders_without_coords = []
 
     for order in orders_qs:
+        coords = None
+        quality = None
+        zone_name = "Desconhecida"
+        
         try:
-            # Buscar zona postal usando o método do modelo
-            zone = PostalZone.find_zone_for_postal_code(order.postal_code)
-
-            if zone and zone.center_latitude and zone.center_longitude:
-                orders_with_coords.append(
-                    {
-                        "order": order,
-                        "lat": float(zone.center_latitude),
-                        "lng": float(zone.center_longitude),
-                        "zone": zone,
-                    }
-                )
+            # Extrair localidade do endereço ou usar código postal
+            locality = order.recipient_address.split()[-1] if order.recipient_address else "Portugal"
+            if len(locality) < 3:  # Se for muito curto, usar default
+                locality = "Portugal"
+            
+            # Normalizar endereço
+            normalized = AddressNormalizer.normalize(
+                order.recipient_address,
+                order.postal_code,
+                locality
+            )
+            
+            # Verificar APENAS cache (não geocodificar durante requisição HTTP)
+            cached = GeocodedAddress.objects.filter(
+                normalized_address=normalized
+            ).first()
+            
+            if cached and cached.latitude and cached.longitude:
+                # Usar coordenadas do cache
+                coords = (float(cached.latitude), float(cached.longitude))
+                quality = cached.geocode_quality
+            else:
+                # Fallback: usar zona postal (não geocodificar agora)
+                zone = PostalZone.find_zone_for_postal_code(order.postal_code)
+                if zone and zone.center_latitude and zone.center_longitude:
+                    coords = (float(zone.center_latitude), float(zone.center_longitude))
+                    quality = 'POSTAL_CODE'
+                    zone_name = zone.name
+            
+            if coords:
+                # Tentar pegar nome da zona
+                if quality != 'POSTAL_CODE':
+                    zone = PostalZone.find_zone_for_postal_code(order.postal_code)
+                    if zone:
+                        zone_name = zone.name
+                
+                orders_with_coords.append({
+                    "order": order,
+                    "lat": coords[0],
+                    "lng": coords[1],
+                    "zone": type('obj', (object,), {'name': zone_name})(),  # Mock zone object
+                    "quality": quality or 'UNKNOWN'
+                })
             else:
                 orders_without_coords.append(order)
-        except Exception:
+                
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Erro ao processar pedido {order.external_reference}: {e}")
             orders_without_coords.append(order)
 
     # Calcular centro do mapa
@@ -382,6 +427,10 @@ def orders_map(request):
         "pending": pending_count,
         "assigned": assigned_count,
         "in_transit": in_transit_count,
+        "delivered": delivered_count,
+        "incident": incident_count,
+        "returned": returned_count,
+        "cancelled": cancelled_count,
     }
 
     context = {
@@ -390,7 +439,118 @@ def orders_map(request):
         "map_center": map_center,
         "map_zoom": map_zoom,
         "stats": stats,
-        "status_filter": status_filter,
     }
 
     return render(request, "orders_manager/orders_map.html", context)
+
+
+@login_required
+def geocoding_failures_report(request):
+    """Relatório de endereços que falharam na geocodificação"""
+    from .models import GeocodingFailure, GeocodedAddress
+    from django.http import JsonResponse
+    from django.views.decorators.http import require_POST
+    import json
+    
+    # Filtros
+    show_resolved = request.GET.get('show_resolved', 'false') == 'true'
+    partner_filter = request.GET.get('partner', '')
+    
+    # Query base
+    failures_qs = GeocodingFailure.objects.select_related(
+        'order__partner',
+        'resolved_by'
+    )
+    
+    if not show_resolved:
+        failures_qs = failures_qs.filter(resolved=False)
+    
+    if partner_filter:
+        failures_qs = failures_qs.filter(order__partner__name__icontains=partner_filter)
+    
+    failures_qs = failures_qs.order_by('-attempted_at')
+    
+    # Paginação
+    paginator = Paginator(failures_qs, 50)
+    page_number = request.GET.get('page')
+    failures = paginator.get_page(page_number)
+    
+    # Estatísticas
+    total_failures = GeocodingFailure.objects.count()
+    unresolved_count = GeocodingFailure.objects.filter(resolved=False).count()
+    resolved_count = GeocodingFailure.objects.filter(resolved=True).count()
+    total_geocoded = GeocodedAddress.objects.count()
+    
+    # Top códigos postais com falhas
+    top_postal_codes = (
+        GeocodingFailure.objects
+        .filter(resolved=False)
+        .values('postal_code')
+        .annotate(count=Count('id'))
+        .order_by('-count')[:10]
+    )
+    
+    context = {
+        'failures': failures,
+        'show_resolved': show_resolved,
+        'partner_filter': partner_filter,
+        'stats': {
+            'total_failures': total_failures,
+            'unresolved': unresolved_count,
+            'resolved': resolved_count,
+            'total_geocoded': total_geocoded,
+            'success_rate': round((total_geocoded / (total_geocoded + unresolved_count) * 100), 1) 
+                if (total_geocoded + unresolved_count) > 0 else 0
+        },
+        'top_postal_codes': top_postal_codes
+    }
+    
+    return render(request, "orders_manager/geocoding_failures_final.html", context)
+
+
+@login_required
+@require_POST
+def resolve_geocoding_failure(request, failure_id):
+    """Resolve a geocoding failure by saving manual coordinates (AJAX).
+
+    Expects POST with 'latitude' and 'longitude' (can be form or JSON).
+    """
+    try:
+        lat = None
+        lng = None
+
+        # Prefer form-encoded POST if present
+        if request.POST and (request.POST.get('latitude') or request.POST.get('longitude')):
+            lat = request.POST.get('latitude')
+            lng = request.POST.get('longitude')
+        else:
+            # Try parse JSON body
+            try:
+                body = request.body.decode('utf-8') or '{}'
+                data = json.loads(body)
+            except Exception:
+                data = {}
+
+            lat = data.get('latitude') or data.get('lat')
+            lng = data.get('longitude') or data.get('lng')
+
+        if lat is None or lng is None:
+            return JsonResponse({'error': 'Missing latitude/longitude'}, status=400)
+
+        failure = GeocodingFailure.objects.get(pk=failure_id)
+        # mark resolved (stores manual coords and creates GeocodedAddress)
+        # convert to float/Decimal acceptable by model
+        try:
+            lat_val = float(lat)
+            lng_val = float(lng)
+        except Exception:
+            return JsonResponse({'error': 'Invalid latitude/longitude format'}, status=400)
+
+        failure.mark_resolved(lat_val, lng_val, user=request.user)
+
+        return JsonResponse({'ok': True, 'message': 'Marked resolved'})
+    except GeocodingFailure.DoesNotExist:
+        return JsonResponse({'error': 'Not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+

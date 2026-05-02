@@ -1,125 +1,211 @@
-# Leguas Franzinas - Sistema de Gestão de Entregas
+# Léguas Franzinas
 
-Sistema completo de gestão de motoristas e entregas com integração Paack API e WhatsApp.
+Sistema de gestão logística para operadores de última-milha em Portugal. Gere motoristas, entregas, pré-faturas, frotas parceiras e integra-se com Cainiao, Delnext e Paack.
 
-## 🚀 Funcionalidades
+[![Production Ready](https://img.shields.io/badge/production-ready-success)](production/DEPLOYMENT.md)
+[![Docker](https://img.shields.io/badge/docker-compose%20v2-blue)](production/docker-compose.yml)
+[![License](https://img.shields.io/badge/license-Proprietary-red)](LICENSE)
 
-### Gestão de Motoristas
-- ✅ Modal AJAX completo com 3 abas (Informações, Documentos, Veículos)
-- ✅ Sistema de aprovação de novos motoristas
-- ✅ Upload e visualização de documentos (PDF e imagens)
-- ✅ Gestão de veículos e documentos de veículos
-- ✅ Ativação/Desativação dinâmica de motoristas
-- ✅ Modal de confirmação customizado
-- ✅ Notificações toast em tempo real
-- ✅ Sem reload de página (AJAX completo)
+---
 
-### Integrações
-- 📦 Paack API - Gestão de entregas
-- 💬 WhatsApp via WPPConnect - Comunicação com motoristas
-- 🤖 TypeBot - Automação de conversas
-- 📊 Dashboard com estatísticas em tempo real
+## ⚡ Quick Start
 
-### Autenticação
-- 🔐 Sistema de autenticação customizado
-- 👥 Perfis diferenciados (Admin, Motorista)
-- 🖼️ Upload de foto de perfil
+### Produção (recomendado)
 
-## 🛠️ Tecnologias
+```bash
+git clone https://github.com/kaled182/leguas.git
+cd leguas/production
+chmod +x install.sh
+./install.sh
+```
 
-- **Backend**: Django 4.2.22
-- **Frontend**: Alpine.js, Tailwind CSS, Lucide Icons
-- **Database**: MySQL
-- **Containerização**: Docker & Docker Compose
-- **Servidor**: Gunicorn
-- **Proxy**: Nginx (via Docker)
+Wizard interactivo: pergunta domínio, admin user/pass — gera secrets automáticos, sobe stack, mostra URL final.
 
-## 📦 Instalação
+📖 [**Guia completo de deploy →**](production/DEPLOYMENT.md)
 
-### Pré-requisitos
-- Docker
-- Docker Compose
+### Desenvolvimento
 
-### Configuração
-
-1. Clone o repositório:
 ```bash
 git clone https://github.com/kaled182/leguas.git
 cd leguas
+cp .env.docker.example .env.docker  # editar
+docker compose up -d
 ```
 
-2. Configure as variáveis de ambiente:
+App em `http://localhost:8000`.
+
+---
+
+## ✨ Funcionalidades principais
+
+### Gestão operacional
+- 👥 **Motoristas** — cadastro, aprovação, documentos, veículos, fotos perfil
+- 🚚 **Frotas parceiras** — empresas subcontratantes com pricing diferenciado
+- 📦 **Pacotes** — importação de planilhas Cainiao (PARCEL_LIST), forecast, planning
+- 🗺️ **Geocodificação** — endereços via GeoAPI.pt + cache local
+- 📊 **Dashboard analytics** — performance motoristas, métricas diárias, alertas
+
+### Financeiro
+- 💰 **Pré-Faturas (PFs)** — geração mensal por motorista com bónus domingo/feriado, ajustes, indicações
+- 🏢 **Fleet Invoices** — pré-fatura agregada por frota com detalhe por motorista
+- 💸 **Conta-Corrente Motoristas** — adiantamentos, combustível, lançamentos pendentes
+- 🤝 **Reembolsos a Sócios** — quando sócio adianta dinheiro do bolso
+- 📈 **DRE + Fluxo de Caixa + Break-even** — gestão contábil completa
+- 🏦 **Conciliação bancária** — import extratos, matching automático
+
+### Integrações
+- 📱 **WhatsApp** (WPPConnect) — relatórios automáticos, lembretes pagamentos
+- 🚛 **Cainiao** — import Excel + sincronização API
+- 📦 **Delnext** — sync diário via Playwright scraping
+- 📮 **Paack** — sync API diário (legacy, descontinuação planeada)
+- ☁️ **Backup** — Google Drive ou FTP
+
+### Tarefas agendadas (Celery Beat)
+- 06:00 — Sync Delnext
+- 06:30 — Auto-emissão Fleet Invoices
+- 07:00 — Sync todos parceiros
+- 09:00 — Lembretes WhatsApp contas vencidas
+- 18:00 — Snapshot Not-Arrived + relatório semanal (sex)
+- 19:00 — Alerta break-even
+- 03:00 (seg) — Cleanup dados antigos
+
+---
+
+## 🏗️ Arquitetura
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Caddy (reverse proxy, SSL automático Let's Encrypt)         │
+│         ↓                                                     │
+│  Django (gunicorn, multi-worker)                             │
+│         ↓                                                     │
+│  MySQL 8.0  +  Redis 7  +  Celery (worker + beat)            │
+│                                                               │
+│  WPPConnect (WhatsApp, container interno)                    │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Stack production: 7 containers, ~1.7 GB RAM, suporta VPS 4 GB.**
+
+📖 [Arquitectura detalhada →](production/DEPLOYMENT.md#12-stack-final--referência-rápida)
+
+---
+
+## 📁 Estrutura do projeto
+
+```
+leguas/
+├── production/                  ← Deploy production (Docker + Caddy)
+│   ├── Dockerfile               (multi-stage)
+│   ├── docker-compose.yml       (7 serviços)
+│   ├── Caddyfile                (SSL automático)
+│   ├── install.sh               (wizard primeira instalação)
+│   ├── update.sh                (update sem perder dados)
+│   ├── backup.sh                (DB + media + Google Drive)
+│   └── DEPLOYMENT.md            (guia completo)
+│
+├── my_project/                  ← Settings Django, urls, ASGI/WSGI
+│
+├── customauth/                  ← Autenticação custom
+├── core/                        ← Partners (Cainiao, Delnext, Paack)
+├── drivers_app/                 ← Motoristas + Empresas Parceiras
+├── settlements/                 ← PFs, Fleet Invoices, Cash Entries
+├── accounting/                  ← Contas a pagar, DRE, Fluxo Caixa
+├── analytics/                   ← Dashboards de performance
+├── orders_manager/              ← Gestão de pedidos genérica
+├── fleet_management/            ← Veículos + manutenções
+├── pricing/                     ← Tarifas + zonas postais
+├── route_allocation/            ← Turnos + rotas
+├── system_config/               ← Configurações + WhatsApp + Backup
+├── converter/                   ← Conversão XLSX
+├── management/                  ← Ferramentas (gerador QR, etc.)
+│
+├── ordersmanager_paack/         ← Legacy Paack (descontinuação)
+├── paack_dashboard/             ← Legacy dashboard Paack
+├── send_paack_reports/          ← Legacy relatórios
+├── manualorders_paack/          ← Legacy correção manual
+│
+├── docker-compose.yml           ← Dev environment
+├── Dockerfile                   ← Dev image
+├── requirements.txt             ← Python deps (~56 pacotes)
+├── .env.docker.example          ← Template dev
+└── README.md                    ← Este ficheiro
+```
+
+---
+
+## 🔧 Stack técnica
+
+| Componente | Tech |
+|---|---|
+| **Backend** | Django 4.2 + DRF |
+| **Database** | MySQL 8.0 |
+| **Cache + Queue** | Redis 7 |
+| **Async tasks** | Celery 5.4 + Beat (DatabaseScheduler) |
+| **Frontend** | Tailwind CSS + Alpine.js (vanilla, sem framework JS) |
+| **Templating** | Django templates + Jinja2 |
+| **Web server** | Gunicorn |
+| **Reverse proxy** | Caddy 2 (SSL automático) |
+| **Scraping** | Playwright (Chromium) |
+| **Reports** | ReportLab (PDFs) + openpyxl (XLSX) |
+| **Geocoding** | GeoAPI.pt + Folium (mapas) |
+| **WhatsApp** | WPPConnect Server |
+| **Encriptação** | Fernet (cryptography) |
+| **Backup** | Google API Client (Drive) + pyzipper (FTP) |
+
+---
+
+## 🚀 Comandos úteis
+
+### Em produção (`production/`)
+
 ```bash
-cp .env.docker.example .env.docker
-# Edite .env.docker com suas credenciais
+docker compose ps                       # Status containers
+docker compose logs -f web              # Logs Django
+docker compose restart web              # Reiniciar Django
+./backup.sh                             # Backup on-demand
+./backup.sh --upload                    # Backup + Google Drive
+./update.sh                             # Update sem perder dados
 ```
 
-3. Inicie os containers:
-```bash
-docker-compose up -d
-```
-
-4. Rode as migrações:
-```bash
-docker-compose exec web python manage.py migrate
-```
-
-5. Crie um superusuário:
-```bash
-docker-compose exec web python manage.py createsuperuser
-```
-
-6. Acesse o sistema:
-- Frontend: http://localhost:8000
-- Admin Django: http://localhost:8000/admin
-
-## 📁 Estrutura do Projeto
-
-```
-├── drivers_app/          # App principal de gestão de motoristas
-├── paack_dashboard/      # Dashboard e integrações Paack
-├── customauth/          # Sistema de autenticação customizado
-├── accounting/          # Módulo de contabilidade
-├── converter/           # Conversor de dados
-├── ordersmanager_paack/ # Gestão de pedidos Paack
-├── settlements/         # Liquidações
-├── wppconnect-chatwoot-bridge/ # Integração WhatsApp
-├── templates/           # Templates globais
-├── static/             # Arquivos estáticos
-└── my_project/         # Configurações Django
-```
-
-## 🔧 Comandos Úteis
+### Em desenvolvimento
 
 ```bash
-# Ver logs
-docker-compose logs -f web
-
-# Restart do servidor
-docker-compose restart web
-
-# Collectstatic
-docker-compose exec web python manage.py collectstatic --noinput
-
-# Shell Django
-docker-compose exec web python manage.py shell
+docker compose exec web python manage.py shell
+docker compose exec web python manage.py makemigrations
+docker compose exec web python manage.py migrate
+docker compose exec web python manage.py createsuperuser
+docker compose exec web python manage.py test
 ```
 
-## 📝 Licença
+### Health check
 
-Proprietário - Leguas Franzinas
+```bash
+curl http://localhost/health/
+# {"status": "ok", "checks": {"db": "ok", "cache": "ok"}}
+```
 
-## 👥 Autores
+---
 
-- **Admin Team** - *Initial work* - Leguas Franzinas
+## 📚 Documentação
 
-## 🌟 Features Recentes
+- 📦 [`production/DEPLOYMENT.md`](production/DEPLOYMENT.md) — guia completo de deploy
+- 📖 [`production/README.md`](production/README.md) — overview production
+- 📝 [`CHANGELOG.md`](CHANGELOG.md) — versões e mudanças
+- ⚖️ [`LICENSE`](LICENSE) — termos de uso
 
-### v1.0.0 (27/02/2026)
-- ✨ Sistema completo de gestão de motoristas com modal AJAX
-- ✨ Visualizador de documentos integrado
-- ✨ Modal de confirmação customizado
-- ✨ Sistema de notificações toast
-- ✨ Configuração Docker completa
-- ✨ Integração WhatsApp via WPPConnect
-- ✨ Dashboard com estatísticas
+---
+
+## 🤝 Suporte
+
+- **Issues**: <https://github.com/kaled182/leguas/issues>
+- **Healthcheck**: `curl http://localhost/health/`
+- **Logs**: `docker compose logs --tail 100`
+
+---
+
+## 📜 Licença
+
+Proprietary — Léguas Franzinas Unipessoal Lda. Todos os direitos reservados.
+
+Ver [`LICENSE`](LICENSE).

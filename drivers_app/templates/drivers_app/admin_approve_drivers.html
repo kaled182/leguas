@@ -70,8 +70,18 @@
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-6">
             <div class="flex items-start justify-between">
                 <div class="flex-1">
-                    <div class="flex items-center gap-3 mb-3">
+                    <div class="flex items-center gap-3 mb-3 flex-wrap">
                         <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ driver.nome_completo }}</h3>
+                        {% if driver.apelido and driver.apelido != driver.nome_completo %}
+                          <span class="px-2 py-0.5 rounded-md text-xs font-mono bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300" title="Apelido / alias na plataforma do parceiro">
+                            @{{ driver.apelido }}
+                          </span>
+                        {% endif %}
+                        {% if driver.courier_id_cainiao %}
+                          <span class="px-2 py-0.5 rounded-md text-xs font-mono bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300" title="Courier ID Cainiao (chave única)">
+                            CN: {{ driver.courier_id_cainiao }}
+                          </span>
+                        {% endif %}
                         <span class="px-3 py-1 rounded-full text-xs font-medium {% if driver.status == 'PENDENTE' %}bg-yellow-100 text-yellow-700{% else %}bg-blue-100 text-blue-700{% endif %}">
                             {{ driver.get_status_display }}
                         </span>

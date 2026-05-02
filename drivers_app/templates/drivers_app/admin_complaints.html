@@ -1,0 +1,995 @@
+{% extends 'paack_dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Painel de Reclamações{% endblock %}
+{% block sidebar_title %}Reclamações{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<div class="p-6" x-data="complaintsPanel()" x-init="init()">
+
+  <!-- ── Header ───────────────────────────────────────────────────────── -->
+  <div class="mb-6 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-12 h-12 bg-gradient-to-br from-orange-500 to-red-600 rounded-xl flex items-center justify-center">
+        <i data-lucide="alert-triangle" class="w-6 h-6 text-white"></i>
+      </div>
+      <div>
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Reclamações de Clientes</h1>
+        <p class="text-gray-600 dark:text-gray-400">Gestão e acompanhamento de tickets de reclamação</p>
+      </div>
+    </div>
+    <button @click="openNewModal()"
+            class="px-5 py-2.5 bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all flex items-center gap-2">
+      <i data-lucide="plus" class="w-5 h-5"></i> Nova Reclamação
+    </button>
+  </div>
+
+  <!-- ── KPI Cards ─────────────────────────────────────────────────────── -->
+  <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+    <template x-for="card in kpiCards" :key="card.key">
+      <button @click="filterByStatus(card.key)"
+              :class="[
+                'rounded-xl p-4 text-left border-2 transition-all hover:shadow-md',
+                filters.status === card.key || (card.key === 'sem_resposta' && filters.overdue === '1')
+                  ? 'ring-2 ring-offset-2 ' + card.ringClass
+                  : 'border-transparent',
+                card.bgClass,
+              ]">
+        <div class="flex items-center justify-between mb-1">
+          <span class="text-xs font-semibold" :class="card.labelClass" x-text="card.label"></span>
+          <i :data-lucide="card.icon" class="w-4 h-4" :class="card.iconClass"></i>
+        </div>
+        <div class="text-2xl font-bold" :class="card.valueClass"
+             x-text="kpis[card.key] ?? '—'"></div>
+      </button>
+    </template>
+  </div>
+
+  <!-- ── Filter bar ────────────────────────────────────────────────────── -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 mb-4 flex flex-wrap gap-3 items-end">
+    <!-- Driver search -->
+    <div class="flex-1 min-w-[180px]">
+      <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Motorista</label>
+      <div class="relative">
+        <input type="text" x-model="driverSearch" @input.debounce.300ms="searchDriversFilter()"
+               placeholder="Nome ou NIF…"
+               class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+        <div x-show="driverSuggestions.length > 0"
+             class="absolute z-20 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg mt-1 max-h-40 overflow-y-auto">
+          <template x-for="d in driverSuggestions" :key="d.id">
+            <button @click="selectDriverFilter(d)"
+                    class="w-full text-left px-3 py-2 text-sm hover:bg-orange-50 dark:hover:bg-orange-900/20 flex items-center gap-2">
+              <span class="font-medium text-gray-900 dark:text-white" x-text="d.nome"></span>
+              <span class="text-xs text-gray-400" x-text="d.nif"></span>
+            </button>
+          </template>
+        </div>
+      </div>
+    </div>
+    <!-- Status -->
+    <div>
+      <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Status</label>
+      <select x-model="filters.status" @change="loadComplaints(1)"
+              class="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+        <option value="">Todos</option>
+        <option value="ABERTO">Aberto</option>
+        <option value="NOTIFICADO">Notificado</option>
+        <option value="RESPONDIDO">Respondido</option>
+        <option value="FECHADO">Fechado</option>
+        <option value="CANCELADO">Cancelado</option>
+      </select>
+    </div>
+    <!-- CP4 -->
+    <div>
+      <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">CP4</label>
+      <input type="text" x-model="filters.cp4" @input.debounce.400ms="loadComplaints(1)"
+             placeholder="Ex: 3885" maxlength="4"
+             class="w-24 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+    </div>
+    <!-- Date range -->
+    <div>
+      <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">De</label>
+      <input type="date" x-model="filters.date_from" @change="loadComplaints(1)"
+             class="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+    </div>
+    <div>
+      <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Até</label>
+      <input type="date" x-model="filters.date_to" @change="loadComplaints(1)"
+             class="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+    </div>
+    <!-- Clear -->
+    <button @click="clearFilters()"
+            class="px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-1">
+      <i data-lucide="x" class="w-3.5 h-3.5"></i> Limpar
+    </button>
+  </div>
+
+  <!-- ── Stats accordion ──────────────────────────────────────────────── -->
+  <div class="mb-4" x-data="{showStats: false}">
+    <button @click="showStats = !showStats"
+            class="flex items-center gap-2 text-sm font-semibold text-indigo-600 dark:text-indigo-400 hover:underline mb-2">
+      <i :data-lucide="showStats ? 'chevron-up' : 'bar-chart-2'" class="w-4 h-4"></i>
+      <span x-text="showStats ? 'Ocultar relatórios' : 'Ver relatórios agregados'"></span>
+    </button>
+    <div x-show="showStats" x-cloak
+         class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <!-- Por dia -->
+      <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+        <h3 class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-1">
+          <i data-lucide="calendar" class="w-3.5 h-3.5"></i> Por Dia (últimos 30)
+        </h3>
+        <div class="space-y-1.5 max-h-48 overflow-y-auto">
+          <template x-if="stats.by_day.length === 0">
+            <p class="text-xs text-gray-400">Sem dados</p>
+          </template>
+          <template x-for="r in stats.by_day" :key="r.day">
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-gray-500 dark:text-gray-400 w-24 flex-shrink-0" x-text="r.day"></span>
+              <div class="flex-1 bg-gray-100 dark:bg-gray-700 rounded-full h-2">
+                <div class="bg-orange-400 h-2 rounded-full"
+                     :style="'width:' + Math.round((r.total / (stats.by_day[0]?.total || 1)) * 100) + '%'"></div>
+              </div>
+              <span class="text-xs font-semibold text-gray-700 dark:text-gray-300 w-6 text-right" x-text="r.total"></span>
+            </div>
+          </template>
+        </div>
+      </div>
+      <!-- Por motorista -->
+      <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+        <h3 class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-1">
+          <i data-lucide="user" class="w-3.5 h-3.5"></i> Por Motorista (top 20)
+        </h3>
+        <div class="space-y-1.5 max-h-48 overflow-y-auto">
+          <template x-if="stats.by_driver.length === 0">
+            <p class="text-xs text-gray-400">Sem dados</p>
+          </template>
+          <template x-for="r in stats.by_driver" :key="r.id">
+            <button @click="selectDriverFilterById(r.id, r.nome)"
+                    class="w-full flex items-center gap-2 hover:bg-orange-50 dark:hover:bg-orange-900/10 rounded px-1 py-0.5 text-left">
+              <span class="text-xs text-gray-700 dark:text-gray-300 flex-1 truncate" x-text="r.nome"></span>
+              <div class="w-16 bg-gray-100 dark:bg-gray-700 rounded-full h-2">
+                <div class="bg-indigo-400 h-2 rounded-full"
+                     :style="'width:' + Math.round((r.total / (stats.by_driver[0]?.total || 1)) * 100) + '%'"></div>
+              </div>
+              <span class="text-xs font-semibold text-gray-700 dark:text-gray-300 w-5 text-right" x-text="r.total"></span>
+            </button>
+          </template>
+        </div>
+      </div>
+      <!-- Por CP4 -->
+      <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+        <h3 class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-1">
+          <i data-lucide="map-pin" class="w-3.5 h-3.5"></i> Por CP4 (top 20)
+        </h3>
+        <div class="space-y-1.5 max-h-48 overflow-y-auto">
+          <template x-if="stats.by_cp4.length === 0">
+            <p class="text-xs text-gray-400">Sem dados</p>
+          </template>
+          <template x-for="r in stats.by_cp4" :key="r.cp4">
+            <button @click="filters.cp4 = r.cp4; loadComplaints(1)"
+                    class="w-full flex items-center gap-2 hover:bg-orange-50 dark:hover:bg-orange-900/10 rounded px-1 py-0.5 text-left">
+              <span class="font-mono text-xs font-bold text-orange-600 dark:text-orange-400 w-10" x-text="r.cp4"></span>
+              <div class="flex-1 bg-gray-100 dark:bg-gray-700 rounded-full h-2">
+                <div class="bg-emerald-400 h-2 rounded-full"
+                     :style="'width:' + Math.round((r.total / (stats.by_cp4[0]?.total || 1)) * 100) + '%'"></div>
+              </div>
+              <span class="text-xs font-semibold text-gray-700 dark:text-gray-300 w-5 text-right" x-text="r.total"></span>
+            </button>
+          </template>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Table ─────────────────────────────────────────────────────────── -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <!-- Loading -->
+    <div x-show="loading" class="flex items-center justify-center py-16">
+      <svg class="animate-spin w-8 h-8 text-orange-500" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+      </svg>
+    </div>
+
+    <div x-show="!loading">
+      <!-- Result count -->
+      <div class="px-4 py-2.5 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+        <span class="text-sm text-gray-500 dark:text-gray-400">
+          <span class="font-semibold text-gray-900 dark:text-white" x-text="pagination.count"></span> reclamações
+        </span>
+        <!-- Pagination -->
+        <div class="flex items-center gap-1">
+          <button @click="loadComplaints(pagination.page - 1)" :disabled="!pagination.has_prev"
+                  class="px-2 py-1 text-xs rounded disabled:opacity-40 disabled:cursor-not-allowed bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 transition-colors">
+            <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>
+          </button>
+          <span class="text-xs text-gray-500 px-2"
+                x-text="'Pág. ' + pagination.page + ' / ' + pagination.num_pages"></span>
+          <button @click="loadComplaints(pagination.page + 1)" :disabled="!pagination.has_next"
+                  class="px-2 py-1 text-xs rounded disabled:opacity-40 disabled:cursor-not-allowed bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 transition-colors">
+            <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Empty -->
+      <template x-if="complaints.length === 0">
+        <div class="text-center py-16 text-gray-400">
+          <i data-lucide="inbox" class="w-12 h-12 mx-auto mb-3"></i>
+          <p class="text-sm">Nenhuma reclamação encontrada com os filtros actuais.</p>
+        </div>
+      </template>
+
+      <!-- Table -->
+      <div x-show="complaints.length > 0" class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">#</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Pacote</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Motorista</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tipo</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Entrega</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Deadline</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">CP4</th>
+              <th class="px-4 py-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Ações</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+            <template x-for="c in complaints" :key="c.id">
+              <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors"
+                  :class="{'bg-red-50/50 dark:bg-red-900/10': isOverdue(c)}">
+                <td class="px-4 py-3">
+                  <span class="font-mono text-xs font-bold text-orange-600 dark:text-orange-400" x-text="'#' + c.id"></span>
+                </td>
+                <td class="px-4 py-3">
+                  <span class="font-mono text-xs text-gray-700 dark:text-gray-300 max-w-[160px] truncate block" x-text="c.numero_pacote"></span>
+                </td>
+                <td class="px-4 py-3">
+                  <span class="text-sm font-medium text-gray-900 dark:text-white" x-text="c.driver_nome"></span>
+                </td>
+                <td class="px-4 py-3">
+                  <span class="text-xs text-gray-500 dark:text-gray-400" x-text="c.tipo_display"></span>
+                </td>
+                <td class="px-4 py-3">
+                  <span class="px-2 py-0.5 rounded-full text-xs font-semibold"
+                        :class="statusClass(c.status)"
+                        x-text="c.status_display"></span>
+                  <template x-if="isOverdue(c)">
+                    <span class="ml-1 px-1.5 py-0.5 rounded text-xs font-bold bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">ATRASADO</span>
+                  </template>
+                </td>
+                <td class="px-4 py-3 text-xs text-gray-500 dark:text-gray-400" x-text="c.data_entrega_display || '—'"></td>
+                <td class="px-4 py-3">
+                  <span class="text-xs" :class="isOverdue(c) ? 'text-red-600 dark:text-red-400 font-semibold' : 'text-gray-400'"
+                        x-text="c.deadline_display || '—'"></span>
+                </td>
+                <td class="px-4 py-3">
+                  <span class="font-mono text-xs text-gray-500 dark:text-gray-400"
+                        x-text="(c.codigo_postal || '').substring(0, 4)"></span>
+                </td>
+                <td class="px-4 py-3">
+                  <div class="flex items-center justify-center gap-1">
+                    <!-- Ver / Editar (abre modal) -->
+                    <button @click="openEditModal(c)"
+                            class="p-1.5 rounded-lg text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors" title="Ver / Editar">
+                      <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                    </button>
+                    <!-- PDF -->
+                    <a :href="'/driversapp/complaints/' + c.id + '/pdf/'" target="_blank"
+                       class="p-1.5 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" title="PDF">
+                      <i data-lucide="file-down" class="w-3.5 h-3.5"></i>
+                    </a>
+                    <!-- Ir para motorista -->
+                    <a :href="'/driversapp/admin/ativos/?open=' + c.driver_id + '&tab=reclamacoes'"
+                       class="p-1.5 rounded-lg text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors" title="Ver Motorista">
+                      <i data-lucide="user" class="w-3.5 h-3.5"></i>
+                    </a>
+                    <!-- Excluir -->
+                    <template x-if="c.status === 'ABERTO' || c.status === 'CANCELADO'">
+                      <button @click="deleteComplaint(c)"
+                              class="p-1.5 rounded-lg text-gray-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-500 transition-colors" title="Excluir">
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                      </button>
+                    </template>
+                  </div>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════════════
+       MODAL: Nova Reclamação (com selecção de motorista)
+       ════════════════════════════════════════════════════════════════════ -->
+  <div x-show="showNewModal" x-cloak
+       class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl mx-4 border border-gray-200 dark:border-gray-700 overflow-hidden max-h-[90vh] flex flex-col">
+      <!-- Header -->
+      <div class="bg-gradient-to-r from-orange-500 to-red-600 px-6 py-4 flex items-center justify-between flex-shrink-0">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center">
+            <i data-lucide="alert-triangle" class="w-5 h-5 text-white"></i>
+          </div>
+          <h3 class="text-base font-bold text-white">Nova Reclamação</h3>
+        </div>
+        <button @click="showNewModal = false" class="text-white/70 hover:text-white hover:bg-white/20 rounded-lg p-1.5">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="overflow-y-auto flex-1 px-6 py-5 space-y-4">
+
+        <!-- Step 1: seleccionar motorista -->
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">
+            Motorista *
+          </label>
+          <div class="relative">
+            <input type="text" x-model="newForm.driverSearch"
+                   @input.debounce.300ms="searchDriversNew()"
+                   placeholder="Pesquisar por nome ou NIF…"
+                   class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500">
+            <div x-show="newDriverSuggestions.length > 0"
+                 class="absolute z-20 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg mt-1 max-h-40 overflow-y-auto">
+              <template x-for="d in newDriverSuggestions" :key="d.id">
+                <button @click="selectDriverNew(d)"
+                        class="w-full text-left px-3 py-2 text-sm hover:bg-orange-50 dark:hover:bg-orange-900/20 flex items-center gap-2">
+                  <span class="font-medium text-gray-900 dark:text-white" x-text="d.nome"></span>
+                  <span class="text-xs text-gray-400" x-text="d.nif"></span>
+                </button>
+              </template>
+            </div>
+          </div>
+          <template x-if="newForm.driver_id">
+            <div class="mt-1.5 inline-flex items-center gap-2 px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 rounded-full text-xs font-semibold">
+              <i data-lucide="user-check" class="w-3.5 h-3.5"></i>
+              <span x-text="newForm.driverSearch"></span>
+              <button @click="newForm.driver_id = null; newForm.driverSearch = ''" class="ml-1 text-green-600 hover:text-green-800">
+                <i data-lucide="x" class="w-3 h-3"></i>
+              </button>
+            </div>
+          </template>
+        </div>
+
+        <template x-if="newForm.driver_id">
+          <div class="space-y-4">
+            <!-- Pacote + Tipo -->
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Nº Pacote / Tracking *</label>
+                <input type="text" x-model="newForm.numero_pacote"
+                       class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Tipo *</label>
+                <select x-model="newForm.tipo"
+                        class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500">
+                  <option value="ENTREGA_FALSA">Entrega Falsa</option>
+                  <option value="ITEM_FALTANDO">Item Faltando</option>
+                  <option value="PACOTE_DANIFICADO">Pacote Danificado</option>
+                  <option value="ENTREGA_ATRASADA">Entrega Atrasada</option>
+                  <option value="OUTRO">Outro</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Relato -->
+            <div>
+              <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Relato do Cliente *</label>
+              <textarea x-model="newForm.descricao" rows="3"
+                        class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 resize-none"></textarea>
+            </div>
+
+            <!-- Cliente -->
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Nome do Cliente *</label>
+                <input type="text" x-model="newForm.nome_cliente"
+                       class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Telefone *</label>
+                <input type="text" x-model="newForm.telefone_cliente"
+                       class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500">
+              </div>
+              <div class="col-span-2">
+                <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Email <span class="font-normal text-gray-400">(opcional)</span></label>
+                <input type="email" x-model="newForm.email_cliente"
+                       class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500">
+              </div>
+            </div>
+
+            <!-- Endereço -->
+            <div class="grid grid-cols-3 gap-3">
+              <div class="col-span-3">
+                <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Morada *</label>
+                <input type="text" x-model="newForm.morada"
+                       class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Código Postal *</label>
+                <input type="text" x-model="newForm.codigo_postal"
+                       class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500">
+              </div>
+              <div class="col-span-2">
+                <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Cidade *</label>
+                <input type="text" x-model="newForm.cidade"
+                       class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500">
+              </div>
+            </div>
+
+            <!-- Datas -->
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Data/Hora da Entrega</label>
+                <input type="datetime-local" x-model="newForm.data_entrega"
+                       class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Deadline <span class="font-normal text-gray-400">(prazo plataforma)</span></label>
+                <input type="datetime-local" x-model="newForm.deadline"
+                       class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500">
+              </div>
+            </div>
+
+            <!-- Notas -->
+            <div>
+              <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Notas Internas <span class="font-normal text-gray-400">(opcional)</span></label>
+              <input type="text" x-model="newForm.notas"
+                     class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500">
+            </div>
+
+            <!-- Anexos -->
+            <div>
+              <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">Anexos <span class="font-normal text-gray-400">(opcional)</span></label>
+              <input type="file" multiple accept="image/*,application/pdf"
+                     x-ref="newAttachFile"
+                     @change="addNewAttachFiles($event)"
+                     class="hidden">
+              <button type="button"
+                      @click="$refs.newAttachFile.click()"
+                      class="flex items-center gap-2 px-3 py-2 text-sm border border-dashed border-gray-400 dark:border-gray-500 rounded-lg text-gray-600 dark:text-gray-400 hover:border-orange-400 hover:text-orange-500 transition-colors w-full justify-center">
+                <i data-lucide="paperclip" class="w-4 h-4"></i> Adicionar ficheiros
+              </button>
+              <template x-for="att in newAttachmentsList" :key="att.uid">
+                <div class="mt-2 flex items-start gap-2 p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                  <div class="flex-1 min-w-0">
+                    <p class="text-xs text-gray-700 dark:text-gray-300 truncate font-medium" x-text="att.name"></p>
+                    <div class="flex gap-2 mt-1">
+                      <select x-model="att.tipo"
+                              class="text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-1 focus:ring-orange-500">
+                        <option value="RECLAMACAO">Reclamação</option>
+                        <option value="POD">POD / Comprovativo</option>
+                        <option value="FOTO">Foto</option>
+                        <option value="OUTRO">Outro</option>
+                      </select>
+                      <input type="text" x-model="att.descricao" placeholder="Descrição (opcional)"
+                             class="flex-1 text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-1 focus:ring-orange-500">
+                    </div>
+                  </div>
+                  <button type="button"
+                          @click="newAttachmentsList = newAttachmentsList.filter(a => a.uid !== att.uid)"
+                          class="text-red-400 hover:text-red-600 flex-shrink-0 mt-1">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                  </button>
+                </div>
+              </template>
+            </div>
+
+          </div>
+        </template>
+      </div>
+
+      <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex gap-2 justify-end flex-shrink-0">
+        <button @click="showNewModal = false"
+                class="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors">
+          Cancelar
+        </button>
+        <button @click="submitNew()" :disabled="!newForm.driver_id"
+                class="px-5 py-2 bg-orange-600 hover:bg-orange-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg text-sm font-semibold transition-colors flex items-center gap-2">
+          <i data-lucide="save" class="w-4 h-4"></i> Guardar Reclamação
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════════════
+       MODAL: Ver / Editar Reclamação
+       ════════════════════════════════════════════════════════════════════ -->
+  <div x-show="showEditModal" x-cloak
+       class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl mx-4 border border-gray-200 dark:border-gray-700 overflow-hidden max-h-[90vh] flex flex-col">
+      <div class="bg-gradient-to-r from-indigo-600 to-blue-600 px-6 py-4 flex items-center justify-between flex-shrink-0">
+        <div>
+          <h3 class="text-base font-bold text-white"
+              x-text="'Reclamação #' + (editComplaint?.id || '')"></h3>
+          <p class="text-xs text-indigo-200"
+             x-text="editComplaint?.driver_nome + ' — ' + editComplaint?.numero_pacote"></p>
+        </div>
+        <button @click="showEditModal = false" class="text-white/70 hover:text-white hover:bg-white/20 rounded-lg p-1.5">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <div class="overflow-y-auto flex-1 px-6 py-5 space-y-4" x-show="editComplaint">
+
+        <!-- WhatsApp text -->
+        <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-lg p-3">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-semibold text-green-700 dark:text-green-400 flex items-center gap-1">
+              <i data-lucide="message-circle" class="w-3.5 h-3.5"></i> Mensagem WhatsApp
+            </span>
+            <button @click="copyWA(editComplaint?.whatsapp_text)"
+                    class="text-xs px-2 py-1 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold flex items-center gap-1">
+              <i data-lucide="copy" class="w-3 h-3"></i> Copiar
+            </button>
+          </div>
+          <pre class="text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap font-sans leading-relaxed"
+               x-text="editComplaint?.whatsapp_text"></pre>
+        </div>
+
+        <!-- Status + actions -->
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="px-2.5 py-1 rounded-full text-xs font-semibold"
+                :class="statusClass(editComplaint?.status)"
+                x-text="editComplaint?.status_display"></span>
+          <template x-if="editComplaint?.status === 'ABERTO'">
+            <button @click="changeStatus(editComplaint, 'NOTIFICADO')"
+                    class="inline-flex items-center gap-1 px-3 py-1.5 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg text-xs font-semibold">
+              <i data-lucide="send" class="w-3 h-3"></i> Marcar Notificado
+            </button>
+          </template>
+          <template x-if="editComplaint?.status === 'NOTIFICADO'">
+            <button @click="changeStatus(editComplaint, 'RESPONDIDO')"
+                    class="inline-flex items-center gap-1 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-semibold">
+              <i data-lucide="check" class="w-3 h-3"></i> Marcar Respondido
+            </button>
+          </template>
+          <template x-if="editComplaint?.status === 'RESPONDIDO'">
+            <button @click="changeStatus(editComplaint, 'FECHADO')"
+                    class="inline-flex items-center gap-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold">
+              <i data-lucide="check-circle" class="w-3 h-3"></i> Fechar Ticket
+            </button>
+          </template>
+        </div>
+
+        <!-- Info table -->
+        <div class="grid grid-cols-2 gap-3 text-sm">
+          <div class="space-y-1.5">
+            <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Pacote</div>
+            <div class="font-mono text-xs text-gray-700 dark:text-gray-300" x-text="editComplaint?.numero_pacote"></div>
+            <div class="text-xs text-gray-500" x-text="editComplaint?.tipo_display"></div>
+            <div x-show="editComplaint?.data_entrega_display" class="text-xs text-gray-500">
+              Entrega: <span class="font-medium" x-text="editComplaint?.data_entrega_display"></span>
+            </div>
+            <div x-show="editComplaint?.deadline_display" class="text-xs" :class="isOverdue(editComplaint) ? 'text-red-600 font-semibold' : 'text-gray-500'">
+              Deadline: <span x-text="editComplaint?.deadline_display"></span>
+            </div>
+          </div>
+          <div class="space-y-1.5">
+            <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Cliente</div>
+            <div class="font-medium text-gray-900 dark:text-white" x-text="editComplaint?.nome_cliente"></div>
+            <div class="text-xs text-gray-500 flex items-center gap-1">
+              <i data-lucide="phone" class="w-3 h-3 text-green-500"></i>
+              <span x-text="editComplaint?.telefone_cliente"></span>
+            </div>
+            <div class="text-xs text-gray-400" x-text="editComplaint?.morada"></div>
+            <div class="text-xs text-gray-400" x-text="editComplaint?.codigo_postal + ' ' + editComplaint?.cidade"></div>
+          </div>
+        </div>
+
+        <!-- Relato -->
+        <div>
+          <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Relato</div>
+          <p class="text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700/50 rounded-lg px-3 py-2"
+             x-text="editComplaint?.descricao"></p>
+        </div>
+
+        <!-- Anexos existentes -->
+        <div x-show="editComplaint?.attachments?.filter(a => a.tipo !== 'RESPOSTA_DRIVER').length > 0">
+          <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Anexos</div>
+          <div class="flex flex-wrap gap-2">
+            <template x-for="att in (editComplaint?.attachments || []).filter(a => a.tipo !== 'RESPOSTA_DRIVER')" :key="att.id">
+              <a :href="att.url" target="_blank"
+                 class="flex items-center gap-1.5 text-xs text-indigo-600 dark:text-indigo-400 hover:underline bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-1.5">
+                <i data-lucide="file" class="w-3 h-3 flex-shrink-0"></i>
+                <span x-text="att.descricao || att.filename"></span>
+              </a>
+            </template>
+          </div>
+        </div>
+
+        <!-- Resposta do motorista -->
+        <div class="border border-emerald-200 dark:border-emerald-700 rounded-xl overflow-hidden">
+          <div class="bg-emerald-50 dark:bg-emerald-900/30 px-4 py-2.5 flex items-center gap-2">
+            <i data-lucide="message-square-reply" class="w-4 h-4 text-emerald-600 dark:text-emerald-400"></i>
+            <span class="text-xs font-semibold text-emerald-700 dark:text-emerald-300 uppercase tracking-wider">Resposta do Motorista</span>
+          </div>
+          <div class="px-4 py-3 space-y-3 bg-white dark:bg-gray-800">
+            <!-- Textarea -->
+            <textarea x-model="editRespostaText" rows="3" placeholder="Registe aqui a resposta do motorista..."
+                      class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 resize-none"></textarea>
+
+            <!-- Anexos existentes de resposta -->
+            <div x-show="editComplaint?.attachments?.filter(a => a.tipo === 'RESPOSTA_DRIVER').length > 0">
+              <p class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">Ficheiros já anexados:</p>
+              <div class="flex flex-wrap gap-2">
+                <template x-for="att in (editComplaint?.attachments || []).filter(a => a.tipo === 'RESPOSTA_DRIVER')" :key="att.id">
+                  <div class="flex items-center gap-1.5 text-xs bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700 rounded-lg px-2 py-1.5">
+                    <a :href="att.url" target="_blank" class="flex items-center gap-1 text-emerald-700 dark:text-emerald-400 hover:underline">
+                      <i data-lucide="file" class="w-3 h-3"></i>
+                      <span x-text="att.descricao || att.filename"></span>
+                    </a>
+                    <button @click="deleteRespAttachment(att)"
+                            class="text-red-400 hover:text-red-600 ml-1">
+                      <i data-lucide="x" class="w-3 h-3"></i>
+                    </button>
+                  </div>
+                </template>
+              </div>
+            </div>
+
+            <!-- Novos ficheiros a anexar -->
+            <div>
+              <input type="file" multiple accept="image/*,application/pdf"
+                     x-ref="respAttachFile"
+                     @change="addRespAttachFiles($event)"
+                     class="hidden">
+              <button type="button"
+                      @click="$refs.respAttachFile.click()"
+                      class="flex items-center gap-2 px-3 py-2 text-xs border border-dashed border-gray-400 dark:border-gray-500 rounded-lg text-gray-600 dark:text-gray-400 hover:border-emerald-400 hover:text-emerald-600 transition-colors w-full justify-center">
+                <i data-lucide="paperclip" class="w-3.5 h-3.5"></i> Adicionar ficheiros à resposta
+              </button>
+              <template x-for="att in editRespostaFiles" :key="att.uid">
+                <div class="mt-2 flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                  <i data-lucide="file" class="w-4 h-4 text-gray-400 flex-shrink-0"></i>
+                  <span class="text-xs text-gray-700 dark:text-gray-300 flex-1 truncate" x-text="att.name"></span>
+                  <input type="text" x-model="att.descricao" placeholder="Descrição (opcional)"
+                         class="text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-1 focus:ring-emerald-500 w-36">
+                  <button type="button"
+                          @click="editRespostaFiles = editRespostaFiles.filter(a => a.uid !== att.uid)"
+                          class="text-red-400 hover:text-red-600">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                  </button>
+                </div>
+              </template>
+            </div>
+
+            <!-- Guardar resposta -->
+            <div class="flex justify-end">
+              <button @click="saveResposta()"
+                      class="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition-colors">
+                <i data-lucide="save" class="w-3.5 h-3.5"></i> Guardar Resposta
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex gap-2 justify-between flex-shrink-0">
+        <a :href="editComplaint ? '/driversapp/admin/ativos/?open=' + editComplaint.driver_id + '&tab=reclamacoes' : '#'"
+           class="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors flex items-center gap-1.5">
+          <i data-lucide="user" class="w-4 h-4"></i> Ver Motorista
+        </a>
+        <div class="flex gap-2">
+          <a :href="editComplaint ? '/driversapp/complaints/' + editComplaint.id + '/pdf/' : '#'" target="_blank"
+             class="px-4 py-2 bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-400 rounded-lg text-sm font-medium hover:bg-red-200 transition-colors flex items-center gap-1.5">
+            <i data-lucide="file-down" class="w-4 h-4"></i> PDF
+          </a>
+          <button @click="showEditModal = false"
+                  class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold transition-colors">
+            Fechar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function complaintsPanel() {
+  const csrf = () => document.querySelector('[name=csrfmiddlewaretoken]').value;
+  const POST_JSON = body => ({
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf() },
+    body: JSON.stringify(body),
+  });
+  const POST = () => ({ method: 'POST', headers: { 'X-CSRFToken': csrf() } });
+
+  return {
+    // State
+    loading: false,
+    complaints: [],
+    pagination: { page: 1, num_pages: 1, count: 0, has_next: false, has_prev: false },
+    kpis: {{ kpis|safe }},
+    stats: { by_day: [], by_driver: [], by_cp4: [] },
+
+    // Filters
+    filters: { status: '', driver: '', cp4: '', date_from: '', date_to: '', overdue: '' },
+    driverSearch: '',
+    driverSuggestions: [],
+
+    // New complaint modal
+    showNewModal: false,
+    newForm: {},
+    newDriverSuggestions: [],
+    newAttachmentsList: [],
+    _uidCounter: 0,
+
+    // Edit modal
+    showEditModal: false,
+    editComplaint: null,
+    editRespostaText: '',
+    editRespostaFiles: [],
+
+    kpiCards: [
+      { key: 'abertas',      label: 'Abertas',       icon: 'alert-circle',   bgClass: 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700',     labelClass: 'text-blue-600 dark:text-blue-400',    iconClass: 'text-blue-400',   valueClass: 'text-blue-700 dark:text-blue-300',   ringClass: 'ring-blue-400' },
+      { key: 'notificadas',  label: 'Notificadas',   icon: 'bell',           bgClass: 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-700', labelClass: 'text-yellow-600 dark:text-yellow-400', iconClass: 'text-yellow-400', valueClass: 'text-yellow-700 dark:text-yellow-300', ringClass: 'ring-yellow-400' },
+      { key: 'respondidas',  label: 'Respondidas',   icon: 'message-square', bgClass: 'bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-700', labelClass: 'text-purple-600 dark:text-purple-400', iconClass: 'text-purple-400', valueClass: 'text-purple-700 dark:text-purple-300', ringClass: 'ring-purple-400' },
+      { key: 'fechadas',     label: 'Fechadas',      icon: 'check-circle',   bgClass: 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-700', labelClass: 'text-emerald-600 dark:text-emerald-400', iconClass: 'text-emerald-400', valueClass: 'text-emerald-700 dark:text-emerald-300', ringClass: 'ring-emerald-400' },
+      { key: 'sem_resposta', label: 'Sem Resposta',  icon: 'clock',          bgClass: 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-700',         labelClass: 'text-red-600 dark:text-red-400',      iconClass: 'text-red-400',    valueClass: 'text-red-700 dark:text-red-300',     ringClass: 'ring-red-400' },
+    ],
+
+    async init() {
+      await this.loadComplaints(1);
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    async loadComplaints(page) {
+      this.loading = true;
+      const p = this.filters;
+      const params = new URLSearchParams({
+        page:      page || 1,
+        status:    p.status,
+        driver:    p.driver,
+        cp4:       p.cp4,
+        date_from: p.date_from,
+        date_to:   p.date_to,
+        overdue:   p.overdue,
+      });
+      const resp = await fetch('/driversapp/api/admin/reclamacoes/list/?' + params);
+      const data = await resp.json();
+      this.complaints = data.complaints;
+      this.pagination = data.pagination;
+      this.stats      = data.stats;
+      this.loading = false;
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    filterByStatus(key) {
+      if (key === 'sem_resposta') {
+        this.filters.overdue = this.filters.overdue === '1' ? '' : '1';
+        this.filters.status = '';
+      } else {
+        this.filters.status = this.filters.status === key ? '' : key;
+        this.filters.overdue = '';
+      }
+      this.loadComplaints(1);
+    },
+
+    clearFilters() {
+      this.filters = { status: '', driver: '', cp4: '', date_from: '', date_to: '', overdue: '' };
+      this.driverSearch = '';
+      this.driverSuggestions = [];
+      this.loadComplaints(1);
+    },
+
+    async searchDriversFilter() {
+      if (!this.driverSearch.trim()) { this.driverSuggestions = []; return; }
+      const resp = await fetch('/driversapp/api/admin/reclamacoes/driver-search/?q=' + encodeURIComponent(this.driverSearch));
+      const data = await resp.json();
+      this.driverSuggestions = data.drivers;
+    },
+
+    selectDriverFilter(d) {
+      this.filters.driver = d.id;
+      this.driverSearch = d.nome;
+      this.driverSuggestions = [];
+      this.loadComplaints(1);
+    },
+
+    selectDriverFilterById(id, nome) {
+      this.filters.driver = id;
+      this.driverSearch = nome;
+      this.driverSuggestions = [];
+      this.loadComplaints(1);
+    },
+
+    // ── New complaint modal ───────────────────────────────────────────────
+    openNewModal() {
+      this.newForm = {
+        driver_id: null, driverSearch: '',
+        numero_pacote: '', tipo: 'ENTREGA_FALSA', descricao: '',
+        nome_cliente: '', telefone_cliente: '', email_cliente: '',
+        morada: '', codigo_postal: '', cidade: '',
+        data_entrega: '', deadline: '', notas: '',
+      };
+      this.newDriverSuggestions = [];
+      this.newAttachmentsList = [];
+      this.showNewModal = true;
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    async searchDriversNew() {
+      if (!this.newForm.driverSearch?.trim()) { this.newDriverSuggestions = []; return; }
+      const resp = await fetch('/driversapp/api/admin/reclamacoes/driver-search/?q=' + encodeURIComponent(this.newForm.driverSearch));
+      const data = await resp.json();
+      this.newDriverSuggestions = data.drivers;
+    },
+
+    selectDriverNew(d) {
+      this.newForm.driver_id = d.id;
+      this.newForm.driverSearch = d.nome;
+      this.newDriverSuggestions = [];
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    addNewAttachFiles(event) {
+      const files = Array.from(event.target.files);
+      files.forEach(file => {
+        this.newAttachmentsList.push({ uid: ++this._uidCounter, file, name: file.name, tipo: 'RECLAMACAO', descricao: '' });
+      });
+      event.target.value = '';
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    async submitNew() {
+      if (!this.newForm.driver_id) return;
+      const f = this.newForm;
+      const required = ['numero_pacote','descricao','nome_cliente','telefone_cliente','morada','codigo_postal','cidade'];
+      for (const field of required) {
+        if (!(f[field] || '').trim()) { alert('Campo obrigatório: ' + field); return; }
+      }
+
+      let resp;
+      if (this.newAttachmentsList.length > 0) {
+        // Use FormData for multipart (files)
+        const fd = new FormData();
+        Object.entries(f).forEach(([k, v]) => fd.append(k, v ?? ''));
+        this.newAttachmentsList.forEach((att, i) => {
+          fd.append('attachment_files', att.file);
+          fd.append('attachment_tipo_' + i, att.tipo);
+          fd.append('attachment_descricao_' + i, att.descricao || '');
+        });
+        resp = await fetch('/driversapp/api/complaints/' + f.driver_id + '/create/', {
+          method: 'POST',
+          headers: { 'X-CSRFToken': csrf() },
+          body: fd,
+        });
+      } else {
+        resp = await fetch('/driversapp/api/complaints/' + f.driver_id + '/create/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf() },
+          body: JSON.stringify(f),
+        });
+      }
+
+      const data = await resp.json();
+      if (data.success) {
+        this.showNewModal = false;
+        this.newAttachmentsList = [];
+        this.kpis.abertas = (this.kpis.abertas || 0) + 1;
+        this.kpis.total   = (this.kpis.total   || 0) + 1;
+        await this.loadComplaints(1);
+      } else {
+        alert(data.error || 'Erro ao criar reclamação.');
+      }
+    },
+
+    // ── Edit modal ───────────────────────────────────────────────────────
+    openEditModal(c) {
+      this.editComplaint = { ...c };
+      this.editRespostaText = c.resposta_driver || '';
+      this.editRespostaFiles = [];
+      this.showEditModal = true;
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    async changeStatus(c, newStatus) {
+      const resp = await fetch('/driversapp/api/complaints/item/' + c.id + '/update/', POST_JSON({ status: newStatus }));
+      const data = await resp.json();
+      if (data.success) {
+        // Update both the editComplaint and the row in the table
+        Object.assign(c, data.complaint);
+        this.editComplaint = { ...data.complaint };
+        this.kpis = { ...this.kpis };  // trigger reactivity
+        await this.loadComplaints(this.pagination.page);
+        this.$nextTick(() => lucide.createIcons());
+      } else {
+        alert(data.error || 'Erro ao actualizar status.');
+      }
+    },
+
+    async deleteComplaint(c) {
+      if (!confirm('Eliminar Reclamação #' + c.id + ' permanentemente?')) return;
+      const resp = await fetch('/driversapp/api/complaints/item/' + c.id + '/delete/', POST());
+      const data = await resp.json();
+      if (data.success) {
+        await this.loadComplaints(this.pagination.page);
+      } else {
+        alert(data.error || 'Erro ao eliminar.');
+      }
+    },
+
+    // ── Resposta do motorista ────────────────────────────────────────────
+    addRespAttachFiles(event) {
+      const files = Array.from(event.target.files);
+      files.forEach(file => {
+        this.editRespostaFiles.push({ uid: ++this._uidCounter, file, name: file.name, descricao: '' });
+      });
+      event.target.value = '';
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    async saveResposta() {
+      const c = this.editComplaint;
+      if (!c) return;
+      const fd = new FormData();
+      fd.append('resposta_driver', this.editRespostaText || '');
+      this.editRespostaFiles.forEach((att, i) => {
+        fd.append('attachment_files', att.file);
+        fd.append('attachment_tipo_' + i, 'RESPOSTA_DRIVER');
+        fd.append('attachment_descricao_' + i, att.descricao || '');
+      });
+      const resp = await fetch('/driversapp/api/complaints/item/' + c.id + '/update/', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': csrf() },
+        body: fd,
+      });
+      const data = await resp.json();
+      if (data.success) {
+        this.editComplaint = { ...data.complaint };
+        this.editRespostaText = data.complaint.resposta_driver || '';
+        this.editRespostaFiles = [];
+        // Update row in table
+        const idx = this.complaints.findIndex(x => x.id === c.id);
+        if (idx !== -1) this.complaints[idx] = { ...data.complaint };
+        this.$nextTick(() => lucide.createIcons());
+      } else {
+        alert(data.error || 'Erro ao guardar resposta.');
+      }
+    },
+
+    async deleteRespAttachment(att) {
+      if (!confirm('Remover este anexo?')) return;
+      const resp = await fetch('/driversapp/api/complaints/attachment/' + att.id + '/delete/', POST());
+      const data = await resp.json();
+      if (data.success) {
+        this.editComplaint.attachments = this.editComplaint.attachments.filter(a => a.id !== att.id);
+      } else {
+        alert(data.error || 'Erro ao remover anexo.');
+      }
+    },
+
+    // ── Helpers ──────────────────────────────────────────────────────────
+    isOverdue(c) {
+      if (!c || !c.deadline || ['FECHADO','CANCELADO','RESPONDIDO'].includes(c.status)) return false;
+      return new Date(c.deadline.split('/').reverse().join('-')) < new Date();
+    },
+
+    statusClass(status) {
+      return {
+        'ABERTO':     'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+        'NOTIFICADO': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
+        'RESPONDIDO': 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
+        'FECHADO':    'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400',
+        'CANCELADO':  'bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-300',
+      }[status] || 'bg-gray-100 text-gray-600';
+    },
+
+    copyWA(text) {
+      if (text && navigator.clipboard) {
+        navigator.clipboard.writeText(text).then(() => alert('Texto copiado!'));
+      }
+    },
+  };
+}
+</script>
+{% endblock %}

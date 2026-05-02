@@ -1,0 +1,114 @@
+{% extends 'settlements/base.html' %}
+{% block title %}Regras de Bónus — {{ partner.name }}{% endblock %}
+{% block content %}
+<div class="max-w-5xl mx-auto p-6 space-y-4">
+  <nav class="text-xs text-gray-500">
+    <a href="{% url 'core:partner-financial' partner.pk %}" class="hover:text-indigo-600">← Financeiro</a>
+    · Regras de Bónus/Penalty
+  </nav>
+
+  <div class="bg-white dark:bg-gray-800 rounded-xl border p-6">
+    <div class="flex items-center justify-between mb-4">
+      <h1 class="text-xl font-bold text-gray-900 dark:text-white">Regras · {{ partner.name }}</h1>
+      <button onclick="_brNew()" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded-lg">
+        + Nova Regra
+      </button>
+    </div>
+
+    <table class="w-full text-sm">
+      <thead class="text-xs uppercase text-gray-500 border-b">
+        <tr>
+          <th class="px-3 py-2 text-left">Nome</th>
+          <th class="px-3 py-2 text-left">Condição</th>
+          <th class="px-3 py-2 text-left">Efeito</th>
+          <th class="px-3 py-2 text-center">Período</th>
+          <th class="px-3 py-2 text-center">Activa</th>
+          <th class="px-3 py-2 text-right">Acções</th>
+        </tr>
+      </thead>
+      <tbody id="br-tbody" class="divide-y divide-gray-100 dark:divide-gray-700/50">
+        {% for r in rules %}
+        <tr data-id="{{ r.id }}">
+          <td class="px-3 py-2">{{ r.name }}</td>
+          <td class="px-3 py-2 text-xs">{{ r.get_condition_display }} · {{ r.condition_value }}</td>
+          <td class="px-3 py-2 text-xs">{{ r.get_effect_display }} · {{ r.effect_value }}</td>
+          <td class="px-3 py-2 text-center text-xs">{{ r.get_scope_period_display }}</td>
+          <td class="px-3 py-2 text-center">
+            {% if r.enabled %}<span class="text-emerald-600">✓</span>{% else %}<span class="text-gray-400">—</span>{% endif %}
+          </td>
+          <td class="px-3 py-2 text-right">
+            <button onclick="_brDelete({{ r.id }})" class="text-xs text-red-600 hover:underline">Remover</button>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="py-8 text-center text-gray-400 text-sm">Sem regras configuradas.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div id="br-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+  <div class="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-lg space-y-3">
+    <h3 class="font-bold text-gray-900 dark:text-white">Nova Regra</h3>
+    <input id="br-name" placeholder="Nome" class="w-full px-3 py-2 border rounded-lg text-sm">
+    <select id="br-condition" class="w-full px-3 py-2 border rounded-lg text-sm">
+      {% for c in condition_choices %}<option value="{{ c.0 }}">{{ c.1 }}</option>{% endfor %}
+    </select>
+    <input id="br-cvalue" type="number" step="0.01" placeholder="Valor da condição"
+      class="w-full px-3 py-2 border rounded-lg text-sm">
+    <select id="br-effect" class="w-full px-3 py-2 border rounded-lg text-sm">
+      {% for c in effect_choices %}<option value="{{ c.0 }}">{{ c.1 }}</option>{% endfor %}
+    </select>
+    <input id="br-evalue" type="number" step="0.01" placeholder="Valor do efeito"
+      class="w-full px-3 py-2 border rounded-lg text-sm">
+    <select id="br-scope" class="w-full px-3 py-2 border rounded-lg text-sm">
+      {% for c in scope_choices %}<option value="{{ c.0 }}">{{ c.1 }}</option>{% endfor %}
+    </select>
+    <div class="flex justify-end gap-2 pt-2">
+      <button onclick="document.getElementById('br-modal').classList.add('hidden')"
+        class="px-3 py-1.5 text-gray-600 text-sm">Cancelar</button>
+      <button onclick="_brSave()" class="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-sm">Guardar</button>
+    </div>
+  </div>
+</div>
+
+{% csrf_token %}
+<script>
+const _CSRF = document.querySelector('input[name=csrfmiddlewaretoken]').value;
+const _PK = {{ partner.pk }};
+
+function _brNew() {
+  document.getElementById('br-name').value = '';
+  document.getElementById('br-cvalue').value = '';
+  document.getElementById('br-evalue').value = '';
+  document.getElementById('br-modal').classList.remove('hidden');
+}
+
+async function _brSave() {
+  const data = {
+    name: document.getElementById('br-name').value,
+    condition: document.getElementById('br-condition').value,
+    condition_value: document.getElementById('br-cvalue').value,
+    effect: document.getElementById('br-effect').value,
+    effect_value: document.getElementById('br-evalue').value,
+    scope_period: document.getElementById('br-scope').value,
+    enabled: true,
+  };
+  const r = await fetch(`/partners/${_PK}/bonus-rules/save/`, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json','X-CSRFToken':_CSRF},
+    body: JSON.stringify(data),
+  });
+  if ((await r.json()).success) location.reload();
+}
+
+async function _brDelete(id) {
+  if (!confirm('Remover esta regra?')) return;
+  await fetch(`/partners/${_PK}/bonus-rules/${id}/delete/`, {
+    method: 'POST', headers: {'X-CSRFToken': _CSRF},
+  });
+  location.reload();
+}
+</script>
+{% endblock %}

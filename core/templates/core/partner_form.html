@@ -126,6 +126,74 @@
         </div>
       </div>
       
+      <!-- Financeiro -->
+      <div class="space-y-4">
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2 pb-2 border-b border-gray-200 dark:border-gray-700">
+          <i data-lucide="euro" class="w-5 h-5 text-emerald-600 dark:text-emerald-400"></i>
+          Financeiro
+        </h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label for="{{ form.price_per_package.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Valor por Pacote — Parceiro paga à Léguas (€) *
+            </label>
+            {{ form.price_per_package }}
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ form.price_per_package.help_text }}</p>
+          </div>
+
+          <div>
+            <label for="{{ form.driver_default_price_per_package.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Valor por Pacote — Léguas paga ao Driver (default) (€)
+            </label>
+            {{ form.driver_default_price_per_package }}
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ form.driver_default_price_per_package.help_text }}</p>
+          </div>
+
+          <div>
+            <label for="{{ form.vat_regime.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Regime de IVA
+            </label>
+            {{ form.vat_regime }}
+          </div>
+
+          <div>
+            <label for="{{ form.vat_rate_override.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Taxa IVA — override (%)
+            </label>
+            {{ form.vat_rate_override }}
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ form.vat_rate_override.help_text }}</p>
+          </div>
+
+          <div>
+            <label for="{{ form.irs_retention_pct.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Retenção IRS (%)
+            </label>
+            {{ form.irs_retention_pct }}
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ form.irs_retention_pct.help_text }}</p>
+          </div>
+        </div>
+
+        <div class="pt-2 space-y-2">
+          <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Bónus (opcionais)</p>
+          <label class="flex items-center gap-2 cursor-pointer">
+            {{ form.bonus_performance_enabled }}
+            <span class="text-sm text-gray-700 dark:text-gray-300">Bónus por performance</span>
+            <span class="text-xs text-gray-500">— aplicar quando taxa sucesso ≥ limiar configurado</span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer">
+            {{ form.bonus_sunday_holiday_enabled }}
+            <span class="text-sm text-gray-700 dark:text-gray-300">Bónus domingo/feriado</span>
+            <span class="text-xs text-gray-500">— aplicar em entregas em dias especiais</span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer">
+            {{ form.bonus_volume_enabled }}
+            <span class="text-sm text-gray-700 dark:text-gray-300">Bónus por volume</span>
+            <span class="text-xs text-gray-500">— aplicar quando volume ≥ limiar configurado</span>
+          </label>
+        </div>
+      </div>
+
       <!-- Observações e Status -->
       <div class="space-y-4">
         <h2 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2 pb-2 border-b border-gray-200 dark:border-gray-700">

@@ -1,0 +1,230 @@
+{% extends 'settlements/base.html' %}
+{% block title %}{{ courier_name }} — Pacotes{% endblock %}
+{% block content %}
+<div class="min-h-screen bg-gray-50 dark:bg-gray-900">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-4">
+
+  {# Breadcrumb #}
+  <nav class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+    <a href="javascript:history.back()" class="inline-flex items-center gap-1 hover:text-indigo-600 dark:hover:text-indigo-400">
+      <i data-lucide="arrow-left" class="w-4 h-4"></i>
+      Voltar
+    </a>
+    <span class="text-gray-300 dark:text-gray-600">/</span>
+    <span class="text-gray-700 dark:text-gray-300">Pacotes do Driver</span>
+  </nav>
+
+  {# Header Card #}
+  <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-6">
+    <div class="flex items-start justify-between gap-6 flex-wrap">
+      <div class="min-w-0">
+        <div class="flex items-center gap-3 mb-2">
+          <div class="w-10 h-10 bg-indigo-100 dark:bg-indigo-900/30 rounded-xl flex items-center justify-center">
+            <i data-lucide="user" class="w-5 h-5 text-indigo-600 dark:text-indigo-400"></i>
+          </div>
+          <div>
+            <h1 class="text-xl font-bold text-gray-900 dark:text-white">{{ courier_name }}</h1>
+            {% if dsp_names %}
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                DSP: {% for d in dsp_names %}<span class="font-medium text-gray-700 dark:text-gray-300">{{ d }}</span>{% if not forloop.last %}, {% endif %}{% endfor %}
+              </p>
+            {% endif %}
+          </div>
+        </div>
+        {% if cp4s_covered %}
+        <div class="mt-3 flex flex-wrap items-center gap-1.5">
+          <span class="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mr-1">CP4s ({{ cp4s_covered|length }})</span>
+          {% for c in cp4s_covered %}
+            <span class="inline-flex items-center px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-[11px] font-mono font-semibold">{{ c }}</span>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+
+      {% if filters.date_from or filters.date_to %}
+      <div class="text-right text-xs text-gray-500 dark:text-gray-400">
+        <span class="block uppercase tracking-wide">Período</span>
+        <span class="text-sm font-medium text-gray-800 dark:text-gray-200">
+          {% if filters.date_from == filters.date_to %}
+            {{ filters.date_to|date:"d/m/Y" }}
+          {% else %}
+            {{ filters.date_from|date:"d/m/Y" }} → {{ filters.date_to|date:"d/m/Y" }}
+          {% endif %}
+        </span>
+      </div>
+      {% endif %}
+    </div>
+
+    {# Status filter chips #}
+    {% with base="?"|add:""|add:"courier="|add:courier_name|urlencode %}{% endwith %}
+    <div class="mt-5 flex flex-wrap items-center gap-2">
+      {# Todos #}
+      <a href="?courier={{ courier_name|urlencode }}{% if filters.date_from %}&date_from={{ filters.date_from|date:'Y-m-d' }}{% endif %}{% if filters.date_to %}&date_to={{ filters.date_to|date:'Y-m-d' }}{% endif %}{% if filters.hub_id %}&hub_id={{ filters.hub_id }}{% endif %}{% for c in filters.cp4s %}&cp4={{ c }}{% endfor %}"
+        class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors
+        {% if not status_filter %}bg-indigo-600 text-white{% else %}bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30{% endif %}">
+        Todos
+        <span class="px-1.5 py-0.5 rounded {% if not status_filter %}bg-white/20{% else %}bg-white dark:bg-gray-800{% endif %} text-xs font-bold">{{ total_all }}</span>
+      </a>
+
+      {# Per-status chips #}
+      {% for chip in status_chips %}
+      <a href="?courier={{ courier_name|urlencode }}&status={{ chip.key|urlencode }}{% if filters.date_from %}&date_from={{ filters.date_from|date:'Y-m-d' }}{% endif %}{% if filters.date_to %}&date_to={{ filters.date_to|date:'Y-m-d' }}{% endif %}{% if filters.hub_id %}&hub_id={{ filters.hub_id }}{% endif %}{% for c in filters.cp4s %}&cp4={{ c }}{% endfor %}"
+        class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors
+        {% if status_filter == chip.key %}
+          {% if chip.color == 'emerald' %}bg-emerald-600 text-white
+          {% elif chip.color == 'amber' %}bg-amber-600 text-white
+          {% elif chip.color == 'blue' %}bg-blue-600 text-white
+          {% elif chip.color == 'slate' %}bg-slate-600 text-white
+          {% elif chip.color == 'red' %}bg-red-600 text-white
+          {% endif %}
+        {% else %}
+          bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600
+        {% endif %}">
+        <i data-lucide="{{ chip.icon }}" class="w-3.5 h-3.5"></i>{{ chip.label }}
+        <span class="px-1.5 py-0.5 rounded {% if status_filter == chip.key %}bg-white/20{% else %}bg-white dark:bg-gray-800{% endif %} text-xs font-bold">{{ chip.count }}</span>
+      </a>
+      {% endfor %}
+    </div>
+
+    {# Search bar #}
+    <div class="mt-4 relative">
+      <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"></i>
+      <input id="pkg-search" type="text" placeholder="Buscar por waybill, zip, cidade ou endereço..."
+        oninput="_filterPackagesTable(this.value)"
+        class="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900/50 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+    </div>
+  </div>
+
+  {# Packages Table #}
+  <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
+    <div class="flex items-center justify-between px-5 py-3 border-b border-gray-100 dark:border-gray-700/50">
+      <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-300">
+        Pacotes
+        <span class="ml-2 text-xs text-gray-400">{{ packages_shown }}{% if packages_shown >= 500 %}+{% endif %} de {{ display_count }}</span>
+      </h2>
+      <span class="text-xs text-gray-400">Clique num waybill para detalhe</span>
+    </div>
+    {% if packages %}
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-gray-50 dark:bg-gray-900/50 text-xs uppercase text-gray-500 dark:text-gray-400">
+          <tr>
+            <th class="px-4 py-2.5 text-left">Data</th>
+            <th class="px-4 py-2.5 text-left">Waybill</th>
+            <th class="px-4 py-2.5 text-left">CP4</th>
+            <th class="px-4 py-2.5 text-left">Cidade</th>
+            <th class="px-4 py-2.5 text-left">Zip</th>
+            <th class="px-4 py-2.5 text-left">Status</th>
+            <th class="px-4 py-2.5 text-left">Início entrega</th>
+            <th class="px-4 py-2.5 text-left">Entrega/Falha</th>
+            <th class="px-4 py-2.5 text-right">Duração</th>
+          </tr>
+        </thead>
+        <tbody id="pkg-tbody" class="divide-y divide-gray-100 dark:divide-gray-700/50">
+          {% for p in packages %}
+          <tr class="pkg-row hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+            <td class="px-4 py-2.5 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{{ p.task_date|date:"d/m/Y" }}</td>
+            <td class="px-4 py-2.5">
+              <a href="{% url 'cainiao-waybill-detail' p.waybill_number %}"
+                class="font-mono text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 hover:underline">
+                {{ p.waybill_number }}
+              </a>
+            </td>
+            <td class="px-4 py-2.5 font-mono text-xs text-gray-700 dark:text-gray-300">{{ p.zip_code|slice:":4" }}</td>
+            <td class="px-4 py-2.5 text-gray-700 dark:text-gray-300">{{ p.destination_city|default:"—" }}</td>
+            <td class="px-4 py-2.5 font-mono text-xs text-gray-500 dark:text-gray-400">{{ p.zip_code|default:"—" }}</td>
+            <td class="px-4 py-2.5">
+              {% if p.is_returned %}
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-400" title="Pacote já fechado por devolução">
+                  <i data-lucide="undo-2" class="w-3 h-3"></i>Devolvido
+                </span>
+              {% elif p.task_status == 'Delivered' %}
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400">
+                  <i data-lucide="check-circle" class="w-3 h-3"></i>Delivered
+                </span>
+              {% elif p.task_status == 'Driver_received' %}
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400">
+                  <i data-lucide="truck" class="w-3 h-3"></i>Driver Received
+                </span>
+              {% elif p.task_status == 'Attempt Failure' %}
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400">
+                  <i data-lucide="x-circle" class="w-3 h-3"></i>Attempt Failure
+                </span>
+              {% elif p.task_status == 'Assigned' %}
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400">
+                  <i data-lucide="warehouse" class="w-3 h-3"></i>Assigned
+                </span>
+              {% elif p.task_status == 'Unassign' %}
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-700 dark:bg-slate-900/40 dark:text-slate-400">
+                  <i data-lucide="package-2" class="w-3 h-3"></i>Unassign
+                </span>
+              {% else %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300">{{ p.task_status }}</span>
+              {% endif %}
+            </td>
+            <td class="px-4 py-2.5 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+              {% if p.start_delivery_time %}{{ p.start_delivery_time|date:"d/m H:i" }}{% else %}—{% endif %}
+            </td>
+            <td class="px-4 py-2.5 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+              {% if p.delivery_time %}
+                <span class="text-emerald-600 dark:text-emerald-400">{{ p.delivery_time|date:"d/m H:i" }}</span>
+              {% elif p.delivery_failure_time %}
+                <span class="text-red-600 dark:text-red-400">{{ p.delivery_failure_time|date:"d/m H:i" }}</span>
+              {% elif p.is_returned %}
+                <span class="text-orange-600 dark:text-orange-400" title="Razão: {{ p.return_record.get_return_reason_display }}">
+                  <i data-lucide="undo-2" class="w-3 h-3 inline"></i>
+                  {{ p.return_record.return_date|date:"d/m" }}
+                </span>
+              {% else %}—{% endif %}
+            </td>
+            <td class="px-4 py-2.5 text-xs text-right text-gray-600 dark:text-gray-400 whitespace-nowrap">
+              <span class="pkg-duration" data-start="{% if p.start_delivery_time %}{{ p.start_delivery_time|date:'c' }}{% endif %}"
+                data-end="{% if p.delivery_time %}{{ p.delivery_time|date:'c' }}{% elif p.delivery_failure_time %}{{ p.delivery_failure_time|date:'c' }}{% endif %}">
+                —
+              </span>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if packages_shown >= 500 %}
+    <div class="px-5 py-2 bg-amber-50 dark:bg-amber-900/20 border-t border-amber-200/50 text-xs text-amber-700 dark:text-amber-400">
+      A mostrar os primeiros 500 resultados — aplique filtros para refinar.
+    </div>
+    {% endif %}
+    {% else %}
+    <div class="p-12 text-center">
+      <i data-lucide="package-x" class="w-10 h-10 mx-auto text-gray-300 dark:text-gray-600"></i>
+      <p class="mt-3 text-sm text-gray-500 dark:text-gray-400">Nenhum pacote encontrado com os filtros actuais.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+</div>
+
+<script src="https://unpkg.com/lucide@latest"></script>
+<script>
+lucide.createIcons();
+
+// Calcular duração (start → end) em minutos/horas
+document.querySelectorAll('.pkg-duration').forEach(el => {
+  const s = el.dataset.start, e = el.dataset.end;
+  if (!s || !e) return;
+  const start = new Date(s), end = new Date(e);
+  const mins = Math.round((end - start) / 60000);
+  if (mins < 0 || mins > 24*60) return;
+  if (mins < 60) el.textContent = mins + 'min';
+  else el.textContent = Math.floor(mins/60) + 'h' + String(mins % 60).padStart(2,'0');
+});
+
+// Filtro client-side
+function _filterPackagesTable(q) {
+  q = (q || '').toLowerCase().trim();
+  document.querySelectorAll('.pkg-row').forEach(row => {
+    const txt = row.textContent.toLowerCase();
+    row.style.display = (!q || txt.includes(q)) ? '' : 'none';
+  });
+}
+</script>
+{% endblock %}

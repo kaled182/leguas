@@ -135,6 +135,7 @@ class PostalZone(models.Model):
     def find_zone_for_postal_code(cls, postal_code):
         """
         Encontra a zona postal para um código postal.
+        Prioriza zonas mais específicas (padrões mais longos).
 
         Args:
             postal_code: Código postal no formato XXXX-XXX
@@ -142,7 +143,10 @@ class PostalZone(models.Model):
         Returns:
             PostalZone instance ou None
         """
-        zones = cls.objects.filter(is_active=True)
+        # Ordenar por comprimento do padrão (descendente) para priorizar zonas específicas
+        zones = cls.objects.filter(is_active=True).order_by(
+            models.functions.Length('postal_code_pattern').desc()
+        )
 
         for zone in zones:
             if zone.matches_postal_code(postal_code):

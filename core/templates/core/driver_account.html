@@ -1,0 +1,82 @@
+{% extends 'settlements/base.html' %}
+{% block title %}Conta-Corrente — {{ driver.nome_completo }}{% endblock %}
+{% block content %}
+<div class="max-w-6xl mx-auto p-6 space-y-5">
+  <nav class="text-xs text-gray-500">
+    <a href="javascript:history.back()" class="hover:text-indigo-600">← Voltar</a>
+    · Conta-Corrente
+  </nav>
+
+  <div class="bg-white dark:bg-gray-800 rounded-xl border p-6">
+    <h1 class="text-xl font-bold text-gray-900 dark:text-white mb-4">{{ driver.nome_completo }}</h1>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div class="p-4 rounded bg-blue-50 dark:bg-blue-900/20">
+        <p class="text-[10px] uppercase text-blue-600 font-semibold">A Receber</p>
+        <p class="text-2xl font-bold text-blue-700 dark:text-blue-400">€{{ kpis.to_receive|floatformat:2 }}</p>
+      </div>
+      <div class="p-4 rounded bg-emerald-50 dark:bg-emerald-900/20">
+        <p class="text-[10px] uppercase text-emerald-600 font-semibold">Pago (histórico)</p>
+        <p class="text-2xl font-bold text-emerald-700 dark:text-emerald-400">€{{ kpis.paid|floatformat:2 }}</p>
+      </div>
+      <div class="p-4 rounded bg-red-50 dark:bg-red-900/20">
+        <p class="text-[10px] uppercase text-red-600 font-semibold">Claims (aprovados)</p>
+        <p class="text-2xl font-bold text-red-700 dark:text-red-400">€{{ kpis.claims|floatformat:2 }}</p>
+      </div>
+      <div class="p-4 rounded bg-indigo-50 dark:bg-indigo-900/20 border-l-4 border-indigo-500">
+        <p class="text-[10px] uppercase text-indigo-600 font-semibold">Saldo Líquido</p>
+        <p class="text-2xl font-bold text-indigo-700 dark:text-indigo-400">€{{ kpis.net|floatformat:2 }}</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid md:grid-cols-2 gap-4">
+    <div class="bg-white dark:bg-gray-800 rounded-xl border p-4">
+      <h2 class="font-semibold mb-3">Últimas Pré-Faturas</h2>
+      <table class="w-full text-sm">
+        <thead class="text-xs uppercase text-gray-500 border-b"><tr>
+          <th class="px-2 py-1.5 text-left">Nº</th>
+          <th class="px-2 py-1.5 text-left">Período</th>
+          <th class="px-2 py-1.5 text-center">Estado</th>
+          <th class="px-2 py-1.5 text-right">Valor</th>
+        </tr></thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-700/50">
+          {% for p in pre_invoices %}
+          <tr>
+            <td class="px-2 py-1.5 font-mono text-xs">{{ p.numero }}</td>
+            <td class="px-2 py-1.5 text-xs">{{ p.periodo_inicio|date:"d/m" }} → {{ p.periodo_fim|date:"d/m" }}</td>
+            <td class="px-2 py-1.5 text-center text-xs">{{ p.get_status_display }}</td>
+            <td class="px-2 py-1.5 text-right font-semibold">€{{ p.total_a_receber|floatformat:2 }}</td>
+          </tr>
+          {% empty %}<tr><td colspan="4" class="py-4 text-center text-gray-400 text-xs">Sem pré-faturas.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 rounded-xl border p-4">
+      <h2 class="font-semibold mb-3">Últimos Claims</h2>
+      <table class="w-full text-sm">
+        <thead class="text-xs uppercase text-gray-500 border-b"><tr>
+          <th class="px-2 py-1.5 text-left">Tipo</th>
+          <th class="px-2 py-1.5 text-left">Data</th>
+          <th class="px-2 py-1.5 text-center">Estado</th>
+          <th class="px-2 py-1.5 text-right">Valor</th>
+        </tr></thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-700/50">
+          {% for c in claims %}
+          <tr>
+            <td class="px-2 py-1.5 text-xs">{{ c.get_claim_type_display }}
+              {% if c.auto_detected %}<span class="ml-1 text-[10px] text-amber-600">(auto)</span>{% endif %}
+            </td>
+            <td class="px-2 py-1.5 text-xs">{{ c.occurred_at|date:"d/m/Y" }}</td>
+            <td class="px-2 py-1.5 text-center text-xs">{{ c.get_status_display }}</td>
+            <td class="px-2 py-1.5 text-right text-red-600 font-semibold">€{{ c.amount|floatformat:2 }}</td>
+          </tr>
+          {% empty %}<tr><td colspan="4" class="py-4 text-center text-gray-400 text-xs">Sem claims.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

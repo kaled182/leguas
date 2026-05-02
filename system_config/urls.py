@@ -1,6 +1,7 @@
 ﻿from django.urls import path
 
 from . import views
+from . import backup_views
 
 app_name = "system_config"
 
@@ -31,6 +32,12 @@ urlpatterns = [
         views.whatsapp_generate_token,
         name="whatsapp_generate_token",
     ),
+    # Backups
+    path("backups/", backup_views.backups_manager, name="backups_manager"),
+    path("backups/delete/", backup_views.delete_backup, name="backup_delete"),
+    path("backups/restore/", backup_views.restore_backup, name="backup_restore"),
+    path("backups/upload-cloud/", backup_views.upload_backup_to_cloud, name="backup_upload_cloud"),
+    path("backups/download/<str:filename>/", backup_views.download_backup, name="backup_download"),
     # Typebot
     path(
         "typebot/test-connection/",

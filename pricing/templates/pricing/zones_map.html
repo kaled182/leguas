@@ -1,5 +1,6 @@
 {% extends 'settlements/base.html' %}
 {% load static %}
+{% load l10n %}
 
 {% block title %}Mapa de Zonas Postais{% endblock %}
 
@@ -13,6 +14,7 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
      crossorigin=""></script>
+{% include 'system_config/_leaflet_tiles.html' %}
 
 <style>
     #map {
@@ -173,13 +175,10 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Inicializa o mapa
-    const map = L.map('map').setView({{ map_center }}, {{ map_zoom }});
-    
-    // Adiciona tiles do OpenStreetMap
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors',
-        maxZoom: 18
-    }).addTo(map);
+    const map = L.map('map').setView([{{ map_center.0|unlocalize }}, {{ map_center.1|unlocalize }}], {{ map_zoom }});
+
+    // Tile layer configurado no sistema (Mapbox/OSM/Esri)
+    window.addTileLayer(map, { maxZoom: 18 });
     
     // Adiciona legenda
     const legend = L.control({position: 'bottomright'});
@@ -206,8 +205,8 @@ document.addEventListener('DOMContentLoaded', function() {
         {
             name: "{{ zone.name|escapejs }}",
             code: "{{ zone.code|escapejs }}",
-            lat: {{ zone.center_latitude }},
-            lng: {{ zone.center_longitude }},
+            lat: {{ zone.center_latitude|unlocalize }},
+            lng: {{ zone.center_longitude|unlocalize }},
             region: "{{ zone.get_region_display|escapejs }}",
             is_urban: {{ zone.is_urban|yesno:"true,false" }},
             delivery_time: {{ zone.average_delivery_time_hours }},

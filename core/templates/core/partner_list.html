@@ -139,6 +139,22 @@
                 <i data-lucide="edit" class="w-4 h-4"></i>
                 Editar
               </a>
+              <form method="post" action="{% url 'core:partner-toggle-status' partner.pk %}" class="contents">
+                {% csrf_token %}
+                <button type="submit"
+                  class="px-3 py-2 text-sm rounded-lg font-medium transition-colors duration-200 flex items-center gap-1
+                  {% if partner.is_active %}bg-amber-100 hover:bg-amber-200 dark:bg-amber-900/30 dark:hover:bg-amber-900/50 text-amber-700 dark:text-amber-400
+                  {% else %}bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-900/30 dark:hover:bg-emerald-900/50 text-emerald-700 dark:text-emerald-400{% endif %}">
+                  <i data-lucide="{% if partner.is_active %}pause{% else %}play{% endif %}" class="w-4 h-4"></i>
+                  {% if partner.is_active %}Desativar{% else %}Ativar{% endif %}
+                </button>
+              </form>
+              <button
+                onclick="openDeleteModal({{ partner.pk }}, '{{ partner.name|escapejs }}')"
+                class="px-3 py-2 text-sm bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-700 dark:text-red-400 rounded-lg font-medium transition-colors duration-200 flex items-center gap-1">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                Apagar
+              </button>
             </div>
           </div>
         </div>
@@ -181,7 +197,58 @@
   </div>
 </div>
 
+<!-- Modal: Confirmar Apagar Parceiro -->
+<div id="modalApagarParceiro" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md border border-gray-200 dark:border-gray-700">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+      <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+        <i data-lucide="trash-2" class="w-5 h-5 text-red-500"></i>
+        Apagar Parceiro
+      </h2>
+      <button onclick="closeDeleteModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+    <div class="px-6 py-5">
+      <p class="text-sm text-gray-600 dark:text-gray-300 mb-1">Tem a certeza que pretende apagar o parceiro:</p>
+      <p id="deletePartnerName" class="text-base font-bold text-gray-900 dark:text-white mb-4"></p>
+      <p class="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-3 py-2">
+        Esta ação é irreversível. Todas as integrações associadas serão também eliminadas.
+      </p>
+    </div>
+    <form id="deletePartnerForm" method="post" action="">
+      {% csrf_token %}
+      <div class="flex justify-end gap-3 px-6 py-4 border-t border-gray-200 dark:border-gray-700">
+        <button type="button" onclick="closeDeleteModal()"
+          class="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg font-medium transition-colors text-sm">
+          Cancelar
+        </button>
+        <button type="submit"
+          class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors text-sm flex items-center gap-2">
+          <i data-lucide="trash-2" class="w-4 h-4"></i>
+          Apagar Definitivamente
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <script>
   lucide.createIcons();
+
+  function openDeleteModal(pk, name) {
+    document.getElementById('deletePartnerName').textContent = name;
+    document.getElementById('deletePartnerForm').action = '/core/partners/' + pk + '/delete/';
+    document.getElementById('modalApagarParceiro').classList.remove('hidden');
+    lucide.createIcons();
+  }
+
+  function closeDeleteModal() {
+    document.getElementById('modalApagarParceiro').classList.add('hidden');
+  }
+
+  document.getElementById('modalApagarParceiro').addEventListener('click', function(e) {
+    if (e.target === this) closeDeleteModal();
+  });
 </script>
 {% endblock %}

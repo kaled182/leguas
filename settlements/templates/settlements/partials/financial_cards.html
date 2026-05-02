@@ -17,16 +17,22 @@
     <!-- Faturas Vencidas -->
     {% include 'settlements/partials/financial_card.html' with card_id="overdue-invoices" icon="alert-circle" color="red" title="Faturas Vencidas" value=invoices_stats.overdue description="Vencidas e não pagas" trend="down" %}
     
-    <!-- Liquidações Totais -->
-    {% include 'settlements/partials/financial_card.html' with card_id="total-settlements" icon="dollar-sign" color="cyan" title="Liquidações Totais" value=settlements_stats.total description="Total de liquidações" %}
-    
-    <!-- Liquidações Pagas -->
-    {% include 'settlements/partials/financial_card.html' with card_id="paid-settlements" icon="check-square" color="violet" title="Liquidações Pagas" value=settlements_stats.paid description="Liquidações concluídas" %}
+    <!-- Liquidações Totais (PFs) -->
+    {% include 'settlements/partials/financial_card.html' with card_id="total-settlements" icon="dollar-sign" color="cyan" title="Liquidações Totais" value=settlements_stats.total description="Pré-faturas no sistema" link_url="/settlements/settlements/" %}
+
+    <!-- Liquidações Pagas (PFs com status PAGO) -->
+    {% include 'settlements/partials/financial_card.html' with card_id="paid-settlements" icon="check-square" color="violet" title="Liquidações Pagas" value=settlements_stats.paid description="Pré-faturas pagas" link_url="/settlements/settlements/?status=PAGO" %}
     
     <!-- Reclamações Ativas -->
     {% include 'settlements/partials/financial_card.html' with card_id="active-claims" icon="alert-triangle" color="yellow" title="Reclamações Ativas" value=claims_stats.pending description="Aguardando análise" %}
     
     <!-- Reclamações Aprovadas -->
     {% include 'settlements/partials/financial_card.html' with card_id="approved-claims" icon="thumbs-up" color="indigo" title="Reclamações Aprovadas" value=claims_stats.approved description="Aprovadas este mês" %}
+
+    <!-- Reembolsos a Sócios (Terceiros) — clicável -->
+    {% include 'settlements/partials/financial_card.html' with card_id="pending-reimbursements" icon="hand-coins" color="orange" title="Reembolsos Pendentes" value=reimbursement_stats.pending_total|floatformat:2 value_prefix="€" description="A empresa deve a sócios" subtitle=reimbursement_stats.pending_count|stringformat:"s"|add:" lançamento(s)" link_url="/settlements/socios/" %}
+
+    <!-- Conta-Corrente Motoristas (Lançamentos pendentes) — clicável -->
+    {% include 'settlements/partials/financial_card.html' with card_id="pending-cash-entries" icon="wallet" color="amber" title="Conta-Corrente Motoristas" value=cash_entry_stats.pending_total|floatformat:2 value_prefix="€" description="Lançamentos pendentes (não em PF)" subtitle=cash_entry_stats.pending_count|stringformat:"s"|add:" lançamento(s)" link_url="/settlements/adiantamentos/" %}
   </div>
 </section>

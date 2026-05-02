@@ -1,0 +1,44 @@
+{% extends 'settlements/base.html' %}
+{% load static %}
+{% block title %}Importar Extracto{% endblock %}
+{% block content %}
+<div class="max-w-2xl mx-auto px-4 py-6 space-y-4">
+  <div class="flex items-center gap-3">
+    <a href="{% url 'accounting:bank_statement_list' %}" class="text-gray-500 hover:text-gray-700">
+      <i data-lucide="arrow-left" class="w-5 h-5"></i>
+    </a>
+    <h1 class="text-2xl font-bold flex items-center gap-2">
+      <i data-lucide="upload" class="w-6 h-6 text-emerald-500"></i> Importar Extracto Bancário
+    </h1>
+  </div>
+
+  {% if messages %}
+    {% for m in messages %}
+      <div class="px-3 py-2 rounded-lg text-sm {% if m.tags == 'error' %}bg-rose-50 text-rose-700 border border-rose-300{% else %}bg-emerald-50 text-emerald-700 border border-emerald-300{% endif %}">{{ m }}</div>
+    {% endfor %}
+  {% endif %}
+
+  <form method="post" enctype="multipart/form-data" class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 space-y-4">
+    {% csrf_token %}
+    <div>
+      <label class="block text-xs font-semibold mb-1">Nome / Banco</label>
+      <input type="text" name="name" placeholder="ex: Millennium Setembro 2026" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700">
+      <p class="text-[10px] text-gray-500 mt-1">Opcional — se vazio, usa o nome do ficheiro.</p>
+    </div>
+    <div>
+      <label class="block text-xs font-semibold mb-1">Ficheiro (CSV ou OFX) *</label>
+      <input type="file" name="file" accept=".csv,.ofx,.qfx" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700">
+      <p class="text-[10px] text-gray-500 mt-1">
+        CSV: tenta detectar colunas <em>data, descrição, valor</em> (ou débito/crédito separados). OFX: bloco <code>&lt;STMTTRN&gt;</code>.
+      </p>
+    </div>
+    <div class="flex justify-end gap-2">
+      <a href="{% url 'accounting:bank_statement_list' %}" class="px-3 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg text-sm">Cancelar</a>
+      <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold flex items-center gap-2">
+        <i data-lucide="upload" class="w-4 h-4"></i> Importar
+      </button>
+    </div>
+  </form>
+</div>
+<script>document.addEventListener('DOMContentLoaded', () => { if (window.lucide) lucide.createIcons(); });</script>
+{% endblock %}

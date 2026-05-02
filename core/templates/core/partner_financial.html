@@ -1,0 +1,505 @@
+{% extends 'settlements/base.html' %}
+{% block title %}Financeiro — {{ partner.name }}{% endblock %}
+{% block content %}
+<div class="min-h-screen bg-gray-50 dark:bg-gray-900">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-5">
+
+  {# Header + filtros #}
+  <div class="flex items-center justify-between gap-4 flex-wrap">
+    <div>
+      <nav class="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
+        <a href="{% url 'core:partner-detail' partner.pk %}" class="hover:text-indigo-600">← {{ partner.name }}</a>
+        <span>·</span>
+        <span>Financeiro</span>
+      </nav>
+      <h1 class="mt-1 text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+        <i data-lucide="wallet" class="w-6 h-6 text-emerald-500"></i>
+        Financeiro — {{ partner.name }}
+      </h1>
+    </div>
+
+    <form method="get" class="flex items-center gap-2">
+      <label class="text-xs text-gray-500 dark:text-gray-400">De:</label>
+      <input type="date" name="date_from" value="{{ date_from|date:'Y-m-d' }}"
+        class="text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg px-2 py-1">
+      <label class="text-xs text-gray-500 dark:text-gray-400">Até:</label>
+      <input type="date" name="date_to" value="{{ date_to|date:'Y-m-d' }}"
+        class="text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg px-2 py-1">
+      <button type="submit" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg">
+        Aplicar
+      </button>
+    </form>
+  </div>
+
+  {# Toolbar de atalhos a páginas existentes #}
+  <div class="flex items-center gap-2 flex-wrap">
+    <a href="/settlements/pre-invoices/?status=NAO_PAGO"
+      class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-indigo-300 dark:border-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100">
+      <i data-lucide="receipt" class="w-3.5 h-3.5"></i>
+      Pré-faturas pendentes
+    </a>
+    <a href="{% url 'drivers_app:admin_active_drivers' %}"
+      class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-emerald-300 dark:border-emerald-600 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100">
+      <i data-lucide="users" class="w-3.5 h-3.5"></i>
+      Motoristas activos
+    </a>
+    <a href="{% url 'drivers_app:admin_approve_drivers' %}"
+      class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-amber-300 dark:border-amber-600 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 hover:bg-amber-100">
+      <i data-lucide="user-check" class="w-3.5 h-3.5"></i>
+      Aprovar motoristas
+    </a>
+    <a href="{% url 'drivers_app:admin_complaints_dashboard' %}"
+      class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-red-300 dark:border-red-600 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 hover:bg-red-100">
+      <i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i>
+      Reclamações
+    </a>
+    <a href="{% url 'core:partner-bonus-rules' partner.pk %}"
+      class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-purple-300 dark:border-purple-600 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 hover:bg-purple-100">
+      <i data-lucide="award" class="w-3.5 h-3.5"></i>
+      Regras Bónus
+    </a>
+    <a href="{% url 'core:financial-alerts' %}"
+      class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50">
+      <i data-lucide="bell" class="w-3.5 h-3.5"></i>
+      Alertas
+    </a>
+  </div>
+
+  {# Alerts #}
+  {% if alerts %}
+  <div class="space-y-2">
+    {% for a in alerts %}
+    <div class="p-3 rounded-lg border flex items-start gap-3
+      {% if a.level == 'DANGER' %}bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-700/50
+      {% elif a.level == 'WARN' %}bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-700/50
+      {% else %}bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700/50{% endif %}">
+      <i data-lucide="alert-triangle" class="w-4 h-4 mt-0.5"></i>
+      <div class="flex-1 min-w-0">
+        <p class="text-sm font-semibold">{{ a.title }}</p>
+        <p class="text-xs text-gray-600 dark:text-gray-400">{{ a.description }}</p>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {# KPIs #}
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-4">
+      <p class="text-[10px] uppercase tracking-wider text-gray-500 font-semibold">Entregas</p>
+      <p class="mt-1 text-3xl font-bold text-emerald-600 dark:text-emerald-400">{{ kpis.delivered }}</p>
+      <p class="text-xs text-gray-400 mt-0.5">de {{ kpis.total_tasks }} tarefas · {{ kpis.success_rate }}% sucesso</p>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-4">
+      <p class="text-[10px] uppercase tracking-wider text-gray-500 font-semibold">A Receber (bruto)</p>
+      <p class="mt-1 text-3xl font-bold text-gray-900 dark:text-white">€{{ kpis.gross_receivable|floatformat:2 }}</p>
+      <p class="text-xs text-gray-400 mt-0.5">{{ kpis.delivered }} × €{{ partner.price_per_package|floatformat:4 }}</p>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-4">
+      <p class="text-[10px] uppercase tracking-wider text-gray-500 font-semibold">Custo Motoristas</p>
+      <p class="mt-1 text-3xl font-bold text-red-600 dark:text-red-400">€{{ kpis.total_driver_cost|floatformat:2 }}</p>
+      <p class="text-xs text-gray-400 mt-0.5">soma por motorista × preço individual</p>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-l-4 border-emerald-400 border-gray-200/50 dark:border-gray-700/50 p-4">
+      <p class="text-[10px] uppercase tracking-wider text-emerald-600 font-semibold">Margem Bruta</p>
+      <p class="mt-1 text-3xl font-bold {% if kpis.margin_gross >= 0 %}text-emerald-600 dark:text-emerald-400{% else %}text-red-600{% endif %}">
+        €{{ kpis.margin_gross|floatformat:2 }}
+      </p>
+      <p class="text-xs text-gray-400 mt-0.5">receita − custo motoristas</p>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-4">
+      <p class="text-[10px] uppercase tracking-wider text-gray-500 font-semibold">Claims</p>
+      <p class="mt-1 text-2xl font-bold text-red-600 dark:text-red-400">€{{ kpis.claims_value|floatformat:2 }}</p>
+      <p class="text-xs text-gray-400 mt-0.5">{{ kpis.claims_count }} reclamações</p>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-4">
+      <p class="text-[10px] uppercase tracking-wider text-gray-500 font-semibold">Em rota</p>
+      <p class="mt-1 text-2xl font-bold text-amber-600 dark:text-amber-400">{{ kpis.in_route }}</p>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-4">
+      <p class="text-[10px] uppercase tracking-wider text-gray-500 font-semibold">Atribuídos</p>
+      <p class="mt-1 text-2xl font-bold text-blue-600 dark:text-blue-400">{{ kpis.assigned }}</p>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-4">
+      <p class="text-[10px] uppercase tracking-wider text-gray-500 font-semibold">Falhas</p>
+      <p class="mt-1 text-2xl font-bold text-red-600 dark:text-red-400">{{ kpis.failures }}</p>
+    </div>
+  </div>
+
+  {# Acção: gerar pré-faturas em lote #}
+  <div class="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-700/50 rounded-xl p-4 flex items-center justify-between gap-3 flex-wrap">
+    <div>
+      <p class="text-sm font-semibold text-indigo-900 dark:text-indigo-300">Geração automática de pré-faturas</p>
+      <p class="text-xs text-indigo-700 dark:text-indigo-400 mt-0.5">
+        Cria pré-faturas para os {{ drivers|length }} motoristas independentes e {{ fleets|length }} frotas, consumindo entregas reais.
+      </p>
+    </div>
+    <button onclick="_fnOpenPreview()"
+      class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium flex items-center gap-2">
+      <i data-lucide="zap" class="w-4 h-4"></i>
+      Gerar em Lote
+    </button>
+  </div>
+
+  {# Modal: vincular courier_name a driver existente #}
+  <div id="link-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+      <div class="px-6 py-4 bg-gradient-to-r from-amber-600 to-orange-600 flex items-center justify-between">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <i data-lucide="link" class="w-4 h-4"></i>
+          Vincular Motorista
+        </h3>
+        <button onclick="document.getElementById('link-modal').classList.add('hidden')"
+          class="text-white/70 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <div class="p-5 space-y-3">
+        <div class="text-sm">
+          <span class="text-gray-500">Nome no ficheiro Cainiao:</span>
+          <strong id="link-courier-name" class="block mt-0.5 font-mono text-gray-900 dark:text-white"></strong>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold uppercase text-gray-500 mb-1">Procurar motorista existente</label>
+          <input id="link-search" type="text" placeholder="Nome, NIF ou email..."
+            oninput="_fnSearchDrivers(this.value)"
+            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg text-sm">
+          <div id="link-results" class="mt-2 max-h-56 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-100 dark:divide-gray-700/50 hidden"></div>
+        </div>
+        <div class="pt-2 border-t border-gray-100 dark:border-gray-700">
+          <p class="text-xs text-gray-500 mb-2">Ou, se o motorista ainda não existe:</p>
+          <a id="link-create-new"
+            href="{% url 'drivers_app:admin_approve_drivers' %}"
+            target="_blank"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-indigo-300 bg-indigo-50 text-indigo-700 hover:bg-indigo-100">
+            <i data-lucide="user-plus" class="w-3.5 h-3.5"></i>
+            Criar novo motorista
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# Modal: preview geração #}
+  <div id="fn-preview-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden">
+      <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between bg-gradient-to-r from-indigo-600 to-blue-600">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <i data-lucide="zap" class="w-4 h-4"></i>
+          Preview — Pré-faturas a gerar
+        </h3>
+        <button onclick="document.getElementById('fn-preview-modal').classList.add('hidden')"
+          class="text-white/70 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <div id="fn-preview-body" class="flex-1 overflow-y-auto p-5 text-sm">
+        <div class="text-gray-500 text-center py-8">A carregar preview...</div>
+      </div>
+      <div class="px-6 py-3 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 flex justify-end gap-2">
+        <button onclick="document.getElementById('fn-preview-modal').classList.add('hidden')"
+          class="px-4 py-2 text-gray-600 hover:text-gray-800 dark:text-gray-400 text-sm">Cancelar</button>
+        <button id="fn-confirm-btn" onclick="_fnConfirmGenerate()" disabled
+          class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white rounded-lg text-sm font-medium">
+          Confirmar & Criar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  {# Frotas #}
+  {% if fleets %}
+  <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
+    <div class="px-5 py-3 border-b border-gray-100 dark:border-gray-700/50 flex items-center gap-2">
+      <i data-lucide="building-2" class="w-4 h-4 text-purple-500"></i>
+      <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Frotas ({{ fleets|length }})</h2>
+    </div>
+    <table class="w-full text-sm">
+      <thead class="bg-gray-50 dark:bg-gray-900/50 text-xs uppercase text-gray-500">
+        <tr>
+          <th class="px-4 py-2.5 text-left">Frota</th>
+          <th class="px-4 py-2.5 text-right">Motoristas</th>
+          <th class="px-4 py-2.5 text-right">Entregas</th>
+          <th class="px-4 py-2.5 text-right">Sucesso</th>
+          <th class="px-4 py-2.5 text-right">Valor a pagar</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100 dark:divide-gray-700/50">
+        {% for f in fleets %}
+        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+          <td class="px-4 py-2.5 font-medium text-gray-900 dark:text-white">{{ f.fleet.nome }}</td>
+          <td class="px-4 py-2.5 text-right">{{ f.drivers|length }}</td>
+          <td class="px-4 py-2.5 text-right font-semibold text-emerald-600 dark:text-emerald-400">{{ f.delivered }}</td>
+          <td class="px-4 py-2.5 text-right">{{ f.success_rate }}%</td>
+          <td class="px-4 py-2.5 text-right font-bold">€{{ f.value|floatformat:2 }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  {# Motoristas independentes #}
+  {% if drivers %}
+  <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
+    <div class="px-5 py-3 border-b border-gray-100 dark:border-gray-700/50 flex items-center gap-2">
+      <i data-lucide="user" class="w-4 h-4 text-indigo-500"></i>
+      <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Motoristas independentes ({{ drivers|length }})</h2>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-gray-50 dark:bg-gray-900/50 text-xs uppercase text-gray-500">
+          <tr>
+            <th class="px-4 py-2.5 text-left">Motorista</th>
+            <th class="px-4 py-2.5 text-right">Entregas</th>
+            <th class="px-4 py-2.5 text-right">Total</th>
+            <th class="px-4 py-2.5 text-right">Sucesso</th>
+            <th class="px-4 py-2.5 text-right">Falhas</th>
+            <th class="px-4 py-2.5 text-right">€/pacote</th>
+            <th class="px-4 py-2.5 text-right">Valor a pagar</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-700/50">
+          {% for d in drivers %}
+          <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+            <td class="px-4 py-2.5 font-medium text-gray-900 dark:text-white">
+              {% if d.profile %}
+                <a href="{% url 'core:driver-account' d.profile.pk %}" class="text-indigo-600 dark:text-indigo-400 hover:underline">{{ d.name }}</a>
+              {% else %}
+                {{ d.name }}
+                <button type="button" onclick="_fnLinkCourier('{{ d.name|escapejs }}', this)"
+                  class="ml-1 inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 hover:bg-amber-200">
+                  <i data-lucide="link" class="w-3 h-3"></i>vincular
+                </button>
+              {% endif %}
+            </td>
+            <td class="px-4 py-2.5 text-right font-semibold text-emerald-600 dark:text-emerald-400">{{ d.delivered }}</td>
+            <td class="px-4 py-2.5 text-right text-gray-500">{{ d.total }}</td>
+            <td class="px-4 py-2.5 text-right">{{ d.success_rate }}%</td>
+            <td class="px-4 py-2.5 text-right text-red-500">{{ d.failures }}</td>
+            <td class="px-4 py-2.5 text-right font-mono text-xs">€{{ d.price|floatformat:4 }}</td>
+            <td class="px-4 py-2.5 text-right font-bold">€{{ d.value|floatformat:2 }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if not drivers and not fleets %}
+  <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-12 text-center">
+    <i data-lucide="inbox" class="w-12 h-12 mx-auto text-gray-300"></i>
+    <p class="mt-3 text-gray-500">Sem entregas neste período.</p>
+  </div>
+  {% endif %}
+
+</div>
+</div>
+
+<script src="https://unpkg.com/lucide@latest"></script>
+<script>
+lucide.createIcons();
+
+const _PARTNER_PK = {{ partner.pk }};
+const _DATE_FROM = '{{ date_from|date:"Y-m-d" }}';
+const _DATE_TO   = '{{ date_to|date:"Y-m-d" }}';
+const _URLS = {
+  preview:  "{% url 'core:partner-financial-preview' partner.pk %}",
+  generate: "{% url 'core:partner-financial-generate' partner.pk %}",
+  link:     "{% url 'core:partner-link-courier' partner.pk %}",
+  search:   "{% url 'core:partner-drivers-search' partner.pk %}",
+};
+const _CSRF = document.querySelector('input[name=csrfmiddlewaretoken]')?.value ||
+              document.querySelector('meta[name=csrf-token]')?.content ||
+              '{{ csrf_token }}';
+
+async function _fnOpenPreview() {
+  const modal = document.getElementById('fn-preview-modal');
+  const body  = document.getElementById('fn-preview-body');
+  const btn   = document.getElementById('fn-confirm-btn');
+  modal.classList.remove('hidden');
+  body.innerHTML = '<div class="text-gray-500 text-center py-8">A carregar preview...</div>';
+  btn.disabled = true;
+  lucide.createIcons();
+
+  const url = `${_URLS.preview}?date_from=${_DATE_FROM}&date_to=${_DATE_TO}`;
+  try {
+    const resp = await fetch(url);
+    const data = await resp.json();
+    if (!data.success) {
+      body.innerHTML = `<div class="p-4 rounded bg-red-50 text-red-700">${data.error || 'Erro'}</div>`;
+      return;
+    }
+    const driversHtml = (data.drivers || []).map(d => `
+      <tr>
+        <td class="px-3 py-2">${d.driver_name}</td>
+        <td class="px-3 py-2 text-right">${d.delivered}</td>
+        <td class="px-3 py-2 text-right font-mono text-xs">€${d.price}</td>
+        <td class="px-3 py-2 text-right font-bold">€${parseFloat(d.amount).toFixed(2)}</td>
+      </tr>
+    `).join('');
+    const fleetsHtml = (data.fleets || []).map(f => `
+      <tr>
+        <td class="px-3 py-2">${f.fleet_name}</td>
+        <td class="px-3 py-2 text-right">${f.drivers.length}</td>
+        <td class="px-3 py-2 text-right">${f.total_delivered}</td>
+        <td class="px-3 py-2 text-right font-bold">€${parseFloat(f.total_amount).toFixed(2)}</td>
+      </tr>
+    `).join('');
+    const unmappedHtml = (data.unmapped || []).map(u => `
+      <tr class="text-amber-600">
+        <td class="px-3 py-2">${u.name}</td>
+        <td class="px-3 py-2 text-right">${u.delivered}</td>
+      </tr>
+    `).join('');
+
+    body.innerHTML = `
+      ${data.drivers.length ? `
+        <h3 class="font-semibold text-gray-800 dark:text-white mb-2 flex items-center gap-2">
+          <i data-lucide="user" class="w-4 h-4 text-indigo-500"></i>
+          Motoristas independentes (${data.drivers.length} pré-faturas)
+        </h3>
+        <table class="w-full text-sm mb-6">
+          <thead class="bg-gray-50 dark:bg-gray-900/50 text-xs uppercase text-gray-500"><tr>
+            <th class="px-3 py-2 text-left">Motorista</th>
+            <th class="px-3 py-2 text-right">Entregas</th>
+            <th class="px-3 py-2 text-right">€/pacote</th>
+            <th class="px-3 py-2 text-right">Valor</th>
+          </tr></thead>
+          <tbody class="divide-y divide-gray-100">${driversHtml}</tbody>
+        </table>
+      ` : ''}
+      ${data.fleets.length ? `
+        <h3 class="font-semibold text-gray-800 dark:text-white mb-2 flex items-center gap-2">
+          <i data-lucide="building-2" class="w-4 h-4 text-purple-500"></i>
+          Frotas (${data.fleets.length} lançamentos)
+        </h3>
+        <table class="w-full text-sm mb-6">
+          <thead class="bg-gray-50 dark:bg-gray-900/50 text-xs uppercase text-gray-500"><tr>
+            <th class="px-3 py-2 text-left">Frota</th>
+            <th class="px-3 py-2 text-right">Motoristas</th>
+            <th class="px-3 py-2 text-right">Entregas</th>
+            <th class="px-3 py-2 text-right">Valor</th>
+          </tr></thead>
+          <tbody class="divide-y divide-gray-100">${fleetsHtml}</tbody>
+        </table>
+      ` : ''}
+      ${data.unmapped.length ? `
+        <div class="p-3 mb-4 rounded bg-amber-50 border border-amber-200 text-amber-800 text-xs">
+          <strong>${data.unmapped.length} motoristas sem perfil</strong> — estes serão ignorados. Cria os perfis antes de gerar.
+        </div>
+        <table class="w-full text-sm"><thead class="text-xs uppercase text-gray-500"><tr>
+          <th class="px-3 py-2 text-left">Nome</th><th class="px-3 py-2 text-right">Entregas</th>
+        </tr></thead><tbody>${unmappedHtml}</tbody></table>
+      ` : ''}
+    `;
+    lucide.createIcons();
+    btn.disabled = (data.drivers.length + data.fleets.length) === 0;
+  } catch (e) {
+    body.innerHTML = `<div class="p-4 rounded bg-red-50 text-red-700">Erro: ${e.message}</div>`;
+  }
+}
+
+// ── Vincular courier_name → DriverProfile ─────────────────────────────
+let _linkPendingCourier = '';
+let _linkSearchTimer = null;
+
+function _fnCleanCourierName(name) {
+  // Remove sufixos comuns que não aparecem no nome do motorista registado:
+  //   "Rondineli_LF" → "Rondineli"
+  //   "Mateus_Brito_3740_3730_4540_LF" → "Mateus Brito"
+  //   "ARMAZEM XPT LEGUAS DS" → "ARMAZEM"
+  if (!name) return '';
+  let clean = name
+    .replace(/_+(LF|XPT|DS|[0-9]+)$/gi, '')        // trailing tokens
+    .replace(/_+(LF|XPT|DS)_+/gi, '_')             // interior
+    .replace(/_+[0-9]{3,5}(?=_|$)/g, '')           // CP4s like _3740
+    .replace(/[_]+/g, ' ')                         // underscores → spaces
+    .trim();
+  // Ficar com os primeiros 2 tokens se forem muitos
+  const parts = clean.split(/\s+/).filter(Boolean);
+  return parts.slice(0, 2).join(' ');
+}
+
+function _fnLinkCourier(courierName, triggerBtn) {
+  _linkPendingCourier = courierName;
+  document.getElementById('link-courier-name').textContent = courierName;
+  const cleaned = _fnCleanCourierName(courierName);
+  document.getElementById('link-search').value = cleaned;
+  document.getElementById('link-modal').classList.remove('hidden');
+  _fnSearchDrivers(cleaned);
+  lucide.createIcons();
+}
+
+async function _fnSearchDrivers(q) {
+  clearTimeout(_linkSearchTimer);
+  _linkSearchTimer = setTimeout(async () => {
+    const panel = document.getElementById('link-results');
+    try {
+      const resp = await fetch(`${_URLS.search}?q=${encodeURIComponent(q)}`);
+      const data = await resp.json();
+      if (!(data.drivers || []).length) {
+        panel.innerHTML = '<div class="p-3 text-xs text-gray-500 text-center">Nenhum motorista encontrado</div>';
+        panel.classList.remove('hidden');
+        return;
+      }
+      panel.innerHTML = data.drivers.map(d => `
+        <button type="button" onclick="_fnDoLink(${d.id}, '${d.name.replace(/'/g,"\\'")}')"
+          class="w-full text-left px-3 py-2 hover:bg-indigo-50 dark:hover:bg-indigo-900/30">
+          <div class="text-sm font-medium text-gray-900 dark:text-white">${d.name}</div>
+          <div class="text-[11px] text-gray-500">NIF ${d.nif}${d.fleet ? ' · ' + d.fleet : ''}</div>
+        </button>
+      `).join('');
+      panel.classList.remove('hidden');
+    } catch (e) { /* noop */ }
+  }, 250);
+}
+
+async function _fnDoLink(driverId, driverName) {
+  try {
+    const resp = await fetch(_URLS.link, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json', 'X-CSRFToken': _CSRF},
+      body: JSON.stringify({
+        courier_name: _linkPendingCourier,
+        driver_id: driverId,
+      }),
+    });
+    const data = await resp.json();
+    if (data.success) {
+      alert(`✓ "${_linkPendingCourier}" vinculado a ${driverName}`);
+      document.getElementById('link-modal').classList.add('hidden');
+      location.reload();
+    } else {
+      alert('Erro: ' + (data.error || 'desconhecido'));
+    }
+  } catch (e) { alert('Erro: ' + e.message); }
+}
+
+async function _fnConfirmGenerate() {
+  const btn = document.getElementById('fn-confirm-btn');
+  btn.disabled = true;
+  btn.textContent = 'A criar...';
+  try {
+    const resp = await fetch(_URLS.generate, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': _CSRF },
+      body: JSON.stringify({ date_from: _DATE_FROM, date_to: _DATE_TO }),
+    });
+    const data = await resp.json();
+    if (!data.success) {
+      alert('Erro: ' + (data.error || 'desconhecido'));
+      btn.disabled = false;
+      btn.textContent = 'Confirmar & Criar';
+      return;
+    }
+    alert(`✓ ${data.drivers_created} pré-faturas de drivers + ${data.fleets_created} lançamentos de frota criados. ${data.unmapped} motoristas ignorados (sem perfil).`);
+    document.getElementById('fn-preview-modal').classList.add('hidden');
+    window.location.reload();
+  } catch (e) {
+    alert('Erro: ' + e.message);
+    btn.disabled = false;
+    btn.textContent = 'Confirmar & Criar';
+  }
+}
+</script>
+{% csrf_token %}
+{% endblock %}

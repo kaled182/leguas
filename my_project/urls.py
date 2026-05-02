@@ -18,6 +18,8 @@ Including another URLconf
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
+from django.db import connection
+from django.http import JsonResponse
 from django.shortcuts import redirect
 from django.urls import include, path
 
@@ -27,7 +29,45 @@ def redirect_mixed(request):
     return redirect("mixed/")
 
 
+def healthcheck(request):
+    """Endpoint /health/ — usado pelo Docker healthcheck e Caddy.
+
+    Verifica:
+      - DB conecta e responde a `SELECT 1`
+      - Cache (Redis) está acessível
+
+    Devolve 200 + JSON `{"status": "ok", ...}` se tudo OK,
+    senão 503 + detalhes do erro.
+    """
+    checks = {"db": "unknown", "cache": "unknown"}
+    status_code = 200
+    try:
+        with connection.cursor() as c:
+            c.execute("SELECT 1")
+            c.fetchone()
+        checks["db"] = "ok"
+    except Exception as e:
+        checks["db"] = f"error: {e}"[:80]
+        status_code = 503
+    try:
+        from django.core.cache import cache
+        cache.set("_health", "1", 5)
+        cache.get("_health")
+        checks["cache"] = "ok"
+    except Exception as e:
+        checks["cache"] = f"error: {e}"[:80]
+        status_code = 503
+    return JsonResponse(
+        {
+            "status": "ok" if status_code == 200 else "degraded",
+            "checks": checks,
+        },
+        status=status_code,
+    )
+
+
 urlpatterns = [
+    path("health/", healthcheck, name="healthcheck"),
     path("admin/", admin.site.urls),
     # path('', redirect_mixed, name='redirect_mixed'),
     # path('old/', include('management.urls')),  # Para acessar na raiz

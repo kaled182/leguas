@@ -1,0 +1,281 @@
+{% extends 'settlements/base.html' %}
+{% load static %}
+{% block title %}Demonstração de Resultados{% endblock %}
+{% block content %}
+<style>
+  .row-line { display:flex; justify-content:space-between; padding:0.5rem 1rem; border-bottom:1px solid rgba(0,0,0,0.05); }
+  .dark .row-line { border-color:rgba(255,255,255,0.05); }
+  .row-line.indent { padding-left:2.5rem; font-size:0.875rem; color:#6b7280; }
+  .row-line.subtotal { font-weight:600; background:rgba(99,102,241,0.05); }
+  .row-line.total { font-weight:bold; background:rgba(16,185,129,0.1); border-top:2px solid #10b981; font-size:1rem; }
+  .row-line.total.negative { background:rgba(244,63,94,0.1); border-color:#f43f5e; }
+  .num { font-family:monospace; }
+  .pos { color:#059669; }
+  .neg { color:#dc2626; }
+</style>
+<div class="max-w-screen-xl mx-auto px-4 py-6 space-y-4">
+  <!-- Header -->
+  <div class="flex items-center justify-between flex-wrap gap-3">
+    <div>
+      <h1 class="text-2xl font-bold flex items-center gap-2">
+        <i data-lucide="bar-chart-3" class="w-6 h-6 text-indigo-500"></i>
+        Demonstração de Resultados
+      </h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400">
+        Receitas, custos directos e fixos — análise de margem por período.
+      </p>
+    </div>
+    <a href="{% url 'accounting:bill_list' %}" class="px-3 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-sm font-semibold flex items-center gap-1.5">
+      <i data-lucide="receipt" class="w-4 h-4"></i> Contas a Pagar
+    </a>
+  </div>
+
+  <!-- Filtros de Período -->
+  <form method="get" class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+    <div class="flex items-center gap-2 flex-wrap">
+      <span class="text-xs font-bold uppercase text-gray-500">Período:</span>
+      <input type="date" name="date_from" value="{{ date_from|date:'Y-m-d' }}" class="px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700">
+      <span class="text-gray-400">→</span>
+      <input type="date" name="date_to" value="{{ date_to|date:'Y-m-d' }}" class="px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700">
+      <button type="submit" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-sm font-semibold">
+        Aplicar
+      </button>
+      <span class="ml-auto text-xs text-gray-500">
+        Atalhos:
+        <button type="button" onclick="setRange('today')" class="ml-1 px-2 py-0.5 bg-gray-200 dark:bg-gray-700 rounded">Hoje</button>
+        <button type="button" onclick="setRange('this_month')" class="px-2 py-0.5 bg-gray-200 dark:bg-gray-700 rounded">Este mês</button>
+        <button type="button" onclick="setRange('last_month')" class="px-2 py-0.5 bg-gray-200 dark:bg-gray-700 rounded">Mês passado</button>
+        <button type="button" onclick="setRange('this_year')" class="px-2 py-0.5 bg-gray-200 dark:bg-gray-700 rounded">Ano</button>
+      </span>
+    </div>
+  </form>
+
+  <!-- KPIs principais com comparativos MoM/YoY -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+    {# Receita #}
+    <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-700 p-3">
+      <div class="text-[10px] uppercase text-blue-700 dark:text-blue-300">Receita</div>
+      <div class="text-2xl font-bold text-blue-700 dark:text-blue-300">€{{ total_revenue|floatformat:2 }}</div>
+      <div class="mt-1 flex flex-wrap gap-1 text-[10px]">
+        {% with d=deltas.total_revenue %}
+          {% if d.vs_prev_pct is not None %}
+            <span class="px-1.5 py-0.5 rounded {% if d.vs_prev_pct >= 0 %}bg-emerald-100 text-emerald-700{% else %}bg-rose-100 text-rose-700{% endif %}" title="Período anterior: €{{ d.prev|floatformat:2 }}">MoM {{ d.vs_prev_pct|floatformat:1 }}%</span>
+          {% endif %}
+          {% if d.vs_yoy_pct is not None %}
+            <span class="px-1.5 py-0.5 rounded {% if d.vs_yoy_pct >= 0 %}bg-emerald-100 text-emerald-700{% else %}bg-rose-100 text-rose-700{% endif %}" title="Mesmo período ano anterior: €{{ d.yoy|floatformat:2 }}">YoY {{ d.vs_yoy_pct|floatformat:1 }}%</span>
+          {% endif %}
+        {% endwith %}
+      </div>
+    </div>
+
+    {# Margem Bruta #}
+    <div class="bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-700 p-3">
+      <div class="text-[10px] uppercase text-emerald-700 dark:text-emerald-300">Margem Bruta</div>
+      <div class="text-2xl font-bold {% if margem_bruta < 0 %}text-rose-600{% else %}text-emerald-700{% endif %}">€{{ margem_bruta|floatformat:2 }}</div>
+      <div class="text-[10px] text-emerald-600 dark:text-emerald-400">{{ margem_bruta_pct|floatformat:1 }}% sobre receita</div>
+      <div class="mt-1 flex flex-wrap gap-1 text-[10px]">
+        {% with d=deltas.margem_bruta %}
+          {% if d.vs_prev_pct is not None %}
+            <span class="px-1.5 py-0.5 rounded {% if d.vs_prev_pct >= 0 %}bg-emerald-100 text-emerald-700{% else %}bg-rose-100 text-rose-700{% endif %}" title="Período anterior: €{{ d.prev|floatformat:2 }}">MoM {{ d.vs_prev_pct|floatformat:1 }}%</span>
+          {% endif %}
+          {% if d.vs_yoy_pct is not None %}
+            <span class="px-1.5 py-0.5 rounded {% if d.vs_yoy_pct >= 0 %}bg-emerald-100 text-emerald-700{% else %}bg-rose-100 text-rose-700{% endif %}" title="Ano anterior: €{{ d.yoy|floatformat:2 }}">YoY {{ d.vs_yoy_pct|floatformat:1 }}%</span>
+          {% endif %}
+        {% endwith %}
+      </div>
+    </div>
+
+    {# EBITDA #}
+    <div class="bg-violet-50 dark:bg-violet-900/20 rounded-lg border border-violet-200 dark:border-violet-700 p-3">
+      <div class="text-[10px] uppercase text-violet-700 dark:text-violet-300">EBITDA</div>
+      <div class="text-2xl font-bold {% if ebitda < 0 %}text-rose-600{% else %}text-violet-700{% endif %}">€{{ ebitda|floatformat:2 }}</div>
+      <div class="text-[10px] text-violet-600 dark:text-violet-400">{{ ebitda_pct|floatformat:1 }}%</div>
+      <div class="mt-1 flex flex-wrap gap-1 text-[10px]">
+        {% with d=deltas.ebitda %}
+          {% if d.vs_prev_pct is not None %}
+            <span class="px-1.5 py-0.5 rounded {% if d.vs_prev_pct >= 0 %}bg-emerald-100 text-emerald-700{% else %}bg-rose-100 text-rose-700{% endif %}" title="Período anterior: €{{ d.prev|floatformat:2 }}">MoM {{ d.vs_prev_pct|floatformat:1 }}%</span>
+          {% endif %}
+          {% if d.vs_yoy_pct is not None %}
+            <span class="px-1.5 py-0.5 rounded {% if d.vs_yoy_pct >= 0 %}bg-emerald-100 text-emerald-700{% else %}bg-rose-100 text-rose-700{% endif %}" title="Ano anterior: €{{ d.yoy|floatformat:2 }}">YoY {{ d.vs_yoy_pct|floatformat:1 }}%</span>
+          {% endif %}
+        {% endwith %}
+      </div>
+    </div>
+
+    {# Resultado Líquido #}
+    <div class="bg-{% if resultado_liquido < 0 %}rose{% else %}gray{% endif %}-50 dark:bg-{% if resultado_liquido < 0 %}rose{% else %}gray{% endif %}-900/20 rounded-lg border border-{% if resultado_liquido < 0 %}rose{% else %}gray{% endif %}-300 p-3">
+      <div class="text-[10px] uppercase text-{% if resultado_liquido < 0 %}rose{% else %}gray{% endif %}-700">Resultado Líquido</div>
+      <div class="text-2xl font-bold {% if resultado_liquido < 0 %}text-rose-700{% else %}text-gray-900 dark:text-white{% endif %}">€{{ resultado_liquido|floatformat:2 }}</div>
+      <div class="text-[10px] text-gray-500">{{ resultado_pct|floatformat:1 }}% sobre receita</div>
+      <div class="mt-1 flex flex-wrap gap-1 text-[10px]">
+        {% with d=deltas.resultado_liquido %}
+          {% if d.vs_prev_pct is not None %}
+            <span class="px-1.5 py-0.5 rounded {% if d.vs_prev_pct >= 0 %}bg-emerald-100 text-emerald-700{% else %}bg-rose-100 text-rose-700{% endif %}" title="Período anterior: €{{ d.prev|floatformat:2 }}">MoM {{ d.vs_prev_pct|floatformat:1 }}%</span>
+          {% endif %}
+          {% if d.vs_yoy_pct is not None %}
+            <span class="px-1.5 py-0.5 rounded {% if d.vs_yoy_pct >= 0 %}bg-emerald-100 text-emerald-700{% else %}bg-rose-100 text-rose-700{% endif %}" title="Ano anterior: €{{ d.yoy|floatformat:2 }}">YoY {{ d.vs_yoy_pct|floatformat:1 }}%</span>
+          {% endif %}
+        {% endwith %}
+      </div>
+    </div>
+  </div>
+  <p class="text-[10px] text-gray-500 dark:text-gray-400 -mt-2">
+    <strong>MoM</strong>: vs {{ prev_from|date:"d/m" }}–{{ prev_to|date:"d/m/Y" }} ·
+    <strong>YoY</strong>: vs {{ yoy_from|date:"d/m" }}–{{ yoy_to|date:"d/m/Y" }}
+  </p>
+
+  <!-- DRE Estruturado -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <div class="px-4 py-3 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
+      <h2 class="text-sm font-bold flex items-center gap-2">
+        <i data-lucide="file-spreadsheet" class="w-4 h-4 text-indigo-500"></i>
+        DRE · {{ date_from|date:"d/m/Y" }} → {{ date_to|date:"d/m/Y" }}
+      </h2>
+    </div>
+
+    <!-- RECEITAS -->
+    <div class="row-line subtotal">
+      <span class="font-bold text-blue-700 dark:text-blue-300">RECEITAS BRUTAS</span>
+      <span class="num font-bold">€{{ total_revenue|floatformat:2 }}</span>
+    </div>
+    {% for r in revenues_by_hub %}
+    <div class="row-line indent">
+      <span>↳ {{ r.hub_name }} ({{ r.deliveries }} entregas)</span>
+      <span class="num pos">€{{ r.revenue|floatformat:2 }}</span>
+    </div>
+    {% endfor %}
+
+    <!-- (–) CUSTOS DIRECTOS -->
+    <div class="row-line subtotal">
+      <span class="font-bold text-rose-700 dark:text-rose-400">(–) CUSTOS DIRECTOS DA OPERAÇÃO</span>
+      <span class="num font-bold neg">€{{ total_direct_op|floatformat:2 }}</span>
+    </div>
+    <div class="row-line indent">
+      <span>↳ Pagamentos a motoristas (PFs)</span>
+      <span class="num neg">€{{ total_driver_cost|floatformat:2 }}</span>
+    </div>
+    {% if total_returns_cost %}
+    <div class="row-line indent">
+      <span>↳ Devoluções (custo de retorno)</span>
+      <span class="num neg">€{{ total_returns_cost|floatformat:2 }}</span>
+    </div>
+    {% endif %}
+    {% for c in direct_extra_lines %}
+    <div class="row-line indent">
+      <span>↳ {{ c.name }} ({{ c.n }})</span>
+      <span class="num neg">€{{ c.total|floatformat:2 }}</span>
+    </div>
+    {% endfor %}
+
+    <!-- = MARGEM BRUTA -->
+    <div class="row-line {% if margem_bruta < 0 %}total negative{% else %}total{% endif %}">
+      <span>= MARGEM BRUTA</span>
+      <span class="num">€{{ margem_bruta|floatformat:2 }}</span>
+    </div>
+
+    <!-- (–) CUSTOS VARIÁVEIS -->
+    {% if total_variavel %}
+    <div class="row-line subtotal">
+      <span class="font-bold">(–) CUSTOS VARIÁVEIS</span>
+      <span class="num font-bold neg">€{{ total_variavel|floatformat:2 }}</span>
+    </div>
+    {% for c in variavel_lines %}
+    <div class="row-line indent">
+      <span>↳ {{ c.name }} ({{ c.n }})</span>
+      <span class="num neg">€{{ c.total|floatformat:2 }}</span>
+    </div>
+    {% endfor %}
+    <div class="row-line subtotal">
+      <span>= MARGEM DE CONTRIBUIÇÃO</span>
+      <span class="num">€{{ margem_contribuicao|floatformat:2 }} ({{ margem_contribuicao_pct|floatformat:1 }}%)</span>
+    </div>
+    {% endif %}
+
+    <!-- (–) CUSTOS FIXOS -->
+    {% if total_fixo %}
+    <div class="row-line subtotal">
+      <span class="font-bold">(–) CUSTOS FIXOS</span>
+      <span class="num font-bold neg">€{{ total_fixo|floatformat:2 }}</span>
+    </div>
+    {% for c in fixo_lines %}
+    <div class="row-line indent">
+      <span>↳ {{ c.name }} ({{ c.n }})</span>
+      <span class="num neg">€{{ c.total|floatformat:2 }}</span>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <div class="row-line {% if ebitda < 0 %}total negative{% else %}total{% endif %}">
+      <span>= EBITDA / Resultado Operacional</span>
+      <span class="num">€{{ ebitda|floatformat:2 }} ({{ ebitda_pct|floatformat:1 }}%)</span>
+    </div>
+
+    {% if total_financeiro %}
+    <div class="row-line subtotal">
+      <span class="font-bold">(–) ENCARGOS FINANCEIROS</span>
+      <span class="num font-bold neg">€{{ total_financeiro|floatformat:2 }}</span>
+    </div>
+    {% for c in financeiro_lines %}
+    <div class="row-line indent">
+      <span>↳ {{ c.name }} ({{ c.n }})</span>
+      <span class="num neg">€{{ c.total|floatformat:2 }}</span>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <div class="row-line {% if resultado_liquido < 0 %}total negative{% else %}total{% endif %}">
+      <span>= RESULTADO LÍQUIDO</span>
+      <span class="num">€{{ resultado_liquido|floatformat:2 }} ({{ resultado_pct|floatformat:1 }}%)</span>
+    </div>
+  </div>
+
+  <!-- Por Centro de Custo -->
+  {% if by_cost_center %}
+  <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+    <h2 class="text-sm font-bold mb-3 flex items-center gap-2">
+      <i data-lucide="map-pin" class="w-4 h-4 text-blue-500"></i>
+      Despesas por Centro de Custo
+    </h2>
+    <table class="w-full text-sm">
+      <thead class="text-xs text-gray-500 uppercase">
+        <tr><th class="text-left py-2">Centro</th><th class="text-left">Tipo</th><th class="text-right">Total</th></tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100 dark:divide-gray-700/50">
+        {% for name, info in by_cost_center.items %}
+        <tr><td class="py-1.5">{{ name }}</td>
+          <td><span class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-xs">{{ info.type }}</span></td>
+          <td class="text-right font-mono neg">€{{ info.total|floatformat:2 }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</div>
+
+<script>
+function setRange(kind) {
+  const f = document.querySelector('[name=date_from]');
+  const t = document.querySelector('[name=date_to]');
+  const today = new Date();
+  const y = today.getFullYear();
+  const m = today.getMonth();
+  const fmt = d => d.toISOString().slice(0, 10);
+  if (kind === 'today') {
+    f.value = t.value = fmt(today);
+  } else if (kind === 'this_month') {
+    f.value = fmt(new Date(y, m, 1));
+    t.value = fmt(today);
+  } else if (kind === 'last_month') {
+    f.value = fmt(new Date(y, m - 1, 1));
+    t.value = fmt(new Date(y, m, 0));
+  } else if (kind === 'this_year') {
+    f.value = fmt(new Date(y, 0, 1));
+    t.value = fmt(today);
+  }
+  f.form.submit();
+}
+document.addEventListener('DOMContentLoaded', () => {
+  if (window.lucide) lucide.createIcons();
+});
+</script>
+{% endblock %}

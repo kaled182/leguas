@@ -1,6 +1,6 @@
 ﻿from django.urls import path
 
-from . import driversmanagement, views
+from . import driversmanagement, tools_views, views
 
 app_name = "management"
 
@@ -30,5 +30,11 @@ urlpatterns = [
         "driversmanagement/change_password/<int:access_id>/",
         driversmanagement.change_driver_password,
         name="change_driver_password",
+    ),
+    # Ferramentas
+    path(
+        "tools/qr-generator/",
+        tools_views.qr_generator_view,
+        name="qr-generator",
     ),
 ]

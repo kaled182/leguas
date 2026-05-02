@@ -1,0 +1,231 @@
+{% extends "management/base.html" %}
+{% load static %}
+
+{% block title %}Gerador de QR Code{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  @media print {
+    body * { visibility: hidden; }
+    #printArea, #printArea * { visibility: visible; }
+    #printArea {
+      position: absolute;
+      inset: 0;
+      padding: 8mm;
+    }
+    .qr-card {
+      break-inside: avoid;
+    }
+    .no-print { display: none !important; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-6">
+
+  <!-- Header -->
+  <div class="flex items-center gap-4 no-print">
+    <div class="w-12 h-12 bg-gradient-to-br from-violet-500 to-violet-600 rounded-xl flex items-center justify-center shadow-md">
+      <i data-lucide="qr-code" class="w-6 h-6 text-white"></i>
+    </div>
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Gerador de QR Code</h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400">Cole os códigos (um por linha) e gere os QR Codes para impressão</p>
+    </div>
+  </div>
+
+  <!-- Input panel -->
+  <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 space-y-4 no-print">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+      <!-- Codes textarea -->
+      <div class="lg:col-span-2 space-y-2">
+        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+          Códigos <span id="codeCount" class="text-xs font-normal text-gray-400">(0 códigos)</span>
+        </label>
+        <textarea id="codesInput"
+                  rows="10"
+                  placeholder="Cole os códigos aqui, um por linha:&#10;CNPRT37402671234006412077&#10;CNPRT37404261234006425708&#10;..."
+                  class="w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm font-mono px-4 py-3 focus:ring-2 focus:ring-violet-500 focus:border-transparent resize-y outline-none transition-colors"></textarea>
+      </div>
+
+      <!-- Options -->
+      <div class="space-y-4">
+        <div class="space-y-2">
+          <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300">Tamanho do QR Code</label>
+          <select id="qrSize" class="w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm px-4 py-2.5 outline-none focus:ring-2 focus:ring-violet-500">
+            <option value="80">Pequeno (80px)</option>
+            <option value="120" selected>Médio (120px)</option>
+            <option value="160">Grande (160px)</option>
+            <option value="200">Extra Grande (200px)</option>
+          </select>
+        </div>
+
+        <div class="space-y-2">
+          <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300">Colunas por linha</label>
+          <select id="gridCols" class="w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm px-4 py-2.5 outline-none focus:ring-2 focus:ring-violet-500">
+            <option value="2">2 colunas</option>
+            <option value="3">3 colunas</option>
+            <option value="4" selected>4 colunas</option>
+            <option value="5">5 colunas</option>
+            <option value="6">6 colunas</option>
+            <option value="8">8 colunas</option>
+          </select>
+        </div>
+
+        <div class="space-y-2">
+          <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300">Mostrar código</label>
+          <div class="flex items-center gap-3">
+            <input type="checkbox" id="showCode" checked
+                   class="w-4 h-4 rounded text-violet-600 border-gray-300 focus:ring-violet-500">
+            <span class="text-sm text-gray-600 dark:text-gray-400">Exibir código por extenso</span>
+          </div>
+        </div>
+
+        <button id="generateBtn"
+                onclick="generateQRCodes()"
+                class="w-full px-4 py-3 bg-violet-600 hover:bg-violet-700 text-white rounded-xl font-semibold text-sm transition-colors flex items-center justify-center gap-2">
+          <i data-lucide="zap" class="w-4 h-4"></i>
+          Gerar QR Codes
+        </button>
+
+        <button onclick="printCodes()"
+                id="printBtn"
+                class="w-full px-4 py-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-xl font-semibold text-sm transition-colors flex items-center justify-center gap-2 hidden">
+          <i data-lucide="printer" class="w-4 h-4"></i>
+          Imprimir
+        </button>
+      </div>
+    </div>
+
+    <!-- Status bar -->
+    <div id="statusBar" class="hidden px-4 py-2.5 bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800 rounded-xl text-sm text-violet-700 dark:text-violet-300 flex items-center gap-2">
+      <i data-lucide="loader-2" class="w-4 h-4 animate-spin" id="statusIcon"></i>
+      <span id="statusText">A gerar...</span>
+    </div>
+  </div>
+
+  <!-- Output -->
+  <div id="printArea">
+    <div id="qrGrid" class="grid gap-3"
+         style="grid-template-columns: repeat(4, minmax(0, 1fr));">
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  const codesInput = document.getElementById('codesInput');
+  const codeCount  = document.getElementById('codeCount');
+  const statusBar  = document.getElementById('statusBar');
+  const statusIcon = document.getElementById('statusIcon');
+  const statusText = document.getElementById('statusText');
+  const printBtn   = document.getElementById('printBtn');
+  const qrGrid     = document.getElementById('qrGrid');
+
+  codesInput.addEventListener('input', function() {
+    const codes = parseCodes();
+    codeCount.textContent = '(' + codes.length + ' código' + (codes.length !== 1 ? 's' : '') + ')';
+  });
+
+  document.getElementById('gridCols').addEventListener('change', function() {
+    qrGrid.style.gridTemplateColumns = 'repeat(' + this.value + ', minmax(0, 1fr))';
+  });
+
+  function parseCodes() {
+    return codesInput.value
+      .split('\n')
+      .map(function(l) { return l.trim().toUpperCase(); })
+      .filter(function(l) { return l.length > 0; });
+  }
+
+  function generateQRCodes() {
+    const codes   = parseCodes();
+    const size    = parseInt(document.getElementById('qrSize').value);
+    const cols    = document.getElementById('gridCols').value;
+    const showCode = document.getElementById('showCode').checked;
+
+    if (codes.length === 0) {
+      alert('Cole pelo menos um código antes de gerar.');
+      return;
+    }
+
+    // Reset grid
+    qrGrid.innerHTML = '';
+    qrGrid.style.gridTemplateColumns = 'repeat(' + cols + ', minmax(0, 1fr))';
+    printBtn.classList.add('hidden');
+
+    // Show status
+    statusBar.classList.remove('hidden');
+    statusIcon.className = 'w-4 h-4 animate-spin';
+    statusIcon.setAttribute('data-lucide', 'loader-2');
+    statusText.textContent = 'A gerar ' + codes.length + ' QR Codes...';
+    lucide.createIcons();
+
+    // Generate in batches to avoid blocking UI
+    var idx = 0;
+    function nextBatch() {
+      var batchEnd = Math.min(idx + 20, codes.length);
+      for (; idx < batchEnd; idx++) {
+        var code = codes[idx];
+        var card = document.createElement('div');
+        card.className = 'qr-card bg-white border border-gray-200 rounded-xl p-3 flex flex-col items-center gap-2';
+
+        var qrDiv = document.createElement('div');
+        qrDiv.id = 'qr-' + idx;
+        card.appendChild(qrDiv);
+
+        if (showCode) {
+          var label = document.createElement('p');
+          label.className = 'text-center text-xs font-mono text-gray-800 break-all leading-tight';
+          label.textContent = code;
+          card.appendChild(label);
+        }
+
+        qrGrid.appendChild(card);
+
+        try {
+          new QRCode(qrDiv, {
+            text:            code,
+            width:           size,
+            height:          size,
+            colorDark:       '#000000',
+            colorLight:      '#ffffff',
+            correctLevel:    QRCode.CorrectLevel.M,
+          });
+        } catch(e) {
+          qrDiv.innerHTML = '<div class="text-xs text-red-500 p-2">Erro</div>';
+        }
+      }
+
+      if (idx < codes.length) {
+        statusText.textContent = 'A gerar... ' + idx + ' / ' + codes.length;
+        setTimeout(nextBatch, 10);
+      } else {
+        // Done
+        statusIcon.className = 'w-4 h-4';
+        statusIcon.setAttribute('data-lucide', 'check-circle');
+        statusText.textContent = codes.length + ' QR Codes gerados com sucesso.';
+        lucide.createIcons();
+        printBtn.classList.remove('hidden');
+        setTimeout(function() { statusBar.classList.add('hidden'); }, 3000);
+      }
+    }
+
+    setTimeout(nextBatch, 50);
+  }
+
+  function printCodes() {
+    window.print();
+  }
+
+  // Allow Enter key shortcut from textarea — Ctrl+Enter generates
+  codesInput.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.key === 'Enter') generateQRCodes();
+  });
+</script>
+{% endblock %}

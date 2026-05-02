@@ -1,0 +1,172 @@
+{% extends 'settlements/base.html' %}
+{% load static %}
+{% block title %}Projecção de Fluxo de Caixa{% endblock %}
+{% block content %}
+<style>
+  .num { font-family:monospace; }
+  .pos { color:#059669; }
+  .neg { color:#dc2626; }
+  .neg-row { background:rgba(244,63,94,0.07); }
+  .weekend { color:#9ca3af; }
+</style>
+<div class="max-w-screen-xl mx-auto px-4 py-6 space-y-4">
+  <!-- Header -->
+  <div class="flex items-center justify-between flex-wrap gap-3">
+    <div>
+      <h1 class="text-2xl font-bold flex items-center gap-2">
+        <i data-lucide="trending-up" class="w-6 h-6 text-emerald-500"></i>
+        Projecção de Fluxo de Caixa
+      </h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400">
+        Saldo projectado · saídas previstas (Bills futuras) + entradas previstas (Forecast Cainiao).
+      </p>
+    </div>
+    <div class="flex gap-2">
+      <a href="{% url 'accounting:dre' %}" class="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold flex items-center gap-1.5">
+        <i data-lucide="bar-chart-3" class="w-4 h-4"></i> DRE Realizado
+      </a>
+      <a href="{% url 'accounting:bill_list' %}" class="px-3 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-sm font-semibold flex items-center gap-1.5">
+        <i data-lucide="receipt" class="w-4 h-4"></i> Contas a Pagar
+      </a>
+    </div>
+  </div>
+
+  <!-- Filtros -->
+  <form method="get" class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+    <div class="flex items-center gap-2 flex-wrap">
+      <span class="text-xs font-bold uppercase text-gray-500">Início:</span>
+      <input type="date" name="start" value="{{ start|date:'Y-m-d' }}" class="px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700">
+      <span class="text-xs font-bold uppercase text-gray-500 ml-2">Horizonte:</span>
+      <select name="days" class="px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700">
+        <option value="7" {% if horizon_days == 7 %}selected{% endif %}>7 dias</option>
+        <option value="14" {% if horizon_days == 14 %}selected{% endif %}>14 dias</option>
+        <option value="30" {% if horizon_days == 30 %}selected{% endif %}>30 dias</option>
+        <option value="60" {% if horizon_days == 60 %}selected{% endif %}>60 dias</option>
+        <option value="90" {% if horizon_days == 90 %}selected{% endif %}>90 dias</option>
+        <option value="180" {% if horizon_days == 180 %}selected{% endif %}>180 dias</option>
+      </select>
+      <span class="text-xs font-bold uppercase text-gray-500 ml-2">Saldo inicial €:</span>
+      <input type="number" step="0.01" name="opening" value="{{ opening_balance }}" class="w-32 px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700">
+      <button type="submit" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-sm font-semibold">
+        Aplicar
+      </button>
+    </div>
+  </form>
+
+  <!-- KPIs -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+    <div class="bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-700 p-3">
+      <div class="text-[10px] uppercase text-emerald-700 dark:text-emerald-300">Entradas previstas</div>
+      <div class="text-2xl font-bold text-emerald-700 pos">€{{ total_in|floatformat:2 }}</div>
+      <div class="text-[10px] text-emerald-600 dark:text-emerald-400">Receita Cainiao @€{{ partner_price|floatformat:2 }}/pacote</div>
+    </div>
+    <div class="bg-rose-50 dark:bg-rose-900/20 rounded-lg border border-rose-200 dark:border-rose-700 p-3">
+      <div class="text-[10px] uppercase text-rose-700 dark:text-rose-300">Saídas previstas</div>
+      <div class="text-2xl font-bold text-rose-700 neg">€{{ total_out|floatformat:2 }}</div>
+      <div class="text-[10px] text-rose-600 dark:text-rose-400">Bills com vencimento no horizonte</div>
+    </div>
+    <div class="bg-{% if net_change < 0 %}rose{% else %}emerald{% endif %}-50 dark:bg-{% if net_change < 0 %}rose{% else %}emerald{% endif %}-900/20 rounded-lg border border-{% if net_change < 0 %}rose{% else %}emerald{% endif %}-300 p-3">
+      <div class="text-[10px] uppercase">Variação líquida</div>
+      <div class="text-2xl font-bold {% if net_change < 0 %}neg{% else %}pos{% endif %}">€{{ net_change|floatformat:2 }}</div>
+    </div>
+    <div class="bg-{% if final_balance < 0 %}rose{% else %}gray{% endif %}-50 dark:bg-{% if final_balance < 0 %}rose{% else %}gray{% endif %}-900/20 rounded-lg border border-gray-300 p-3">
+      <div class="text-[10px] uppercase text-gray-700">Saldo final projectado</div>
+      <div class="text-2xl font-bold {% if final_balance < 0 %}neg{% else %}text-gray-900 dark:text-white{% endif %}">€{{ final_balance|floatformat:2 }}</div>
+      <div class="text-[10px] text-gray-500">Inicial: €{{ opening_balance|floatformat:2 }}</div>
+    </div>
+  </div>
+
+  {% if n_critical %}
+  <div class="bg-rose-50 dark:bg-rose-900/20 border border-rose-300 dark:border-rose-700 rounded-lg p-3">
+    <div class="flex items-center gap-2 text-rose-700 dark:text-rose-300 font-semibold text-sm">
+      <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+      ⚠ {{ n_critical }} dia{{ n_critical|pluralize:"s" }} com saldo negativo no horizonte
+    </div>
+    <p class="text-xs text-rose-600 dark:text-rose-400 mt-1">
+      Considera adiar pagamentos ou antecipar entradas. Primeiro dia crítico: <strong>{{ critical_days.0.date|date:"d/m/Y" }}</strong> (€{{ critical_days.0.balance|floatformat:2 }})
+    </p>
+  </div>
+  {% endif %}
+
+  <!-- Timeline diária -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <div class="px-4 py-3 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
+      <h2 class="text-sm font-bold flex items-center gap-2">
+        <i data-lucide="calendar" class="w-4 h-4 text-blue-500"></i>
+        Projecção dia-a-dia · {{ start|date:"d/m/Y" }} → {{ end|date:"d/m/Y" }}
+      </h2>
+    </div>
+    <div class="overflow-x-auto max-h-[500px] overflow-y-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-gray-50 dark:bg-gray-700/50 sticky top-0">
+          <tr class="text-xs text-gray-500 uppercase">
+            <th class="px-3 py-2 text-left">Data</th>
+            <th class="px-3 py-2 text-left">Dia</th>
+            <th class="px-3 py-2 text-right pos">Entradas</th>
+            <th class="px-3 py-2 text-right neg">Saídas</th>
+            <th class="px-3 py-2 text-right">Líquido</th>
+            <th class="px-3 py-2 text-right">Saldo</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-700/50">
+          {% for d in timeline %}
+          <tr class="{% if d.negative %}neg-row{% endif %}">
+            <td class="px-3 py-1.5 num text-xs">{{ d.date|date:"d/m/Y" }}</td>
+            <td class="px-3 py-1.5 text-xs {% if d.weekday == 'Sáb' or d.weekday == 'Dom' %}weekend{% endif %}">{{ d.weekday }}</td>
+            <td class="px-3 py-1.5 num text-right pos">{% if d.inflow %}€{{ d.inflow|floatformat:2 }}{% else %}—{% endif %}</td>
+            <td class="px-3 py-1.5 num text-right neg">{% if d.outflow %}€{{ d.outflow|floatformat:2 }}{% else %}—{% endif %}</td>
+            <td class="px-3 py-1.5 num text-right {% if d.net < 0 %}neg{% elif d.net > 0 %}pos{% endif %}">
+              {% if d.net != 0 %}€{{ d.net|floatformat:2 }}{% else %}—{% endif %}
+            </td>
+            <td class="px-3 py-1.5 num text-right font-bold {% if d.balance < 0 %}neg{% endif %}">€{{ d.balance|floatformat:2 }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Bills detalhadas -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <div class="px-4 py-3 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
+      <h2 class="text-sm font-bold flex items-center gap-2">
+        <i data-lucide="list" class="w-4 h-4 text-rose-500"></i>
+        Bills no horizonte ({{ bills_detail|length }})
+      </h2>
+    </div>
+    <table class="w-full text-sm">
+      <thead class="bg-gray-50 dark:bg-gray-700/50">
+        <tr class="text-xs text-gray-500 uppercase">
+          <th class="px-3 py-2 text-left">Vencimento</th>
+          <th class="px-3 py-2 text-left">Descrição</th>
+          <th class="px-3 py-2 text-left">Centro</th>
+          <th class="px-3 py-2 text-right">Valor</th>
+          <th class="px-3 py-2 text-center">Estado</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100 dark:divide-gray-700/50">
+        {% for b in bills_detail %}
+        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+          <td class="px-3 py-1.5 num text-xs">{{ b.due_date|date:"d/m/Y" }}</td>
+          <td class="px-3 py-1.5">
+            <a href="{% url 'accounting:bill_detail' b.pk %}" class="text-indigo-600 dark:text-indigo-400 hover:underline">{{ b.description }}</a>
+            <div class="text-[10px] text-gray-500">{{ b.supplier }} · {{ b.category.name }}</div>
+          </td>
+          <td class="px-3 py-1.5 text-xs">{{ b.cost_center.name }}</td>
+          <td class="px-3 py-1.5 num text-right neg">€{{ b.amount_total|floatformat:2 }}</td>
+          <td class="px-3 py-1.5 text-center text-xs">{{ b.get_status_display }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="px-3 py-8 text-center text-gray-400">Nenhuma bill no horizonte.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  if (window.lucide) lucide.createIcons();
+});
+</script>
+{% endblock %}

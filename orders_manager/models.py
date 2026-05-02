@@ -371,3 +371,151 @@ class OrderIncident(models.Model):
         self.resolved_at = timezone.now()
         self.resolution_notes = resolution_notes
         self.save()
+
+
+class GeocodedAddress(models.Model):
+    """
+    Cache de endereços geocodificados para evitar requests repetidos
+    """
+    
+    # Endereço original
+    address = models.TextField("Endereço Original")
+    postal_code = models.CharField("Código Postal", max_length=10)
+    locality = models.CharField("Localidade", max_length=200)
+    
+    # Endereço normalizado (usado para busca)
+    normalized_address = models.TextField("Endereço Normalizado", db_index=True)
+    
+    # Coordenadas geocodificadas
+    latitude = models.DecimalField(
+        "Latitude", 
+        max_digits=9, 
+        decimal_places=6,
+        null=True,
+        blank=True
+    )
+    longitude = models.DecimalField(
+        "Longitude", 
+        max_digits=9, 
+        decimal_places=6,
+        null=True,
+        blank=True
+    )
+    
+    # Qualidade da geocodificação
+    geocode_quality = models.CharField(
+        "Qualidade",
+        max_length=20,
+        choices=[
+            ('EXACT', 'Endereço Exato'),
+            ('STREET', 'Rua'),
+            ('POSTAL_CODE', 'Código Postal'),
+            ('LOCALITY', 'Localidade'),
+            ('MANUAL', 'Manual'),
+            ('FAILED', 'Falhou'),
+        ],
+        default='FAILED'
+    )
+    
+    # Metadata
+    geocoded_at = models.DateTimeField("Geocodificado em", auto_now_add=True)
+    geocode_source = models.CharField("Fonte", max_length=50, default="Nominatim")
+    
+    class Meta:
+        verbose_name = "Endereço Geocodificado"
+        verbose_name_plural = "Endereços Geocodificados"
+        indexes = [
+            models.Index(fields=['normalized_address']),
+            models.Index(fields=['postal_code', 'locality']),
+        ]
+        unique_together = ['normalized_address']
+    
+    def __str__(self):
+        return f"{self.normalized_address} → ({self.latitude}, {self.longitude})"
+
+
+class GeocodingFailure(models.Model):
+    """Registra endereços que falharam na geocodificação para revisão manual"""
+    
+    order = models.ForeignKey(
+        Order,
+        on_delete=models.CASCADE,
+        related_name='geocoding_failures',
+        verbose_name="Pedido"
+    )
+    
+    # Dados do endereço original
+    original_address = models.TextField("Endereço Original")
+    normalized_address = models.TextField("Endereço Normalizado")
+    postal_code = models.CharField("Código Postal", max_length=20)
+    locality = models.CharField("Localidade", max_length=100, blank=True)
+    
+    # Informações da falha
+    failure_reason = models.TextField("Motivo da Falha", blank=True)
+    attempted_at = models.DateTimeField("Tentativa em", auto_now_add=True)
+    retry_count = models.IntegerField("Tentativas", default=1)
+    last_retry_at = models.DateTimeField("Última Tentativa", auto_now=True)
+    
+    # Status
+    resolved = models.BooleanField("Resolvido", default=False)
+    resolved_at = models.DateTimeField("Resolvido em", null=True, blank=True)
+    resolved_by = models.ForeignKey(
+        'auth.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name="Resolvido por"
+    )
+    
+    # Coordenadas manuais (se resolvido manualmente)
+    manual_latitude = models.DecimalField(
+        "Latitude Manual",
+        max_digits=9,
+        decimal_places=6,
+        null=True,
+        blank=True
+    )
+    manual_longitude = models.DecimalField(
+        "Longitude Manual",
+        max_digits=9,
+        decimal_places=6,
+        null=True,
+        blank=True
+    )
+    
+    class Meta:
+        verbose_name = "Falha de Geocodificação"
+        verbose_name_plural = "Falhas de Geocodificação"
+        ordering = ['-attempted_at']
+        indexes = [
+            models.Index(fields=['resolved', 'attempted_at']),
+            models.Index(fields=['postal_code']),
+        ]
+    
+    def __str__(self):
+        status = "✓ Resolvido" if self.resolved else f"✗ Falhou ({self.retry_count}x)"
+        return f"{status} - {self.order.external_reference}"
+    
+    def mark_resolved(self, lat, lng, user=None):
+        """Marca a falha como resolvida com coordenadas manuais"""
+        from django.utils import timezone
+        self.resolved = True
+        self.resolved_at = timezone.now()
+        self.resolved_by = user
+        self.manual_latitude = lat
+        self.manual_longitude = lng
+        self.save()
+        
+        # Criar entrada de geocodificação
+        GeocodedAddress.objects.update_or_create(
+            normalized_address=self.normalized_address,
+            defaults={
+                'address': self.original_address,
+                'postal_code': self.postal_code,
+                'locality': self.locality,
+                'latitude': lat,
+                'longitude': lng,
+                'geocode_quality': 'MANUAL',
+                'geocode_source': 'Manual'
+            }
+        )

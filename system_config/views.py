@@ -43,6 +43,11 @@ def save_config(request):
     field_mappings = {
         # Empresa
         "company_name": "company_name",
+        "company_nif": "company_nif",
+        "company_morada": "company_morada",
+        "company_localidade": "company_localidade",
+        "company_telefone": "company_telefone",
+        "company_email": "company_email",
         # Mapas - Básicos
         "map_provider": "map_provider",
         "map_default_lat": "map_default_lat",

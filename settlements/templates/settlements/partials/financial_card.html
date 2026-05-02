@@ -3,8 +3,10 @@
   - Visual clean com cores otimizadas
   - Animações suaves e transições
   - Responsivo e acessível
+  - Suporta link_url opcional para tornar o card clicável
 -->
-<article class="dashboard-card group relative overflow-hidden rounded-xl border border-gray-200/50 dark:border-gray-700/50 bg-white dark:bg-gray-800 shadow-sm hover:shadow-lg dark:shadow-xl transition-all duration-300 hover:-translate-y-1 card-{{ color }}" data-card="{{ card_id }}">
+{% if link_url %}<a href="{{ link_url }}" class="block focus:outline-none focus:ring-2 focus:ring-{{ color }}-500 rounded-xl">{% endif %}
+<article class="dashboard-card group relative overflow-hidden rounded-xl border border-gray-200/50 dark:border-gray-700/50 bg-white dark:bg-gray-800 shadow-sm hover:shadow-lg dark:shadow-xl transition-all duration-300 hover:-translate-y-1 card-{{ color }}{% if link_url %} cursor-pointer{% endif %}" data-card="{{ card_id }}">
   <div class="p-6">
     <!-- Header do card -->
     <div class="flex items-start justify-between mb-4">
@@ -17,12 +19,15 @@
           <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ description }}</p>
         </div>
       </div>
+      {% if link_url %}
+        <i data-lucide="arrow-up-right" class="w-4 h-4 text-gray-400 dark:text-gray-500 group-hover:text-{{ color }}-500 transition-colors flex-shrink-0"></i>
+      {% endif %}
     </div>
-    
+
     <!-- Valor principal -->
     <div class="flex items-baseline gap-2">
       <span class="{% if custom_text_size %}{{ custom_text_size }}{% else %}text-3xl{% endif %} font-bold text-gray-900 dark:text-white tracking-tight" id="{{ card_id }}">
-        {{ value|default:"—" }}{% if suffix %}<span class="ml-1 {% if custom_text_size %}{{ custom_text_size|default:'text-xl' }}{% else %}text-xl{% endif %}">{{ suffix }}</span>{% endif %}
+        {% if value_prefix %}<span class="text-xl mr-1">{{ value_prefix }}</span>{% endif %}{{ value|default:"—" }}{% if suffix %}<span class="ml-1 {% if custom_text_size %}{{ custom_text_size|default:'text-xl' }}{% else %}text-xl{% endif %}">{{ suffix }}</span>{% endif %}
       </span>
       {% if trend == 'up' %}
         <div class="flex items-center text-emerald-500 dark:text-emerald-400">
@@ -34,8 +39,12 @@
         </div>
       {% endif %}
     </div>
+    {% if subtitle %}
+      <div class="mt-2 text-xs text-gray-500 dark:text-gray-400">{{ subtitle }}</div>
+    {% endif %}
   </div>
-  
+
   <!-- Gradiente decorativo -->
   <div class="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-{{ color }}-400 to-{{ color }}-600"></div>
 </article>
+{% if link_url %}</a>{% endif %}

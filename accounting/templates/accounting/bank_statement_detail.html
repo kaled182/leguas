@@ -1,0 +1,123 @@
+{% extends 'settlements/base.html' %}
+{% load static %}
+{% block title %}{{ statement.name }}{% endblock %}
+{% block content %}
+<style>
+  .num { font-family:monospace; }
+  .pos { color:#059669; }
+  .neg { color:#dc2626; }
+</style>
+<div class="max-w-screen-xl mx-auto px-4 py-6 space-y-4">
+  <div class="flex items-center justify-between flex-wrap gap-2">
+    <div class="flex items-center gap-3">
+      <a href="{% url 'accounting:bank_statement_list' %}" class="text-gray-500 hover:text-gray-700">
+        <i data-lucide="arrow-left" class="w-5 h-5"></i>
+      </a>
+      <h1 class="text-2xl font-bold flex items-center gap-2">
+        <i data-lucide="landmark" class="w-6 h-6 text-blue-500"></i> {{ statement.name }}
+      </h1>
+    </div>
+    <div class="text-xs text-gray-500">
+      {{ statement.period_from|date:"d/m/Y" }} → {{ statement.period_to|date:"d/m/Y" }}
+    </div>
+  </div>
+
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+    <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3">
+      <div class="text-[10px] uppercase text-gray-500">Total Transacções</div>
+      <div class="text-2xl font-bold">{{ n_total }}</div>
+    </div>
+    <div class="bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-300 dark:border-emerald-700 p-3">
+      <div class="text-[10px] uppercase text-emerald-700">Conciliadas</div>
+      <div class="text-2xl font-bold text-emerald-700">{{ n_matched }}</div>
+    </div>
+    <div class="bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-300 dark:border-amber-700 p-3">
+      <div class="text-[10px] uppercase text-amber-700">Débitos por conciliar</div>
+      <div class="text-2xl font-bold text-amber-700">{{ n_pending }}</div>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3">
+      <div class="text-[10px] uppercase text-gray-500">Importado em</div>
+      <div class="text-sm">{{ statement.uploaded_at|date:"d/m/Y H:i" }}</div>
+      <div class="text-[10px] text-gray-400">por {{ statement.uploaded_by|default:"—" }}</div>
+    </div>
+  </div>
+
+  <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-gray-50 dark:bg-gray-700/50">
+          <tr class="text-xs text-gray-500 uppercase">
+            <th class="px-3 py-2 text-left">Data</th>
+            <th class="px-3 py-2 text-left">Descrição</th>
+            <th class="px-3 py-2 text-right">Valor</th>
+            <th class="px-3 py-2 text-left">Conciliação</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-700/50">
+          {% for r in rows %}
+          <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 align-top">
+            <td class="px-3 py-2 num text-xs whitespace-nowrap">{{ r.tx.date|date:"d/m/Y" }}</td>
+            <td class="px-3 py-2 text-xs">
+              <div class="text-gray-700 dark:text-gray-200">{{ r.tx.description }}</div>
+              {% if r.tx.external_id %}<div class="text-[10px] text-gray-400 font-mono">ref: {{ r.tx.external_id }}</div>{% endif %}
+            </td>
+            <td class="px-3 py-2 text-right num">
+              <span class="{% if r.tx.direction == 'CREDIT' %}pos{% else %}neg{% endif %}">
+                {% if r.tx.direction == 'CREDIT' %}+{% else %}−{% endif %}€{{ r.tx.amount|floatformat:2 }}
+              </span>
+            </td>
+            <td class="px-3 py-2">
+              {% if r.tx.matched_bill_id %}
+                <div class="flex items-center gap-2 text-xs">
+                  <span class="px-1.5 py-0.5 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 rounded font-bold">CONCILIADO</span>
+                  <a href="{% url 'accounting:bill_detail' r.tx.matched_bill.pk %}" class="text-indigo-600 dark:text-indigo-400 hover:underline">{{ r.tx.matched_bill.description }}</a>
+                  <button onclick="unmatch({{ r.tx.pk }})" class="text-rose-500 hover:text-rose-700 ml-1" title="Desfazer conciliação">
+                    <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                  </button>
+                </div>
+              {% elif r.tx.direction == 'CREDIT' %}
+                <span class="text-xs text-gray-400 italic">Crédito (entrada)</span>
+              {% elif r.suggestions %}
+                <div class="space-y-1">
+                  {% for b in r.suggestions %}
+                  <button onclick="match({{ r.tx.pk }}, {{ b.pk }})" class="block text-left text-xs px-2 py-1 bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 border border-amber-300 dark:border-amber-700 rounded">
+                    <span class="font-semibold">{{ b.description }}</span>
+                    <span class="text-gray-500">· {{ b.supplier }} · {{ b.due_date|date:"d/m" }}</span>
+                  </button>
+                  {% endfor %}
+                </div>
+              {% else %}
+                <span class="text-xs text-amber-600">Sem sugestão · <a href="{% url 'accounting:bill_list' %}" class="text-indigo-600 hover:underline">procurar Bill manualmente</a></span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+<script>
+function getCsrf() {
+  return document.cookie.split(';').find(c => c.trim().startsWith('csrftoken='))?.split('=')[1];
+}
+async function match(txId, billId) {
+  if (!confirm('Conciliar esta transacção com a Bill seleccionada? A Bill ficará marcada como paga.')) return;
+  const fd = new FormData();
+  fd.append('bill_id', billId);
+  const r = await fetch(`/accounting/extractos/transacao/${txId}/conciliar/`, {
+    method: 'POST', body: fd, headers: { 'X-CSRFToken': getCsrf() },
+  });
+  if ((await r.json()).success) location.reload();
+}
+async function unmatch(txId) {
+  if (!confirm('Desfazer esta conciliação?')) return;
+  const r = await fetch(`/accounting/extractos/transacao/${txId}/desconciliar/`, {
+    method: 'POST', headers: { 'X-CSRFToken': getCsrf() },
+  });
+  if ((await r.json()).success) location.reload();
+}
+document.addEventListener('DOMContentLoaded', () => { if (window.lucide) lucide.createIcons(); });
+</script>
+{% csrf_token %}
+{% endblock %}

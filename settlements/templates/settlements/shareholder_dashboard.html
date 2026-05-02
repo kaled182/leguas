@@ -1,0 +1,500 @@
+{% extends 'settlements/base.html' %}
+{% load static %}
+
+{% block title %}Sócios e Reembolsos{% endblock %}
+
+{% block content %}
+<!-- Toast (padrão do projeto) -->
+<div id="toast" class="fixed bottom-6 right-6 z-[500] hidden">
+    <div id="toast-inner" class="flex items-center gap-3 px-5 py-3 rounded-xl shadow-2xl text-white text-sm font-medium">
+        <i id="toast-icon" data-lucide="check-circle" class="w-5 h-5 flex-shrink-0"></i>
+        <span id="toast-msg"></span>
+    </div>
+</div>
+
+<div x-data="shareholderDashboard()" x-init="init()" class="max-w-7xl mx-auto space-y-6">
+    {% csrf_token %}
+
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <i data-lucide="hand-coins" class="w-6 h-6 text-orange-500"></i>
+                Sócios &amp; Reembolsos a Terceiros
+            </h1>
+            <p class="text-sm text-gray-500 dark:text-gray-400">
+                Controlo das dívidas da empresa para sócios que adiantaram dinheiro do bolso (combustível, adiantamentos, etc.).
+            </p>
+        </div>
+        <div class="flex gap-2">
+            <button @click="tab = 'reembolsos'" :class="tab === 'reembolsos' ? 'bg-orange-500 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'" class="px-4 py-2 rounded text-sm font-medium">
+                Reembolsos
+            </button>
+            <button @click="tab = 'socios'" :class="tab === 'socios' ? 'bg-orange-500 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'" class="px-4 py-2 rounded text-sm font-medium">
+                Sócios
+            </button>
+        </div>
+    </div>
+
+    <!-- ────────────── REEMBOLSOS TAB ────────────── -->
+    <div x-show="tab === 'reembolsos'" class="space-y-4">
+
+        <!-- KPIs -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 border-l-4 border-orange-500">
+                <div class="text-xs text-gray-500 dark:text-gray-400">Pendente (a empresa deve)</div>
+                <div class="text-2xl font-bold text-orange-600 dark:text-orange-400" x-text="'€ ' + parseFloat(kpis.total_pendente || 0).toFixed(2)"></div>
+                <div class="text-xs text-gray-400" x-text="(kpis.n_pendente || 0) + ' lançamentos'"></div>
+            </div>
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 border-l-4 border-green-500">
+                <div class="text-xs text-gray-500 dark:text-gray-400">Já pago (histórico)</div>
+                <div class="text-2xl font-bold text-green-600 dark:text-green-400" x-text="'€ ' + parseFloat(kpis.total_pago || 0).toFixed(2)"></div>
+                <div class="text-xs text-gray-400" x-text="(kpis.n_pago || 0) + ' lançamentos'"></div>
+            </div>
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+                <div class="text-xs text-gray-500 dark:text-gray-400 mb-2">Pendente por sócio</div>
+                <div class="space-y-1 max-h-24 overflow-y-auto">
+                    <template x-for="bl in byLender" :key="bl.lender_id">
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-700 dark:text-gray-300" x-text="bl.lender_nome"></span>
+                            <span class="font-bold text-orange-600 dark:text-orange-400" x-text="'€ ' + parseFloat(bl.total_pendente).toFixed(2)"></span>
+                        </div>
+                    </template>
+                    <div x-show="byLender.length === 0" class="text-xs text-gray-400 italic">Sem pendências</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filtros -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
+                <div>
+                    <label class="text-xs text-gray-500 block mb-1">Status</label>
+                    <select x-model="filters.status" @change="load()" class="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 dark:text-white text-sm">
+                        <option value="">Todos</option>
+                        <option value="PENDENTE">Pendente</option>
+                        <option value="PAGO">Pago</option>
+                        <option value="CANCELADO">Cancelado</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-xs text-gray-500 block mb-1">Sócio</label>
+                    <select x-model="filters.lender_id" @change="load()" class="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 dark:text-white text-sm">
+                        <option value="">Todos</option>
+                        <template x-for="s in shareholders" :key="s.id">
+                            <option :value="s.id" x-text="s.nome"></option>
+                        </template>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-xs text-gray-500 block mb-1">De</label>
+                    <input type="date" x-model="filters.from" @change="load()" class="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 dark:text-white text-sm">
+                </div>
+                <div>
+                    <label class="text-xs text-gray-500 block mb-1">Até</label>
+                    <input type="date" x-model="filters.to" @change="load()" class="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 dark:text-white text-sm">
+                </div>
+                <div class="flex items-end gap-2">
+                    <button @click="filters = { status: 'PENDENTE', lender_id: '', from: '', to: '' }; load()" class="px-3 py-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded text-sm">Limpar</button>
+                    <button @click="openCreateModal()" class="px-3 py-1 bg-orange-500 text-white rounded text-sm hover:bg-orange-600 flex items-center gap-1">
+                        <i data-lucide="plus" class="w-4 h-4"></i> Novo
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabela -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-50 dark:bg-gray-700/40 text-xs uppercase text-gray-500 dark:text-gray-400">
+                        <tr>
+                            <th class="px-3 py-2 text-left">
+                                <input type="checkbox" @change="toggleSelectAll($event)" :checked="allSelected()">
+                            </th>
+                            <th class="px-3 py-2 text-left">Status</th>
+                            <th class="px-3 py-2 text-left">Sócio</th>
+                            <th class="px-3 py-2 text-right">Valor</th>
+                            <th class="px-3 py-2 text-left">Data emp.</th>
+                            <th class="px-3 py-2 text-left">Descrição</th>
+                            <th class="px-3 py-2 text-left">Origem</th>
+                            <th class="px-3 py-2 text-left">Data pag.</th>
+                            <th class="px-3 py-2 text-left">Ref. pag.</th>
+                            <th class="px-3 py-2 text-right">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                        <template x-for="r in reimbursements" :key="r.id">
+                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                                <td class="px-3 py-2">
+                                    <input type="checkbox" :value="r.id" x-model="selectedIds" :disabled="r.status !== 'PENDENTE'">
+                                </td>
+                                <td class="px-3 py-2">
+                                    <span :class="{
+                                        'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300': r.status === 'PENDENTE',
+                                        'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300': r.status === 'PAGO',
+                                        'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300': r.status === 'CANCELADO'
+                                    }" class="px-2 py-0.5 rounded text-xs font-semibold" x-text="r.status_display"></span>
+                                </td>
+                                <td class="px-3 py-2 font-medium dark:text-white" x-text="r.lender_nome"></td>
+                                <td class="px-3 py-2 text-right font-bold text-orange-600 dark:text-orange-400" x-text="'€ ' + parseFloat(r.valor).toFixed(2)"></td>
+                                <td class="px-3 py-2 text-gray-600 dark:text-gray-400" x-text="r.data_emprestimo"></td>
+                                <td class="px-3 py-2 text-gray-600 dark:text-gray-400 max-w-xs truncate" :title="r.descricao" x-text="r.descricao"></td>
+                                <td class="px-3 py-2 text-xs">
+                                    <span x-show="r.driver_nome" class="text-gray-500 dark:text-gray-400">
+                                        <i data-lucide="user" class="w-3 h-3 inline"></i>
+                                        <span x-text="r.driver_nome"></span>
+                                        <span x-show="r.pf_numero" class="text-gray-400" x-text="' · ' + r.pf_numero"></span>
+                                    </span>
+                                    <span x-show="!r.driver_nome" class="text-gray-400 italic">manual</span>
+                                </td>
+                                <td class="px-3 py-2 text-gray-600 dark:text-gray-400" x-text="r.data_pagamento || '—'"></td>
+                                <td class="px-3 py-2 text-gray-600 dark:text-gray-400 max-w-[10rem] truncate" :title="r.referencia_pagamento" x-text="r.referencia_pagamento || '—'"></td>
+                                <td class="px-3 py-2 text-right space-x-1">
+                                    <button x-show="r.status === 'PENDENTE'" @click="openMarkPaidModal(r)" class="px-2 py-1 bg-green-500 text-white rounded text-xs hover:bg-green-600">Marcar pago</button>
+                                    <button x-show="r.status === 'PENDENTE'" @click="cancelReimb(r.id)" class="px-2 py-1 bg-gray-400 text-white rounded text-xs hover:bg-gray-500">Cancelar</button>
+                                </td>
+                            </tr>
+                        </template>
+                        <tr x-show="reimbursements.length === 0">
+                            <td colspan="10" class="px-3 py-8 text-center text-gray-400 italic">Nenhum reembolso encontrado.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <!-- Bulk actions -->
+            <div x-show="selectedIds.length > 0" class="flex items-center gap-3 px-4 py-2 bg-orange-50 dark:bg-orange-900/20 border-t border-orange-200 dark:border-orange-800">
+                <span class="text-sm font-medium text-orange-700 dark:text-orange-300" x-text="selectedIds.length + ' selecionado(s)'"></span>
+                <button @click="openBulkMarkPaidModal()" class="px-3 py-1 bg-green-500 text-white rounded text-sm hover:bg-green-600">Marcar todos como pago</button>
+                <button @click="selectedIds = []" class="px-3 py-1 bg-gray-300 text-gray-700 rounded text-sm">Limpar seleção</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ────────────── SÓCIOS TAB ────────────── -->
+    <div x-show="tab === 'socios'" class="space-y-4">
+        <div class="flex justify-end">
+            <button @click="openShareholderForm()" class="px-3 py-1.5 bg-orange-500 text-white rounded text-sm hover:bg-orange-600 flex items-center gap-1">
+                <i data-lucide="plus" class="w-4 h-4"></i> Novo Sócio
+            </button>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+            <table class="w-full text-sm">
+                <thead class="bg-gray-50 dark:bg-gray-700/40 text-xs uppercase text-gray-500 dark:text-gray-400">
+                    <tr>
+                        <th class="px-3 py-2 text-left">Nome</th>
+                        <th class="px-3 py-2 text-left">IBAN</th>
+                        <th class="px-3 py-2 text-left">Telefone</th>
+                        <th class="px-3 py-2 text-right">Saldo Pendente</th>
+                        <th class="px-3 py-2 text-center">Ativo</th>
+                        <th class="px-3 py-2 text-right">Ações</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                    <template x-for="s in shareholdersAll" :key="s.id">
+                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                            <td class="px-3 py-2 font-medium dark:text-white" x-text="s.nome"></td>
+                            <td class="px-3 py-2 text-gray-600 dark:text-gray-400 font-mono text-xs" x-text="s.iban || '—'"></td>
+                            <td class="px-3 py-2 text-gray-600 dark:text-gray-400" x-text="s.telefone || '—'"></td>
+                            <td class="px-3 py-2 text-right font-bold" :class="parseFloat(s.saldo_pendente) > 0 ? 'text-orange-600 dark:text-orange-400' : 'text-gray-400'" x-text="'€ ' + parseFloat(s.saldo_pendente).toFixed(2)"></td>
+                            <td class="px-3 py-2 text-center">
+                                <span x-show="s.ativo" class="px-2 py-0.5 bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 rounded text-xs">Ativo</span>
+                                <span x-show="!s.ativo" class="px-2 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-500 rounded text-xs">Inativo</span>
+                            </td>
+                            <td class="px-3 py-2 text-right space-x-1">
+                                <button @click="openShareholderForm(s)" class="px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600">Editar</button>
+                                <button @click="deleteShareholder(s)" class="px-2 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-600">Remover</button>
+                            </td>
+                        </tr>
+                    </template>
+                    <tr x-show="shareholdersAll.length === 0">
+                        <td colspan="6" class="px-3 py-8 text-center text-gray-400 italic">Nenhum sócio registado.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ────────────── MODAL: Novo / Editar Sócio ────────────── -->
+    <div x-show="shareholderModal.open" x-cloak @click.self="shareholderModal.open = false" class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-5 space-y-3">
+            <div class="flex justify-between items-center">
+                <h3 class="text-lg font-bold dark:text-white" x-text="shareholderModal.id ? 'Editar Sócio' : 'Novo Sócio'"></h3>
+                <button @click="shareholderModal.open = false" class="text-gray-400">✕</button>
+            </div>
+            <div>
+                <label class="text-xs text-gray-500">Nome *</label>
+                <input type="text" x-model="shareholderModal.nome" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 dark:text-white">
+            </div>
+            <div>
+                <label class="text-xs text-gray-500">IBAN</label>
+                <input type="text" x-model="shareholderModal.iban" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 dark:text-white font-mono text-sm">
+            </div>
+            <div>
+                <label class="text-xs text-gray-500">Telefone</label>
+                <input type="text" x-model="shareholderModal.telefone" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 dark:text-white">
+            </div>
+            <div>
+                <label class="text-xs text-gray-500">Observações</label>
+                <textarea x-model="shareholderModal.observacoes" rows="2" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 dark:text-white"></textarea>
+            </div>
+            <div class="flex items-center gap-2">
+                <input type="checkbox" x-model="shareholderModal.ativo" id="modalAtivoChk">
+                <label for="modalAtivoChk" class="text-sm dark:text-white">Ativo</label>
+            </div>
+            <div class="flex justify-end gap-2 pt-2">
+                <button @click="shareholderModal.open = false" class="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded">Cancelar</button>
+                <button @click="saveShareholder()" :disabled="shareholderModal.submitting" class="px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600 disabled:opacity-50">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ────────────── MODAL: Marcar como Pago ────────────── -->
+    <div x-show="markPaidModal.open" x-cloak @click.self="markPaidModal.open = false" class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-5 space-y-3">
+            <div class="flex justify-between items-center">
+                <h3 class="text-lg font-bold dark:text-white">Marcar como Pago</h3>
+                <button @click="markPaidModal.open = false" class="text-gray-400">✕</button>
+            </div>
+            <div class="bg-orange-50 dark:bg-orange-900/20 rounded p-3 text-sm">
+                <div class="text-gray-700 dark:text-gray-300">
+                    <span x-show="markPaidModal.bulk" x-text="'A pagar ' + selectedIds.length + ' reembolso(s)'"></span>
+                    <span x-show="!markPaidModal.bulk">
+                        <strong x-text="markPaidModal.target?.lender_nome"></strong>:
+                        <span class="text-orange-600 font-bold" x-text="'€ ' + parseFloat(markPaidModal.target?.valor || 0).toFixed(2)"></span>
+                    </span>
+                </div>
+            </div>
+            <div>
+                <label class="text-xs text-gray-500">Data do pagamento</label>
+                <input type="date" x-model="markPaidModal.data_pagamento" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 dark:text-white">
+            </div>
+            <div>
+                <label class="text-xs text-gray-500">Referência (opcional)</label>
+                <input type="text" x-model="markPaidModal.referencia_pagamento" placeholder="Ex.: Transferência IBAN, MB Way 2026-05-01" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 dark:text-white">
+            </div>
+            <div class="flex justify-end gap-2 pt-2">
+                <button @click="markPaidModal.open = false" class="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded">Cancelar</button>
+                <button @click="confirmMarkPaid()" :disabled="markPaidModal.submitting" class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50">Confirmar Pagamento</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ────────────── MODAL: Novo reembolso (sem advance) ────────────── -->
+    <div x-show="createModal.open" x-cloak @click.self="createModal.open = false" class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-5 space-y-3">
+            <div class="flex justify-between items-center">
+                <h3 class="text-lg font-bold dark:text-white">Novo Reembolso (manual)</h3>
+                <button @click="createModal.open = false" class="text-gray-400">✕</button>
+            </div>
+            <div>
+                <label class="text-xs text-gray-500">Sócio *</label>
+                <select x-model="createModal.lender_id" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 dark:text-white">
+                    <option value="">— escolher sócio —</option>
+                    <template x-for="s in shareholders" :key="s.id">
+                        <option :value="s.id" x-text="s.nome"></option>
+                    </template>
+                </select>
+            </div>
+            <div>
+                <label class="text-xs text-gray-500">Valor (€) *</label>
+                <input type="number" step="0.01" x-model="createModal.valor" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 dark:text-white">
+            </div>
+            <div>
+                <label class="text-xs text-gray-500">Data do empréstimo</label>
+                <input type="date" x-model="createModal.data_emprestimo" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 dark:text-white">
+            </div>
+            <div>
+                <label class="text-xs text-gray-500">Descrição</label>
+                <input type="text" x-model="createModal.descricao" placeholder="Ex.: Peça de carro, recibo #1234" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 dark:text-white">
+            </div>
+            <div class="flex justify-end gap-2 pt-2">
+                <button @click="createModal.open = false" class="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded">Cancelar</button>
+                <button @click="confirmCreate()" :disabled="createModal.submitting" class="px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600 disabled:opacity-50">Criar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function showToast(msg, ok = true) {
+    const t = document.getElementById('toast');
+    const inner = document.getElementById('toast-inner');
+    document.getElementById('toast-msg').textContent = msg;
+    inner.className = `flex items-center gap-3 px-5 py-3 rounded-xl shadow-2xl text-white text-sm font-medium ${ok ? 'bg-emerald-600' : 'bg-red-600'}`;
+    document.getElementById('toast-icon').setAttribute('data-lucide', ok ? 'check-circle' : 'alert-circle');
+    if (window.lucide) lucide.createIcons();
+    t.classList.remove('hidden');
+    clearTimeout(window._shToastTimer);
+    window._shToastTimer = setTimeout(() => t.classList.add('hidden'), 3500);
+}
+
+function shareholderDashboard() {
+    const csrf = () => document.querySelector('[name=csrfmiddlewaretoken]').value;
+    const POST_JSON = body => ({
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf() },
+        body: JSON.stringify(body),
+    });
+    const todayStr = () => new Date().toISOString().slice(0, 10);
+
+    return {
+        tab: 'reembolsos',
+        reimbursements: [],
+        shareholders: [],         // ativos (para selects)
+        shareholdersAll: [],      // todos (gestão CRUD)
+        kpis: {},
+        byLender: [],
+        selectedIds: [],
+        filters: { status: 'PENDENTE', lender_id: '', from: '', to: '' },
+        shareholderModal: {
+            open: false, submitting: false,
+            id: null, nome: '', iban: '', telefone: '', observacoes: '', ativo: true,
+        },
+        markPaidModal: {
+            open: false, submitting: false, bulk: false,
+            target: null, data_pagamento: todayStr(), referencia_pagamento: '',
+        },
+        createModal: {
+            open: false, submitting: false,
+            lender_id: '', valor: 0, data_emprestimo: todayStr(), descricao: '',
+        },
+
+        async init() {
+            await this.loadShareholders();
+            await this.load();
+            setTimeout(() => lucide.createIcons(), 100);
+        },
+
+        async loadShareholders() {
+            // ativos (para selects)
+            const r1 = await fetch('/settlements/socios/list/?ativo=1');
+            const d1 = await r1.json();
+            this.shareholders = d1.shareholders || [];
+            // todos (CRUD)
+            const r2 = await fetch('/settlements/socios/list/?ativo=0');
+            const d2 = await r2.json();
+            this.shareholdersAll = d2.shareholders || [];
+        },
+
+        async load() {
+            const params = new URLSearchParams();
+            if (this.filters.status) params.append('status', this.filters.status);
+            if (this.filters.lender_id) params.append('lender_id', this.filters.lender_id);
+            if (this.filters.from) params.append('from', this.filters.from);
+            if (this.filters.to) params.append('to', this.filters.to);
+            const r = await fetch('/settlements/reembolsos/?' + params.toString());
+            const d = await r.json();
+            this.reimbursements = d.reimbursements || [];
+            this.kpis = d.kpis || {};
+            this.byLender = d.by_lender || [];
+            this.selectedIds = [];
+            setTimeout(() => lucide.createIcons(), 50);
+        },
+
+        allSelected() {
+            const pendIds = this.reimbursements.filter(r => r.status === 'PENDENTE').map(r => r.id);
+            return pendIds.length > 0 && pendIds.every(id => this.selectedIds.includes(id));
+        },
+        toggleSelectAll(ev) {
+            const pendIds = this.reimbursements.filter(r => r.status === 'PENDENTE').map(r => r.id);
+            this.selectedIds = ev.target.checked ? pendIds : [];
+        },
+
+        // ── Shareholders ─────────────────────────────────
+        openShareholderForm(s) {
+            if (s) {
+                this.shareholderModal = { open: true, submitting: false, id: s.id, nome: s.nome, iban: s.iban || '', telefone: s.telefone || '', observacoes: '', ativo: s.ativo };
+            } else {
+                this.shareholderModal = { open: true, submitting: false, id: null, nome: '', iban: '', telefone: '', observacoes: '', ativo: true };
+            }
+        },
+        async saveShareholder() {
+            if (!this.shareholderModal.nome.trim()) { showToast('Nome é obrigatório.', false); return; }
+            this.shareholderModal.submitting = true;
+            const url = this.shareholderModal.id
+                ? `/settlements/socios/${this.shareholderModal.id}/update/`
+                : '/settlements/socios/create/';
+            const r = await fetch(url, POST_JSON(this.shareholderModal));
+            const d = await r.json();
+            this.shareholderModal.submitting = false;
+            if (d.success) {
+                this.shareholderModal.open = false;
+                await this.loadShareholders();
+                showToast(this.shareholderModal.id ? 'Sócio atualizado.' : 'Sócio criado.');
+            } else {
+                showToast(d.error || 'Erro ao guardar', false);
+            }
+        },
+        async deleteShareholder(s) {
+            if (!confirm(`Remover sócio "${s.nome}"?\n(Se tiver reembolsos, será apenas desactivado.)`)) return;
+            const r = await fetch(`/settlements/socios/${s.id}/delete/`, POST_JSON({}));
+            const d = await r.json();
+            if (d.success) {
+                showToast(d.deactivated ? 'Sócio desactivado (tinha reembolsos).' : 'Sócio removido.');
+                await this.loadShareholders();
+            }
+        },
+
+        // ── Reimbursements ───────────────────────────────
+        openMarkPaidModal(r) {
+            this.markPaidModal = { open: true, submitting: false, bulk: false, target: r, data_pagamento: todayStr(), referencia_pagamento: '' };
+        },
+        openBulkMarkPaidModal() {
+            if (this.selectedIds.length === 0) return;
+            this.markPaidModal = { open: true, submitting: false, bulk: true, target: null, data_pagamento: todayStr(), referencia_pagamento: '' };
+        },
+        async confirmMarkPaid() {
+            this.markPaidModal.submitting = true;
+            try {
+                if (this.markPaidModal.bulk) {
+                    const r = await fetch('/settlements/reembolsos/bulk-mark-paid/', POST_JSON({
+                        ids: this.selectedIds,
+                        data_pagamento: this.markPaidModal.data_pagamento,
+                        referencia_pagamento: this.markPaidModal.referencia_pagamento,
+                    }));
+                    await r.json();
+                } else {
+                    const r = await fetch(`/settlements/reembolsos/${this.markPaidModal.target.id}/mark-paid/`, POST_JSON({
+                        data_pagamento: this.markPaidModal.data_pagamento,
+                        referencia_pagamento: this.markPaidModal.referencia_pagamento,
+                    }));
+                    await r.json();
+                }
+                this.markPaidModal.open = false;
+                await this.load();
+                await this.loadShareholders();
+            } finally {
+                this.markPaidModal.submitting = false;
+            }
+        },
+        async cancelReimb(id) {
+            if (!confirm('Cancelar este reembolso?')) return;
+            await fetch(`/settlements/reembolsos/${id}/cancel/`, POST_JSON({}));
+            await this.load();
+            await this.loadShareholders();
+        },
+        openCreateModal() {
+            this.createModal = { open: true, submitting: false, lender_id: '', valor: 0, data_emprestimo: todayStr(), descricao: '' };
+        },
+        async confirmCreate() {
+            if (!this.createModal.lender_id) { showToast('Selecione o sócio.', false); return; }
+            if (!this.createModal.valor || parseFloat(this.createModal.valor) <= 0) { showToast('Valor inválido.', false); return; }
+            this.createModal.submitting = true;
+            const r = await fetch('/settlements/reembolsos/create/', POST_JSON(this.createModal));
+            const d = await r.json();
+            this.createModal.submitting = false;
+            if (d.success) {
+                this.createModal.open = false;
+                await this.load();
+                await this.loadShareholders();
+                showToast('Reembolso criado.');
+            } else {
+                showToast(d.error || 'Erro', false);
+            }
+        },
+    };
+}
+</script>
+{% endblock %}

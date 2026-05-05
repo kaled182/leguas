@@ -50,27 +50,46 @@ def driver_admin_edit(request, driver_id):
     """Edição admin completa — sem aprovação."""
     driver = get_object_or_404(DriverProfile, pk=driver_id)
 
+    # Campos numéricos que aceitam NULL no DB (vazio → None em vez de "")
+    NUMERIC_NULLABLE = (
+        "daily_capacity", "price_per_package", "advance_monthly_limit",
+    )
+
     if request.method == "POST":
+        from decimal import Decimal, InvalidOperation
         for field in EDITABLE_BY_ADMIN:
             if field in request.POST:
                 value = request.POST.get(field, "").strip()
-                if field in ("daily_capacity", "advance_monthly_limit"):
-                    value = value or None
+
+                # Booleans (checkbox): "on" se ticado
+                if field in ("is_active", "bonus_performance_enabled"):
+                    setattr(driver, field, value == "on")
+                    continue
+
+                # Datas vazias → None
                 if field == "data_nascimento":
-                    value = value or None
-                if field == "is_active":
-                    setattr(driver, field, value == "on")
+                    setattr(driver, field, value or None)
                     continue
-                if field == "bonus_performance_enabled":
-                    setattr(driver, field, value == "on")
-                    continue
-                if field == "price_per_package" and value:
-                    try:
-                        from decimal import Decimal
-                        value = Decimal(value)
-                    except Exception:
+
+                # Numéricos vazios → None; senão converter
+                if field in NUMERIC_NULLABLE:
+                    if not value:
+                        setattr(driver, field, None)
                         continue
-                # FK: empresa_parceira (separado abaixo)
+                    try:
+                        if field == "daily_capacity":
+                            value = int(value)
+                        else:
+                            value = Decimal(value)
+                    except (InvalidOperation, ValueError):
+                        messages.error(
+                            request, f"Valor inválido em {field}: '{value}'",
+                        )
+                        continue
+                    setattr(driver, field, value)
+                    continue
+
+                # Strings normais
                 setattr(driver, field, value)
 
         # Campos boolean fora do POST → False

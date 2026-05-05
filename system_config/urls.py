@@ -3,6 +3,7 @@
 from . import views
 from . import backup_views
 from . import user_views
+from . import views_recovery
 from . import views_updates
 
 app_name = "system_config"
@@ -10,6 +11,18 @@ app_name = "system_config"
 urlpatterns = [
     path("", views.system_config_view, name="index"),
     path("save/", views.save_config, name="save"),
+
+    # ─── Recovery Keys: chaves críticas (BACKUP_ZIP_PASSWORD, etc.) ───
+    path(
+        "recovery-keys/",
+        views_recovery.recovery_keys_index,
+        name="recovery_keys_index",
+    ),
+    path(
+        "recovery-keys/download/",
+        views_recovery.recovery_keys_download_env,
+        name="recovery_keys_download",
+    ),
 
     # ─── Atualização: changelog, sugestões e check do GitHub ───
     path("atualizacao/", views_updates.updates_index, name="updates_index"),

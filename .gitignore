@@ -95,3 +95,8 @@ coverage.xml
 *.dump
 *.sql
 !init-db.sql
+
+# Recovery keys (gerado pelo install.sh, contém secrets)
+.recovery_keys.txt
+production/.recovery_keys.txt
+*.env.bak

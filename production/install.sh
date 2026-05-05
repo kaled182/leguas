@@ -198,7 +198,44 @@ for i in {1..30}; do
     sleep 3
 done
 
-# ── 5. Resumo ────────────────────────────────────────────────────────
+# ── 5. Recovery keys: gravar ficheiro + imprimir no terminal ─────────
+RECOVERY_FILE=".recovery_keys.txt"
+cat > "$RECOVERY_FILE" <<EOF
+# ════════════════════════════════════════════════════════════════════
+# Léguas Franzinas — Recovery Keys
+# Gerado pelo install.sh em $(date)
+#
+# *** CRITICAL ***
+# Guarda este ficheiro num cofre/password manager.
+# Sem o BACKUP_ZIP_PASSWORD, qualquer backup criado por esta instalação
+# torna-se irrecuperável se o .env for perdido.
+#
+# Acesso a estas chaves também disponível em:
+#   - http://<host>/system/recovery-keys/  (superuser)
+#   - docker exec leguas_web python manage.py show_recovery_keys
+# ════════════════════════════════════════════════════════════════════
+
+ADMIN_USER=$ADMIN_USER
+ADMIN_PASSWORD=$ADMIN_PASS
+ADMIN_EMAIL=$ADMIN_EMAIL
+
+DJANGO_SECRET_KEY=$SECRET_KEY
+FERNET_KEY=$FERNET_KEY
+
+DB_USER=leguas_user
+DB_PASSWORD=$DB_PASSWORD
+DB_ROOT_PASSWORD=$DB_ROOT_PASSWORD
+
+BACKUP_ZIP_PASSWORD=$BACKUP_PASS
+UPDATER_SECRET=$UPDATER_SECRET
+WPPCONNECT_SECRET=$WPP_SECRET
+
+DOMAIN=$DOMAIN
+LETSENCRYPT_EMAIL=$LE_EMAIL
+EOF
+chmod 600 "$RECOVERY_FILE"
+
+# ── 6. Resumo ────────────────────────────────────────────────────────
 echo
 echo -e "${G}╔══════════════════════════════════════════════════════════╗"
 echo -e "║       ✓ Instalação concluída                              ║"
@@ -215,10 +252,31 @@ echo -e "  ${B}Admin:${N}    $ADMIN_USER (password definida)"
 echo -e "  ${B}Logs:${N}     docker compose logs -f web"
 echo -e "  ${B}Status:${N}   docker compose ps"
 echo
-echo -e "  ${Y}Próximos passos:${N}"
-echo -e "    1. Login em /admin com user '$ADMIN_USER'"
-echo -e "    2. Configurar integrações em /system/ (Cainiao, Delnext, GeoAPI…)"
-echo -e "    3. Autenticar WhatsApp em /system/whatsapp/ (escanear QR)"
-echo -e "    4. Configurar backup automático: ver DEPLOYMENT.md"
+
+echo -e "${Y}╔══════════════════════════════════════════════════════════╗${N}"
+echo -e "${Y}║   🔑 RECOVERY KEYS — guarda estas chaves AGORA!           ║${N}"
+echo -e "${Y}╚══════════════════════════════════════════════════════════╝${N}"
 echo
-warn "GUARDA o teu .env em local seguro (contém todas as passwords)."
+echo -e "  ${B}Admin user:${N}              $ADMIN_USER"
+echo -e "  ${B}Admin password:${N}          $ADMIN_PASS"
+echo -e "  ${B}Admin email:${N}             $ADMIN_EMAIL"
+echo
+echo -e "  ${B}DB password:${N}             $DB_PASSWORD"
+echo -e "  ${B}DB root password:${N}        $DB_ROOT_PASSWORD"
+echo
+echo -e "  ${R}BACKUP_ZIP_PASSWORD:${N}     $BACKUP_PASS"
+echo -e "    ${Y}↳ sem esta chave, backups antigos ficam irrecuperáveis!${N}"
+echo
+echo -e "  ${B}UPDATER_SECRET:${N}          $UPDATER_SECRET"
+echo -e "  ${B}WPPCONNECT_SECRET:${N}       $WPP_SECRET"
+echo
+echo -e "  ${G}✓ Gravado em $(pwd)/$RECOVERY_FILE (chmod 600)${N}"
+echo -e "  ${G}✓ Disponível também em /system/recovery-keys/ (superuser)${N}"
+echo
+echo -e "  ${Y}Próximos passos:${N}"
+echo -e "    1. ${R}MOVE${N} ${RECOVERY_FILE} para password manager (1Password / Bitwarden / etc.)"
+echo -e "    2. Login em / com user '$ADMIN_USER'"
+echo -e "    3. Configurar integrações em /system/ (Cainiao, Delnext, GeoAPI…)"
+echo -e "    4. Autenticar WhatsApp em /system/whatsapp/ (escanear QR)"
+echo
+warn "GUARDA o ${RECOVERY_FILE} (e o .env) em local seguro."

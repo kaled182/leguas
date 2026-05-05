@@ -1,0 +1,128 @@
+{% extends 'paack_dashboard/base.html' %}
+{% load static %}
+{% block title %}Recovery Keys{% endblock %}
+{% block content %}
+
+<div class="max-w-screen-xl mx-auto px-4 py-6 space-y-4" x-data="recoveryKeysPage()">
+
+  {# ─── Header ─── #}
+  <div class="bg-gradient-to-r from-rose-500 to-amber-500 rounded-2xl p-6 text-white shadow-lg">
+    <div class="flex items-start justify-between flex-wrap gap-4">
+      <div>
+        <h1 class="text-2xl font-bold flex items-center gap-2">
+          <i data-lucide="key-round" class="w-6 h-6"></i>
+          Recovery Keys
+        </h1>
+        <p class="text-rose-100 text-sm mt-1">
+          Chaves críticas do sistema — copia para password manager. Sem estas chaves, alguns dados (backups, tokens) ficam irrecuperáveis.
+        </p>
+      </div>
+      <a href="{% url 'system_config:recovery_keys_download' %}"
+         class="px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur rounded-lg text-sm font-semibold inline-flex items-center gap-2">
+        <i data-lucide="download" class="w-4 h-4"></i>
+        Download .env
+      </a>
+    </div>
+  </div>
+
+  {# ─── Aviso ─── #}
+  <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700/50 rounded-xl p-4 flex items-start gap-3">
+    <i data-lucide="shield-alert" class="w-6 h-6 text-amber-600 flex-shrink-0 mt-0.5"></i>
+    <div class="text-sm text-amber-900 dark:text-amber-200">
+      <strong>Como guardar com segurança:</strong>
+      <ol class="list-decimal list-inside mt-1 space-y-0.5 text-xs">
+        <li>Clica <strong>Download .env</strong> para baixar todas as chaves</li>
+        <li>Move o ficheiro para o teu password manager (1Password, Bitwarden, KeePass, etc.)</li>
+        <li>Apaga o ficheiro local — <strong>nunca</strong> faças upload para Git, email ou Slack</li>
+      </ol>
+    </div>
+  </div>
+
+  {# ─── Tabela de chaves ─── #}
+  <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
+    <table class="w-full">
+      <thead class="bg-gray-50 dark:bg-gray-900/40">
+        <tr>
+          <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Chave</th>
+          <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Valor</th>
+          <th class="px-4 py-2 w-20"></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+        {% for k in keys %}
+        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 {% if k.critical %}bg-rose-50/30 dark:bg-rose-900/10{% endif %}">
+          <td class="px-4 py-3">
+            <div class="flex items-start gap-2">
+              {% if k.critical %}
+                <i data-lucide="alert-triangle" class="w-4 h-4 text-rose-500 flex-shrink-0 mt-0.5"></i>
+              {% else %}
+                <i data-lucide="key" class="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5"></i>
+              {% endif %}
+              <div>
+                <div class="font-mono text-sm font-bold text-gray-900 dark:text-white">{{ k.env_var }}</div>
+                <div class="text-[11px] text-gray-500 dark:text-gray-400">{{ k.label }}</div>
+                <div class="text-[11px] text-gray-600 dark:text-gray-300 mt-1 max-w-md">{{ k.description }}</div>
+              </div>
+            </div>
+          </td>
+          <td class="px-4 py-3">
+            {% if k.has_value %}
+              <div class="flex items-center gap-2">
+                <input type="password" readonly value="{{ k.value }}"
+                       :type="visible['{{ k.env_var }}'] ? 'text' : 'password'"
+                       class="w-full px-3 py-1.5 text-xs font-mono bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg"
+                       :id="'k-{{ k.env_var }}'">
+                <button type="button" @click="toggle('{{ k.env_var }}')"
+                        class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-600 dark:text-gray-400">
+                  <i :data-lucide="visible['{{ k.env_var }}'] ? 'eye-off' : 'eye'" class="w-4 h-4"></i>
+                </button>
+              </div>
+            {% else %}
+              <span class="text-xs italic text-gray-400">não definido</span>
+            {% endif %}
+          </td>
+          <td class="px-4 py-3 text-right">
+            {% if k.has_value %}
+            <button type="button" @click="copy('{{ k.env_var }}', '{{ k.value|escapejs }}')"
+                    class="p-1.5 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 text-emerald-600 rounded">
+              <i data-lucide="copy" class="w-4 h-4"></i>
+            </button>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700/50 rounded-xl p-4 text-xs text-gray-600 dark:text-gray-400">
+    <p class="flex items-center gap-2">
+      <i data-lucide="terminal" class="w-4 h-4"></i>
+      <span>Acesso via CLI:</span>
+      <code class="bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded font-mono">docker exec leguas_web python manage.py show_recovery_keys</code>
+    </p>
+  </div>
+</div>
+
+<script>
+function recoveryKeysPage() {
+  return {
+    visible: {},
+    toggle(key) {
+      this.visible[key] = !this.visible[key];
+      setTimeout(() => { if (window.lucide) window.lucide.createIcons(); }, 50);
+    },
+    async copy(label, value) {
+      try {
+        await navigator.clipboard.writeText(value);
+        (window.toast || function(o){alert(o.message);})({
+          type: 'success', message: `${label} copiado`,
+        });
+      } catch (e) {
+        (window.toast || alert)({ type: 'error', message: 'Falha a copiar: ' + e.message });
+      }
+    },
+  };
+}
+</script>
+{% endblock %}

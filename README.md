@@ -36,6 +36,60 @@ App em `http://localhost:8000`.
 
 ---
 
+## 🔗 URLs principais
+
+> Substitui `<host>` por `http://localhost` (dev) ou pelo teu domínio em produção.
+
+### Públicas (sem login)
+| URL | Descrição |
+|---|---|
+| `<host>/driversapp/cadastro/` | **Auto-cadastro motorista** (formulário simples) |
+| `<host>/driversapp/cadastro-completo/` | Auto-cadastro completo (com docs e veículos) |
+| `<host>/auth/driver/` | **Login motorista** (DriverAccess) |
+| `<host>/auth/login/` | Login administrador |
+
+### Portal do motorista (autenticado)
+| URL | Descrição |
+|---|---|
+| `<host>/driversapp/portal/<id>/` | Visão geral do motorista (KPIs, heatmap, top CP4) |
+| `<host>/driversapp/portal/<id>/relatorios/` | Relatórios mensais e anuais |
+| `<host>/driversapp/portal/<id>/faturas/` | Faturas + anexar fatura-recibo |
+| `<host>/driversapp/portal/<id>/perfil/` | Perfil + pedidos de alteração |
+
+### Admin / Operação
+| URL | Descrição |
+|---|---|
+| `<host>/` | **Dashboard principal** (Cainiao + alertas + KPIs) |
+| `<host>/driversapp/admin/` | **Central de Motoristas** (lista moderna com filtros e KPIs) |
+| `<host>/driversapp/admin/aprovar/` | Aprovar cadastros pendentes |
+| `<host>/driversapp/admin/pedidos-alteracao/` | Aprovar pedidos de alteração de perfil |
+| `<host>/driversapp/admin/reclamacoes/` | Reclamações de clientes |
+| `<host>/converter/` | Conversor de listas Paack/Cainiao para XLSX |
+
+### Financeiro
+| URL | Descrição |
+|---|---|
+| `<host>/accounting/a-pagar/` | **A Pagar** — inbox unificado (motoristas, frotas, sócios, contas) |
+| `<host>/settlements/invoices/` | A Receber (faturas dos parceiros) |
+| `<host>/settlements/financial/` | Análise — Dashboard |
+| `<host>/accounting/dre/` | Análise — DRE |
+| `<host>/accounting/fluxo-caixa/` | Análise — Fluxo de caixa |
+| `<host>/accounting/break-even/` | Análise — Break-even |
+| `<host>/accounting/extractos/` | Análise — Conciliação bancária |
+| `<host>/settlements/adiantamentos/` | Conta-corrente motoristas |
+| `<host>/settlements/socios/` | Sócios & reembolsos |
+
+### Sistema
+| URL | Descrição |
+|---|---|
+| `<host>/system/` | **Configurações** (Empresa, Mapas, Comunicações, Backup) |
+| `<host>/system/atualizacao/` | **Atualização** — changelog, sugestões, auto-update GitHub |
+| `<host>/system/whatsapp/` | WhatsApp dashboard (QR, sessões, envio de teste) |
+| `<host>/system/users/` | Gestão de utilizadores (superuser only) |
+| `<host>/admin/` | Django Admin (low-level) |
+
+---
+
 ## ✨ Funcionalidades principais
 
 ### Gestão operacional

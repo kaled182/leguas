@@ -384,7 +384,10 @@ class GeocodedAddress(models.Model):
     locality = models.CharField("Localidade", max_length=200)
     
     # Endereço normalizado (usado para busca)
-    normalized_address = models.TextField("Endereço Normalizado", db_index=True)
+    # CharField (não TextField) porque MySQL não permite UNIQUE em TEXT
+    normalized_address = models.CharField(
+        "Endereço Normalizado", max_length=500, unique=True, db_index=True,
+    )
     
     # Coordenadas geocodificadas
     latitude = models.DecimalField(
@@ -425,10 +428,9 @@ class GeocodedAddress(models.Model):
         verbose_name = "Endereço Geocodificado"
         verbose_name_plural = "Endereços Geocodificados"
         indexes = [
-            models.Index(fields=['normalized_address']),
             models.Index(fields=['postal_code', 'locality']),
         ]
-        unique_together = ['normalized_address']
+        # unique=True em CharField já garante o índice e a unicidade.
     
     def __str__(self):
         return f"{self.normalized_address} → ({self.latitude}, {self.longitude})"

@@ -17,7 +17,7 @@ class Migration(migrations.Migration):
                 ('address', models.TextField(verbose_name='Endereço Original')),
                 ('postal_code', models.CharField(max_length=10, verbose_name='Código Postal')),
                 ('locality', models.CharField(max_length=200, verbose_name='Localidade')),
-                ('normalized_address', models.TextField(db_index=True, verbose_name='Endereço Normalizado')),
+                ('normalized_address', models.CharField(db_index=True, max_length=500, unique=True, verbose_name='Endereço Normalizado')),
                 ('latitude', models.DecimalField(blank=True, decimal_places=6, max_digits=9, null=True, verbose_name='Latitude')),
                 ('longitude', models.DecimalField(blank=True, decimal_places=6, max_digits=9, null=True, verbose_name='Longitude')),
                 ('geocode_quality', models.CharField(choices=[('EXACT', 'Endereço Exato'), ('STREET', 'Rua'), ('POSTAL_CODE', 'Código Postal'), ('LOCALITY', 'Localidade'), ('FAILED', 'Falhou')], default='FAILED', max_length=20, verbose_name='Qualidade')),
@@ -27,8 +27,7 @@ class Migration(migrations.Migration):
             options={
                 'verbose_name': 'Endereço Geocodificado',
                 'verbose_name_plural': 'Endereços Geocodificados',
-                'indexes': [models.Index(fields=['normalized_address'], name='orders_mana_normali_fd2373_idx'), models.Index(fields=['postal_code', 'locality'], name='orders_mana_postal__fc3e8e_idx')],
-                'unique_together': {('normalized_address',)},
+                'indexes': [models.Index(fields=['postal_code', 'locality'], name='orders_mana_postal__fc3e8e_idx')],
             },
         ),
     ]

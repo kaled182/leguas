@@ -1,0 +1,61 @@
+# Ficheiros que DEVEM ter line endings LF (mesmo em Windows).
+# Sem isto, scripts shell e Dockerfiles checked out no Windows
+# com CRLF quebram em containers Linux: bash não encontra
+# `/bin/bash\r` e devolve "no such file or directory".
+
+# Shell scripts
+*.sh         text eol=lf
+
+# Dockerfiles e ficheiros de container
+Dockerfile         text eol=lf
+*.Dockerfile       text eol=lf
+.dockerignore      text eol=lf
+docker-compose*.yml text eol=lf
+
+# Entrypoints (sem extensão)
+entrypoint         text eol=lf
+*entrypoint*       text eol=lf
+
+# Configs Linux
+*.conf       text eol=lf
+*.service    text eol=lf
+.flake8      text eol=lf
+Caddyfile    text eol=lf
+
+# Python (ficheiros normalizados)
+*.py         text eol=lf
+
+# YAML / TOML / JSON (multiplataforma)
+*.yml        text eol=lf
+*.yaml       text eol=lf
+*.toml       text eol=lf
+
+# SQL
+*.sql        text eol=lf
+
+# Markdown e docs (LF é mais universal)
+*.md         text eol=lf
+
+# Binários (não tocar)
+*.png        binary
+*.jpg        binary
+*.jpeg       binary
+*.gif        binary
+*.svg        binary
+*.zip        binary
+*.gz         binary
+*.tar        binary
+*.tgz        binary
+*.bz2        binary
+*.7z         binary
+*.pdf        binary
+*.xlsx       binary
+*.xls        binary
+*.docx       binary
+*.doc        binary
+*.ico        binary
+*.woff       binary
+*.woff2      binary
+*.ttf        binary
+*.eot        binary
+*.otf        binary

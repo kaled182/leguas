@@ -4281,6 +4281,18 @@ def cainiao_driver_stat_guided_import(request):
     linked = 0
     skipped = 0
 
+    # ── Ordenar decisões: 'create' primeiro, depois 'link', depois 'group',
+    #    skip por último. Garante que quando uma linha 'group' refere outra
+    #    linha do mesmo import via 'import:<courier_id>', o driver target
+    #    já foi criado neste loop. ──
+    _action_order = {"create": 0, "link": 1, "group": 2, "skip": 3}
+    decisions = sorted(
+        decisions, key=lambda d: _action_order.get(d.get("action"), 9),
+    )
+
+    # Mapa courier_id → driver para resolver references "import:<cid>"
+    imported_drivers_by_cid = {}
+
     with transaction.atomic():
         batch = CainiaoDriverStatBatch.objects.create(
             filename=request.POST.get("filename", "guided_import"),
@@ -4322,15 +4334,27 @@ def cainiao_driver_stat_guided_import(request):
 
             driver = None
             if action in ("link", "group"):
-                drv_id = dec.get("driver_id")
-                if not drv_id:
+                drv_id_raw = dec.get("driver_id")
+                if drv_id_raw is None or drv_id_raw == "":
                     skipped += 1
                     continue
-                try:
-                    driver = DriverProfile.objects.get(pk=int(drv_id))
-                except DriverProfile.DoesNotExist:
-                    skipped += 1
-                    continue
+                # Suporte: target é uma linha deste import marcada como
+                # "create" — formato "import:<courier_id>"
+                drv_id_str = str(drv_id_raw)
+                if drv_id_str.startswith("import:"):
+                    ref_cid = drv_id_str.split(":", 1)[1]
+                    driver = imported_drivers_by_cid.get(ref_cid)
+                    if driver is None:
+                        # Linha referenciada ainda não foi criada (não devia
+                        # acontecer dado o sort, mas guard rail)
+                        skipped += 1
+                        continue
+                else:
+                    try:
+                        driver = DriverProfile.objects.get(pk=int(drv_id_raw))
+                    except (DriverProfile.DoesNotExist, ValueError, TypeError):
+                        skipped += 1
+                        continue
                 linked += 1
                 # Sync apelido / courier_id_cainiao se vazios
                 changed = []
@@ -4369,6 +4393,9 @@ def cainiao_driver_stat_guided_import(request):
                     ),
                 )
                 drivers_created += 1
+                # Regista driver para que linhas 'group' subsequentes
+                # possam apontar a este courier_id via "import:<cid>"
+                imported_drivers_by_cid[cid] = driver
 
             # Cria/actualiza mapping
             if driver:

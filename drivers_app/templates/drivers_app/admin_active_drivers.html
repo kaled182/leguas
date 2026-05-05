@@ -5944,10 +5944,20 @@ function cainiaoImportManager() {
                   <select x-show="row.action === 'link' || row.action === 'group'" x-model="row.driver_id"
                     class="w-full text-xs px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
                     <option value="">— Escolher —</option>
-                    <template x-for="d in drivers" :key="d.id">
-                      <option :value="d.id" :selected="d.id === row.driver_id"
-                        x-text="d.nome_completo + (d.apelido ? ' (' + d.apelido + ')' : '')"></option>
-                    </template>
+                    <optgroup label="Drivers existentes">
+                      <template x-for="d in drivers" :key="d.id">
+                        <option :value="d.id" :selected="d.id === row.driver_id"
+                          x-text="d.nome_completo + (d.apelido ? ' (' + d.apelido + ')' : '')"></option>
+                      </template>
+                    </optgroup>
+                    {# Quando é "group", permite agrupar com outra linha deste mesmo import marcada como "create" #}
+                    <optgroup label="Linhas deste import (criar novo)" x-show="row.action === 'group'">
+                      <template x-for="other in rows" :key="'imp_' + other.courier_id">
+                        <option x-show="other.action === 'create' && other.courier_id !== row.courier_id"
+                          :value="'import:' + other.courier_id"
+                          x-text="'» ' + (other.courier_name || other.courier_id) + ' (' + other.courier_id + ')'"></option>
+                      </template>
+                    </optgroup>
                   </select>
                   <span x-show="row.action === 'create'" class="text-xs text-rose-600">Novo: <span x-text="row.courier_name || row.courier_id"></span></span>
                   <span x-show="row.action === 'skip'" class="text-xs text-gray-400 italic">não importar</span>

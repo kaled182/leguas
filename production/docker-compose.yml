@@ -133,8 +133,8 @@ services:
   wppconnect:
     image: leguas_wppconnect_custom:latest
     build:
-      context: ../wppconnect-server
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: deploy/wppconnect/Dockerfile
     container_name: leguas_wppconnect
     restart: unless-stopped
     environment:

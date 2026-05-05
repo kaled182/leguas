@@ -97,7 +97,7 @@ services:
   wppconnect:
     build:
       context: ../..
-      dockerfile: deploy/dev/wppconnect/Dockerfile
+      dockerfile: deploy/wppconnect/Dockerfile
     image: leguas_wppconnect_custom:latest
     container_name: leguas_wppconnect
     restart: unless-stopped

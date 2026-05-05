@@ -28,7 +28,7 @@ ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
 
 WORKDIR /wppserver
 
-COPY deploy/dev/wppconnect/patch.js /tmp/wppconnect-patch.js
+COPY deploy/wppconnect/patch.js /tmp/wppconnect-patch.js
 
 RUN git config --global http.sslVerify false \
     && git clone --depth=1 --branch main https://github.com/wppconnect-team/wppconnect-server.git . \

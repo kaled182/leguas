@@ -8,16 +8,33 @@ Checklist para validar que um utilizador pode instalar e operar o sistema **do z
 
 ## Fase 1 — Máquina limpa (5 min)
 
-Pré-requisitos no host:
+### Opção A — Host fresh sem nada instalado
+
+Corre o bootstrap (instala Docker, Compose v2 e git automaticamente):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/kaled182/leguas/main/production/bootstrap.sh | bash
+```
+
+- [ ] Output termina com `✓ Pré-requisitos instalados`
+- [ ] **Logout + login** (para o user entrar no grupo docker)
+- [ ] `docker info` sem `sudo` responde sem erro
+
+### Opção B — Já tens Docker
+
+Verifica:
 
 - [ ] **Docker Engine** instalado (`docker --version` ≥ 20.10)
 - [ ] **Docker Compose v2** (`docker compose version` ≥ 2.0)
 - [ ] **Git** (`git --version`)
+
+### Em ambos casos
+
 - [ ] Pelo menos **4 GB RAM livre** + **10 GB disco**
 - [ ] Portas livres: **80, 443** (Caddy), **3306** opcional (DB)
 - [ ] Ligação à internet (para puxar imagens Docker e clonar repo)
 
-**Critério**: todos os comandos acima respondem sem erros.
+**Critério**: `docker info` responde sem `sudo`, `docker compose version` mostra ≥ 2.0.
 
 ---
 

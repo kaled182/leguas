@@ -10,7 +10,19 @@ Sistema de gestão logística para operadores de última-milha em Portugal. Gere
 
 ## ⚡ Quick Start
 
-### Produção (recomendado)
+### Host Linux limpo (zero pré-requisitos)
+
+```bash
+# 1. Instala Docker, Compose, git num host fresh:
+curl -fsSL https://raw.githubusercontent.com/kaled182/leguas/main/production/bootstrap.sh | bash
+
+# 2. Logout + login (para o user entrar no grupo docker), depois:
+git clone https://github.com/kaled182/leguas.git
+cd leguas/production
+./install.sh
+```
+
+### Já tens Docker instalado
 
 ```bash
 git clone https://github.com/kaled182/leguas.git
@@ -19,9 +31,9 @@ chmod +x install.sh
 ./install.sh
 ```
 
-Wizard interactivo: pergunta domínio, admin user/pass — gera secrets automáticos, sobe stack, mostra URL final.
+Wizard interactivo: pergunta domínio, admin user/pass — gera secrets automáticos, sobe stack, mostra URL final + recovery keys.
 
-📖 [**Guia completo de deploy →**](production/DEPLOYMENT.md)
+📖 [**Guia completo de deploy →**](production/DEPLOYMENT.md) · 📋 [**Checklist UAT →**](docs/runbook/INSTALL_CHECKLIST.md)
 
 ### Desenvolvimento
 

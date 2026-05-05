@@ -1350,8 +1350,10 @@ function empresasApp() {
       this.showLancamentoForm = false;
       this.lancamentoEditId = null;
       this.lancamentoError = '';
-      // Carrega config auto-emit ao abrir
+      // Pré-carrega config + count de motoristas ao abrir
+      // (evita o badge mostrar 0 até o user clicar no tab)
       this.loadAutoEmitConfig();
+      this.loadMotoristasFrota();
       this.showForm = true;
       this.$nextTick(() => lucide.createIcons());
     },

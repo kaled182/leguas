@@ -29,7 +29,7 @@ Wizard interactivo: pergunta domínio, admin user/pass — gera secrets automát
 git clone https://github.com/kaled182/leguas.git
 cd leguas
 cp .env.docker.example .env.docker  # editar
-docker compose up -d
+docker compose -f deploy/dev/docker-compose.yml up -d
 ```
 
 App em `http://localhost:8000`.
@@ -125,11 +125,22 @@ leguas/
 ├── send_paack_reports/          ← Legacy relatórios
 ├── manualorders_paack/          ← Legacy correção manual
 │
-├── docker-compose.yml           ← Dev environment
-├── Dockerfile                   ← Dev image
-├── requirements.txt             ← Python deps (~56 pacotes)
+├── deploy/dev/                  ← Dev environment (Docker)
+│   ├── Dockerfile, docker-compose.yml
+│   ├── docker-entrypoint.sh, init-db.sql
+│   └── wppconnect/              (Dockerfile, config.json, patch.js)
+│
+├── examples/                    ← CSVs de exemplo (tarifas, zonas postais)
+│
+├── docs/
+│   ├── ARCHITECTURE.md, DOCKER.md, ROADMAP.md
+│   ├── integrations/   (DELNEXT, PAACK, WHATSAPP, OMNICHANNEL, TYPEBOT)
+│   ├── runbook/        (TROUBLESHOOTING, CRON_JOBS, INSTALL_CHECKLIST)
+│   └── archive/        (snapshots históricos de evolução)
+│
+├── requirements.txt             ← Python deps
 ├── .env.docker.example          ← Template dev
-└── README.md                    ← Este ficheiro
+└── README.md
 ```
 
 ---

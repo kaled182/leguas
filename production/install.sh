@@ -95,6 +95,7 @@ DB_PASSWORD=$(openssl rand -hex 24 2>/dev/null || head -c 32 /dev/urandom | base
 DB_ROOT_PASSWORD=$(openssl rand -hex 24 2>/dev/null || head -c 32 /dev/urandom | base64 | tr -d "=+/" | head -c 32)
 WPP_SECRET=$(openssl rand -hex 32 2>/dev/null || head -c 64 /dev/urandom | base64 | tr -d "=+/" | head -c 64)
 BACKUP_PASS=$(openssl rand -hex 16 2>/dev/null || head -c 24 /dev/urandom | base64 | tr -d "=+/" | head -c 24)
+UPDATER_SECRET=$(openssl rand -hex 32 2>/dev/null || head -c 64 /dev/urandom | base64 | tr -d "=+/" | head -c 64)
 
 # Gera Fernet key (precisa Python cryptography)
 FERNET_KEY=$(docker run --rm python:3.11-alpine sh -c "pip install -q cryptography && python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())'")
@@ -169,6 +170,11 @@ GEOAPI_TOKEN=
 
 # ─────────────────────── BACKUP ─────────────────────────
 BACKUP_ZIP_PASSWORD=$BACKUP_PASS
+
+# ─────────────────────── AUTO-UPDATER SIDECAR ───────────
+UPDATER_SECRET=$UPDATER_SECRET
+UPDATER_BRANCH=main
+COMPOSE_PROJECT_NAME=appleguasfranzinaspt
 
 # ─────────────────────── EVOLUTION (opcional, legacy) ───
 AUTHENTICATION_API_KEY=

@@ -14,16 +14,6 @@ urlpatterns = [
     # ─── Atualização: changelog, sugestões e check do GitHub ───
     path("atualizacao/", views_updates.updates_index, name="updates_index"),
     path(
-        "atualizacao/changelog/guardar/",
-        views_updates.changelog_save,
-        name="changelog_save",
-    ),
-    path(
-        "atualizacao/changelog/<int:entry_id>/publicar/",
-        views_updates.changelog_publish,
-        name="changelog_publish",
-    ),
-    path(
         "atualizacao/sugestao/criar/",
         views_updates.suggestion_create,
         name="suggestion_create",

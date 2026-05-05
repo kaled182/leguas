@@ -15,9 +15,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
-from .models import (
-    ChangelogEntry, Suggestion, SystemVersionState, suggest_next_version,
-)
+from .models import Suggestion, SystemVersionState
 
 
 def _is_admin(request):
@@ -40,96 +38,95 @@ def _parse_github_repo(url):
     return None, None
 
 
+def _fetch_recent_commits(state, max_commits=80):
+    """Busca commits recentes do GitHub e agrupa por dia.
+
+    Devolve uma lista de dias (mais recente primeiro), cada um com:
+        { date, version, commit_count, commits: [...] }
+
+    Versão de cada dia: `beta-DD-MM.N` onde N = nº de commits do dia.
+    A entrada do dia mostra todos os commits (cada um com sha + msg + autor).
+
+    Em caso de erro, devolve (lista_vazia, error_string).
+    """
+    owner, repo = _parse_github_repo(state.github_repo_url)
+    if not owner or not repo:
+        return [], "URL do repositório GitHub não configurada."
+    branch = state.github_branch or "main"
+    headers = {"Accept": "application/vnd.github+json"}
+    if state.github_token:
+        headers["Authorization"] = f"Bearer {state.github_token}"
+    try:
+        r = requests.get(
+            f"https://api.github.com/repos/{owner}/{repo}/commits",
+            params={"sha": branch, "per_page": min(max_commits, 100)},
+            headers=headers, timeout=15,
+        )
+    except requests.exceptions.RequestException as e:
+        return [], f"Erro de rede: {e}"
+    if r.status_code != 200:
+        try:
+            msg = r.json().get("message", r.text[:200])
+        except (ValueError, json.JSONDecodeError):
+            msg = r.text[:200]
+        return [], f"GitHub respondeu {r.status_code}: {msg}"
+
+    raw = r.json() or []
+    by_date = {}
+    for c in raw:
+        author_date = c["commit"]["author"]["date"]  # ISO 8601 UTC
+        try:
+            d = datetime.fromisoformat(author_date.replace("Z", "+00:00")).date()
+        except (ValueError, TypeError):
+            continue
+        full_msg = c["commit"]["message"]
+        first_line = (full_msg.split("\n")[0] or "").strip()[:140]
+        body_lines = [
+            ln.strip() for ln in full_msg.split("\n")[1:]
+            if ln.strip() and not ln.startswith("Co-Authored-By")
+        ]
+        by_date.setdefault(d, []).append({
+            "sha": c["sha"],
+            "sha_short": c["sha"][:7],
+            "message": first_line,
+            "body": "\n".join(body_lines)[:600],
+            "author": c["commit"]["author"]["name"],
+            "url": c["html_url"],
+            "date": author_date,
+        })
+
+    days = []
+    for d in sorted(by_date.keys(), reverse=True):
+        commits = by_date[d]
+        # Ordenar do mais recente para o mais antigo dentro do dia
+        commits.sort(key=lambda x: x["date"], reverse=True)
+        version = f"beta-{d.day:02d}-{d.month:02d}.{len(commits)}"
+        days.append({
+            "date": d,
+            "version": version,
+            "commit_count": len(commits),
+            "commits": commits,
+        })
+    return days, None
+
+
 @login_required
 def updates_index(request):
-    """Página principal de Atualização: versão actual, changelog, sugestões."""
+    """Página principal de Atualização: versão actual, changelog (GitHub), sugestões."""
     state = SystemVersionState.get()
 
-    entries = ChangelogEntry.objects.all()[:50]
+    commit_days, changelog_error = _fetch_recent_commits(state)
     suggestions_recent = Suggestion.objects.all()[:30]
     suggestions_open = Suggestion.objects.filter(status="NEW").count()
 
-    suggested_version = suggest_next_version()
-
     return render(request, "system_config/updates.html", {
         "state": state,
-        "entries": entries,
+        "commit_days": commit_days,
+        "changelog_error": changelog_error,
         "suggestions_recent": suggestions_recent,
         "suggestions_open": suggestions_open,
-        "suggested_version": suggested_version,
         "is_admin_view": _is_admin(request),
     })
-
-
-@login_required
-@require_http_methods(["POST"])
-def changelog_save(request):
-    """Cria ou actualiza a entrada de changelog do dia."""
-    if not _is_admin(request):
-        return HttpResponseForbidden("Apenas admin.")
-
-    today = timezone.now().date()
-    version = (request.POST.get("version") or "").strip()
-    content = (request.POST.get("content") or "").strip()
-
-    if not content:
-        messages.error(request, "Conteúdo é obrigatório.")
-        return redirect("system_config:updates_index")
-
-    if not version:
-        version = suggest_next_version()
-
-    entry, created = ChangelogEntry.objects.get_or_create(
-        date=today,
-        defaults={
-            "version": version,
-            "content": content,
-            "created_by": request.user,
-        },
-    )
-    if not created:
-        # Actualiza conteúdo + faz bump de versão se a fornecida é nova
-        entry.content = content
-        if version and version != entry.version:
-            history = list(entry.version_history or [])
-            if entry.version and entry.version not in history:
-                history.append(entry.version)
-            entry.version = version
-            entry.version_history = history
-        entry.publish_status = "PENDING"  # nova versão precisa de re-publish
-        entry.save()
-
-    # Publicação automática (best-effort — não falha o save se push falhar)
-    success, err = _publish_changelog_to_github(entry)
-    if success:
-        messages.success(
-            request,
-            f"Entrada {entry.version} guardada e publicada no GitHub.",
-        )
-    else:
-        messages.warning(
-            request,
-            f"Entrada {entry.version} guardada, mas publicação no GitHub "
-            f"falhou: {err}",
-        )
-    return redirect("system_config:updates_index")
-
-
-@login_required
-@require_http_methods(["POST"])
-def changelog_publish(request, entry_id):
-    """Re-tenta publicar uma entrada específica no GitHub."""
-    if not _is_admin(request):
-        return HttpResponseForbidden()
-    entry = get_object_or_404(ChangelogEntry, id=entry_id)
-    success, err = _publish_changelog_to_github(entry)
-    if success:
-        return JsonResponse({
-            "success": True,
-            "commit_sha": entry.published_commit_sha,
-            "published_at": entry.published_at.isoformat() if entry.published_at else None,
-        })
-    return JsonResponse({"success": False, "error": err}, status=502)
 
 
 @login_required
@@ -289,98 +286,6 @@ def _updater_secret():
     return os.environ.get("UPDATER_SECRET", "")
 
 
-def _build_changelog_markdown():
-    """Gera o conteúdo do CHANGELOG.md a partir das entradas em DB.
-
-    Formato:
-        # Changelog
-        ## beta-DD-MM.N — YYYY-MM-DD
-        <content>
-    """
-    lines = [
-        "# Changelog",
-        "",
-        "All notable changes to this project are documented in this file.",
-        "Auto-gerado pelo módulo de Atualização do sistema.",
-        "",
-    ]
-    for e in ChangelogEntry.objects.all().order_by("-date"):
-        lines.append(f"## {e.version} — {e.date.strftime('%Y-%m-%d')}")
-        if e.version_history and len(e.version_history) > 1:
-            others = ", ".join(v for v in e.version_history if v != e.version)
-            lines.append(f"_Versões anteriores deste dia: {others}_")
-        lines.append("")
-        lines.append((e.content or "").rstrip())
-        lines.append("")
-    return "\n".join(lines)
-
-
-def _publish_changelog_to_github(entry):
-    """Tenta publicar o CHANGELOG.md no GitHub. Atualiza o status da entrada.
-
-    Devolve (success: bool, error: str).
-    """
-    state = SystemVersionState.get()
-    if not state.github_token:
-        entry.publish_status = "FAILED"
-        entry.publish_error = "Token do GitHub não configurado."
-        entry.save(update_fields=["publish_status", "publish_error"])
-        return False, entry.publish_error
-    if not state.github_repo_url:
-        entry.publish_status = "FAILED"
-        entry.publish_error = "URL do repositório não configurada."
-        entry.save(update_fields=["publish_status", "publish_error"])
-        return False, entry.publish_error
-
-    secret = _updater_secret()
-    if not secret:
-        entry.publish_status = "FAILED"
-        entry.publish_error = "UPDATER_SECRET não configurado."
-        entry.save(update_fields=["publish_status", "publish_error"])
-        return False, entry.publish_error
-
-    content = _build_changelog_markdown()
-    payload = {
-        "content": content,
-        "token": state.github_token,
-        "repo_url": state.github_repo_url,
-        "branch": state.github_branch or "main",
-        "commit_message": (
-            f"chore(changelog): {entry.version} — {entry.date.isoformat()}"
-        ),
-    }
-    try:
-        r = requests.post(
-            _updater_url("/changelog-push"),
-            headers={"X-Updater-Secret": secret},
-            json=payload, timeout=60,
-        )
-    except requests.exceptions.RequestException as e:
-        entry.publish_status = "FAILED"
-        entry.publish_error = f"Updater inacessível: {e}"
-        entry.save(update_fields=["publish_status", "publish_error"])
-        return False, entry.publish_error
-    if r.status_code != 200:
-        entry.publish_status = "FAILED"
-        try:
-            entry.publish_error = (
-                f"Updater respondeu {r.status_code}: "
-                f"{r.json().get('error', r.text[:200])}"
-            )
-        except (ValueError, json.JSONDecodeError):
-            entry.publish_error = f"Updater respondeu {r.status_code}"
-        entry.save(update_fields=["publish_status", "publish_error"])
-        return False, entry.publish_error
-    data = r.json()
-    entry.publish_status = "PUBLISHED"
-    entry.publish_error = ""
-    entry.published_at = timezone.now()
-    entry.published_commit_sha = data.get("commit_sha", "")[:40]
-    entry.save(update_fields=[
-        "publish_status", "publish_error",
-        "published_at", "published_commit_sha",
-    ])
-    return True, ""
 
 
 @login_required

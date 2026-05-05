@@ -137,102 +137,66 @@
 
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
-    {# ─── Coluna esquerda: Changelog timeline ─── #}
+    {# ─── Coluna esquerda: Changelog (commits do GitHub) ─── #}
     <div class="lg:col-span-2 space-y-4">
-
-      {% if is_admin_view %}
-      <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 p-5">
-        <div class="flex items-center gap-2 mb-3">
-          <i data-lucide="git-commit" class="w-5 h-5 text-indigo-500"></i>
-          <h2 class="font-bold text-gray-900 dark:text-white">Nova entrada no changelog</h2>
-        </div>
-        <form method="post" action="{% url 'system_config:changelog_save' %}" class="space-y-3">
-          {% csrf_token %}
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div class="md:col-span-1">
-              <label class="block text-xs uppercase font-semibold text-gray-600 dark:text-gray-300 mb-1">Versão</label>
-              <input type="text" name="version" value="{{ suggested_version }}"
-                     class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg font-mono">
-              <p class="text-[11px] text-gray-500 mt-1">Sugestão: <code>{{ suggested_version }}</code></p>
-            </div>
-            <div class="md:col-span-2">
-              <label class="block text-xs uppercase font-semibold text-gray-600 dark:text-gray-300 mb-1">Conteúdo (markdown)</label>
-              <textarea name="content" rows="5" required
-                        placeholder="• Inbox unificado A Pagar&#10;• Driver portal: download de PF e anexar recibo&#10;• Bug fixes de KPIs"
-                        class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg font-mono"></textarea>
-            </div>
-          </div>
-          <div class="flex justify-end">
-            <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold inline-flex items-center gap-2">
-              <i data-lucide="save" class="w-4 h-4"></i> Guardar / Atualizar dia
-            </button>
-          </div>
-        </form>
-        <p class="text-[11px] text-gray-500 mt-2">
-          Apenas uma entrada por dia — guardar de novo agrega ao mesmo registo, com bump de versão se diferente.
-        </p>
-      </div>
-      {% endif %}
 
       <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
         <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
           <i data-lucide="history" class="w-5 h-5 text-purple-500"></i>
           <h2 class="font-bold text-gray-900 dark:text-white">Changelog</h2>
-          <span class="ml-auto text-xs text-gray-500">{{ entries|length }} entrada{{ entries|length|pluralize:"s" }}</span>
+          <span class="text-[11px] text-gray-500">lido directamente do GitHub</span>
+          <span class="ml-auto text-xs text-gray-500">{{ commit_days|length }} dia{{ commit_days|length|pluralize:"s" }}</span>
         </div>
+
+        {% if changelog_error %}
+        <div class="m-5 p-4 bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-700/50 rounded-xl flex items-start gap-3">
+          <i data-lucide="alert-circle" class="w-5 h-5 text-rose-600 flex-shrink-0 mt-0.5"></i>
+          <div class="flex-1">
+            <div class="font-semibold text-rose-800 dark:text-rose-200 text-sm">Falha a ler o changelog do GitHub</div>
+            <div class="text-xs text-rose-700 dark:text-rose-300 mt-1">{{ changelog_error }}</div>
+            {% if is_admin_view %}
+            <button @click="ghModal.open = true" class="mt-2 text-xs text-indigo-600 hover:underline">Configurar GitHub →</button>
+            {% endif %}
+          </div>
+        </div>
+        {% endif %}
+
         <div class="divide-y divide-gray-100 dark:divide-gray-700">
-          {% for e in entries %}
+          {% for d in commit_days %}
           <div class="p-5">
-            <div class="flex items-start gap-3 mb-2">
+            <div class="flex items-start gap-3 mb-3">
               <div class="flex-shrink-0 w-12 h-12 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg flex flex-col items-center justify-center">
-                <span class="text-[10px] uppercase text-indigo-600 dark:text-indigo-400">{{ e.date|date:"M" }}</span>
-                <span class="text-lg font-bold text-indigo-700 dark:text-indigo-300 leading-none">{{ e.date|date:"d" }}</span>
+                <span class="text-[10px] uppercase text-indigo-600 dark:text-indigo-400">{{ d.date|date:"M" }}</span>
+                <span class="text-lg font-bold text-indigo-700 dark:text-indigo-300 leading-none">{{ d.date|date:"d" }}</span>
               </div>
-              <div class="flex-1">
+              <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-2 flex-wrap">
-                  <span class="font-mono font-bold text-gray-900 dark:text-white">{{ e.version }}</span>
-                  {% if e.version_history|length > 1 %}
-                    <span class="text-[10px] text-gray-500">+ {{ e.version_history|length|add:"-1" }} versão(ões) anterior(es)</span>
-                  {% endif %}
-
-                  {# Estado de publicação no GitHub #}
-                  {% if e.publish_status == 'PUBLISHED' %}
-                    <a href="{{ state.github_repo_url }}/commit/{{ e.published_commit_sha }}" target="_blank"
-                       class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 hover:underline"
-                       title="Publicado em {{ e.published_at|date:'d/m H:i' }}">
-                      <i data-lucide="check-circle-2" class="w-3 h-3"></i> Publicado · {{ e.published_commit_sha|slice:":7" }}
-                    </a>
-                  {% elif e.publish_status == 'FAILED' %}
-                    <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-300"
-                          title="{{ e.publish_error }}">
-                      <i data-lucide="x-circle" class="w-3 h-3"></i> Falhou
-                    </span>
-                  {% else %}
-                    <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-gray-100 dark:bg-gray-700/50 text-gray-600 dark:text-gray-400">
-                      <i data-lucide="circle-dashed" class="w-3 h-3"></i> Por publicar
-                    </span>
-                  {% endif %}
-
-                  {% if is_admin_view and e.publish_status != 'PUBLISHED' %}
-                    <button @click="republish({{ e.id }})"
-                            class="text-[10px] text-indigo-600 hover:text-indigo-700 hover:underline">
-                      <i data-lucide="upload-cloud" class="w-3 h-3 inline"></i> Republicar
-                    </button>
-                  {% endif %}
-
-                  <span class="ml-auto text-[11px] text-gray-500">
-                    {% if e.created_by %}{{ e.created_by.username }} · {% endif %}{{ e.updated_at|date:"d/m H:i" }}
-                  </span>
+                  <span class="font-mono font-bold text-gray-900 dark:text-white">{{ d.version }}</span>
+                  <span class="text-[11px] text-gray-500">{{ d.commit_count }} commit{{ d.commit_count|pluralize:"s" }}</span>
+                  <span class="ml-auto text-[11px] text-gray-500">{{ d.date|date:"l, d \\d\\e F Y" }}</span>
                 </div>
-                <pre class="mt-2 whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-300 font-sans">{{ e.content }}</pre>
+                <ul class="mt-2 space-y-1.5">
+                  {% for c in d.commits %}
+                  <li class="flex items-start gap-2 text-sm">
+                    <a href="{{ c.url }}" target="_blank" rel="noopener"
+                       class="font-mono text-[10px] bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-1.5 py-0.5 rounded hover:bg-indigo-100 dark:hover:bg-indigo-900/40 hover:text-indigo-700 dark:hover:text-indigo-300 flex-shrink-0">{{ c.sha_short }}</a>
+                    <div class="flex-1 min-w-0">
+                      <span class="text-gray-700 dark:text-gray-300">{{ c.message }}</span>
+                      <span class="text-[11px] text-gray-500 ml-2">— {{ c.author }}</span>
+                    </div>
+                  </li>
+                  {% endfor %}
+                </ul>
               </div>
             </div>
           </div>
           {% empty %}
+          {% if not changelog_error %}
           <div class="p-12 text-center">
             <i data-lucide="git-branch" class="w-10 h-10 text-gray-400 mx-auto mb-2"></i>
-            <p class="text-sm text-gray-500">Ainda sem entradas. {% if is_admin_view %}Cria a primeira acima.{% endif %}</p>
+            <p class="text-sm text-gray-500">Sem commits para mostrar.</p>
           </div>
+          {% endif %}
           {% endfor %}
         </div>
       </div>
@@ -452,23 +416,6 @@ function updatesPage() {
       }
       this.updateJob.polling = false;
       this.applying = false;
-    },
-    async republish(entryId) {
-      const csrf = document.cookie.split('csrftoken=')[1]?.split(';')[0] || '';
-      try {
-        const r = await fetch(`/system/atualizacao/changelog/${entryId}/publicar/`, {
-          method: 'POST', headers: { 'X-CSRFToken': csrf },
-        });
-        const d = await r.json();
-        if (d.success) {
-          (window.toast || alert)({ type: 'success', message: 'Publicado no GitHub.' });
-          setTimeout(() => window.location.reload(), 600);
-        } else {
-          (window.toast || alert)({ type: 'error', title: 'Falha', message: d.error });
-        }
-      } catch (e) {
-        (window.toast || alert)({ type: 'error', message: e.message });
-      }
     },
     async submitSuggestion() {
       if (!this.suggModal.title || !this.suggModal.description) {

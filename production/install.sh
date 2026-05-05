@@ -62,6 +62,40 @@ fi
 log "Docker $(docker --version | awk '{print $3}' | tr -d ',') ✓"
 log "Docker Compose $(docker compose version --short) ✓"
 
+# ── Auto-recovery: grupo docker não activo na sessão actual ──────────
+# Se o user foi adicionado ao grupo docker (via bootstrap.sh ou similar)
+# mas a sessão actual ainda não recarregou /etc/group, `docker info` dá
+# permission denied. Re-executa o script via `sg docker` que activa o
+# grupo na sub-shell sem precisar de logout.
+if ! docker info &> /dev/null; then
+    if [ "${LEGUAS_INSTALL_REEXEC:-0}" = "1" ]; then
+        # Já tentámos uma vez, evitar loop
+        err "Docker continua sem permissão mesmo após sg docker."
+        err "Verifica: sudo systemctl status docker"
+        err "Tenta: sudo ./install.sh   ou   newgrp docker; ./install.sh"
+        exit 1
+    fi
+    # Está o user no grupo docker (em /etc/group, não em groups()) ?
+    if getent group docker 2>/dev/null | grep -qE "(:|,)$USER(,|$)"; then
+        warn "Grupo 'docker' ainda não activo nesta sessão — a re-executar via sg docker…"
+        export LEGUAS_INSTALL_REEXEC=1
+        # sg docker -c '...' executa o comando com o grupo docker activo.
+        # Precisamos de re-executar o script com os mesmos argumentos.
+        exec sg docker -c "bash $(printf '%q ' "$0" "$@")"
+    fi
+    # User não está no grupo docker — tenta adicionar e re-executa
+    if command -v sudo &> /dev/null; then
+        warn "User '$USER' não está no grupo docker. A adicionar agora…"
+        sudo usermod -aG docker "$USER"
+        export LEGUAS_INSTALL_REEXEC=1
+        warn "Re-executando via sg docker (sem precisar logout)…"
+        exec sg docker -c "bash $(printf '%q ' "$0" "$@")"
+    fi
+    err "Sem acesso ao Docker e sudo indisponível."
+    err "Corre: sudo usermod -aG docker $USER; logout + login; ./install.sh"
+    exit 1
+fi
+
 # ── 2. Inputs interactivos ───────────────────────────────────────────
 log "Vou pedir alguns dados de configuração. Premir Enter aceita o default."
 echo

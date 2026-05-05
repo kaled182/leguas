@@ -11,76 +11,69 @@ duplicada com courier_ids diferentes), o admin pode usar
 
 Tudo dentro de uma única transacção atómica — se algum passo falhar,
 nada é alterado.
+
+Estratégia: Django introspection descobre dinamicamente todos os
+ForeignKey que apontam para DriverProfile. Isto evita listas
+hard-coded ficarem desactualizadas quando novos modelos são
+adicionados.
 """
 from django.db import transaction
 
 from .models import DriverMergeAudit, DriverProfile
 
 
-# Modelos com FK directa para DriverProfile.
-# Lista mantida sincronizada com o código real — see grep:
-#   grep -rE "ForeignKey.*DriverProfile" --include='*.py'
-#
-# Cada entrada: (app_label, model_name, fk_field_name)
-FK_TARGETS = [
-    ("contracts", "DriverContract", "driver"),
-    ("customauth", "DriverAccess", "driver_profile"),
-    ("fleet_management", "VehicleAssignment", "driver"),
-    ("fleet_management", "VehicleIncident", "driver"),
-    ("route_allocation", "DriverShift", "driver"),
-    ("settlements", "DriverSettlement", "driver"),
-    ("settlements", "DriverClaim", "driver"),
-    ("settlements", "DriverPreInvoice", "driver"),
-    ("settlements", "PreInvoiceAdvance", "driver"),
-    ("settlements", "DriverCourierMapping", "driver"),
-    ("settlements", "CainiaoDelivery", "driver"),
-    ("settlements", "DriverHelper", "driver"),
-    ("settlements", "OperationalCost", "driver"),
-    ("settlements", "FinancialAlert", "driver"),
-    ("settlements", "FleetInvoiceDriverLine", "driver"),
-    ("settlements", "ForecastPlanAssignment", "driver"),
-    ("settlements", "WaybillAttributionOverride", "attributed_to_driver"),
-    ("analytics", "DriverPerformance", "driver"),
-    ("drivers_app", "DriverProfileChangeRequest", "driver"),
-    ("drivers_app", "EmpresaParceiraLancamento", "driver"),
-]
+def _find_driver_fk_targets():
+    """Descobre todas as classes Model com FK directa para DriverProfile.
 
-# Modelos opcionais — só processados se existirem no projecto
-OPTIONAL_FK_TARGETS = [
-    ("settlements", "PreInvoiceLine", "driver"),
-    ("settlements", "PreInvoiceBonus", "driver"),
-    ("settlements", "PreInvoiceLostPackage", "driver"),
-    ("settlements", "ThirdPartyReimbursement", "driver"),
-    ("settlements", "Shareholder", "user"),  # diferente: aponta a User
-]
+    Devolve lista de (Model, fk_field_name) percorrendo o registo de
+    apps do Django. Inclui ForeignKey e OneToOneField — tanto faz para
+    o `update()` que vamos fazer.
 
-
-def _get_model(app_label, model_name):
-    """Devolve a classe do modelo ou None se não existir."""
+    Skips:
+      - Relações inversas (related_objects)
+      - ManyToMany (precisariam de tratamento separado)
+      - Self-references no próprio DriverProfile
+    """
     from django.apps import apps
-    try:
-        return apps.get_model(app_label, model_name)
-    except LookupError:
-        return None
+    targets = []
+    for model in apps.get_models():
+        if model is DriverProfile:
+            continue
+        for field in model._meta.get_fields():
+            if not field.is_relation:
+                continue
+            # Só FK e OneToOne (forward), não M2M nem reverse
+            if not (
+                getattr(field, "many_to_one", False)
+                or getattr(field, "one_to_one", False)
+            ):
+                continue
+            # Ignora reverse relations (são auto)
+            if getattr(field, "auto_created", False) and not getattr(
+                field, "concrete", False,
+            ):
+                continue
+            related = getattr(field, "related_model", None)
+            if related is DriverProfile:
+                targets.append((model, field.name))
+    return targets
 
 
 def preview_merge(source: DriverProfile, target: DriverProfile) -> dict:
     """Conta quantas linhas serão transferidas, sem alterar nada.
 
-    Devolve dict { "<app.Model>": int, "_total": int }.
+    Devolve dict {"<app.Model>": int, "_total": int}.
     """
     counts = {}
     total = 0
-    for app, model, field in FK_TARGETS + OPTIONAL_FK_TARGETS:
-        Model = _get_model(app, model)
-        if Model is None:
-            continue
+    for Model, field_name in _find_driver_fk_targets():
         try:
-            n = Model.objects.filter(**{field: source}).count()
+            n = Model.objects.filter(**{field_name: source}).count()
         except Exception:
             continue
         if n > 0:
-            counts[f"{app}.{model}"] = n
+            label = f"{Model._meta.app_label}.{Model.__name__}"
+            counts[label] = n
             total += n
     counts["_total"] = total
     return counts
@@ -91,8 +84,9 @@ def merge_drivers(source: DriverProfile, target: DriverProfile,
                   user=None, notes: str = "") -> DriverMergeAudit:
     """Move tudo do `source` para o `target` e apaga `source`.
 
-    Levanta ValueError se source == target ou se source já não existe.
-    Retorna o `DriverMergeAudit` criado.
+    Levanta ValueError se source == target ou se source/target não existem.
+    Levanta RuntimeError se algum reassign falhar (toda a transacção é
+    revertida via @transaction.atomic).
     """
     if source.pk == target.pk:
         raise ValueError("Source e target são o mesmo motorista.")
@@ -102,21 +96,29 @@ def merge_drivers(source: DriverProfile, target: DriverProfile,
         raise ValueError(f"Target driver #{target.pk} não existe.")
 
     transferred = {}
+    failed = []
 
-    for app, model, field in FK_TARGETS + OPTIONAL_FK_TARGETS:
-        Model = _get_model(app, model)
-        if Model is None:
-            continue
+    for Model, field_name in _find_driver_fk_targets():
+        label = f"{Model._meta.app_label}.{Model.__name__}.{field_name}"
         try:
-            n = Model.objects.filter(**{field: source}).update(
-                **{field: target}
+            n = Model.objects.filter(**{field_name: source}).update(
+                **{field_name: target}
             )
         except Exception as e:
-            raise RuntimeError(
-                f"Falha a reassignar {app}.{model}.{field}: {e}"
-            )
+            # Caso raríssimo (constraint custom, etc.) — recolhe mas não
+            # interrompe se for 0 linhas afectadas.
+            if Model.objects.filter(**{field_name: source}).exists():
+                failed.append(f"{label}: {e}")
+            continue
         if n > 0:
-            transferred[f"{app}.{model}"] = n
+            transferred[
+                f"{Model._meta.app_label}.{Model.__name__}"
+            ] = n
+
+    if failed:
+        raise RuntimeError(
+            "Falha a reassignar: " + " | ".join(failed)
+        )
 
     # Snapshot textual do source antes de apagar
     source_repr = (
@@ -125,7 +127,6 @@ def merge_drivers(source: DriverProfile, target: DriverProfile,
     if source.courier_id_cainiao:
         source_repr += f" · cainiao={source.courier_id_cainiao}"
 
-    # Audit log
     audit = DriverMergeAudit.objects.create(
         source_driver_repr=source_repr,
         source_driver_id=source.pk,
@@ -135,7 +136,6 @@ def merge_drivers(source: DriverProfile, target: DriverProfile,
         merged_by=user if (user and user.is_authenticated) else None,
     )
 
-    # Apagar source
     source.delete()
 
     return audit

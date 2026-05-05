@@ -1050,6 +1050,42 @@
                         </label>
                     </div>
 
+                    {# ─── Password do ZIP (só superuser) ─── #}
+                    {% if backup_zip_password %}
+                    <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700/50 rounded-lg p-4 mb-5"
+                         x-data="{ visible: false, copied: false }">
+                        <div class="flex items-start gap-3">
+                            <i data-lucide="key-round" class="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5"></i>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center justify-between gap-2 flex-wrap mb-2">
+                                    <div>
+                                        <div class="text-sm font-bold text-amber-900 dark:text-amber-200">Password de cifragem dos ZIPs</div>
+                                        <div class="text-[11px] text-amber-700 dark:text-amber-400">
+                                            Necessária para restaurar este backup noutra instalação. <strong>Guarda em password manager.</strong>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <input :type="visible ? 'text' : 'password'"
+                                           value="{{ backup_zip_password }}" readonly
+                                           class="flex-1 px-3 py-2 text-sm font-mono bg-white dark:bg-gray-800 border border-amber-300 dark:border-amber-700 rounded-lg text-gray-900 dark:text-white">
+                                    <button type="button" @click="visible = !visible"
+                                            class="p-2 hover:bg-amber-100 dark:hover:bg-amber-900/40 rounded-lg text-amber-700 dark:text-amber-300"
+                                            :title="visible ? 'Ocultar' : 'Mostrar'">
+                                        <i :data-lucide="visible ? 'eye-off' : 'eye'" class="w-4 h-4"></i>
+                                    </button>
+                                    <button type="button"
+                                            @click="navigator.clipboard.writeText('{{ backup_zip_password|escapejs }}'); copied = true; setTimeout(() => copied = false, 2000)"
+                                            class="px-3 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-semibold inline-flex items-center gap-1.5">
+                                        <i :data-lucide="copied ? 'check' : 'copy'" class="w-4 h-4"></i>
+                                        <span x-text="copied ? 'Copiado!' : 'Copiar'"></span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
                     <!-- Mensagem -->
                     <div x-show="message" x-cloak
                          class="mb-4 rounded-lg px-4 py-3 text-sm"

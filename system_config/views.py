@@ -24,10 +24,19 @@ logger = logging.getLogger(__name__)
 @login_required
 def system_config_view(request):
     """View para exibir e editar configurações do sistema"""
+    import os
     config = SystemConfiguration.get_config()
 
     context = {
         "config": config,
+        # Expor BACKUP_ZIP_PASSWORD na secção Backup para superuser:
+        # sem esta chave, backups antigos ficam irrecuperáveis se o
+        # operador trocar de instalação. Apenas superuser para evitar
+        # exposição em capturas de ecrã casuais.
+        "backup_zip_password": (
+            os.environ.get("BACKUP_ZIP_PASSWORD", "")
+            if request.user.is_superuser else ""
+        ),
     }
 
     return render(request, "system_config/config.html", context)

@@ -3548,3 +3548,36 @@ def driver_quickview(request, driver_id):
     })
 
 
+
+
+# ─── Portal do Driver (Fase 1) ───
+from .portal_views import (
+    driver_portal,
+    driver_portal_reports,
+    driver_portal_invoices,
+    driver_portal_profile,
+    driver_pre_invoice_pdf,
+    driver_pre_invoice_upload_recibo,
+)
+
+
+# ─── Admin: pedidos de alteração de perfil (Fase 2) ───
+from .admin_change_requests import (
+    change_requests_list,
+    change_request_action,
+)
+
+# ─── Central de Motoristas (vista admin moderna) ───
+from .central_views import drivers_central
+
+# ─── Portal Admin: editar / docs / veículos / helpers / reclamações / logins / financeiro ───
+from .portal_admin_views import (
+    driver_admin_edit,
+    driver_documents,
+    driver_vehicles,
+    driver_helpers,
+    driver_complaints,
+    driver_logins,
+    driver_financeiro,
+    driver_pre_invoice_detail,
+)

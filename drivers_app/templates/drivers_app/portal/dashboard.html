@@ -1,0 +1,321 @@
+{% extends 'drivers_app/portal/_base.html' %}
+
+{% block portal_content %}
+
+{# ─── KPIs principais (Hoje, Semana, Mês, Ano) ─── #}
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+
+  <div class="bg-gradient-to-br from-emerald-500 to-green-600 rounded-2xl p-5 text-white shadow-md hover:shadow-lg transition">
+    <div class="flex items-center justify-between mb-2">
+      <span class="text-xs font-bold uppercase tracking-wider text-emerald-100">Hoje</span>
+      <i data-lucide="sun" class="w-5 h-5 text-emerald-100"></i>
+    </div>
+    <p class="text-4xl font-extrabold">{{ kpis_today.total }}</p>
+    <p class="text-xs text-emerald-100 mt-1">pacotes</p>
+    <div class="mt-3 grid grid-cols-3 gap-2 text-[11px]">
+      <div><div class="font-bold text-base">{{ kpis_today.delivered }}</div><div class="text-emerald-100">✓</div></div>
+      <div><div class="font-bold text-base">{{ kpis_today.failures }}</div><div class="text-emerald-100">✗</div></div>
+      <div><div class="font-bold text-base">{{ kpis_today.success_rate|floatformat:0 }}%</div><div class="text-emerald-100">sucesso</div></div>
+    </div>
+  </div>
+
+  <div class="bg-white dark:bg-gray-800 rounded-2xl p-5 border border-gray-200/50 dark:border-gray-700/50 shadow-sm hover:shadow-md transition">
+    <div class="flex items-center justify-between mb-2">
+      <span class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Semana</span>
+      <div class="bg-blue-100 dark:bg-blue-900/40 p-1.5 rounded-lg">
+        <i data-lucide="calendar-days" class="w-4 h-4 text-blue-600 dark:text-blue-400"></i>
+      </div>
+    </div>
+    <p class="text-4xl font-extrabold text-gray-900 dark:text-white">{{ kpis_week.total }}</p>
+    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">pacotes</p>
+    <div class="mt-3 grid grid-cols-3 gap-2 text-[11px]">
+      <div><div class="font-bold text-base text-emerald-600">{{ kpis_week.delivered }}</div><div class="text-gray-500">✓</div></div>
+      <div><div class="font-bold text-base text-rose-600">{{ kpis_week.failures }}</div><div class="text-gray-500">✗</div></div>
+      <div><div class="font-bold text-base text-blue-600">{{ kpis_week.success_rate|floatformat:0 }}%</div><div class="text-gray-500">sucesso</div></div>
+    </div>
+  </div>
+
+  <div class="bg-white dark:bg-gray-800 rounded-2xl p-5 border border-gray-200/50 dark:border-gray-700/50 shadow-sm hover:shadow-md transition">
+    <div class="flex items-center justify-between mb-2">
+      <span class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Mês</span>
+      <div class="bg-purple-100 dark:bg-purple-900/40 p-1.5 rounded-lg">
+        <i data-lucide="calendar" class="w-4 h-4 text-purple-600 dark:text-purple-400"></i>
+      </div>
+    </div>
+    <p class="text-4xl font-extrabold text-gray-900 dark:text-white">{{ kpis_month.total }}</p>
+    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">pacotes</p>
+    <div class="mt-3 grid grid-cols-3 gap-2 text-[11px]">
+      <div><div class="font-bold text-base text-emerald-600">{{ kpis_month.delivered }}</div><div class="text-gray-500">✓</div></div>
+      <div><div class="font-bold text-base text-rose-600">{{ kpis_month.failures }}</div><div class="text-gray-500">✗</div></div>
+      <div><div class="font-bold text-base text-purple-600">{{ kpis_month.success_rate|floatformat:0 }}%</div><div class="text-gray-500">sucesso</div></div>
+    </div>
+  </div>
+
+  <div class="bg-white dark:bg-gray-800 rounded-2xl p-5 border border-gray-200/50 dark:border-gray-700/50 shadow-sm hover:shadow-md transition">
+    <div class="flex items-center justify-between mb-2">
+      <span class="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Ano</span>
+      <div class="bg-amber-100 dark:bg-amber-900/40 p-1.5 rounded-lg">
+        <i data-lucide="trophy" class="w-4 h-4 text-amber-600 dark:text-amber-400"></i>
+      </div>
+    </div>
+    <p class="text-4xl font-extrabold text-gray-900 dark:text-white">{{ kpis_year.total }}</p>
+    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">pacotes</p>
+    <div class="mt-3 grid grid-cols-3 gap-2 text-[11px]">
+      <div><div class="font-bold text-base text-emerald-600">{{ kpis_year.delivered }}</div><div class="text-gray-500">✓</div></div>
+      <div><div class="font-bold text-base text-rose-600">{{ kpis_year.failures }}</div><div class="text-gray-500">✗</div></div>
+      <div><div class="font-bold text-base text-amber-600">{{ kpis_year.success_rate|floatformat:0 }}%</div><div class="text-gray-500">sucesso</div></div>
+    </div>
+  </div>
+</div>
+
+{# ─── Ranking + Última PF + Contratos ─── #}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+
+  {# Ranking #}
+  <div class="bg-white dark:bg-gray-800 rounded-2xl p-5 border border-gray-200/50 dark:border-gray-700/50 shadow-sm">
+    <div class="flex items-center gap-2 mb-3">
+      <i data-lucide="trophy" class="w-5 h-5 text-amber-500"></i>
+      <h2 class="font-bold text-gray-900 dark:text-white">Ranking do Mês</h2>
+    </div>
+    {% if ranking.position %}
+      <div class="text-center py-4">
+        <div class="inline-flex items-center justify-center w-20 h-20 rounded-full
+          {% if ranking.position == 1 %}bg-gradient-to-br from-amber-400 to-yellow-500
+          {% elif ranking.position == 2 %}bg-gradient-to-br from-gray-300 to-gray-400
+          {% elif ranking.position == 3 %}bg-gradient-to-br from-orange-400 to-orange-600
+          {% else %}bg-gradient-to-br from-blue-400 to-blue-600{% endif %} text-white shadow-lg">
+          <span class="text-2xl font-extrabold">#{{ ranking.position }}</span>
+        </div>
+        <p class="text-sm text-gray-700 dark:text-gray-300 mt-3">
+          de <span class="font-bold">{{ ranking.total }}</span> motoristas activos
+        </p>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+          Taxa de sucesso: <span class="font-bold text-emerald-600">{{ ranking.success_rate|floatformat:1 }}%</span>
+        </p>
+      </div>
+    {% else %}
+      <p class="text-sm text-gray-500 italic text-center py-6">Sem dados suficientes para ranking este mês.</p>
+    {% endif %}
+  </div>
+
+  {# Última PF #}
+  <div class="bg-white dark:bg-gray-800 rounded-2xl p-5 border border-gray-200/50 dark:border-gray-700/50 shadow-sm">
+    <div class="flex items-center gap-2 mb-3">
+      <i data-lucide="receipt" class="w-5 h-5 text-blue-500"></i>
+      <h2 class="font-bold text-gray-900 dark:text-white">Última Pré-Fatura</h2>
+    </div>
+    {% if last_pf %}
+      <p class="text-sm text-gray-500 dark:text-gray-400">
+        {{ last_pf.periodo_inicio|date:"d/m" }} → {{ last_pf.periodo_fim|date:"d/m/Y" }}
+      </p>
+      <p class="text-3xl font-extrabold text-gray-900 dark:text-white mt-2">€ {{ last_pf.total_a_receber|floatformat:2 }}</p>
+      <span class="inline-block mt-2 px-2 py-0.5 rounded text-xs font-semibold
+        {% if last_pf.status == 'PAGO' %}bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300
+        {% elif last_pf.status == 'APROVADO' %}bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300
+        {% elif last_pf.status == 'PENDENTE' %}bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300
+        {% else %}bg-gray-100 text-gray-700 dark:bg-gray-900/40 dark:text-gray-300{% endif %}">
+        {{ last_pf.get_status_display }}
+      </span>
+      <a href="{% url 'drivers_app:driver_portal_invoices' driver.id %}"
+         class="block mt-3 text-xs text-blue-600 dark:text-blue-400 hover:underline">
+        Ver todas →
+      </a>
+    {% else %}
+      <p class="text-sm text-gray-500 italic">Ainda não há pré-faturas.</p>
+    {% endif %}
+  </div>
+
+  {# Contratos (placeholder Fase 3) #}
+  <div class="bg-white dark:bg-gray-800 rounded-2xl p-5 border border-gray-200/50 dark:border-gray-700/50 shadow-sm">
+    <div class="flex items-center gap-2 mb-3">
+      <i data-lucide="file-signature" class="w-5 h-5 text-violet-500"></i>
+      <h2 class="font-bold text-gray-900 dark:text-white">Contratos</h2>
+    </div>
+    <div class="grid grid-cols-2 gap-3 mt-3">
+      <div class="text-center p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/30">
+        <p class="text-2xl font-extrabold text-amber-700 dark:text-amber-300">{{ contracts_pending }}</p>
+        <p class="text-[11px] text-amber-700 dark:text-amber-400 mt-0.5">Por assinar</p>
+      </div>
+      <div class="text-center p-3 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700/30">
+        <p class="text-2xl font-extrabold text-emerald-700 dark:text-emerald-300">{{ contracts_signed }}</p>
+        <p class="text-[11px] text-emerald-700 dark:text-emerald-400 mt-0.5">Assinados</p>
+      </div>
+    </div>
+    <p class="text-[11px] text-gray-400 dark:text-gray-500 italic mt-3 text-center">Disponível em breve (Fase 3)</p>
+  </div>
+</div>
+
+{# ─── Distribuição últimos 30 dias com flags Domingo/Feriado ─── #}
+<div class="bg-white dark:bg-gray-800 rounded-2xl p-5 border border-gray-200/50 dark:border-gray-700/50 shadow-sm mb-4">
+  <div class="flex items-center gap-2 mb-4">
+    <i data-lucide="trending-up" class="w-5 h-5 text-indigo-500"></i>
+    <h2 class="font-bold text-gray-900 dark:text-white">Últimos 30 dias</h2>
+    <span class="text-xs text-gray-500 ml-2">Domingos e feriados destacados (com bonificação)</span>
+  </div>
+
+  <div class="flex items-end justify-between gap-1 h-40 overflow-x-auto">
+    {% for d in history_30d %}
+      <div class="flex-1 min-w-[24px] flex flex-col items-center gap-0.5 group">
+        <span class="text-[10px] font-semibold {% if d.is_holiday %}text-amber-600 dark:text-amber-400{% elif d.is_sunday %}text-rose-600 dark:text-rose-400{% else %}text-gray-700 dark:text-gray-300{% endif %} opacity-100">{{ d.total|default:"" }}</span>
+        <div class="w-full flex flex-col-reverse h-28 bg-gray-100 dark:bg-gray-900/40 rounded-t overflow-hidden relative cursor-help"
+             title="{{ d.label }}{% if d.is_holiday %} · Feriado: {{ d.holiday_name }}{% elif d.is_sunday %} · Domingo{% endif %} · {{ d.total }} pacotes ({{ d.delivered }} entregues, {{ d.failures }} falhas)">
+          {% if d.delivered %}
+          <div class="{% if d.is_holiday %}bg-gradient-to-t from-amber-500 to-amber-400{% elif d.is_sunday %}bg-gradient-to-t from-rose-500 to-rose-400{% else %}bg-gradient-to-t from-emerald-500 to-emerald-400{% endif %}"
+               style="{% if d.total %}height:{% widthratio d.delivered 100 75 %}px;{% endif %}"></div>
+          {% endif %}
+          {% if d.failures %}
+          <div class="bg-gradient-to-t from-red-600 to-red-500"
+               style="height:{% widthratio d.failures 100 25 %}px;"></div>
+          {% endif %}
+        </div>
+        <span class="text-[10px] {% if d.is_holiday %}text-amber-600 font-bold{% elif d.is_sunday %}text-rose-600 font-bold{% else %}text-gray-500 dark:text-gray-400{% endif %}">{{ d.label }}</span>
+      </div>
+    {% endfor %}
+  </div>
+  <div class="flex items-center justify-center gap-4 mt-3 text-xs text-gray-500 dark:text-gray-400 flex-wrap">
+    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-emerald-500"></span>Dia normal</span>
+    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-rose-500"></span>Domingo (com bónus)</span>
+    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-amber-500"></span>Feriado (com bónus)</span>
+    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-red-600"></span>Falhas</span>
+  </div>
+</div>
+
+{# ─── Heatmap anual de actividade ─── #}
+{% if heatmap_days %}
+<div class="bg-white dark:bg-gray-800 rounded-2xl p-5 border border-gray-200/50 dark:border-gray-700/50 shadow-sm mb-4">
+  <div class="flex items-center gap-2 mb-3 flex-wrap">
+    <i data-lucide="calendar-days" class="w-5 h-5 text-emerald-500"></i>
+    <h2 class="font-bold text-gray-900 dark:text-white">Heatmap anual {{ heatmap_year }}</h2>
+    <span class="text-xs text-gray-500">{{ heatmap_total }} entregas em {{ heatmap_active_days }} dia{{ heatmap_active_days|pluralize:"s" }} activo{{ heatmap_active_days|pluralize:"s" }}</span>
+  </div>
+  <div class="overflow-x-auto pb-2">
+    <div class="grid grid-flow-col grid-rows-7 gap-[3px] auto-cols-max">
+      {% for d in heatmap_days %}
+        <div class="w-3 h-3 rounded-[2px] cursor-help
+          {% if d.is_holiday %}bg-amber-500{% elif d.level == 0 and d.is_sunday %}bg-rose-300 dark:bg-rose-900
+          {% elif d.level == 0 %}bg-gray-200 dark:bg-gray-700/40
+          {% elif d.is_sunday and d.level >= 1 %}bg-rose-{{ d.level|add:300 }}{% endif %}
+          {% if not d.is_holiday and not d.is_sunday %}
+            {% if d.level == 1 %}bg-emerald-200 dark:bg-emerald-900/60
+            {% elif d.level == 2 %}bg-emerald-400 dark:bg-emerald-700
+            {% elif d.level == 3 %}bg-emerald-500 dark:bg-emerald-500
+            {% elif d.level == 4 %}bg-emerald-600 dark:bg-emerald-400
+            {% endif %}
+          {% endif %}"
+          title="{{ d.date|date:'d/m/Y' }}{% if d.is_holiday %} · {{ d.holiday_name }}{% elif d.is_sunday %} · Domingo{% endif %} · {{ d.n }} entregas">
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="flex items-center gap-4 mt-3 text-[11px] text-gray-500 dark:text-gray-400 flex-wrap">
+    <span>Menos</span>
+    <span class="w-3 h-3 rounded-[2px] bg-gray-200 dark:bg-gray-700/40"></span>
+    <span class="w-3 h-3 rounded-[2px] bg-emerald-200 dark:bg-emerald-900/60"></span>
+    <span class="w-3 h-3 rounded-[2px] bg-emerald-400 dark:bg-emerald-700"></span>
+    <span class="w-3 h-3 rounded-[2px] bg-emerald-500"></span>
+    <span class="w-3 h-3 rounded-[2px] bg-emerald-600 dark:bg-emerald-400"></span>
+    <span>Mais</span>
+    <span class="ml-3 inline-flex items-center gap-1.5"><span class="w-3 h-3 rounded-[2px] bg-amber-500"></span>Feriado</span>
+    <span class="inline-flex items-center gap-1.5"><span class="w-3 h-3 rounded-[2px] bg-rose-400"></span>Domingo</span>
+  </div>
+</div>
+{% endif %}
+
+{# ─── Top CP4 + Waybills (lado a lado) ─── #}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+  {# Top CP4 (1 coluna) #}
+  <div class="bg-white dark:bg-gray-800 rounded-2xl p-5 border border-gray-200/50 dark:border-gray-700/50 shadow-sm">
+    <div class="flex items-center gap-2 mb-3">
+      <i data-lucide="map" class="w-5 h-5 text-blue-500"></i>
+      <h2 class="font-bold text-gray-900 dark:text-white">Top CP4 do mês</h2>
+    </div>
+    <div class="space-y-2">
+      {% for c in top_cp4 %}
+        <div class="flex items-center gap-3 p-2 hover:bg-gray-50 dark:hover:bg-gray-700/30 rounded-lg">
+          <div class="font-mono text-sm font-bold text-blue-600 dark:text-blue-400 w-12">{{ c.cp4 }}</div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center justify-between">
+              <span class="text-xs text-gray-700 dark:text-gray-300 font-semibold">{{ c.total }} pacotes</span>
+              <span class="text-[11px] {% if c.success_rate >= 90 %}text-emerald-600{% elif c.success_rate >= 70 %}text-amber-600{% else %}text-rose-600{% endif %} font-semibold">{{ c.success_rate|floatformat:0 }}%</span>
+            </div>
+            <div class="flex items-center gap-2 text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">
+              <span class="text-emerald-600">{{ c.delivered }} ok</span>
+              <span class="text-rose-600">{{ c.failures }} fail</span>
+            </div>
+          </div>
+        </div>
+      {% empty %}
+        <p class="text-xs text-gray-500 italic text-center py-3">Sem dados.</p>
+      {% endfor %}
+    </div>
+  </div>
+
+  {# Lista de Waybills (2 colunas) #}
+  <div class="lg:col-span-2 bg-white dark:bg-gray-800 rounded-2xl p-5 border border-gray-200/50 dark:border-gray-700/50 shadow-sm">
+    <div class="flex items-center gap-2 mb-3">
+      <i data-lucide="package-2" class="w-5 h-5 text-violet-500"></i>
+      <h2 class="font-bold text-gray-900 dark:text-white">Pacotes do mês</h2>
+      {% if waybills_page %}
+        <span class="text-xs text-gray-500 ml-auto">
+          {{ waybills_page.start_index }}–{{ waybills_page.end_index }} de {{ waybills_page.paginator.count }}
+        </span>
+      {% endif %}
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full">
+        <thead class="bg-gray-50 dark:bg-gray-900/40">
+          <tr>
+            <th class="px-3 py-2 text-left text-[11px] font-semibold text-gray-600 dark:text-gray-400 uppercase">Waybill</th>
+            <th class="px-3 py-2 text-left text-[11px] font-semibold text-gray-600 dark:text-gray-400 uppercase">Data</th>
+            <th class="px-3 py-2 text-left text-[11px] font-semibold text-gray-600 dark:text-gray-400 uppercase">CP4</th>
+            <th class="px-3 py-2 text-left text-[11px] font-semibold text-gray-600 dark:text-gray-400 uppercase">Status</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+          {% for w in waybills_page %}
+          <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+            <td class="px-3 py-1.5">
+              <a href="/settlements/cainiao/waybill/{{ w.waybill_number }}/"
+                 title="Ver vida do pacote"
+                 class="font-mono text-xs text-blue-600 dark:text-blue-400 hover:underline">
+                {{ w.waybill_number }}
+              </a>
+            </td>
+            <td class="px-3 py-1.5 text-xs text-gray-700 dark:text-gray-300">{{ w.task_date|date:"d/m/Y" }}</td>
+            <td class="px-3 py-1.5 text-xs font-mono text-gray-600 dark:text-gray-400">{{ w.zip_code|slice:":4"|default:"—" }}</td>
+            <td class="px-3 py-1.5">
+              <span class="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase
+                {% if w.task_status == 'Delivered' %}bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300
+                {% elif w.task_status == 'Attempt Failure' %}bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-300
+                {% elif w.task_status == 'Driver_received' %}bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300
+                {% else %}bg-gray-100 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300{% endif %}">
+                {{ w.task_status|truncatechars:14 }}
+              </span>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4" class="px-3 py-6 text-center text-xs text-gray-500 italic">Sem pacotes este mês.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if waybills_page and waybills_page.paginator.num_pages > 1 %}
+    <div class="flex items-center justify-between mt-3 text-xs">
+      {% if waybills_page.has_previous %}
+        <a href="?page={{ waybills_page.previous_page_number }}" class="px-2 py-1 rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">← Anterior</a>
+      {% else %}
+        <span></span>
+      {% endif %}
+      <span class="text-gray-500">Página {{ waybills_page.number }} de {{ waybills_page.paginator.num_pages }}</span>
+      {% if waybills_page.has_next %}
+        <a href="?page={{ waybills_page.next_page_number }}" class="px-2 py-1 rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">Próxima →</a>
+      {% else %}
+        <span></span>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}

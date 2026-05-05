@@ -101,6 +101,7 @@ urlpatterns = [
     path(
         "analytics/", include("analytics.urls")
     ),  # Dashboards de Analytics e Relatórios
+    path("contracts/", include("contracts.urls")),  # Sistema de Contratos
 ]
 
 # Servir arquivos estáticos

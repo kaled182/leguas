@@ -151,6 +151,28 @@ services:
     networks:
       - leguas_net
 
+  # ───────────────────────── UPDATER (sidecar de auto-update) ─────
+  # Recebe pedidos do Django para fazer git pull + rebuild + recreate.
+  # Escuta apenas na rede leguas_net (não exposto ao host).
+  # Token X-Updater-Secret obrigatório para autenticar pedidos.
+  updater:
+    build:
+      context: ..
+      dockerfile: production/updater.Dockerfile
+    image: leguas-updater:production
+    container_name: leguas_updater
+    restart: unless-stopped
+    environment:
+      UPDATER_SECRET: ${UPDATER_SECRET:-change-me-please}
+      COMPOSE_PROJECT: ${COMPOSE_PROJECT_NAME:-appleguasfranzinaspt}
+      COMPOSE_FILE_PATH: /repo/production/docker-compose.yml
+      BRANCH: ${UPDATER_BRANCH:-main}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ..:/repo
+    networks:
+      - leguas_net
+
   # ───────────────────────── CADDY (Reverse Proxy + SSL) ───────────
   caddy:
     image: caddy:2-alpine

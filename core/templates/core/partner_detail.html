@@ -126,6 +126,18 @@
         class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/30">
         Ver names sem mapping
       </button>
+      <button onclick="_runRollForward()" id="rollfwd-btn"
+        title="Move pacotes Driver_received de até 7 dias para hoje (backlog activo)"
+        class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/30">
+        <i data-lucide="calendar-arrow-up" class="w-3.5 h-3.5"></i>
+        <span id="rollfwd-label">Roll-forward Backlog</span>
+      </button>
+      <button onclick="_runStaleArmazem()" id="stale-armazem-btn"
+        title="Marca pacotes presos no armazém (Driver_received) há mais de N dias como Stale_Armazem"
+        class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-rose-300 dark:border-rose-700 text-rose-700 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/30">
+        <i data-lucide="package-x" class="w-3.5 h-3.5"></i>
+        <span id="stale-armazem-label">Limpar Stale Armazém</span>
+      </button>
     </div>
   </div>
   <div id="cid-unmapped-panel" class="hidden bg-white dark:bg-gray-800 border border-amber-200 dark:border-amber-700/50 rounded-xl p-3 max-h-60 overflow-y-auto"></div>
@@ -6099,6 +6111,153 @@ async function _onCidHubChange(hubId) {
   const panel = document.getElementById('cid-unmapped-panel');
   if (panel && !panel.classList.contains('hidden')) {
     _showUnmappedNames();
+  }
+}
+
+async function _runRollForward() {
+  const btn = document.getElementById('rollfwd-btn');
+  const lbl = document.getElementById('rollfwd-label');
+  const csrf = document.querySelector('input[name=csrfmiddlewaretoken]')?.value || '{{ csrf_token }}';
+
+  btn.disabled = true;
+  lbl.textContent = 'A analisar...';
+  let dry;
+  try {
+    const r = await fetch('/settlements/cainiao/roll-forward/', {
+      method: 'POST',
+      headers: { 'X-CSRFToken': csrf, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dry_run: true }),
+    });
+    dry = await r.json();
+  } catch (e) {
+    alert('Erro: ' + e.message);
+    btn.disabled = false; lbl.textContent = 'Roll-forward Backlog';
+    return;
+  }
+
+  if (!dry.success) {
+    alert('Erro: ' + (dry.error || 'desconhecido'));
+    btn.disabled = false; lbl.textContent = 'Roll-forward Backlog';
+    return;
+  }
+
+  const n = dry.would_roll || 0;
+  if (n === 0) {
+    alert(`Nenhum pacote para roll-forward (today=${dry.today}, threshold=${dry.threshold_days} dias).`);
+    btn.disabled = false; lbl.textContent = 'Roll-forward Backlog';
+    return;
+  }
+
+  const sample = (dry.by_date_courier || []).slice(0, 8)
+    .map(x => `  • ${x.task_date}  ${x.courier}  →  ${x.count}`)
+    .join('\n');
+
+  const ok = confirm(
+    `Mover ${n.toLocaleString()} pacotes Driver_received para HOJE (${dry.today})?\n\n` +
+    `Threshold: até ${dry.threshold_days} dias atrás\n` +
+    `Pacotes mais antigos vão para Stale_Armazem (botão separado).\n\n` +
+    `Top distribuição:\n${sample}\n\n` +
+    `Operação reversível pelo histórico (CainiaoOperationTaskHistory).`
+  );
+  if (!ok) {
+    btn.disabled = false; lbl.textContent = 'Roll-forward Backlog';
+    return;
+  }
+
+  lbl.textContent = 'A mover...';
+  try {
+    const r = await fetch('/settlements/cainiao/roll-forward/', {
+      method: 'POST',
+      headers: { 'X-CSRFToken': csrf, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dry_run: false }),
+    });
+    const d = await r.json();
+    if (d.success) {
+      const dup = d.deleted_duplicate ? ` (${d.deleted_duplicate} duplicados consolidados)` : '';
+      alert(`✓ Movidos ${d.rolled.toLocaleString()} pacotes para hoje${dup}.\n${d.history_created || 0} entries de history criados.`);
+      location.reload();
+    } else {
+      alert('Erro: ' + (d.error || 'desconhecido'));
+    }
+  } catch (e) {
+    alert('Erro: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    lbl.textContent = 'Roll-forward Backlog';
+  }
+}
+
+async function _runStaleArmazem() {
+  const btn = document.getElementById('stale-armazem-btn');
+  const lbl = document.getElementById('stale-armazem-label');
+  const csrf = document.querySelector('input[name=csrfmiddlewaretoken]')?.value || '{{ csrf_token }}';
+
+  // Passo 1: dry_run para mostrar o que vai mudar
+  btn.disabled = true;
+  lbl.textContent = 'A analisar...';
+  let dry;
+  try {
+    const r = await fetch('/settlements/cainiao/mark-stale-armazem/', {
+      method: 'POST',
+      headers: { 'X-CSRFToken': csrf, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dry_run: true }),
+    });
+    dry = await r.json();
+  } catch (e) {
+    alert('Erro ao analisar: ' + e.message);
+    btn.disabled = false; lbl.textContent = 'Limpar Stale Armazém';
+    return;
+  }
+
+  if (!dry.success) {
+    alert('Erro: ' + (dry.error || 'desconhecido'));
+    btn.disabled = false; lbl.textContent = 'Limpar Stale Armazém';
+    return;
+  }
+
+  const n = dry.would_mark || 0;
+  if (n === 0) {
+    alert(`Nenhum pacote stale a marcar (cutoff=${dry.cutoff}, threshold=${dry.threshold_days} dias).`);
+    btn.disabled = false; lbl.textContent = 'Limpar Stale Armazém';
+    return;
+  }
+
+  // Resumo das primeiras linhas
+  const sample = (dry.by_date_courier || []).slice(0, 8)
+    .map(x => `  • ${x.task_date}  ${x.courier}  →  ${x.count}`)
+    .join('\n');
+
+  const ok = confirm(
+    `Marcar ${n.toLocaleString()} pacotes 'esquecidos' no armazém como Stale_Armazem?\n\n` +
+    `Threshold: ${dry.threshold_days} dias\nCutoff: até ${dry.cutoff}\n\n` +
+    `Top distribuição:\n${sample}\n\n` +
+    `Pacotes afectados ficam no histórico (timeline). Esta acção é reversível por importação de planilha que traga o waybill com novo status.`
+  );
+  if (!ok) {
+    btn.disabled = false; lbl.textContent = 'Limpar Stale Armazém';
+    return;
+  }
+
+  // Passo 2: executar
+  lbl.textContent = 'A marcar...';
+  try {
+    const r = await fetch('/settlements/cainiao/mark-stale-armazem/', {
+      method: 'POST',
+      headers: { 'X-CSRFToken': csrf, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dry_run: false }),
+    });
+    const d = await r.json();
+    if (d.success) {
+      alert(`✓ Marcados ${d.marked.toLocaleString()} pacotes como Stale_Armazem.\n${d.history_created || 0} entries criados no histórico.`);
+      location.reload();
+    } else {
+      alert('Erro: ' + (d.error || 'desconhecido'));
+    }
+  } catch (e) {
+    alert('Erro: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    lbl.textContent = 'Limpar Stale Armazém';
   }
 }
 

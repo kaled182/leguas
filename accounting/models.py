@@ -528,6 +528,19 @@ class Bill(models.Model):
     issue_date = models.DateField("Data Emissão")
     due_date = models.DateField("Data Vencimento")
     paid_date = models.DateField("Data Pagamento", null=True, blank=True)
+    paid_amount = models.DecimalField(
+        "Valor Pago", max_digits=12, decimal_places=2,
+        null=True, blank=True,
+    )
+    payment_reference = models.CharField(
+        "Referência Pagamento", max_length=200, blank=True,
+        help_text="MB WAY, IBAN, transferência, etc.",
+    )
+    payment_proof = models.FileField(
+        "Comprovativo de Pagamento",
+        upload_to="bills/comprovativos/%Y/%m/",
+        null=True, blank=True,
+    )
     status = models.CharField(
         "Estado", max_length=10, choices=STATUS_CHOICES,
         default=STATUS_PENDING,

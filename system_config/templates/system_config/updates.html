@@ -1,0 +1,505 @@
+{% extends 'paack_dashboard/base.html' %}
+{% load static %}
+{% block title %}Atualização do Sistema{% endblock %}
+{% block content %}
+
+<div class="max-w-screen-2xl mx-auto px-4 py-6 space-y-4" x-data="updatesPage()">
+
+  {# ─── Header + estado da versão ─── #}
+  <div class="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-6 text-white shadow-lg">
+    <div class="flex items-start justify-between flex-wrap gap-4">
+      <div>
+        <h1 class="text-2xl font-bold flex items-center gap-2">
+          <i data-lucide="rocket" class="w-6 h-6"></i>
+          Atualização do Sistema
+        </h1>
+        <p class="text-indigo-100 text-sm mt-1">
+          Changelog, sugestões e gestão de versões — em fase beta.
+        </p>
+      </div>
+      <div class="text-right">
+        <div class="text-xs uppercase tracking-wider text-indigo-200">Versão actual</div>
+        <div class="text-3xl font-extrabold font-mono">
+          {{ state.current_version|default:"—" }}
+        </div>
+        {% if state.deployed_commit_hash %}
+          <div class="text-xs text-indigo-100 font-mono">{{ state.deployed_commit_hash|slice:":7" }}</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="mt-5 flex flex-wrap gap-2">
+      <button @click="checkUpdates()" :disabled="checking"
+              class="px-4 py-2 bg-white/20 hover:bg-white/30 disabled:opacity-50 backdrop-blur rounded-lg text-sm font-semibold inline-flex items-center gap-2">
+        <i data-lucide="refresh-cw" class="w-4 h-4" :class="{'animate-spin': checking}"></i>
+        <span x-text="checking ? 'A verificar…' : 'Verificar atualizações'"></span>
+      </button>
+      <button @click="suggModal.open = true"
+              class="px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur rounded-lg text-sm font-semibold inline-flex items-center gap-2">
+        <i data-lucide="lightbulb" class="w-4 h-4"></i>
+        Sugerir melhoria
+      </button>
+      {% if is_admin_view %}
+      <button @click="ghModal.open = true"
+              class="px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur rounded-lg text-sm font-semibold inline-flex items-center gap-2">
+        <i data-lucide="github" class="w-4 h-4"></i>
+        Configurar GitHub
+      </button>
+      {% endif %}
+    </div>
+  </div>
+
+  {# ─── Resultado de verificação (dinâmico) ─── #}
+  <div x-show="checkResult.success && checkResult.up_to_date" x-cloak
+       class="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700/50 rounded-xl p-4 flex items-center gap-3">
+    <i data-lucide="check-circle-2" class="w-6 h-6 text-emerald-600"></i>
+    <div>
+      <div class="font-semibold text-emerald-800 dark:text-emerald-200">Sistema actualizado</div>
+      <div class="text-xs text-emerald-700 dark:text-emerald-300">
+        Está na última versão (<span x-text="checkResult.remote_hash"></span>).
+      </div>
+    </div>
+  </div>
+
+  <div x-show="checkResult.success && !checkResult.up_to_date" x-cloak
+       class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50 rounded-xl p-4">
+    <div class="flex items-start gap-3">
+      <i data-lucide="package" class="w-6 h-6 text-amber-600 flex-shrink-0 mt-0.5"></i>
+      <div class="flex-1">
+        <div class="font-semibold text-amber-800 dark:text-amber-200">
+          Atualização disponível: <span class="font-mono" x-text="checkResult.ahead_by"></span> commit(s) à frente
+        </div>
+        <div class="text-xs text-amber-700 dark:text-amber-300 mt-0.5">
+          Local: <span class="font-mono" x-text="checkResult.local_hash || '(desconhecido)'"></span>
+          → Remoto: <span class="font-mono" x-text="checkResult.remote_hash"></span>
+        </div>
+        <ul class="mt-3 space-y-1 text-xs text-amber-900 dark:text-amber-200">
+          <template x-for="c in checkResult.commits.slice(0, 8)" :key="c.sha">
+            <li class="flex items-start gap-2">
+              <span class="font-mono text-[10px] bg-amber-200 dark:bg-amber-900/60 px-1.5 py-0.5 rounded" x-text="c.sha"></span>
+              <span x-text="c.message" class="flex-1"></span>
+              <span class="text-[10px] text-amber-600" x-text="c.author"></span>
+            </li>
+          </template>
+        </ul>
+        {% if is_admin_view %}
+        <button @click="applyUpdate()" :disabled="applying"
+                class="mt-3 px-4 py-2 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white rounded-lg text-sm font-semibold inline-flex items-center gap-2">
+          <i data-lucide="download-cloud" class="w-4 h-4"></i>
+          <span x-text="applying ? 'A pedir actualização…' : 'Atualizar agora'"></span>
+        </button>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div x-show="checkResult.error" x-cloak
+       class="bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-700/50 rounded-xl p-4 flex items-center gap-3">
+    <i data-lucide="alert-circle" class="w-6 h-6 text-rose-600"></i>
+    <div>
+      <div class="font-semibold text-rose-800 dark:text-rose-200">Falha ao verificar</div>
+      <div class="text-xs text-rose-700 dark:text-rose-300" x-text="checkResult.error"></div>
+    </div>
+  </div>
+
+  {# ─── Painel de progresso da actualização ─── #}
+  <div x-show="updateJob.id" x-cloak
+       class="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-700/50 rounded-xl p-5">
+    <div class="flex items-center gap-3 mb-3">
+      <i data-lucide="loader-circle" class="w-5 h-5 text-indigo-600"
+         :class="updateJob.phase === 'running' ? 'animate-spin' : ''"></i>
+      <div class="flex-1">
+        <div class="font-semibold text-indigo-800 dark:text-indigo-200">
+          <span x-show="updateJob.phase === 'running'">A actualizar — <span x-text="updateJob.step"></span></span>
+          <span x-show="updateJob.phase === 'success'">✓ Actualização concluída</span>
+          <span x-show="updateJob.phase === 'failed'">✗ Actualização falhou</span>
+        </div>
+        <div class="text-[11px] text-indigo-600 dark:text-indigo-400 font-mono">job <span x-text="updateJob.id"></span></div>
+      </div>
+    </div>
+    <ul class="space-y-1.5">
+      <template x-for="(s, i) in updateJob.steps" :key="i">
+        <li class="flex items-start gap-2 text-xs">
+          <i data-lucide="check-circle-2" x-show="s.rc === 0" class="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5"></i>
+          <i data-lucide="x-circle" x-show="s.rc !== 0" class="w-4 h-4 text-rose-600 flex-shrink-0 mt-0.5"></i>
+          <div class="flex-1 min-w-0">
+            <div class="font-semibold text-gray-700 dark:text-gray-300" x-text="s.label"></div>
+            <details x-show="s.stderr || s.stdout" class="mt-1">
+              <summary class="cursor-pointer text-[11px] text-gray-500">Logs (<span x-text="s.duration + 's'"></span>)</summary>
+              <pre x-show="s.stdout" class="mt-1 p-2 bg-gray-900 text-gray-200 text-[10px] rounded overflow-x-auto" x-text="s.stdout"></pre>
+              <pre x-show="s.stderr" class="mt-1 p-2 bg-rose-900 text-rose-100 text-[10px] rounded overflow-x-auto" x-text="s.stderr"></pre>
+            </details>
+          </div>
+        </li>
+      </template>
+    </ul>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+    {# ─── Coluna esquerda: Changelog timeline ─── #}
+    <div class="lg:col-span-2 space-y-4">
+
+      {% if is_admin_view %}
+      <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 p-5">
+        <div class="flex items-center gap-2 mb-3">
+          <i data-lucide="git-commit" class="w-5 h-5 text-indigo-500"></i>
+          <h2 class="font-bold text-gray-900 dark:text-white">Nova entrada no changelog</h2>
+        </div>
+        <form method="post" action="{% url 'system_config:changelog_save' %}" class="space-y-3">
+          {% csrf_token %}
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div class="md:col-span-1">
+              <label class="block text-xs uppercase font-semibold text-gray-600 dark:text-gray-300 mb-1">Versão</label>
+              <input type="text" name="version" value="{{ suggested_version }}"
+                     class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg font-mono">
+              <p class="text-[11px] text-gray-500 mt-1">Sugestão: <code>{{ suggested_version }}</code></p>
+            </div>
+            <div class="md:col-span-2">
+              <label class="block text-xs uppercase font-semibold text-gray-600 dark:text-gray-300 mb-1">Conteúdo (markdown)</label>
+              <textarea name="content" rows="5" required
+                        placeholder="• Inbox unificado A Pagar&#10;• Driver portal: download de PF e anexar recibo&#10;• Bug fixes de KPIs"
+                        class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg font-mono"></textarea>
+            </div>
+          </div>
+          <div class="flex justify-end">
+            <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold inline-flex items-center gap-2">
+              <i data-lucide="save" class="w-4 h-4"></i> Guardar / Atualizar dia
+            </button>
+          </div>
+        </form>
+        <p class="text-[11px] text-gray-500 mt-2">
+          Apenas uma entrada por dia — guardar de novo agrega ao mesmo registo, com bump de versão se diferente.
+        </p>
+      </div>
+      {% endif %}
+
+      <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
+        <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
+          <i data-lucide="history" class="w-5 h-5 text-purple-500"></i>
+          <h2 class="font-bold text-gray-900 dark:text-white">Changelog</h2>
+          <span class="ml-auto text-xs text-gray-500">{{ entries|length }} entrada{{ entries|length|pluralize:"s" }}</span>
+        </div>
+        <div class="divide-y divide-gray-100 dark:divide-gray-700">
+          {% for e in entries %}
+          <div class="p-5">
+            <div class="flex items-start gap-3 mb-2">
+              <div class="flex-shrink-0 w-12 h-12 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg flex flex-col items-center justify-center">
+                <span class="text-[10px] uppercase text-indigo-600 dark:text-indigo-400">{{ e.date|date:"M" }}</span>
+                <span class="text-lg font-bold text-indigo-700 dark:text-indigo-300 leading-none">{{ e.date|date:"d" }}</span>
+              </div>
+              <div class="flex-1">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="font-mono font-bold text-gray-900 dark:text-white">{{ e.version }}</span>
+                  {% if e.version_history|length > 1 %}
+                    <span class="text-[10px] text-gray-500">+ {{ e.version_history|length|add:"-1" }} versão(ões) anterior(es)</span>
+                  {% endif %}
+
+                  {# Estado de publicação no GitHub #}
+                  {% if e.publish_status == 'PUBLISHED' %}
+                    <a href="{{ state.github_repo_url }}/commit/{{ e.published_commit_sha }}" target="_blank"
+                       class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 hover:underline"
+                       title="Publicado em {{ e.published_at|date:'d/m H:i' }}">
+                      <i data-lucide="check-circle-2" class="w-3 h-3"></i> Publicado · {{ e.published_commit_sha|slice:":7" }}
+                    </a>
+                  {% elif e.publish_status == 'FAILED' %}
+                    <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-300"
+                          title="{{ e.publish_error }}">
+                      <i data-lucide="x-circle" class="w-3 h-3"></i> Falhou
+                    </span>
+                  {% else %}
+                    <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-gray-100 dark:bg-gray-700/50 text-gray-600 dark:text-gray-400">
+                      <i data-lucide="circle-dashed" class="w-3 h-3"></i> Por publicar
+                    </span>
+                  {% endif %}
+
+                  {% if is_admin_view and e.publish_status != 'PUBLISHED' %}
+                    <button @click="republish({{ e.id }})"
+                            class="text-[10px] text-indigo-600 hover:text-indigo-700 hover:underline">
+                      <i data-lucide="upload-cloud" class="w-3 h-3 inline"></i> Republicar
+                    </button>
+                  {% endif %}
+
+                  <span class="ml-auto text-[11px] text-gray-500">
+                    {% if e.created_by %}{{ e.created_by.username }} · {% endif %}{{ e.updated_at|date:"d/m H:i" }}
+                  </span>
+                </div>
+                <pre class="mt-2 whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-300 font-sans">{{ e.content }}</pre>
+              </div>
+            </div>
+          </div>
+          {% empty %}
+          <div class="p-12 text-center">
+            <i data-lucide="git-branch" class="w-10 h-10 text-gray-400 mx-auto mb-2"></i>
+            <p class="text-sm text-gray-500">Ainda sem entradas. {% if is_admin_view %}Cria a primeira acima.{% endif %}</p>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    {# ─── Coluna direita: Sugestões ─── #}
+    <div>
+      <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
+        <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
+          <i data-lucide="lightbulb" class="w-5 h-5 text-amber-500"></i>
+          <h2 class="font-bold text-gray-900 dark:text-white">Sugestões</h2>
+          {% if suggestions_open %}
+          <span class="ml-auto px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300">
+            {{ suggestions_open }} nova{{ suggestions_open|pluralize:"s" }}
+          </span>
+          {% endif %}
+        </div>
+        <div class="divide-y divide-gray-100 dark:divide-gray-700 max-h-[600px] overflow-y-auto">
+          {% for s in suggestions_recent %}
+          <div class="p-4">
+            <div class="flex items-start gap-2">
+              <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold flex-shrink-0
+                {% if s.status == 'NEW' %}bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300
+                {% elif s.status == 'PLANNED' %}bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300
+                {% elif s.status == 'DONE' %}bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300
+                {% elif s.status == 'REJECTED' %}bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-300
+                {% else %}bg-gray-100 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300{% endif %}">
+                {{ s.get_status_display }}
+              </span>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-semibold text-gray-900 dark:text-white truncate" title="{{ s.title }}">{{ s.title }}</p>
+                <p class="text-[11px] text-gray-500 mt-0.5">
+                  {{ s.submitter_name|default:"Anónimo" }} · {{ s.created_at|date:"d/m" }} · {{ s.get_category_display }}
+                </p>
+                <p class="text-xs text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">{{ s.description }}</p>
+              </div>
+            </div>
+          </div>
+          {% empty %}
+          <div class="p-8 text-center">
+            <i data-lucide="lightbulb-off" class="w-10 h-10 text-gray-400 mx-auto mb-2"></i>
+            <p class="text-sm text-gray-500">Sem sugestões ainda.</p>
+            <button @click="suggModal.open = true" class="mt-3 px-3 py-1.5 bg-amber-100 dark:bg-amber-900/30 hover:bg-amber-200 text-amber-700 dark:text-amber-300 rounded-lg text-xs font-semibold">
+              Submeter a primeira
+            </button>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  {# ─── Modal: nova sugestão ─── #}
+  <div x-show="suggModal.open" x-cloak class="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/50" @keydown.escape.window="suggModal.open = false">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl">
+      <h3 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-4">
+        <i data-lucide="lightbulb" class="w-5 h-5 text-amber-500"></i>
+        Sugerir melhoria
+      </h3>
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs uppercase font-semibold text-gray-600 dark:text-gray-300 mb-1">Título</label>
+          <input type="text" x-model="suggModal.title" maxlength="200"
+                 class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg">
+        </div>
+        <div>
+          <label class="block text-xs uppercase font-semibold text-gray-600 dark:text-gray-300 mb-1">Categoria</label>
+          <select x-model="suggModal.category" class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg">
+            <option value="UI">Interface / Usabilidade</option>
+            <option value="FEATURE">Nova funcionalidade</option>
+            <option value="PERFORMANCE">Performance</option>
+            <option value="BUG">Bug / Defeito</option>
+            <option value="OTHER">Outro</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs uppercase font-semibold text-gray-600 dark:text-gray-300 mb-1">Descrição</label>
+          <textarea x-model="suggModal.description" rows="5"
+                    placeholder="Descreve a sugestão. Quanto mais contexto, melhor."
+                    class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg"></textarea>
+        </div>
+      </div>
+      <div class="flex gap-2 mt-6">
+        <button @click="suggModal.open = false" class="flex-1 px-4 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg text-sm font-semibold">Cancelar</button>
+        <button @click="submitSuggestion()" :disabled="suggModal.submitting"
+                class="flex-1 px-4 py-2 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white rounded-lg text-sm font-semibold">
+          <span x-show="!suggModal.submitting">Submeter</span>
+          <span x-show="suggModal.submitting">A enviar…</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  {# ─── Modal: configurar GitHub ─── #}
+  {% if is_admin_view %}
+  <div x-show="ghModal.open" x-cloak class="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/50" @keydown.escape.window="ghModal.open = false">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl">
+      <h3 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-4">
+        <i data-lucide="github" class="w-5 h-5"></i>
+        Configurar GitHub
+      </h3>
+      <form method="post" action="{% url 'system_config:github_save_config' %}" class="space-y-3">
+        {% csrf_token %}
+        <div>
+          <label class="block text-xs uppercase font-semibold text-gray-600 dark:text-gray-300 mb-1">URL do repositório</label>
+          <input type="url" name="github_repo_url" value="{{ state.github_repo_url }}"
+                 placeholder="https://github.com/owner/repo"
+                 class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg">
+        </div>
+        <div>
+          <label class="block text-xs uppercase font-semibold text-gray-600 dark:text-gray-300 mb-1">Branch</label>
+          <input type="text" name="github_branch" value="{{ state.github_branch|default:'main' }}"
+                 class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg font-mono">
+        </div>
+        <div>
+          <label class="block text-xs uppercase font-semibold text-gray-600 dark:text-gray-300 mb-1">Token (apenas para repos privados)</label>
+          <input type="password" name="github_token" placeholder="{% if state.github_token %}*** (já configurado, deixar em branco para manter){% else %}Personal Access Token{% endif %}"
+                 class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg font-mono">
+        </div>
+        <div class="flex gap-2 mt-2">
+          <button type="button" @click="ghModal.open = false" class="flex-1 px-4 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg text-sm font-semibold">Cancelar</button>
+          <button type="submit" class="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<script>
+function updatesPage() {
+  return {
+    checking: false,
+    applying: false,
+    checkResult: { success: null, error: null, up_to_date: false, commits: [] },
+    suggModal: {
+      open: false, submitting: false,
+      title: '', description: '', category: 'OTHER',
+    },
+    ghModal: { open: false },
+
+    async checkUpdates() {
+      this.checking = true;
+      try {
+        const r = await fetch('{% url "system_config:updates_check" %}');
+        const d = await r.json();
+        this.checkResult = d;
+        setTimeout(() => { if (window.lucide) window.lucide.createIcons(); }, 50);
+      } catch (e) {
+        this.checkResult = { success: false, error: e.message };
+      }
+      this.checking = false;
+    },
+    updateJob: { id: null, phase: 'idle', step: '', steps: [], polling: false },
+
+    async applyUpdate() {
+      const ok = window.confirmModal
+        ? await window.confirmModal({
+            type: 'warning',
+            title: 'Aplicar atualização?',
+            message: 'Vai puxar a versão mais recente do GitHub e reconstruir o container web. O sistema poderá ficar inacessível durante alguns segundos.',
+            confirmText: 'Atualizar agora', icon: 'download-cloud',
+          })
+        : confirm('Aplicar atualização? O sistema poderá ficar inacessível por alguns segundos.');
+      if (!ok) return;
+      this.applying = true;
+      const csrf = document.cookie.split('csrftoken=')[1]?.split(';')[0] || '';
+      try {
+        const r = await fetch('{% url "system_config:updates_apply" %}', {
+          method: 'POST', headers: { 'X-CSRFToken': csrf },
+        });
+        const d = await r.json();
+        if (d.success) {
+          this.updateJob.id = d.job_id;
+          this.updateJob.phase = 'running';
+          this.updateJob.step = 'A iniciar…';
+          (window.toast || alert)({ type: 'info', title: 'Atualização iniciada', message: d.message });
+          this.pollStatus();
+        } else {
+          this.applying = false;
+          (window.toast || alert)({ type: 'error', message: d.error || 'Falhou' });
+        }
+      } catch (e) {
+        this.applying = false;
+        (window.toast || alert)({ type: 'error', message: e.message });
+      }
+    },
+
+    async pollStatus() {
+      if (this.updateJob.polling) return;
+      this.updateJob.polling = true;
+      let attempts = 0;
+      const maxAttempts = 180; // 6 min
+      while (attempts++ < maxAttempts) {
+        try {
+          const r = await fetch('{% url "system_config:updates_status" %}', { cache: 'no-store' });
+          if (r.ok) {
+            const d = await r.json();
+            this.updateJob.phase = d.phase || 'unknown';
+            this.updateJob.step = d.current_step || '';
+            this.updateJob.steps = d.steps || [];
+            if (d.phase === 'success') {
+              (window.toast || alert)({ type: 'success', title: 'Atualização concluída', message: 'Sistema actualizado com sucesso. Recarregar a página.' });
+              setTimeout(() => window.location.reload(), 2000);
+              break;
+            }
+            if (d.phase === 'failed') {
+              (window.toast || alert)({ type: 'error', title: 'Atualização falhou', message: 'Verifica os logs no painel.' });
+              break;
+            }
+          }
+        } catch (e) {
+          // Web pode estar a reiniciar — apenas aguarda
+        }
+        await new Promise(r => setTimeout(r, 2000));
+      }
+      this.updateJob.polling = false;
+      this.applying = false;
+    },
+    async republish(entryId) {
+      const csrf = document.cookie.split('csrftoken=')[1]?.split(';')[0] || '';
+      try {
+        const r = await fetch(`/system/atualizacao/changelog/${entryId}/publicar/`, {
+          method: 'POST', headers: { 'X-CSRFToken': csrf },
+        });
+        const d = await r.json();
+        if (d.success) {
+          (window.toast || alert)({ type: 'success', message: 'Publicado no GitHub.' });
+          setTimeout(() => window.location.reload(), 600);
+        } else {
+          (window.toast || alert)({ type: 'error', title: 'Falha', message: d.error });
+        }
+      } catch (e) {
+        (window.toast || alert)({ type: 'error', message: e.message });
+      }
+    },
+    async submitSuggestion() {
+      if (!this.suggModal.title || !this.suggModal.description) {
+        (window.toast || alert)({ type: 'error', message: 'Título e descrição obrigatórios.' });
+        return;
+      }
+      this.suggModal.submitting = true;
+      const csrf = document.cookie.split('csrftoken=')[1]?.split(';')[0] || '';
+      const fd = new FormData();
+      fd.append('title', this.suggModal.title);
+      fd.append('description', this.suggModal.description);
+      fd.append('category', this.suggModal.category);
+      try {
+        const r = await fetch('{% url "system_config:suggestion_create" %}', {
+          method: 'POST', headers: { 'X-CSRFToken': csrf }, body: fd,
+        });
+        const d = await r.json();
+        if (d.success) {
+          (window.toast || alert)({ type: 'success', message: 'Sugestão submetida. Obrigado!' });
+          this.suggModal.open = false;
+          this.suggModal.title = ''; this.suggModal.description = '';
+          setTimeout(() => window.location.reload(), 600);
+        } else {
+          (window.toast || alert)({ type: 'error', message: d.error || 'Falhou' });
+        }
+      } catch (e) {
+        (window.toast || alert)({ type: 'error', message: e.message });
+      }
+      this.suggModal.submitting = false;
+    },
+  };
+}
+</script>
+{% endblock %}

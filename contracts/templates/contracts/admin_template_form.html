@@ -1,0 +1,148 @@
+{% extends 'paack_dashboard/base.html' %}
+
+{% block title %}{% if is_create %}Novo Template{% else %}Editar {{ template.name }}{% endif %}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+
+  <div class="flex items-center justify-between mb-6">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 bg-gradient-to-br from-violet-500 to-purple-600 rounded-xl flex items-center justify-center shadow-sm">
+        <i data-lucide="file-plus" class="w-5 h-5 text-white"></i>
+      </div>
+      <div>
+        <h1 class="text-xl font-bold text-gray-900 dark:text-white">
+          {% if is_create %}Novo Template de Contrato{% else %}Editar Template{% endif %}
+        </h1>
+        <p class="text-xs text-gray-500 dark:text-gray-400">
+          {% if not is_create %}{{ template.name }} v{{ template.version }}{% endif %}
+        </p>
+      </div>
+    </div>
+    <a href="{% url 'contracts:admin_templates_list' %}"
+       class="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 inline-flex items-center gap-1.5">
+      <i data-lucide="arrow-left" class="w-4 h-4"></i>
+      Voltar
+    </a>
+  </div>
+
+  {% if not is_create and has_signatures %}
+  <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50 rounded-xl p-4 mb-4 flex items-start gap-3">
+    <i data-lucide="lock" class="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5"></i>
+    <div>
+      <p class="text-sm font-semibold text-amber-800 dark:text-amber-300">Conteúdo bloqueado</p>
+      <p class="text-xs text-amber-700 dark:text-amber-400 mt-0.5">
+        Este template já tem contratos assinados. Para evitar quebrar registos legais, o
+        conteúdo não pode ser editado. Para alterar o texto, cria uma <strong>nova versão</strong>.
+      </p>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if messages %}
+    {% for m in messages %}
+      <div class="mb-3 px-4 py-3 rounded-lg text-sm
+        {% if 'error' in m.tags %}bg-rose-50 dark:bg-rose-900/20 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-700/50
+        {% else %}bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-700/50{% endif %}">{{ m }}</div>
+    {% endfor %}
+  {% endif %}
+
+  <form method="post" class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 shadow-sm p-6 space-y-5">
+    {% csrf_token %}
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div class="md:col-span-2">
+        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+          Nome <span class="text-rose-500">*</span>
+        </label>
+        <input type="text" name="name" required maxlength="200"
+               value="{% if template %}{{ template.name }}{% endif %}"
+               placeholder="Ex: Termo de Adesão"
+               class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
+      </div>
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Versão</label>
+        <input type="text" name="version" maxlength="20"
+               value="{% if template %}{{ template.version }}{% else %}1.0{% endif %}"
+               placeholder="1.0"
+               class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
+      </div>
+    </div>
+
+    <div>
+      <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Aplicabilidade</label>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+        <label class="cursor-pointer">
+          <input type="radio" name="scope" value="all" class="peer sr-only" {% if not template or template.scope == 'all' %}checked{% endif %}>
+          <div class="border-2 border-gray-200 dark:border-gray-600 rounded-lg p-3 peer-checked:border-violet-500 peer-checked:bg-violet-50 dark:peer-checked:bg-violet-900/20">
+            <p class="font-semibold text-sm text-gray-900 dark:text-white">Todos</p>
+            <p class="text-[11px] text-gray-500 dark:text-gray-400">Para todos os motoristas</p>
+          </div>
+        </label>
+        <label class="cursor-pointer">
+          <input type="radio" name="scope" value="independent" class="peer sr-only" {% if template.scope == 'independent' %}checked{% endif %}>
+          <div class="border-2 border-gray-200 dark:border-gray-600 rounded-lg p-3 peer-checked:border-violet-500 peer-checked:bg-violet-50 dark:peer-checked:bg-violet-900/20">
+            <p class="font-semibold text-sm text-gray-900 dark:text-white">Independentes</p>
+            <p class="text-[11px] text-gray-500 dark:text-gray-400">Sem empresa parceira</p>
+          </div>
+        </label>
+        <label class="cursor-pointer">
+          <input type="radio" name="scope" value="fleet" class="peer sr-only" {% if template.scope == 'fleet' %}checked{% endif %}>
+          <div class="border-2 border-gray-200 dark:border-gray-600 rounded-lg p-3 peer-checked:border-violet-500 peer-checked:bg-violet-50 dark:peer-checked:bg-violet-900/20">
+            <p class="font-semibold text-sm text-gray-900 dark:text-white">Frotas</p>
+            <p class="text-[11px] text-gray-500 dark:text-gray-400">Subcontratados</p>
+          </div>
+        </label>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Vigente desde</label>
+        <input type="date" name="effective_from"
+               value="{% if template %}{{ template.effective_from|date:'Y-m-d' }}{% else %}{% now 'Y-m-d' %}{% endif %}"
+               class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
+      </div>
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Expira em (opcional)</label>
+        <input type="date" name="expires_at"
+               value="{% if template.expires_at %}{{ template.expires_at|date:'Y-m-d' }}{% endif %}"
+               class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
+      </div>
+    </div>
+
+    <div>
+      <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+        Conteúdo (HTML/texto) <span class="text-rose-500">*</span>
+      </label>
+      <textarea name="content" rows="20" required
+                {% if not is_create and has_signatures %}readonly disabled{% endif %}
+                placeholder="Texto do contrato. Aceita HTML básico (h1-h6, p, ul, ol, strong, em, br)."
+                class="w-full px-3 py-2 text-sm font-mono bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white {% if not is_create and has_signatures %}cursor-not-allowed opacity-60{% endif %}">{% if template %}{{ template.content }}{% endif %}</textarea>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+        Use HTML simples: &lt;h2&gt;, &lt;p&gt;, &lt;strong&gt;, &lt;ul&gt;, &lt;li&gt;, &lt;br&gt;.
+      </p>
+    </div>
+
+    {% if not is_create %}
+    <label class="flex items-center gap-2">
+      <input type="checkbox" name="is_active" {% if template.is_active %}checked{% endif %}
+             class="w-4 h-4 text-violet-600 rounded border-gray-300">
+      <span class="text-sm text-gray-700 dark:text-gray-300">Template activo (motoristas podem assinar)</span>
+    </label>
+    {% endif %}
+
+    <div class="flex justify-end gap-2 border-t border-gray-200 dark:border-gray-700 pt-4">
+      <a href="{% url 'contracts:admin_templates_list' %}"
+         class="px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
+        Cancelar
+      </a>
+      <button type="submit"
+              class="px-4 py-2 text-sm bg-gradient-to-r from-violet-600 to-purple-700 hover:from-violet-700 hover:to-purple-800 text-white rounded-lg font-medium shadow-sm inline-flex items-center gap-1.5">
+        <i data-lucide="save" class="w-4 h-4"></i>
+        {% if is_create %}Criar Template{% else %}Guardar{% endif %}
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}

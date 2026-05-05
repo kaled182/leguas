@@ -2,6 +2,7 @@
 {% load static accounting_extras %}
 {% block title %}Monitor da Operação · Break-Even{% endblock %}
 {% block content %}
+{% include 'accounting/_analysis_tabs.html' with current='break_even' %}
 <style>
   .num { font-family:monospace; }
   .pos { color:#059669; }

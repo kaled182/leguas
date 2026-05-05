@@ -1,0 +1,142 @@
+{% extends 'drivers_app/portal/_base.html' %}
+
+{% block portal_content %}
+
+<div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700/50 rounded-xl p-4 mb-4 flex items-start gap-3">
+  <i data-lucide="info" class="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5"></i>
+  <div class="text-sm">
+    <p class="font-semibold text-blue-800 dark:text-blue-300">Logins por Parceiro</p>
+    <p class="text-xs text-blue-700 dark:text-blue-400 mt-0.5">
+      Cada parceiro tem o seu próprio Courier ID. Um motorista pode ter múltiplos logins (ex: várias contas Cainiao, ou ser responsável por outros couriers).
+    </p>
+  </div>
+</div>
+
+{# Form add #}
+<form method="post" class="bg-white dark:bg-gray-800 rounded-2xl p-5 border border-gray-200/50 dark:border-gray-700/50 shadow-sm mb-4">
+  {% csrf_token %}
+  <input type="hidden" name="action" value="add">
+  <h3 class="font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+    <i data-lucide="plus-circle" class="w-5 h-5 text-emerald-500"></i>
+    Adicionar Login
+  </h3>
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+    <div>
+      <label class="block text-xs uppercase font-bold text-gray-500 mb-1">Parceiro *</label>
+      <select name="partner_id" required
+              class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
+        <option value="">— Selecciona —</option>
+        {% for p in partners %}
+          <option value="{{ p.id }}">{{ p.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="block text-xs uppercase font-bold text-gray-500 mb-1">Courier ID *</label>
+      <input type="text" name="courier_id" required maxlength="100"
+             placeholder="ex: 1576538295475"
+             class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white font-mono">
+    </div>
+    <div>
+      <label class="block text-xs uppercase font-bold text-gray-500 mb-1">Apelido / Courier Name</label>
+      <input type="text" name="courier_name" maxlength="200"
+             placeholder="ex: Alexandre_LF"
+             class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
+    </div>
+    <div class="flex items-end">
+      <button type="submit" class="w-full px-4 py-2 text-sm bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium inline-flex items-center justify-center gap-1.5">
+        <i data-lucide="plus" class="w-4 h-4"></i> Adicionar
+      </button>
+    </div>
+  </div>
+</form>
+
+{# Lista #}
+<div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden" x-data="{ editingId: null }">
+  <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
+    <i data-lucide="key" class="w-5 h-5 text-amber-500"></i>
+    <h3 class="font-bold text-gray-900 dark:text-white">Logins Registados</h3>
+    <span class="ml-auto text-xs text-gray-500">{{ mappings.count }} login{{ mappings.count|pluralize:"s" }}</span>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="w-full">
+      <thead class="bg-gray-50 dark:bg-gray-900/40">
+        <tr>
+          <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Parceiro</th>
+          <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Courier ID</th>
+          <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Apelido / Name</th>
+          <th class="px-4 py-2 text-right text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Acções</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+        {% for m in mappings %}
+        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+          <td class="px-4 py-3">
+            <span class="inline-flex items-center px-2.5 py-1 rounded text-xs font-bold bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300">
+              {{ m.partner.name }}
+            </span>
+          </td>
+
+          {# Modo view ou edit #}
+          <template x-if="editingId !== {{ m.id }}">
+            <td class="px-4 py-3">
+              <span class="font-mono text-sm text-gray-900 dark:text-white">{{ m.courier_id }}</span>
+            </td>
+          </template>
+          <template x-if="editingId !== {{ m.id }}">
+            <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{{ m.courier_name|default:"—" }}</td>
+          </template>
+          <template x-if="editingId !== {{ m.id }}">
+            <td class="px-4 py-3 text-right">
+              <button @click="editingId = {{ m.id }}"
+                      class="px-2 py-1 text-xs text-blue-600 dark:text-blue-400 hover:underline">
+                Editar
+              </button>
+              <form method="post" class="inline ml-1">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="delete">
+                <input type="hidden" name="mapping_id" value="{{ m.id }}">
+                <button type="submit" onclick="return confirm('Remover login {{ m.partner.name }} / {{ m.courier_id }}?')"
+                        class="px-2 py-1 text-xs text-rose-600 dark:text-rose-400 hover:underline">
+                  Remover
+                </button>
+              </form>
+            </td>
+          </template>
+
+          {# Modo edit (form inline) #}
+          <template x-if="editingId === {{ m.id }}">
+            <td colspan="3" class="px-4 py-3 bg-blue-50 dark:bg-blue-900/20">
+              <form method="post" class="flex flex-wrap items-center gap-2">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="edit">
+                <input type="hidden" name="mapping_id" value="{{ m.id }}">
+                <input type="text" name="courier_id" required value="{{ m.courier_id }}"
+                       class="flex-1 min-w-[150px] px-2 py-1 text-sm bg-white dark:bg-gray-700 border border-blue-300 dark:border-blue-600 rounded-lg text-gray-900 dark:text-white font-mono">
+                <input type="text" name="courier_name" value="{{ m.courier_name }}"
+                       class="flex-1 min-w-[150px] px-2 py-1 text-sm bg-white dark:bg-gray-700 border border-blue-300 dark:border-blue-600 rounded-lg text-gray-900 dark:text-white">
+                <button type="submit"
+                        class="px-3 py-1 text-xs bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium">
+                  Guardar
+                </button>
+                <button type="button" @click="editingId = null"
+                        class="px-3 py-1 text-xs border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg">
+                  Cancelar
+                </button>
+              </form>
+            </td>
+          </template>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="4" class="px-4 py-12 text-center">
+            <i data-lucide="key-off" class="w-12 h-12 text-gray-300 mx-auto mb-2"></i>
+            <p class="text-sm text-gray-500 italic">Nenhum login registado.</p>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

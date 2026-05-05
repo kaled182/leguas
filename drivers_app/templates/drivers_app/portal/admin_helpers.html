@@ -1,0 +1,67 @@
+{% extends 'drivers_app/portal/_base.html' %}
+
+{% block portal_content %}
+
+<div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700/50 rounded-xl p-4 mb-4 flex items-start gap-3">
+  <i data-lucide="info" class="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5"></i>
+  <div class="text-sm">
+    <p class="font-semibold text-blue-800 dark:text-blue-300">Helpers (ajudantes)</p>
+    <p class="text-xs text-blue-700 dark:text-blue-400 mt-0.5">
+      Pessoas que ajudam o motorista nas entregas. Quando o nome aparece como "Courier Helper" nas planilhas Cainiao, fica associado a este motorista.
+    </p>
+  </div>
+</div>
+
+<form method="post" class="bg-white dark:bg-gray-800 rounded-2xl p-5 border border-gray-200/50 dark:border-gray-700/50 shadow-sm mb-4">
+  {% csrf_token %}
+  <input type="hidden" name="action" value="add">
+  <h3 class="font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+    <i data-lucide="user-plus" class="w-5 h-5 text-emerald-500"></i>
+    Adicionar Helper
+  </h3>
+  <div class="flex gap-3">
+    <input type="text" name="helper_name" required maxlength="200"
+           placeholder="Nome do helper (como aparece nas planilhas)"
+           class="flex-1 px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
+    <button type="submit"
+            class="px-4 py-2 text-sm bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium inline-flex items-center gap-1.5">
+      <i data-lucide="plus" class="w-4 h-4"></i> Adicionar
+    </button>
+  </div>
+</form>
+
+<div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
+  <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
+    <i data-lucide="users" class="w-5 h-5 text-purple-500"></i>
+    <h3 class="font-bold text-gray-900 dark:text-white">Helpers Registados</h3>
+    <span class="ml-auto text-xs text-gray-500">{{ helpers.count }} registos</span>
+  </div>
+  <div class="divide-y divide-gray-100 dark:divide-gray-700">
+    {% for h in helpers %}
+    <div class="px-5 py-3 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-700/30">
+      <div class="w-9 h-9 rounded-full bg-gradient-to-br from-purple-500 to-violet-600 text-white flex items-center justify-center font-bold">
+        {{ h.helper_name|first|upper }}
+      </div>
+      <div class="flex-1">
+        <p class="font-semibold text-gray-900 dark:text-white">{{ h.helper_name }}</p>
+        <p class="text-xs text-gray-500">Adicionado em {{ h.created_at|date:"d/m/Y" }}</p>
+      </div>
+      <form method="post" class="inline">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="delete">
+        <input type="hidden" name="helper_id" value="{{ h.id }}">
+        <button type="submit" onclick="return confirm('Remover helper {{ h.helper_name }}?')"
+                class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md text-gray-600 dark:text-gray-400 hover:text-rose-600">
+          <i data-lucide="trash-2" class="w-4 h-4"></i>
+        </button>
+      </form>
+    </div>
+    {% empty %}
+    <div class="px-5 py-12 text-center">
+      <i data-lucide="users" class="w-12 h-12 text-gray-300 mx-auto mb-2"></i>
+      <p class="text-sm text-gray-500 italic">Nenhum helper registado.</p>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

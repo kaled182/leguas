@@ -1,0 +1,227 @@
+{% extends 'drivers_app/portal/_base.html' %}
+
+{% block portal_content %}
+
+{# Banner: Como funciona #}
+<div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700/50 rounded-xl p-4 mb-6 flex items-start gap-3">
+  <i data-lucide="shield-check" class="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5"></i>
+  <div class="flex-1 text-sm">
+    <p class="font-semibold text-blue-800 dark:text-blue-300">Edição de perfil com aprovação</p>
+    <p class="text-xs text-blue-700 dark:text-blue-400 mt-0.5">
+      Alterações enviadas ficam <span class="font-semibold">pendentes</span> até um administrador aprovar.
+      Os teus dados actuais não mudam até lá.
+      {% if pending_count %}
+        Tens <span class="font-bold">{{ pending_count }}</span> pedido{{ pending_count|pluralize:"s" }} aguardando revisão.
+      {% endif %}
+    </p>
+  </div>
+</div>
+
+<form method="post" class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+  {% csrf_token %}
+
+  {# Identificação (read-only — só admin pode alterar) #}
+  <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-200/50 dark:border-gray-700/50 shadow-sm">
+    <h3 class="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+      <i data-lucide="user-circle" class="w-5 h-5 text-indigo-500"></i>
+      Identificação
+      <span class="ml-auto text-[11px] font-normal text-gray-400 italic">somente leitura</span>
+    </h3>
+    <dl class="space-y-3 text-sm">
+      <div>
+        <dt class="text-xs text-gray-500 dark:text-gray-400 uppercase">Nome Completo</dt>
+        <dd class="font-semibold text-gray-900 dark:text-white">{{ driver.nome_completo|default:"—" }}</dd>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <dt class="text-xs text-gray-500 dark:text-gray-400 uppercase">Apelido (operação)</dt>
+          <dd class="font-semibold text-gray-900 dark:text-white">{{ driver.apelido|default:"—" }}</dd>
+        </div>
+        <div>
+          <dt class="text-xs text-gray-500 dark:text-gray-400 uppercase">Courier ID</dt>
+          <dd class="font-mono text-gray-900 dark:text-white">{{ driver.courier_id_cainiao|default:"—" }}</dd>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <dt class="text-xs text-gray-500 dark:text-gray-400 uppercase">NIF</dt>
+          <dd class="font-semibold text-gray-900 dark:text-white">{{ driver.nif|default:"—" }}</dd>
+        </div>
+        <div>
+          <dt class="text-xs text-gray-500 dark:text-gray-400 uppercase">NISS</dt>
+          <dd class="font-semibold text-gray-900 dark:text-white">{{ driver.niss|default:"—" }}</dd>
+        </div>
+      </div>
+      <div>
+        <dt class="text-xs text-gray-500 dark:text-gray-400 uppercase">Data de nascimento</dt>
+        <dd class="font-semibold text-gray-900 dark:text-white">{% if driver.data_nascimento %}{{ driver.data_nascimento|date:"d/m/Y" }}{% else %}—{% endif %}</dd>
+      </div>
+    </dl>
+    <p class="text-[11px] text-gray-400 italic mt-3">Para alterar dados de identificação, contacta o administrador.</p>
+  </div>
+
+  {# Contacto (editável) #}
+  <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-200/50 dark:border-gray-700/50 shadow-sm">
+    <h3 class="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+      <i data-lucide="phone" class="w-5 h-5 text-emerald-500"></i>
+      Contacto
+      <span class="ml-auto text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">editável</span>
+    </h3>
+    <div class="space-y-3 text-sm">
+      {% for field, label in editable_fields %}
+        {% with pending=pending_by_field|default_if_none:'' %}
+        <div>
+          <label class="block text-xs text-gray-500 dark:text-gray-400 uppercase mb-1">
+            {{ label }}
+            {% if field in pending_by_field %}
+              <span class="inline-flex items-center gap-1 ml-2 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300">
+                <i data-lucide="clock" class="w-2.5 h-2.5"></i>
+                pendente
+              </span>
+            {% endif %}
+          </label>
+          <input type="{% if field == 'email' %}email{% else %}text{% endif %}"
+                 name="{{ field }}"
+                 value="{% if field == 'telefone' %}{{ driver.telefone }}{% elif field == 'email' %}{{ driver.email }}{% elif field == 'endereco_residencia' %}{{ driver.endereco_residencia }}{% elif field == 'codigo_postal' %}{{ driver.codigo_postal }}{% elif field == 'cidade' %}{{ driver.cidade }}{% elif field == 'nacionalidade' %}{{ driver.nacionalidade }}{% endif %}"
+                 class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:bg-white dark:focus:bg-gray-800 focus:border-indigo-500">
+          {% if field in pending_by_field %}
+            <p class="text-[11px] text-amber-700 dark:text-amber-400 mt-0.5">
+              Pedido pendente: <code class="font-mono">{{ pending_by_field|stringformat:"s" }}</code>
+              {{ pending_by_field.field }} → <strong>{{ pending_by_field.new_value|truncatechars:40 }}</strong>
+            </p>
+          {% endif %}
+        </div>
+        {% endwith %}
+      {% endfor %}
+    </div>
+  </div>
+
+  {# Vínculo (read-only) #}
+  <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-200/50 dark:border-gray-700/50 shadow-sm">
+    <h3 class="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+      <i data-lucide="briefcase" class="w-5 h-5 text-violet-500"></i>
+      Vínculo
+      <span class="ml-auto text-[11px] font-normal text-gray-400 italic">somente leitura</span>
+    </h3>
+    <dl class="space-y-3 text-sm">
+      <div>
+        <dt class="text-xs text-gray-500 dark:text-gray-400 uppercase">Tipo</dt>
+        <dd class="font-semibold text-gray-900 dark:text-white">{{ driver.get_tipo_vinculo_display|default:driver.tipo_vinculo|default:"—" }}</dd>
+      </div>
+      {% if driver.empresa_parceira %}
+        <div>
+          <dt class="text-xs text-gray-500 dark:text-gray-400 uppercase">Empresa parceira</dt>
+          <dd class="font-semibold text-gray-900 dark:text-white">{{ driver.empresa_parceira.nome }}</dd>
+        </div>
+      {% elif driver.nome_frota %}
+        <div>
+          <dt class="text-xs text-gray-500 dark:text-gray-400 uppercase">Frota</dt>
+          <dd class="font-semibold text-gray-900 dark:text-white">{{ driver.nome_frota }}</dd>
+        </div>
+      {% endif %}
+    </dl>
+  </div>
+
+  {# Comerciais (read-only) #}
+  <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-200/50 dark:border-gray-700/50 shadow-sm">
+    <h3 class="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+      <i data-lucide="euro" class="w-5 h-5 text-amber-500"></i>
+      Comerciais
+      <span class="ml-auto text-[11px] font-normal text-gray-400 italic">somente leitura</span>
+    </h3>
+    <dl class="space-y-3 text-sm">
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <dt class="text-xs text-gray-500 dark:text-gray-400 uppercase">Capacidade diária</dt>
+          <dd class="font-semibold text-gray-900 dark:text-white">{{ driver.daily_capacity|default:"—" }}</dd>
+        </div>
+        <div>
+          <dt class="text-xs text-gray-500 dark:text-gray-400 uppercase">Preço / pacote</dt>
+          <dd class="font-semibold text-gray-900 dark:text-white">{% if driver.price_per_package %}€ {{ driver.price_per_package|floatformat:3 }}{% else %}—{% endif %}</dd>
+        </div>
+      </div>
+      <div>
+        <dt class="text-xs text-gray-500 dark:text-gray-400 uppercase">Bónus de performance</dt>
+        <dd class="font-semibold {% if driver.bonus_performance_enabled %}text-emerald-600{% else %}text-gray-500{% endif %}">
+          {% if driver.bonus_performance_enabled %}Activado{% else %}Desactivado{% endif %}
+        </dd>
+      </div>
+    </dl>
+  </div>
+
+  {# Submit #}
+  <div class="lg:col-span-2 flex justify-end gap-2">
+    <a href="{% url 'drivers_app:driver_portal' driver.id %}"
+       class="px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
+      Cancelar
+    </a>
+    <button type="submit"
+            class="px-4 py-2 text-sm bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-lg font-medium shadow-sm inline-flex items-center gap-1.5">
+      <i data-lucide="send" class="w-4 h-4"></i>
+      Enviar pedido de alteração
+    </button>
+  </div>
+</form>
+
+{# Histórico de pedidos #}
+{% if requests %}
+<div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden mt-6">
+  <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-700">
+    <h3 class="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+      <i data-lucide="history" class="w-4 h-4 text-indigo-500"></i>
+      Histórico de pedidos
+      <span class="text-xs font-normal text-gray-400">({{ requests|length }} entrada{{ requests|length|pluralize:"s" }})</span>
+    </h3>
+  </div>
+  <div class="divide-y divide-gray-100 dark:divide-gray-700">
+    {% for r in requests %}
+    <div class="px-5 py-3 flex items-start gap-3">
+      <div class="flex-shrink-0 mt-0.5">
+        {% if r.status == 'pending' %}
+          <i data-lucide="clock" class="w-4 h-4 text-amber-500"></i>
+        {% elif r.status == 'approved' %}
+          <i data-lucide="check-circle" class="w-4 h-4 text-emerald-500"></i>
+        {% elif r.status == 'rejected' %}
+          <i data-lucide="x-circle" class="w-4 h-4 text-rose-500"></i>
+        {% else %}
+          <i data-lucide="archive" class="w-4 h-4 text-gray-400"></i>
+        {% endif %}
+      </div>
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center justify-between gap-2 flex-wrap">
+          <p class="text-sm font-semibold text-gray-900 dark:text-white">
+            {{ r.get_field_display }}
+          </p>
+          <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase
+            {% if r.status == 'pending' %}bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300
+            {% elif r.status == 'approved' %}bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300
+            {% elif r.status == 'rejected' %}bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-300
+            {% else %}bg-gray-100 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300{% endif %}">
+            {{ r.get_status_display }}
+          </span>
+        </div>
+        <p class="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
+          <span class="line-through text-gray-400">{{ r.old_value|default:"∅"|truncatechars:50 }}</span>
+          <i data-lucide="arrow-right" class="w-3 h-3 inline mx-1"></i>
+          <span class="font-semibold text-gray-900 dark:text-white">{{ r.new_value|truncatechars:50 }}</span>
+        </p>
+        <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
+          Pedido em {{ r.requested_at|date:"d/m/Y H:i" }}
+          {% if r.reviewed_at %}
+            · Revisto em {{ r.reviewed_at|date:"d/m/Y H:i" }}
+            {% if r.reviewed_by %} por {{ r.reviewed_by.username }}{% endif %}
+          {% endif %}
+        </p>
+        {% if r.review_notes %}
+        <p class="text-xs text-gray-600 dark:text-gray-400 italic mt-1 px-2 py-1 rounded bg-gray-50 dark:bg-gray-900/40">
+          "{{ r.review_notes }}"
+        </p>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

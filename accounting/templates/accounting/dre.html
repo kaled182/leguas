@@ -2,6 +2,7 @@
 {% load static %}
 {% block title %}Demonstração de Resultados{% endblock %}
 {% block content %}
+{% include 'accounting/_analysis_tabs.html' with current='dre' %}
 <style>
   .row-line { display:flex; justify-content:space-between; padding:0.5rem 1rem; border-bottom:1px solid rgba(0,0,0,0.05); }
   .dark .row-line { border-color:rgba(255,255,255,0.05); }

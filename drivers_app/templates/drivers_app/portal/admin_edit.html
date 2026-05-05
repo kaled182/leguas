@@ -1,0 +1,214 @@
+{% extends 'drivers_app/portal/_base.html' %}
+
+{% block portal_content %}
+
+<div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50 rounded-xl p-4 mb-6 flex items-start gap-3">
+  <i data-lucide="shield-alert" class="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5"></i>
+  <div>
+    <p class="text-sm font-semibold text-amber-800 dark:text-amber-300">Edição administrativa</p>
+    <p class="text-xs text-amber-700 dark:text-amber-400 mt-0.5">
+      Aqui edita-se o perfil <strong>sem aprovação</strong>. Para edições com workflow de aprovação, ver "Pedidos de Alteração".
+    </p>
+  </div>
+</div>
+
+<form method="post" class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+  {% csrf_token %}
+
+  {# IDENTIFICAÇÃO #}
+  <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-200/50 dark:border-gray-700/50 shadow-sm">
+    <h3 class="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+      <i data-lucide="user-circle" class="w-5 h-5 text-indigo-500"></i>
+      Identificação
+    </h3>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div class="md:col-span-2">
+        <label class="block text-xs uppercase font-bold text-gray-500 mb-1">Nome completo *</label>
+        <input type="text" name="nome_completo" required value="{{ driver.nome_completo }}"
+               class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
+      </div>
+      <div>
+        <label class="block text-xs uppercase font-bold text-gray-500 mb-1">Apelido (operação)</label>
+        <input type="text" name="apelido" value="{{ driver.apelido }}"
+               class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
+      </div>
+      <div>
+        <label class="block text-xs uppercase font-bold text-gray-500 mb-1">Courier ID Cainiao</label>
+        <input type="text" name="courier_id_cainiao" value="{{ driver.courier_id_cainiao }}"
+               class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white font-mono">
+      </div>
+      <div>
+        <label class="block text-xs uppercase font-bold text-gray-500 mb-1">NIF *</label>
+        <input type="text" name="nif" required maxlength="9" pattern="\d{9}" value="{{ driver.nif }}"
+               class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white font-mono">
+      </div>
+      <div>
+        <label class="block text-xs uppercase font-bold text-gray-500 mb-1">NISS</label>
+        <input type="text" name="niss" value="{{ driver.niss }}"
+               class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white font-mono">
+      </div>
+      <div>
+        <label class="block text-xs uppercase font-bold text-gray-500 mb-1">Data de nascimento</label>
+        <input type="date" name="data_nascimento"
+               value="{{ driver.data_nascimento|date:'Y-m-d' }}"
+               class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
+      </div>
+      <div>
+        <label class="block text-xs uppercase font-bold text-gray-500 mb-1">Nacionalidade</label>
+        <input type="text" name="nacionalidade" value="{{ driver.nacionalidade }}"
+               class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
+      </div>
+    </div>
+  </div>
+
+  {# CONTACTO #}
+  <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-200/50 dark:border-gray-700/50 shadow-sm">
+    <h3 class="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+      <i data-lucide="phone" class="w-5 h-5 text-emerald-500"></i>
+      Contacto
+    </h3>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div>
+        <label class="block text-xs uppercase font-bold text-gray-500 mb-1">Telefone</label>
+        <input type="text" name="telefone" value="{{ driver.telefone }}"
+               class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
+      </div>
+      <div>
+        <label class="block text-xs uppercase font-bold text-gray-500 mb-1">Email</label>
+        <input type="email" name="email" value="{{ driver.email }}"
+               class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
+      </div>
+      <div class="md:col-span-2">
+        <label class="block text-xs uppercase font-bold text-gray-500 mb-1">Endereço</label>
+        <input type="text" name="endereco_residencia" value="{{ driver.endereco_residencia }}"
+               class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
+      </div>
+      <div>
+        <label class="block text-xs uppercase font-bold text-gray-500 mb-1">Código postal</label>
+        <input type="text" name="codigo_postal" value="{{ driver.codigo_postal }}"
+               class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
+      </div>
+      <div>
+        <label class="block text-xs uppercase font-bold text-gray-500 mb-1">Cidade</label>
+        <input type="text" name="cidade" value="{{ driver.cidade }}"
+               class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
+      </div>
+    </div>
+  </div>
+
+  {# VÍNCULO #}
+  <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-200/50 dark:border-gray-700/50 shadow-sm">
+    <h3 class="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+      <i data-lucide="briefcase" class="w-5 h-5 text-violet-500"></i>
+      Vínculo
+    </h3>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div>
+        <label class="block text-xs uppercase font-bold text-gray-500 mb-1">Tipo de vínculo</label>
+        <select name="tipo_vinculo"
+                class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
+          <option value="DIRETO" {% if driver.tipo_vinculo == 'DIRETO' %}selected{% endif %}>Direto - Recibos Verdes</option>
+          <option value="PARCEIRO" {% if driver.tipo_vinculo == 'PARCEIRO' %}selected{% endif %}>Parceiro - Frota</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs uppercase font-bold text-gray-500 mb-1">Empresa parceira (frota)</label>
+        <select name="empresa_parceira"
+                class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
+          <option value="">— Independente —</option>
+          {% for f in fleets %}
+            <option value="{{ f.id }}" {% if driver.empresa_parceira_id == f.id %}selected{% endif %}>{{ f.nome }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="md:col-span-2">
+        <label class="block text-xs uppercase font-bold text-gray-500 mb-1">Nome da frota (texto livre — fallback)</label>
+        <input type="text" name="nome_frota" value="{{ driver.nome_frota }}"
+               class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
+      </div>
+    </div>
+  </div>
+
+  {# COMERCIAIS #}
+  <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-200/50 dark:border-gray-700/50 shadow-sm">
+    <h3 class="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+      <i data-lucide="euro" class="w-5 h-5 text-amber-500"></i>
+      Comerciais
+    </h3>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div>
+        <label class="block text-xs uppercase font-bold text-gray-500 mb-1">Capacidade diária</label>
+        <input type="number" name="daily_capacity" min="0"
+               value="{{ driver.daily_capacity|default:'' }}"
+               class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
+      </div>
+      <div>
+        <label class="block text-xs uppercase font-bold text-gray-500 mb-1">€ por pacote</label>
+        <input type="number" step="0.001" min="0" name="price_per_package"
+               value="{{ driver.price_per_package|default:'' }}"
+               class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
+      </div>
+      <div>
+        <label class="block text-xs uppercase font-bold text-gray-500 mb-1">Limite mensal de adiantamentos (€)</label>
+        <input type="number" step="0.01" min="0" name="advance_monthly_limit"
+               value="{{ driver.advance_monthly_limit|default:'' }}"
+               class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
+      </div>
+      <div class="flex items-end">
+        <label class="flex items-center gap-2">
+          <input type="checkbox" name="bonus_performance_enabled"
+                 {% if driver.bonus_performance_enabled %}checked{% endif %}
+                 class="w-4 h-4 text-amber-600 rounded">
+          <span class="text-sm text-gray-700 dark:text-gray-300">Bónus de performance activo</span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  {# ESTADO #}
+  <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-200/50 dark:border-gray-700/50 shadow-sm lg:col-span-2">
+    <h3 class="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+      <i data-lucide="shield" class="w-5 h-5 text-rose-500"></i>
+      Estado
+    </h3>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div>
+        <label class="block text-xs uppercase font-bold text-gray-500 mb-1">Status</label>
+        <select name="status"
+                class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
+          <option value="PENDENTE" {% if driver.status == 'PENDENTE' %}selected{% endif %}>Pendente</option>
+          <option value="EM_ANALISE" {% if driver.status == 'EM_ANALISE' %}selected{% endif %}>Em Análise</option>
+          <option value="ATIVO" {% if driver.status == 'ATIVO' %}selected{% endif %}>Activo</option>
+          <option value="BLOQUEADO" {% if driver.status == 'BLOQUEADO' %}selected{% endif %}>Bloqueado</option>
+          <option value="IRREGULAR" {% if driver.status == 'IRREGULAR' %}selected{% endif %}>Irregular</option>
+        </select>
+      </div>
+      <div class="flex items-end">
+        <label class="flex items-center gap-2">
+          <input type="checkbox" name="is_active" {% if driver.is_active %}checked{% endif %}
+                 class="w-4 h-4 text-emerald-600 rounded">
+          <span class="text-sm text-gray-700 dark:text-gray-300">Ativo (pode operar)</span>
+        </label>
+      </div>
+      <div class="md:col-span-2">
+        <label class="block text-xs uppercase font-bold text-gray-500 mb-1">Notas administrativas</label>
+        <textarea name="notas" rows="3"
+                  class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">{{ driver.notas }}</textarea>
+      </div>
+    </div>
+  </div>
+
+  <div class="lg:col-span-2 flex justify-end gap-2">
+    <a href="{% url 'drivers_app:driver_portal' driver.id %}"
+       class="px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
+      Cancelar
+    </a>
+    <button type="submit"
+            class="px-4 py-2 text-sm bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-lg font-medium shadow-sm inline-flex items-center gap-1.5">
+      <i data-lucide="save" class="w-4 h-4"></i>
+      Guardar Alterações
+    </button>
+  </div>
+</form>
+
+{% endblock %}

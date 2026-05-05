@@ -1,0 +1,97 @@
+{% extends 'drivers_app/portal/_base.html' %}
+
+{% block portal_content %}
+
+<div class="max-w-4xl mx-auto">
+
+  {# Header #}
+  <div class="bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl p-6 text-white shadow-lg mb-6">
+    <div class="flex items-start gap-4">
+      <div class="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+        <i data-lucide="file-signature" class="w-6 h-6"></i>
+      </div>
+      <div class="flex-1">
+        <h1 class="text-xl font-extrabold">{{ template.name }}</h1>
+        <p class="text-sm text-amber-100 mt-1">
+          Versão {{ template.version }} · vigente desde {{ template.effective_from|date:"d/m/Y" }}
+          {% if template.expires_at %}· expira em {{ template.expires_at|date:"d/m/Y" }}{% endif %}
+        </p>
+      </div>
+      <a href="{% url 'contracts:driver_contracts' driver.id %}"
+         class="px-3 py-2 bg-white/15 hover:bg-white/25 backdrop-blur-sm rounded-lg text-sm font-medium inline-flex items-center gap-1.5">
+        <i data-lucide="arrow-left" class="w-4 h-4"></i>
+        Voltar
+      </a>
+    </div>
+  </div>
+
+  {# Conteúdo do contrato #}
+  <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 shadow-sm mb-6">
+    <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
+      <i data-lucide="file-text" class="w-5 h-5 text-gray-500"></i>
+      <h2 class="font-bold text-gray-900 dark:text-white">Texto do Contrato</h2>
+    </div>
+    <div class="p-6 max-h-[500px] overflow-y-auto prose dark:prose-invert prose-sm max-w-none">
+      {{ template.content|safe|linebreaks }}
+    </div>
+  </div>
+
+  {# Form de assinatura #}
+  <form method="post" class="bg-white dark:bg-gray-800 rounded-2xl border-2 border-amber-300 dark:border-amber-700/50 shadow-md p-6">
+    {% csrf_token %}
+
+    <h3 class="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+      <i data-lucide="pen-tool" class="w-5 h-5 text-amber-600"></i>
+      Assinatura Digital
+    </h3>
+
+    <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50 rounded-xl p-4 mb-4">
+      <p class="text-sm text-amber-800 dark:text-amber-300 font-semibold flex items-start gap-2">
+        <i data-lucide="info" class="w-4 h-4 mt-0.5 flex-shrink-0"></i>
+        <span>Esta assinatura digital tem validade legal. Vai ser registada com:</span>
+      </p>
+      <ul class="text-xs text-amber-700 dark:text-amber-400 mt-2 ml-6 list-disc space-y-0.5">
+        <li>O teu nome: <strong>{{ driver.nome_completo|default:driver.apelido }}</strong></li>
+        <li>NIF: <strong>{{ driver.nif|default:"—" }}</strong></li>
+        <li>Data e hora actual</li>
+        <li>O endereço IP do teu dispositivo</li>
+        <li>Hash SHA-256 do conteúdo (integridade)</li>
+      </ul>
+    </div>
+
+    <label class="flex items-start gap-3 cursor-pointer p-3 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700/30 mb-4">
+      <input type="checkbox" name="agreed" value="yes" required
+             class="mt-0.5 w-4 h-4 text-amber-600 border-gray-300 rounded focus:ring-amber-500">
+      <span class="text-sm text-gray-900 dark:text-white">
+        <strong>Li, compreendi e aceito todos os termos</strong> deste contrato. Confirmo que esta assinatura digital tem o mesmo efeito legal que uma assinatura manuscrita.
+      </span>
+    </label>
+
+    <div class="mb-4">
+      <label class="block text-xs text-gray-500 dark:text-gray-400 uppercase font-bold mb-1">
+        Frase de aceitação (opcional)
+      </label>
+      <input type="text" name="signature_text"
+             value="Li e aceito os termos."
+             maxlength="200"
+             class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
+      <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
+        Aparece como "assinatura" no contrato registado.
+      </p>
+    </div>
+
+    <div class="flex justify-end gap-2">
+      <a href="{% url 'contracts:driver_contracts' driver.id %}"
+         class="px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
+        Cancelar
+      </a>
+      <button type="submit"
+              class="px-6 py-2 text-sm bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white rounded-lg font-bold shadow-md inline-flex items-center gap-1.5">
+        <i data-lucide="pen-tool" class="w-4 h-4"></i>
+        Assinar Contrato
+      </button>
+    </div>
+  </form>
+</div>
+
+{% endblock %}

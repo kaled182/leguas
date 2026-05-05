@@ -1,12 +1,19 @@
 ﻿from django.urls import path
 
-from . import views
+from . import views, views_payables
 
 app_name = "accounting"
 
 urlpatterns = [
     # Dashboard
     path("", views.dashboard, name="dashboard"),
+
+    # ── Inbox unificado de Pagamentos a Fazer ──
+    path("a-pagar/", views_payables.payables_inbox, name="payables_inbox"),
+    path(
+        "a-pagar/marcar-pago/", views_payables.payables_mark_paid,
+        name="payables_mark_paid",
+    ),
     # URLs para Receitas
     path("receitas/", views.revenue_list, name="revenue_list"),
     path("receitas/nova/", views.revenue_create, name="revenue_create"),

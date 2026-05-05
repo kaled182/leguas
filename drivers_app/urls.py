@@ -16,6 +16,63 @@ urlpatterns = [
     path("dashboard/", views.driver_dashboard_view, name="driver_dashboard"),
     path("export/xlsx/", views.driver_export_xlsx, name="driver_export_xlsx"),
     path("logout/", views.driver_logout_view, name="driver_logout"),
+
+    # ─── Portal do Driver (Fase 1: KPIs + relatórios + faturas) ───
+    path("portal/<int:driver_id>/", views.driver_portal, name="driver_portal"),
+    path(
+        "portal/<int:driver_id>/relatorios/",
+        views.driver_portal_reports,
+        name="driver_portal_reports",
+    ),
+    path(
+        "portal/<int:driver_id>/faturas/",
+        views.driver_portal_invoices,
+        name="driver_portal_invoices",
+    ),
+    path(
+        "portal/<int:driver_id>/perfil/",
+        views.driver_portal_profile,
+        name="driver_portal_profile",
+    ),
+    # ─── Portal Admin (substitui modais antigos) ───
+    path("portal/<int:driver_id>/editar/", views.driver_admin_edit, name="driver_admin_edit"),
+    path("portal/<int:driver_id>/documentos/", views.driver_documents, name="driver_documents"),
+    path("portal/<int:driver_id>/veiculos/", views.driver_vehicles, name="driver_vehicles"),
+    path("portal/<int:driver_id>/helpers/", views.driver_helpers, name="driver_helpers"),
+    path("portal/<int:driver_id>/reclamacoes/", views.driver_complaints, name="driver_complaints"),
+    path("portal/<int:driver_id>/logins/", views.driver_logins, name="driver_logins"),
+    path("portal/<int:driver_id>/financeiro/", views.driver_financeiro, name="driver_financeiro"),
+    path(
+        "portal/<int:driver_id>/pf/<int:pre_invoice_id>/",
+        views.driver_pre_invoice_detail,
+        name="driver_pre_invoice_detail",
+    ),
+    path(
+        "portal/<int:driver_id>/pf/<int:pre_invoice_id>/upload-recibo/",
+        views.driver_pre_invoice_upload_recibo,
+        name="driver_pre_invoice_upload_recibo",
+    ),
+    path(
+        "portal/<int:driver_id>/pf/<int:pre_invoice_id>/pdf/",
+        views.driver_pre_invoice_pdf,
+        name="driver_pre_invoice_pdf",
+    ),
+
+    # ─── Admin: aprovar pedidos de alteração ───
+    path(
+        "admin/pedidos-alteracao/",
+        views.change_requests_list,
+        name="change_requests_list",
+    ),
+    path(
+        "admin/pedidos-alteracao/<int:pk>/acao/",
+        views.change_request_action,
+        name="change_request_action",
+    ),
+    # ─── Central de Motoristas (admin moderna) ───
+    path("admin/", views.drivers_central, name="drivers_central"),
+    path("admin/central/", views.drivers_central, name="drivers_central_alias"),
+
     # Admin - Gestao de Motoristas
     path("admin/criar/", views.admin_create_driver, name="admin_create_driver"),
     path(

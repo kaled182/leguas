@@ -2425,14 +2425,9 @@ def cainiao_operation_preview(request):
         date_novos = date_atualizados = 0
 
         for waybill, r_list in wb_rows.items():
-            cancelled_couriers = {
-                _cell_str(r, ci_courier)
-                for r in r_list
-                if _cell_str(r, ci_status) == "Cancel"
-            }
-            active_rows = [r for r in r_list if _cell_str(r, ci_courier) not in cancelled_couriers]
-            if not active_rows:
-                active_rows = r_list
+            # Sem cancel exclusion: cada linha (Cancel inclusive) é uma
+            # assinatura legítima da cadeia. Best row = última cronologicamente.
+            active_rows = r_list
             best_score = (-1, -1)
             best_row = None
             for row in active_rows:
@@ -2624,7 +2619,35 @@ def cainiao_operation_audit(request):
 
 
 def cainiao_operation_import(request):
-    """Import da planilha Operation Update — data lida automaticamente da coluna Task Date."""
+    """Import da planilha Operation Update.
+
+    Estratégia:
+      • A data efectiva (smart_date) é determinada por cascata:
+        delivery_time → delivery_failure_time → start_delivery_time → Task Date.
+        Alinha com a coluna 'Task Actual Date' do dashboard Cainiao.
+      • Os pacotes são identificados pelo waybill_number e atualizados onde
+        quer que estejam na BD — independentemente da task_date original.
+      • Se o smart_date diferir da task_date guardada, o registo "move-se"
+        de data (DELETE row antiga + INSERT na nova).
+      • Status downgrade prevention: se o status novo tem prioridade
+        inferior ao guardado, mantém-se o status antigo mas atualizam-se
+        os outros campos.
+    """
+    try:
+        return _cainiao_operation_import_impl(request)
+    except Exception as e:
+        import traceback, sys
+        tb = traceback.format_exc()
+        print("=== CAINIAO IMPORT ERROR ===", file=sys.stderr)
+        print(tb, file=sys.stderr)
+        return JsonResponse({
+            "success": False,
+            "error": f"{type(e).__name__}: {e}",
+            "traceback": tb.splitlines()[-15:],
+        }, status=500)
+
+
+def _cainiao_operation_import_impl(request):
     ficheiro = request.FILES.get("ficheiro")
     if not ficheiro:
         return JsonResponse({"success": False, "error": "Nenhum ficheiro enviado."}, status=400)
@@ -2695,20 +2718,45 @@ def cainiao_operation_import(request):
         s = str(v).strip().lower()
         return s in ("yes", "y", "true", "1", "sim", "s")
 
-    def _parse_row_date(row):
-        ci_td = ci["taskdate"]
-        if ci_td is None or ci_td >= len(row):
+    def _to_date(v):
+        if v is None or v == "":
             return None
-        v = row[ci_td]
         if isinstance(v, _date) and not isinstance(v, _dt):
             return v
         if isinstance(v, _dt):
             return v.date()
-        s = str(v).strip()[:10] if v else ""
+        s = str(v).strip()[:10]
         try:
             return _date.fromisoformat(s)
         except ValueError:
             return None
+
+    def _planned_date(row):
+        """Task Date (planeada) — usada como fallback."""
+        ci_td = ci["taskdate"]
+        if ci_td is None or ci_td >= len(row):
+            return None
+        return _to_date(row[ci_td])
+
+    def _smart_date(row):
+        """Task Date da linha = fonte de verdade.
+
+        Regra do operador: se a planilha diz que o pacote é de Task Date X,
+        o pacote pertence ao dia X. Fallback para Receipt/Creation apenas
+        quando Task Date está vazia (raro)."""
+        d = _planned_date(row)
+        if d:
+            return d
+        # Fallback: receipt → creation
+        for col in ("receipt", "creation", "del_time", "del_fail",
+                    "start_del", "outbound"):
+            idx = ci[col]
+            if idx is None or idx >= len(row):
+                continue
+            dt = _parse_datetime(row[idx])
+            if dt:
+                return dt.date()
+        return None
 
     STATUS_PRIORITY = {"Delivered": 4, "Attempt Failure": 3, "Driver_received": 2, "Assigned": 1, "Unassign": 0, "Cancel": -1}
     # Cancel é incluído para preservar histórico (driver pegou e devolveu/
@@ -2717,59 +2765,65 @@ def cainiao_operation_import(request):
     _VALID = {"Delivered", "Driver_received", "Attempt Failure", "Unassign", "Assigned", "Cancel"}
 
     from collections import defaultdict
-    from .models import CainiaoOperationBatch, CainiaoOperationTask
+    from .models import (
+        CainiaoOperationBatch, CainiaoOperationTask,
+        CainiaoOperationTaskHistory,
+    )
 
-    # ─── AUDIT: contar tudo o que se passa para o user ver ─────────
     audit = {
         "total_rows_in_file": 0,
         "skipped_no_waybill": 0,
-        "skipped_no_taskdate": 0,
-        "skipped_invalid_status": 0,
+        "skipped_no_date": 0,
         "rows_by_status": defaultdict(int),
         "waybills_unique": 0,
         "waybills_skipped_cancel_only": 0,
-        "waybills_skipped_no_active_row": 0,
         "waybills_no_status_change_due_downgrade": 0,
-        "skipped_waybill_examples": [],   # primeiros 20
-        "cancelled_only_examples": [],    # primeiros 20
-        "downgrade_examples": [],         # primeiros 20
+        "waybills_moved_date": 0,
+        "skipped_waybill_examples": [],
+        "cancelled_only_examples": [],
+        "downgrade_examples": [],
+        "moved_date_examples": [],
     }
 
-    # Group all data rows by (task_date, waybill)
-    date_wb_rows = defaultdict(lambda: defaultdict(list))
-    skipped_rows_no_taskdate_seen = []  # primeiros 20 para debug
-
+    # ─── 1. Agrupar por waybill (não por data — data é decidida por waybill) ─
+    wb_rows = defaultdict(list)
+    audit["couriers_in_file"] = defaultdict(int)
+    audit["dsp_in_file"] = defaultdict(int)
+    audit["headers_detected"] = [
+        {"col": chr(65 + i) if i < 26 else f"col{i}", "header": str(h)}
+        for i, h in enumerate(header) if h is not None
+    ]
+    audit["courier_name_col_idx"] = ci.get("courier_name")
+    audit["dsp_name_col_idx"] = ci.get("dsp_name")
     for row in all_rows[header_idx + 1:]:
         audit["total_rows_in_file"] += 1
         waybill = _cell_str(row, ci["waybill"])
-        task_date = _parse_row_date(row)
         status = _cell_str(row, ci["task_status"])
+        courier = _cell_str(row, ci["courier_name"])
+        dsp = _cell_str(row, ci["dsp_name"])
         if status:
             audit["rows_by_status"][status] += 1
+        if courier:
+            audit["couriers_in_file"][courier] += 1
+        if dsp:
+            audit["dsp_in_file"][dsp] += 1
         if not waybill:
             audit["skipped_no_waybill"] += 1
             continue
-        if not task_date:
-            audit["skipped_no_taskdate"] += 1
-            if len(skipped_rows_no_taskdate_seen) < 20:
-                skipped_rows_no_taskdate_seen.append(waybill)
-            continue
-        date_wb_rows[task_date][waybill].append(row)
-    audit["skipped_no_taskdate_examples"] = skipped_rows_no_taskdate_seen
-    audit["waybills_unique"] = sum(
-        len(d) for d in date_wb_rows.values()
-    )
+        wb_rows[waybill].append(row)
+    # Converter defaultdicts para dicts JSON-serializáveis
+    audit["couriers_in_file"] = dict(audit["couriers_in_file"])
+    audit["dsp_in_file"] = dict(audit["dsp_in_file"])
 
-    if not date_wb_rows:
+    if not wb_rows:
         return JsonResponse(
-            {"success": False, "error": "Nenhuma linha com Waybill Number e Task Date válidos."},
+            {"success": False, "error": "Nenhuma linha com Waybill Number válido."},
             status=400,
         )
 
     # NOTE: courier_id_cainiao é EXCLUÍDO de update_fields porque é definido
     # apenas no INSERT (via resolver). Em re-imports queremos preservar
-    # mappings manuais já feitos pelo utilizador. Se for necessário resolver
-    # tasks sem courier_id_cainiao, usar o backfill banner.
+    # mappings manuais já feitos pelo utilizador.
     update_fields_all = [
         "lp_number", "task_status", "courier_name",
         "dsp_name", "delivery_type",
@@ -2781,27 +2835,23 @@ def cainiao_operation_import(request):
         "exception_type", "exception_detail", "weight_g", "length", "width", "height",
         "seller_name", "zone", "original_plan_task_date", "sign_pod", "pudo_address",
         "task_id", "last_import_batch",
-        # Campos extra do Tracking/Planning
         "is_priority_external", "pre_assigned_driver", "pre_allocated_dsp",
         "wrong_hub_parcel", "arrive_wrong_hub", "commercial_area",
         "hub_exception_reason", "bigbag_number", "task_plan_date",
     ]
-    _status_time_fields = {"task_status", "delivery_time", "delivery_failure_time", "start_delivery_time"}
+    # Em downgrade: não tocar em status, courier nem nos seus timestamps.
+    # Só actualizar campos genéricos (endereço, dimensões, etc.). Evita o
+    # bug de mistura "Attempt Failure (de driver A) + courier=B".
+    _status_time_fields = {
+        "task_status",
+        "delivery_time", "delivery_failure_time", "start_delivery_time",
+        "courier_name", "courier_id_cainiao",
+    }
     update_fields_no_status = [f for f in update_fields_all if f not in _status_time_fields]
 
-    all_dates = sorted(date_wb_rows.keys())
     filename = ficheiro.name
-    total_novos = 0
-    total_atualizados = 0
-    total_cleaned = 0
-    batch_ids = []
 
-    # Pre-load courier_name → courier_id resolver. Permite que entregas
-    # mantenham ligação ao driver mesmo quando o courier_name é renomeado.
-    # Prioridade:
-    #   1. DriverCourierMapping (estado actual)
-    #   2. CourierNameAlias (histórico persistente, inclui nomes antigos)
-    #   3. DriverProfile.apelido (fallback)
+    # Pre-load courier_name → courier_id resolver
     from .models import DriverCourierMapping, CourierNameAlias
     from drivers_app.models import DriverProfile
     from core.models import Partner
@@ -2813,240 +2863,494 @@ def cainiao_operation_import(request):
             if m.courier_name:
                 _name_to_courier_id[m.courier_name] = m.courier_id
             _name_to_courier_id.setdefault(m.courier_id, m.courier_id)
-        # Aliases persistentes (nomes antigos, mappings manuais, etc.)
         for a in CourierNameAlias.objects.filter(partner=_cainiao_partner):
             _name_to_courier_id.setdefault(a.courier_name, a.courier_id)
-    # fallback: drivers com apelido configurado
     for d in DriverProfile.objects.exclude(courier_id_cainiao="").exclude(apelido=""):
         _name_to_courier_id.setdefault(d.apelido, d.courier_id_cainiao)
 
     def _resolve_courier_id(courier_name):
         return _name_to_courier_id.get((courier_name or "").strip(), "")
 
-    for task_date in all_dates:
-        wb_rows = date_wb_rows[task_date]
+    # Heurística: courier é placeholder de armazém/hub (não driver real).
+    # Usado APENAS como tie-breaker final quando duas linhas têm exactamente
+    # o mesmo timestamp e priority de status.
+    _WAREHOUSE_KEYWORDS = ("ARMAZEM", "ARMAZÉM", "HUB", "WAREHOUSE", "DEPOSITO", "DEPÓSITO", "CENTRO_OPERACIONAL")
 
-        # Dedup intra-file: Cancel exclusion + best status by priority
-        # Para waybills onde TODAS as rows são Cancel ou todas excluídas,
-        # caímos para fallback que aceita o melhor row (mesmo Cancel) —
-        # assim não perdemos a info de que o pacote foi visto no ficheiro.
-        best_rows = {}
-        for waybill, r_list in wb_rows.items():
-            cancelled_couriers = {
-                _cell_str(r, ci["courier_name"])
-                for r in r_list
-                if _cell_str(r, ci["task_status"]) == "Cancel"
-            }
-            active_rows = [
-                r for r in r_list
-                if _cell_str(r, ci["courier_name"]) not in cancelled_couriers
-                and _cell_str(r, ci["task_status"]) in _VALID
-            ]
-            # Fallback: se não há rows activas, tenta usar QUALQUER row
-            # com status válido (mesmo de courier "cancelado") para ainda
-            # registar info do waybill — não silenciar.
-            if not active_rows:
-                fallback = [
-                    r for r in r_list
-                    if _cell_str(r, ci["task_status"]) in _VALID
-                ]
-                if fallback:
-                    active_rows = fallback
-                    if len(audit["cancelled_only_examples"]) < 20:
-                        audit["cancelled_only_examples"].append(waybill)
-                else:
-                    # Todas as rows deste waybill são Cancel ou inválidas.
-                    audit["waybills_skipped_cancel_only"] += 1
-                    if len(audit["skipped_waybill_examples"]) < 20:
-                        audit["skipped_waybill_examples"].append({
-                            "waybill": waybill,
-                            "n_rows": len(r_list),
-                            "statuses": list({
-                                _cell_str(r, ci["task_status"])
-                                for r in r_list
-                            }),
-                        })
-                    continue
-            best_score = (-1, -1)
-            best_row = None
-            for row in active_rows:
-                status = _cell_str(row, ci["task_status"])
-                priority = STATUS_PRIORITY.get(status, 0)
-                has_del_time = 1 if (ci["del_time"] is not None and row[ci["del_time"]]) else 0
-                score = (priority, has_del_time)
-                if score > best_score:
-                    best_score = score
-                    best_row = row
-            best_rows[waybill] = (best_score, best_row)
+    def _is_warehouse_courier(courier_name):
+        if not courier_name:
+            return True
+        cn_upper = courier_name.upper()
+        return any(kw in cn_upper for kw in _WAREHOUSE_KEYWORDS)
 
-        if not best_rows:
+    # Sentinela para rows sem nenhum timestamp — ficam abaixo de qualquer
+    # row com timestamp real. Datetime aware com tzinfo UTC para comparações.
+    from datetime import timezone as _tz
+    _EPOCH = _dt(1970, 1, 1, tzinfo=_tz.utc)
+
+    def _row_last_event_ts(row):
+        """Timestamp do evento mais recente registado nesta linha.
+        Reflecte 'a última coisa que aconteceu ao pacote nesta agente'."""
+        latest = None
+        for col in ("del_time", "del_fail", "start_del", "outbound", "receipt", "creation"):
+            idx = ci[col]
+            if idx is None or idx >= len(row):
+                continue
+            dt = _parse_datetime(row[idx])
+            if dt and (latest is None or dt > latest):
+                latest = dt
+        return latest
+
+    # ─── 2. Para cada waybill: best row + smart_date + signatures ─
+    # Filosofia "cadeia de assinaturas":
+    #   Cada linha da planilha = uma assinatura (courier+status+timestamp).
+    #   - active_rows: linhas com status válido (NÃO excluímos por Cancel —
+    #     Cancel também é uma assinatura legítima na timeline).
+    #   - best_row: linha com timestamp mais recente = estado vigente actual.
+    #   - all_signatures_per_wb: TODAS as linhas para irem à timeline.
+    best_row_per_wb = {}
+    all_signatures_per_wb = {}  # waybill → list[row] (ordenado por ts asc)
+    for waybill, r_list in wb_rows.items():
+        active_rows = [
+            r for r in r_list
+            if _cell_str(r, ci["task_status"]) in _VALID
+        ]
+        if not active_rows:
+            audit["waybills_skipped_cancel_only"] += 1
+            if len(audit["skipped_waybill_examples"]) < 20:
+                audit["skipped_waybill_examples"].append({
+                    "waybill": waybill,
+                    "n_rows": len(r_list),
+                    "statuses": list({
+                        _cell_str(r, ci["task_status"]) for r in r_list
+                    }),
+                })
             continue
 
-        # Existing DB records for this date (to prevent status downgrade)
-        existing_db = {
-            r["waybill_number"]: r["task_status"]
-            for r in CainiaoOperationTask.objects
-                .filter(task_date=task_date)
-                .values("waybill_number", "task_status")
-        }
-        existing_waybills = set(existing_db.keys())
+        # Algoritmo "Task Date mais recente vence" para estado vigente:
+        # Score (tuple, decrescente):
+        #   1. task_date_row — Task Date da linha (planilha = verdade)
+        #   2. last_event_ts — timestamp do evento (desempate)
+        #   3. priority — desempate quando ts iguais
+        #   4. is_real_driver — prefere driver real sobre placeholder
+        from datetime import date as _date_helper
+        _DATE_MIN = _date_helper(1970, 1, 1)
+        best_score = (_DATE_MIN, _EPOCH, -1, -1)
+        best_row = None
+        for row in active_rows:
+            row_task_date = _planned_date(row) or _DATE_MIN
+            last_ts = _row_last_event_ts(row) or _EPOCH
+            status = _cell_str(row, ci["task_status"])
+            courier = _cell_str(row, ci["courier_name"])
+            priority = STATUS_PRIORITY.get(status, 0)
+            is_real = 0 if _is_warehouse_courier(courier) else 1
+            score = (row_task_date, last_ts, priority, is_real)
+            if score > best_score:
+                best_score = score
+                best_row = row
+
+        smart_dt = _smart_date(best_row)
+        if not smart_dt:
+            audit["skipped_no_date"] += 1
+            continue
+
+        best_row_per_wb[waybill] = (best_row, smart_dt)
+        # Guardar todas as assinaturas em ordem cronológica para o history
+        all_signatures_per_wb[waybill] = sorted(
+            active_rows,
+            key=lambda r: (_row_last_event_ts(r) or _EPOCH),
+        )
+
+    audit["waybills_unique"] = len(best_row_per_wb)
+
+    if not best_row_per_wb:
+        return JsonResponse(
+            {"success": False, "error": "Nenhum waybill processável."},
+            status=400,
+        )
+
+    # ─── 3. Lookup global por waybill (sem filtrar por data) ─
+    # Pré-carregamos o estado COMPLETO de cada waybill já em BD, incluindo
+    # courier e datas, para podermos detectar mudanças e registar timeline.
+    existing_full = {}  # waybill → {task_date, task_status, courier_name, courier_id_cainiao}
+    for r in CainiaoOperationTask.objects.filter(
+        waybill_number__in=list(best_row_per_wb.keys())
+    ).values(
+        "waybill_number", "task_date", "task_status",
+        "courier_name", "courier_id_cainiao",
+    ):
+        wb = r["waybill_number"]
+        cur = existing_full.get(wb)
+        # Em caso de múltiplas rows (datas diferentes), ficamos com a
+        # de maior priority como representante do "estado vigente".
+        if cur is None:
+            existing_full[wb] = r
+        else:
+            cur_pri = STATUS_PRIORITY.get(cur["task_status"], 0)
+            new_pri = STATUS_PRIORITY.get(r["task_status"], 0)
+            if new_pri > cur_pri:
+                existing_full[wb] = r
+
+    # Atalho para o resto do código que só precisa de (date, status)
+    existing_by_waybill = {
+        wb: (r["task_date"], r["task_status"])
+        for wb, r in existing_full.items()
+    }
+
+    # ─── 4. Decidir CREATE vs UPDATE vs MOVE-DATE vs SKIP por waybill ─
+    # objs_by_date: smart_date → list[(obj, is_status_upgrade)]
+    objs_upgrade_by_date = defaultdict(list)
+    objs_no_status_by_date = defaultdict(list)
+    waybills_to_delete = []  # [(waybill, old_date), ...] para MOVE-DATE
+    # Entries de timeline a criar (preenche batch=None, atribuído depois)
+    history_pending = []  # list[dict] — convertido em CainiaoOperationTaskHistory
+
+    for waybill, (row, smart_dt) in best_row_per_wb.items():
+        new_status = _cell_str(row, ci["task_status"])
+        new_priority = STATUS_PRIORITY.get(new_status, 0)
+        _cn = _cell_str(row, ci["courier_name"])
+        _resolved_id = _resolve_courier_id(_cn)
+        last_event_ts = _row_last_event_ts(row)
+
+        tpd = None
+        if ci["task_plan"] is not None and ci["task_plan"] < len(row):
+            tpd = _to_date(row[ci["task_plan"]])
+
+        # Decisão de data e tipo de operação
+        is_status_upgrade = True
+        target_date = smart_dt
+        existing_main = existing_full.get(waybill)
+        change_type = None  # se vai gerar history entry: 'created' | 'status_change' | 'courier_change' | 'date_move'
+        if existing_main is None:
+            change_type = "created"
+        else:
+            old_date = existing_main["task_date"]
+            old_status = existing_main["task_status"]
+            old_courier = existing_main["courier_name"]
+            old_priority = STATUS_PRIORITY.get(old_status, 0)
+            if new_priority < old_priority:
+                # Downgrade: manter na data antiga e não tocar no status
+                is_status_upgrade = False
+                target_date = old_date
+                audit["waybills_no_status_change_due_downgrade"] += 1
+                if len(audit["downgrade_examples"]) < 20:
+                    audit["downgrade_examples"].append({
+                        "waybill": waybill,
+                        "old_status": old_status,
+                        "new_status_attempted": new_status,
+                    })
+                # Mesmo num downgrade, se o courier mudou, regista no history
+                # (relevante para o caso "voltou ao armazém de outro driver")
+                if (_cn or "") != (old_courier or ""):
+                    change_type = "courier_change"
+            elif old_date != smart_dt:
+                # MOVE-DATE: status válido para upgrade mas data mudou
+                # → apaga row antiga e insere em smart_date
+                waybills_to_delete.append((waybill, old_date))
+                audit["waybills_moved_date"] += 1
+                if len(audit["moved_date_examples"]) < 20:
+                    audit["moved_date_examples"].append({
+                        "waybill": waybill,
+                        "old_date": str(old_date),
+                        "new_date": str(smart_dt),
+                        "old_status": old_status,
+                        "new_status": new_status,
+                    })
+                change_type = "date_move"
+            elif old_status != new_status:
+                change_type = "status_change"
+            elif (_cn or "") != (old_courier or ""):
+                change_type = "courier_change"
+
+        if change_type:
+            history_pending.append({
+                "waybill_number": waybill,
+                # Estado APÓS a mudança (vai ser persistido após bulk_create)
+                "task_date": target_date,
+                "task_status": (
+                    new_status if is_status_upgrade
+                    else (existing_main["task_status"] if existing_main else new_status)
+                ),
+                "courier_name": _cn,
+                "courier_id_cainiao": _resolved_id,
+                # Estado ANTES (None se for criação)
+                "previous_task_date": existing_main["task_date"] if existing_main else None,
+                "previous_task_status": existing_main["task_status"] if existing_main else "",
+                "previous_courier_name": existing_main["courier_name"] if existing_main else "",
+                "change_type": change_type,
+                "event_timestamp": last_event_ts,
+                "target_date_for_batch": target_date,  # usado para atribuir batch certo
+            })
+
+        # Signature entries: cada linha activa do waybill na planilha vira
+        # uma entry no history (timeline completa "cadeia de assinaturas").
+        # Permite reconstruir todos os couriers que tocaram o pacote.
+        signatures = all_signatures_per_wb.get(waybill, [])
+        for sig_row in signatures:
+            sig_status = _cell_str(sig_row, ci["task_status"])
+            sig_courier = _cell_str(sig_row, ci["courier_name"])
+            sig_ts = _row_last_event_ts(sig_row)
+            sig_date = _smart_date(sig_row)
+            history_pending.append({
+                "waybill_number": waybill,
+                "task_date": sig_date or target_date,
+                "task_status": sig_status,
+                "courier_name": sig_courier,
+                "courier_id_cainiao": _resolve_courier_id(sig_courier),
+                "previous_task_date": None,
+                "previous_task_status": "",
+                "previous_courier_name": "",
+                "change_type": "signature",
+                "event_timestamp": sig_ts,
+                "target_date_for_batch": target_date,
+            })
+
+        obj = CainiaoOperationTask(
+            waybill_number=waybill,
+            task_date=target_date,
+            lp_number=_cell_str(row, ci["lp"]),
+            task_status=new_status,
+            courier_name=_cn,
+            courier_id_cainiao=_resolve_courier_id(_cn),
+            dsp_name=_cell_str(row, ci["dsp_name"]),
+            delivery_type=_cell_str(row, ci["delivery_type"]),
+            order_type=_cell_str(row, ci["order_type"]),
+            task_group_order=_cell_str(row, ci["task_group"]),
+            sitecode=_cell_str(row, ci["sitecode"]),
+            destination_country=_cell_str(row, ci["dest_country"]),
+            destination_area=_cell_str(row, ci["dest_area"]),
+            destination_city=_cell_str(row, ci["dest_city"]),
+            zip_code=_normalise_zip(_cell_str(row, ci["zip_code"])),
+            detailed_address=_cell_str(row, ci["address"]),
+            receiver_latitude=_cell_str(row, ci["recv_lat"]),
+            receiver_longitude=_cell_str(row, ci["recv_lng"]),
+            actual_latitude=_cell_str(row, ci["act_lat"]),
+            actual_longitude=_cell_str(row, ci["act_lng"]),
+            delivery_gap_distance=_cell_str(row, ci["gap_dist"]),
+            creation_time=_parse_datetime(row[ci["creation"]] if ci["creation"] is not None else None),
+            receipt_time=_parse_datetime(row[ci["receipt"]] if ci["receipt"] is not None else None),
+            outbound_time=_parse_datetime(row[ci["outbound"]] if ci["outbound"] is not None else None),
+            start_delivery_time=_parse_datetime(row[ci["start_del"]] if ci["start_del"] is not None else None),
+            delivery_time=_parse_datetime(row[ci["del_time"]] if ci["del_time"] is not None else None),
+            delivery_failure_time=_parse_datetime(row[ci["del_fail"]] if ci["del_fail"] is not None else None),
+            exception_type=_cell_str(row, ci["exc_type"]),
+            exception_detail=_cell_str(row, ci["exc_detail"]),
+            weight_g=_cell_float(row, ci["weight"]),
+            length=_cell_float(row, ci["length"]),
+            width=_cell_float(row, ci["width"]),
+            height=_cell_float(row, ci["height"]),
+            seller_name=_cell_str(row, ci["seller"]),
+            zone=_cell_str(row, ci["zone"]),
+            original_plan_task_date=_cell_str(row, ci["orig_date"]),
+            sign_pod=_cell_str(row, ci["sign_pod"]),
+            pudo_address=_cell_str(row, ci["pudo_addr"]),
+            task_id=_cell_str(row, ci["task_id"]),
+            is_priority_external=_yesno_to_bool(
+                row[ci["priority"]]
+                if ci["priority"] is not None and ci["priority"] < len(row)
+                else None
+            ),
+            pre_assigned_driver=_cell_str(row, ci["pre_driver"]),
+            pre_allocated_dsp=_cell_str(row, ci["pre_dsp"]),
+            wrong_hub_parcel=_yesno_to_bool(
+                row[ci["wrong_parcel"]]
+                if ci["wrong_parcel"] is not None and ci["wrong_parcel"] < len(row)
+                else None
+            ),
+            arrive_wrong_hub=_yesno_to_bool(
+                row[ci["arrive_wrong"]]
+                if ci["arrive_wrong"] is not None and ci["arrive_wrong"] < len(row)
+                else None
+            ),
+            commercial_area=_cell_str(row, ci["comm_area"]),
+            hub_exception_reason=_cell_str(row, ci["hub_exc"]),
+            bigbag_number=_cell_str(row, ci["bigbag"]),
+            task_plan_date=tpd,
+            last_import_batch=None,  # atribuído por data abaixo
+        )
+
+        if is_status_upgrade:
+            objs_upgrade_by_date[target_date].append(obj)
+        else:
+            objs_no_status_by_date[target_date].append(obj)
+
+    # ─── 5. Consolidação: cada waybill = 1 row vigente na smart_dt ─
+    # Para todos os waybills que serão UPSERT em alguma smart_dt, apagar
+    # quaisquer outras rows do mesmo waybill em datas != smart_dt. Resolve
+    # o caso "pacote espalhado por várias datas" — mantém só a row actual.
+    # A timeline está preservada no CainiaoOperationTaskHistory.
+    waybill_to_target_date = {}
+    for target_date, objs in objs_upgrade_by_date.items():
+        for o in objs:
+            waybill_to_target_date[o.waybill_number] = target_date
+    for target_date, objs in objs_no_status_by_date.items():
+        for o in objs:
+            waybill_to_target_date.setdefault(o.waybill_number, target_date)
+
+    if waybill_to_target_date:
+        from django.db.models import Q
+        from django.db import transaction
+        # Procurar todas as rows existentes desses waybills em datas
+        # diferentes da target_date, agrupar por (target_date, waybill) e apagar.
+        existing_other_dates = list(
+            CainiaoOperationTask.objects
+            .filter(waybill_number__in=list(waybill_to_target_date.keys()))
+            .values("waybill_number", "task_date")
+        )
+        # Agrupar por task_date as rows que precisam de ser apagadas
+        deletes_by_date = defaultdict(list)
+        consolidated_count = 0
+        for r in existing_other_dates:
+            wb = r["waybill_number"]
+            target_dt = waybill_to_target_date.get(wb)
+            if target_dt is None:
+                continue
+            if r["task_date"] != target_dt:
+                deletes_by_date[r["task_date"]].append(wb)
+                consolidated_count += 1
+
+        if deletes_by_date:
+            with transaction.atomic():
+                for dt, wbs in deletes_by_date.items():
+                    CainiaoOperationTask.objects.filter(
+                        task_date=dt, waybill_number__in=wbs,
+                    ).delete()
+        audit["waybills_consolidated"] = consolidated_count
+
+    # ─── 6. Criar batch + bulk_create por data ─
+    all_target_dates = sorted(set(objs_upgrade_by_date.keys()) | set(objs_no_status_by_date.keys()))
+    batch_ids = []
+    batch_by_date = {}  # target_date → CainiaoOperationBatch (para atribuir ao history)
+    total_novos = 0
+    total_atualizados = 0
+    existing_waybills_global = set(existing_by_waybill.keys())
+
+    for target_date in all_target_dates:
+        upgrade_objs = objs_upgrade_by_date.get(target_date, [])
+        no_status_objs = objs_no_status_by_date.get(target_date, [])
+        all_objs = upgrade_objs + no_status_objs
+        if not all_objs:
+            continue
 
         batch = CainiaoOperationBatch.objects.create(
             filename=filename,
-            task_date=task_date,
+            task_date=target_date,
             created_by=request.user,
         )
         batch_ids.append(batch.id)
+        batch_by_date[target_date] = batch
 
-        objs_upgrade = []
-        objs_no_status = []
+        for o in all_objs:
+            o.last_import_batch = batch
 
-        for waybill, (_score, row) in best_rows.items():
-            new_status = _cell_str(row, ci["task_status"])
-            new_priority = STATUS_PRIORITY.get(new_status, 0)
-
-            _cn = _cell_str(row, ci["courier_name"])
-            # Parse opcional do task_plan_date
-            tpd = None
-            if ci["task_plan"] is not None and ci["task_plan"] < len(row):
-                tpd_v = row[ci["task_plan"]]
-                if isinstance(tpd_v, _date) and not isinstance(tpd_v, _dt):
-                    tpd = tpd_v
-                elif isinstance(tpd_v, _dt):
-                    tpd = tpd_v.date()
-                elif tpd_v:
-                    try:
-                        tpd = _date.fromisoformat(
-                            str(tpd_v).strip()[:10]
-                        )
-                    except ValueError:
-                        tpd = None
-
-            obj = CainiaoOperationTask(
-                waybill_number=waybill,
-                task_date=task_date,
-                lp_number=_cell_str(row, ci["lp"]),
-                task_status=new_status,
-                courier_name=_cn,
-                courier_id_cainiao=_resolve_courier_id(_cn),
-                dsp_name=_cell_str(row, ci["dsp_name"]),
-                delivery_type=_cell_str(row, ci["delivery_type"]),
-                order_type=_cell_str(row, ci["order_type"]),
-                task_group_order=_cell_str(row, ci["task_group"]),
-                sitecode=_cell_str(row, ci["sitecode"]),
-                destination_country=_cell_str(row, ci["dest_country"]),
-                destination_area=_cell_str(row, ci["dest_area"]),
-                destination_city=_cell_str(row, ci["dest_city"]),
-                zip_code=_normalise_zip(_cell_str(row, ci["zip_code"])),
-                detailed_address=_cell_str(row, ci["address"]),
-                receiver_latitude=_cell_str(row, ci["recv_lat"]),
-                receiver_longitude=_cell_str(row, ci["recv_lng"]),
-                actual_latitude=_cell_str(row, ci["act_lat"]),
-                actual_longitude=_cell_str(row, ci["act_lng"]),
-                delivery_gap_distance=_cell_str(row, ci["gap_dist"]),
-                creation_time=_parse_datetime(row[ci["creation"]] if ci["creation"] is not None else None),
-                receipt_time=_parse_datetime(row[ci["receipt"]] if ci["receipt"] is not None else None),
-                outbound_time=_parse_datetime(row[ci["outbound"]] if ci["outbound"] is not None else None),
-                start_delivery_time=_parse_datetime(row[ci["start_del"]] if ci["start_del"] is not None else None),
-                delivery_time=_parse_datetime(row[ci["del_time"]] if ci["del_time"] is not None else None),
-                delivery_failure_time=_parse_datetime(row[ci["del_fail"]] if ci["del_fail"] is not None else None),
-                exception_type=_cell_str(row, ci["exc_type"]),
-                exception_detail=_cell_str(row, ci["exc_detail"]),
-                weight_g=_cell_float(row, ci["weight"]),
-                length=_cell_float(row, ci["length"]),
-                width=_cell_float(row, ci["width"]),
-                height=_cell_float(row, ci["height"]),
-                seller_name=_cell_str(row, ci["seller"]),
-                zone=_cell_str(row, ci["zone"]),
-                original_plan_task_date=_cell_str(row, ci["orig_date"]),
-                sign_pod=_cell_str(row, ci["sign_pod"]),
-                pudo_address=_cell_str(row, ci["pudo_addr"]),
-                task_id=_cell_str(row, ci["task_id"]),
-                # Campos extra do Tracking/Planning
-                is_priority_external=_yesno_to_bool(
-                    row[ci["priority"]]
-                    if ci["priority"] is not None
-                    and ci["priority"] < len(row)
-                    else None
-                ),
-                pre_assigned_driver=_cell_str(row, ci["pre_driver"]),
-                pre_allocated_dsp=_cell_str(row, ci["pre_dsp"]),
-                wrong_hub_parcel=_yesno_to_bool(
-                    row[ci["wrong_parcel"]]
-                    if ci["wrong_parcel"] is not None
-                    and ci["wrong_parcel"] < len(row)
-                    else None
-                ),
-                arrive_wrong_hub=_yesno_to_bool(
-                    row[ci["arrive_wrong"]]
-                    if ci["arrive_wrong"] is not None
-                    and ci["arrive_wrong"] < len(row)
-                    else None
-                ),
-                commercial_area=_cell_str(row, ci["comm_area"]),
-                hub_exception_reason=_cell_str(row, ci["hub_exc"]),
-                bigbag_number=_cell_str(row, ci["bigbag"]),
-                task_plan_date=tpd,
-                last_import_batch=batch,
-            )
-
-            if waybill in existing_db:
-                old_priority = STATUS_PRIORITY.get(existing_db[waybill], 0)
-                if new_priority >= old_priority:
-                    objs_upgrade.append(obj)
-                else:
-                    objs_no_status.append(obj)
-                    audit["waybills_no_status_change_due_downgrade"] += 1
-                    if len(audit["downgrade_examples"]) < 20:
-                        audit["downgrade_examples"].append({
-                            "waybill": waybill,
-                            "old_status": existing_db[waybill],
-                            "new_status_attempted": new_status,
-                        })
-            else:
-                objs_upgrade.append(obj)
-
-        if objs_upgrade:
+        # NOTA: unique_fields NÃO é passado — MySQL não suporta esse parâmetro
+        # com update_conflicts. O motor MySQL usa automaticamente a unique key
+        # via INSERT ... ON DUPLICATE KEY UPDATE.
+        if upgrade_objs:
             CainiaoOperationTask.objects.bulk_create(
-                objs_upgrade, batch_size=500,
-                update_conflicts=True, update_fields=update_fields_all,
+                upgrade_objs, batch_size=500,
+                update_conflicts=True,
+                update_fields=update_fields_all,
             )
-        if objs_no_status:
+        if no_status_objs:
             CainiaoOperationTask.objects.bulk_create(
-                objs_no_status, batch_size=500,
-                update_conflicts=True, update_fields=update_fields_no_status,
+                no_status_objs, batch_size=500,
+                update_conflicts=True,
+                update_fields=update_fields_no_status,
             )
 
-        seen = set(best_rows.keys())
-        n_updated = sum(1 for w in seen if w in existing_waybills)
-        n_created = len(seen) - n_updated
-        total_novos += n_created
-        total_atualizados += n_updated
+        n_in_batch_existing = sum(1 for o in all_objs if o.waybill_number in existing_waybills_global)
+        n_in_batch_new = len(all_objs) - n_in_batch_existing
+        total_atualizados += n_in_batch_existing
+        total_novos += n_in_batch_new
 
-        batch.total_tasks = len(seen)
-        batch.new_tasks = n_created
-        batch.updated_tasks = n_updated
+        batch.total_tasks = len(all_objs)
+        batch.new_tasks = n_in_batch_new
+        batch.updated_tasks = n_in_batch_existing
         batch.save(update_fields=["total_tasks", "new_tasks", "updated_tasks"])
 
-        # NOTA: o antigo cleanup que apagava snapshots intermédios foi
-        # desactivado — destruía o histórico de tentativas e drivers que
-        # passaram pelo pacote, info crítica para a "vida do pacote".
-        # Mantemos o histórico completo: cada (waybill, task_date) preservado.
-        # Se for necessário voltar a comprimir, usar o endpoint manual
-        # /cainiao/cleanup-stale/.
+    # ─── 7. Persistir entries de history (timeline) ─
+    # Dedup prévio:
+    #   - Para signatures: cada (waybill, courier, status, event_ts) é único.
+    #     Evita duplicatas em re-imports da mesma planilha.
+    #   - Para outros change_types: cada combinação no batch é única.
+    # Fazemos esta verificação contra a BD para evitar entries idênticos
+    # criados em imports anteriores.
 
-    most_recent_date = str(all_dates[-1]) if all_dates else None
-    date_range = f"{all_dates[0]} → {all_dates[-1]}" if len(all_dates) > 1 else str(all_dates[0]) if all_dates else ""
+    # 1. Pré-carregar signatures já existentes para os waybills tocados
+    sig_keys_pending = set()  # (wb, courier, status, ts_iso)
+    other_pending = []
+    for h in history_pending:
+        if h["change_type"] == "signature":
+            ts = h["event_timestamp"]
+            ts_iso = ts.isoformat() if ts else ""
+            key = (h["waybill_number"], h["courier_name"] or "",
+                   h["task_status"] or "", ts_iso)
+            if key in sig_keys_pending:
+                continue  # dedup intra-batch
+            sig_keys_pending.add(key)
+        else:
+            other_pending.append(h)
 
-    # Converter defaultdict para dict normal antes de serializar
+    # 2. Existing signatures na BD para os mesmos waybills
+    waybills_with_sigs = {h["waybill_number"] for h in history_pending}
+    existing_sig_keys = set()
+    if waybills_with_sigs:
+        for r in CainiaoOperationTaskHistory.objects.filter(
+            waybill_number__in=list(waybills_with_sigs),
+            change_type="signature",
+        ).values("waybill_number", "courier_name", "task_status", "event_timestamp"):
+            ts = r["event_timestamp"]
+            ts_iso = ts.isoformat() if ts else ""
+            existing_sig_keys.add((
+                r["waybill_number"], r["courier_name"] or "",
+                r["task_status"] or "", ts_iso,
+            ))
+
+    history_objs = []
+    audit["signatures_skipped_duplicate"] = 0
+    for h in history_pending:
+        if h["change_type"] == "signature":
+            ts = h["event_timestamp"]
+            ts_iso = ts.isoformat() if ts else ""
+            key = (h["waybill_number"], h["courier_name"] or "",
+                   h["task_status"] or "", ts_iso)
+            if key in existing_sig_keys:
+                audit["signatures_skipped_duplicate"] += 1
+                continue
+            existing_sig_keys.add(key)
+        batch_obj = batch_by_date.get(h["target_date_for_batch"])
+        history_objs.append(CainiaoOperationTaskHistory(
+            waybill_number=h["waybill_number"],
+            task_date=h["task_date"],
+            task_status=h["task_status"],
+            courier_name=h["courier_name"],
+            courier_id_cainiao=h["courier_id_cainiao"],
+            previous_task_date=h["previous_task_date"],
+            previous_task_status=h["previous_task_status"],
+            previous_courier_name=h["previous_courier_name"],
+            change_type=h["change_type"],
+            event_timestamp=h["event_timestamp"],
+            batch=batch_obj,
+        ))
+    if history_objs:
+        CainiaoOperationTaskHistory.objects.bulk_create(history_objs, batch_size=500)
+    audit["history_entries_created"] = len(history_objs)
+
+    most_recent_date = str(all_target_dates[-1]) if all_target_dates else None
+    date_range = (
+        f"{all_target_dates[0]} → {all_target_dates[-1]}"
+        if len(all_target_dates) > 1
+        else (str(all_target_dates[0]) if all_target_dates else "")
+    )
+
     audit["rows_by_status"] = dict(audit["rows_by_status"])
 
     return JsonResponse({
         "success": True,
         "total_novos": total_novos,
         "total_atualizados": total_atualizados,
-        "total_cleaned": total_cleaned,
-        "dates_imported": len(all_dates),
+        "total_cleaned": 0,
+        "dates_imported": len(all_target_dates),
         "date_range": date_range,
         "most_recent_date": most_recent_date,
         "batch_ids": batch_ids,
@@ -3268,6 +3572,343 @@ def cainiao_cleanup_stale_rows_view(request):
         })
 
     result = _cleanup_stale_waybill_rows()
+    return JsonResponse({"success": True, **result})
+
+
+@login_required
+@require_http_methods(["POST"])
+def cainiao_debug_headers_view(request):
+    """Debug: recebe upload XLSX e devolve cabeçalho + 3 primeiras linhas.
+
+    Útil para diagnosticar discrepâncias entre o que o user vê no Excel
+    e o que o parser lê.
+    """
+    ficheiro = request.FILES.get("ficheiro")
+    if not ficheiro:
+        return JsonResponse({"success": False, "error": "Nenhum ficheiro."}, status=400)
+
+    try:
+        all_rows = _load_workbook_rows(ficheiro.read())
+    except Exception as e:
+        return JsonResponse({"success": False, "error": f"Erro ao ler: {e}"}, status=400)
+
+    header, header_idx = _find_header_row(all_rows, "Waybill Number")
+    if header is None:
+        # devolve as primeiras 5 linhas para ver
+        return JsonResponse({
+            "success": False,
+            "error": "Cabeçalho não encontrado",
+            "first_5_rows": [
+                [str(c)[:50] for c in r] for r in all_rows[:5]
+            ],
+        })
+
+    # Procurar especificamente onde está "LEGUAS-XPT" para identificar a coluna
+    leguas_xpt_columns = []
+    for row in all_rows[header_idx + 1:header_idx + 11]:
+        for col_idx, cell in enumerate(row):
+            s = str(cell or "")
+            if "LEGUAS-XPT" in s.upper() or "LEGUAS XPT" in s.upper():
+                col_header = str(header[col_idx]) if col_idx < len(header) else "(no header)"
+                leguas_xpt_columns.append({
+                    "col_idx": col_idx,
+                    "col_letter": chr(65 + col_idx) if col_idx < 26 else f"AA+{col_idx-26}",
+                    "header": col_header,
+                    "sample_value": s[:50],
+                })
+
+    # Localizar todas as colunas com "Courier" no nome
+    courier_cols = []
+    for i, h in enumerate(header):
+        if h and "courier" in str(h).lower():
+            courier_cols.append({
+                "col_idx": i,
+                "col_letter": chr(65 + i) if i < 26 else f"AA+{i-26}",
+                "header": str(h),
+                "sample_row1": str(all_rows[header_idx + 1][i])[:50] if header_idx + 1 < len(all_rows) and i < len(all_rows[header_idx + 1]) else "",
+            })
+
+    # Devolver cabeçalho completo + 3 linhas
+    return JsonResponse({
+        "success": True,
+        "filename": ficheiro.name,
+        "total_rows": len(all_rows) - header_idx - 1,
+        "header_row_idx": header_idx,
+        "all_headers": [
+            {"col_idx": i, "col_letter": chr(65 + i) if i < 26 else f"AA+{i-26}",
+             "header": str(h)} for i, h in enumerate(header)
+        ],
+        "courier_columns_detected": courier_cols,
+        "leguas_xpt_locations": leguas_xpt_columns[:10],
+        "first_3_data_rows": [
+            [str(c)[:60] for c in r]
+            for r in all_rows[header_idx + 1:header_idx + 4]
+        ],
+    })
+
+
+@login_required
+@require_http_methods(["POST"])
+def cainiao_dedup_signatures_view(request):
+    """Remove duplicates de history signatures.
+
+    Cada (waybill, courier, status, event_timestamp, change_type=signature)
+    deve ser único. Quando re-imports criaram duplicates, este endpoint
+    mantém apenas a entry mais antiga (primeira recorded_at) e apaga as
+    restantes.
+    """
+    import json
+    from django.db.models import Min
+    from django.db import transaction
+    from .models import CainiaoOperationTaskHistory
+
+    try:
+        body = json.loads(request.body or b"{}")
+    except json.JSONDecodeError:
+        body = {}
+    dry_run = bool(body.get("dry_run"))
+
+    # Agrupar em python — mais simples e robusto que SQL group-by para
+    # tuplas com NULL.
+    qs = CainiaoOperationTaskHistory.objects.filter(change_type="signature")
+    rows = list(qs.values(
+        "id", "waybill_number", "courier_name", "task_status", "event_timestamp",
+        "recorded_at",
+    ))
+    seen = {}  # key → id_to_keep
+    to_delete = []
+    for r in rows:
+        key = (
+            r["waybill_number"], r["courier_name"] or "",
+            r["task_status"] or "",
+            r["event_timestamp"].isoformat() if r["event_timestamp"] else "",
+        )
+        if key not in seen:
+            seen[key] = r["id"]
+        else:
+            to_delete.append(r["id"])
+
+    if dry_run:
+        return JsonResponse({
+            "success": True, "dry_run": True,
+            "total_signatures": len(rows),
+            "unique_signatures": len(seen),
+            "duplicates_to_delete": len(to_delete),
+        })
+
+    if to_delete:
+        with transaction.atomic():
+            BATCH = 5000
+            for i in range(0, len(to_delete), BATCH):
+                batch = to_delete[i:i + BATCH]
+                CainiaoOperationTaskHistory.objects.filter(
+                    id__in=batch
+                ).delete()
+
+    return JsonResponse({
+        "success": True, "dry_run": False,
+        "total_signatures": len(rows),
+        "unique_signatures": len(seen),
+        "deleted": len(to_delete),
+    })
+
+
+@login_required
+@require_http_methods(["POST"])
+def cainiao_consolidate_waybills_view(request):
+    """Backfill: para cada waybill com múltiplas rows espalhadas em datas
+    diferentes, mantém apenas a row 'vigente' (último evento mais recente)
+    e apaga as outras. Cria entries no history para preservar timeline.
+
+    Body JSON opcional:
+        { "dry_run": true }
+
+    Cenário: pacote teve linha em 01/05 (Driver_received), em 02/05 (Driver_received),
+    em 30/04 (Attempt Failure) — após este backfill, fica só 1 row (a com
+    timestamp mais recente).
+    """
+    import json
+    from django.db.models import Count
+    from django.db import transaction
+    from .models import (
+        CainiaoOperationTask, CainiaoOperationTaskHistory,
+    )
+
+    try:
+        body = json.loads(request.body or b"{}")
+    except json.JSONDecodeError:
+        body = {}
+    dry_run = bool(body.get("dry_run"))
+
+    # Encontrar waybills com >1 row
+    duplicated_wbs = list(
+        CainiaoOperationTask.objects
+        .values("waybill_number")
+        .annotate(n=Count("task_date", distinct=True))
+        .filter(n__gt=1)
+        .values_list("waybill_number", flat=True)
+    )
+
+    if not duplicated_wbs:
+        return JsonResponse({
+            "success": True, "dry_run": dry_run,
+            "waybills_with_duplicates": 0, "rows_to_delete": 0,
+        })
+
+    # Para cada waybill duplicado, escolher a row vigente (timestamp mais recente)
+    rows = list(
+        CainiaoOperationTask.objects
+        .filter(waybill_number__in=duplicated_wbs)
+        .values(
+            "id", "waybill_number", "task_date", "task_status", "courier_name",
+            "courier_id_cainiao",
+            "creation_time", "receipt_time", "outbound_time",
+            "start_delivery_time", "delivery_time", "delivery_failure_time",
+        )
+    )
+
+    def _row_event_ts(r):
+        candidates = [
+            r.get("delivery_time"), r.get("delivery_failure_time"),
+            r.get("start_delivery_time"), r.get("outbound_time"),
+            r.get("receipt_time"), r.get("creation_time"),
+        ]
+        return max((c for c in candidates if c), default=None)
+
+    STATUS_PRIORITY = {
+        "Delivered": 4, "Attempt Failure": 3,
+        "Driver_received": 2, "Assigned": 1,
+        "Unassign": 0, "Cancel": -1,
+        "Stale_Armazem": -2,
+    }
+
+    by_wb = defaultdict(list)
+    for r in rows:
+        by_wb[r["waybill_number"]].append(r)
+
+    keepers = {}     # waybill → row id a manter
+    to_delete = []   # row ids a apagar
+    history_to_create = []
+    EPOCH = _dt(1970, 1, 1, tzinfo=_dt(2000, 1, 1).astimezone().tzinfo or None)
+    from datetime import timezone as _tz_const
+    EPOCH = _dt(1970, 1, 1, tzinfo=_tz_const.utc)
+
+    for wb, rs in by_wb.items():
+        # ordenar por (last_ts desc, priority desc) — primeiro é o keeper
+        def sk(r):
+            ts = _row_event_ts(r) or EPOCH
+            pri = STATUS_PRIORITY.get(r["task_status"], 0)
+            return (ts, pri)
+        rs_sorted = sorted(rs, key=sk, reverse=True)
+        keeper = rs_sorted[0]
+        keepers[wb] = keeper["id"]
+        # As outras rows são "consolidadas" — apagar e registar history
+        for r in rs_sorted[1:]:
+            to_delete.append(r["id"])
+            history_to_create.append({
+                "waybill_number": wb,
+                "task_date": keeper["task_date"],
+                "task_status": keeper["task_status"],
+                "courier_name": keeper["courier_name"],
+                "courier_id_cainiao": keeper["courier_id_cainiao"],
+                "previous_task_date": r["task_date"],
+                "previous_task_status": r["task_status"],
+                "previous_courier_name": r["courier_name"],
+                "change_type": "date_move",
+                "event_timestamp": _row_event_ts(r),
+            })
+
+    if dry_run:
+        return JsonResponse({
+            "success": True, "dry_run": True,
+            "waybills_with_duplicates": len(duplicated_wbs),
+            "rows_to_delete": len(to_delete),
+            "history_would_create": len(history_to_create),
+        })
+
+    # Executar: bulk delete + bulk create history
+    with transaction.atomic():
+        if to_delete:
+            CainiaoOperationTask.objects.filter(id__in=to_delete).delete()
+        if history_to_create:
+            CainiaoOperationTaskHistory.objects.bulk_create([
+                CainiaoOperationTaskHistory(
+                    waybill_number=h["waybill_number"],
+                    task_date=h["task_date"],
+                    task_status=h["task_status"],
+                    courier_name=h["courier_name"],
+                    courier_id_cainiao=h["courier_id_cainiao"],
+                    previous_task_date=h["previous_task_date"],
+                    previous_task_status=h["previous_task_status"],
+                    previous_courier_name=h["previous_courier_name"],
+                    change_type=h["change_type"],
+                    event_timestamp=h["event_timestamp"],
+                )
+                for h in history_to_create
+            ], batch_size=1000)
+
+    return JsonResponse({
+        "success": True, "dry_run": False,
+        "waybills_with_duplicates": len(duplicated_wbs),
+        "rows_deleted": len(to_delete),
+        "history_created": len(history_to_create),
+    })
+
+
+@login_required
+@require_http_methods(["POST"])
+def cainiao_roll_forward_view(request):
+    """Endpoint admin para mover pacotes Driver_received "vivos" (1-7 dias)
+    para a data de HOJE.
+
+    Body JSON opcional:
+        { "dry_run": true, "threshold_days": 7 }
+
+    Cria entries no CainiaoOperationTaskHistory para preservar timeline.
+    """
+    import json
+    from .tasks import roll_forward_active_packages
+    try:
+        body = json.loads(request.body or b"{}")
+    except json.JSONDecodeError:
+        body = {}
+    dry_run = bool(body.get("dry_run"))
+    threshold_days = body.get("threshold_days")
+
+    result = roll_forward_active_packages(
+        threshold_days=threshold_days,
+        dry_run=dry_run,
+    )
+    return JsonResponse({"success": True, **result})
+
+
+@login_required
+@require_http_methods(["POST"])
+def cainiao_mark_stale_armazem_view(request):
+    """Endpoint admin para marcar pacotes presos no armazém como Stale.
+
+    Body JSON opcional:
+        { "dry_run": true, "threshold_days": 5 }
+
+    - dry_run: só conta e devolve breakdown sem alterar BD.
+    - threshold_days: dias após os quais um waybill é stale (default 5).
+
+    Cria entries no CainiaoOperationTaskHistory para preservar timeline.
+    Pode também ser chamado pelo Celery Beat às 03:00 diariamente.
+    """
+    import json
+    from .tasks import mark_stale_armazem
+    try:
+        body = json.loads(request.body or b"{}")
+    except json.JSONDecodeError:
+        body = {}
+    dry_run = bool(body.get("dry_run"))
+    threshold_days = body.get("threshold_days")
+
+    result = mark_stale_armazem(
+        threshold_days=threshold_days,
+        dry_run=dry_run,
+    )
     return JsonResponse({"success": True, **result})
 
 
@@ -4923,11 +5564,20 @@ def cainiao_waybill_detail(request, waybill):
             f"{delta.seconds // 60}min"
         )
 
+    # Histórico de mudanças (timeline operacional preservada)
+    from .models import CainiaoOperationTaskHistory
+    history_entries = list(
+        CainiaoOperationTaskHistory.objects
+        .filter(waybill_number=waybill)
+        .order_by("recorded_at")
+    )
+
     context = {
         "waybill": waybill,
         "records": records,
         "latest": latest,
         "timeline": timeline,
+        "history_entries": history_entries,
         "planning": planning,
         "forecast": forecast,
         "detail": detail,

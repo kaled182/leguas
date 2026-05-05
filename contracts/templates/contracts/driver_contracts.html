@@ -1,0 +1,94 @@
+{% extends 'drivers_app/portal/_base.html' %}
+
+{% block portal_content %}
+
+{% if pending %}
+<div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50 rounded-xl p-4 mb-6 flex items-start gap-3">
+  <i data-lucide="alert-triangle" class="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5"></i>
+  <div>
+    <p class="font-semibold text-amber-800 dark:text-amber-300">
+      Tens {{ pending|length }} contrato{{ pending|length|pluralize:"s" }} por assinar
+    </p>
+    <p class="text-xs text-amber-700 dark:text-amber-400 mt-0.5">
+      Por favor lê e assina cada um. A assinatura digital fica registada com IP e data/hora.
+    </p>
+  </div>
+</div>
+{% endif %}
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+  {# Pendentes #}
+  <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
+    <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
+      <i data-lucide="file-warning" class="w-5 h-5 text-amber-500"></i>
+      <h3 class="font-bold text-gray-900 dark:text-white">Por Assinar</h3>
+      {% if pending %}
+        <span class="ml-auto px-2 py-0.5 rounded bg-amber-500 text-white text-xs font-bold">{{ pending|length }}</span>
+      {% endif %}
+    </div>
+    <div class="divide-y divide-gray-100 dark:divide-gray-700">
+      {% for t in pending %}
+      <div class="px-5 py-4 flex items-start gap-3">
+        <div class="w-9 h-9 bg-amber-100 dark:bg-amber-900/40 rounded-lg flex items-center justify-center flex-shrink-0">
+          <i data-lucide="file-signature" class="w-4 h-4 text-amber-600 dark:text-amber-400"></i>
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="font-semibold text-gray-900 dark:text-white">{{ t.name }}</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+            v{{ t.version }} · vigente desde {{ t.effective_from|date:"d/m/Y" }}
+          </p>
+        </div>
+        <a href="{% url 'contracts:driver_contract_sign' driver.id t.id %}"
+           class="px-3 py-1.5 text-xs bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white rounded-lg font-medium inline-flex items-center gap-1.5 shadow-sm">
+          <i data-lucide="pen-tool" class="w-3.5 h-3.5"></i>
+          Ler e Assinar
+        </a>
+      </div>
+      {% empty %}
+      <div class="px-5 py-8 text-center">
+        <i data-lucide="check-circle-2" class="w-10 h-10 text-emerald-500 mx-auto mb-2"></i>
+        <p class="text-sm text-gray-700 dark:text-gray-300 font-semibold">Tudo em dia!</p>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Não há contratos pendentes.</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  {# Assinados #}
+  <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
+    <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
+      <i data-lucide="file-check" class="w-5 h-5 text-emerald-500"></i>
+      <h3 class="font-bold text-gray-900 dark:text-white">Assinados</h3>
+      {% if signed %}
+        <span class="ml-auto px-2 py-0.5 rounded bg-emerald-500 text-white text-xs font-bold">{{ signed.count }}</span>
+      {% endif %}
+    </div>
+    <div class="divide-y divide-gray-100 dark:divide-gray-700">
+      {% for c in signed %}
+      <div class="px-5 py-4 flex items-start gap-3">
+        <div class="w-9 h-9 bg-emerald-100 dark:bg-emerald-900/40 rounded-lg flex items-center justify-center flex-shrink-0">
+          <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-600 dark:text-emerald-400"></i>
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="font-semibold text-gray-900 dark:text-white">{{ c.template.name }}</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+            v{{ c.template.version }} · assinado em {{ c.signed_at|date:"d/m/Y H:i" }}
+          </p>
+        </div>
+        <a href="{% url 'contracts:driver_contract_view' driver.id c.id %}"
+           class="px-3 py-1.5 text-xs border border-emerald-200 dark:border-emerald-700/50 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg font-medium inline-flex items-center gap-1.5">
+          <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+          Ver
+        </a>
+      </div>
+      {% empty %}
+      <div class="px-5 py-8 text-center text-sm text-gray-500 italic">
+        Ainda não há contratos assinados.
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+{% endblock %}

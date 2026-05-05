@@ -1,54 +1,418 @@
 {% extends 'paack_dashboard/base.html' %}
 {% load static %}
 
-{% block title %}Dashboard - Monitoramento de Drivers{% endblock %}
-{% block sidebar_title %}Dashboard{% endblock %}
+{% block title %}Dashboard Operacional{% endblock %}
 
 {% block content %}
-<!-- Loading overlay -->
-<div id="dashboard-loading" class="fixed inset-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm z-50 flex items-center justify-center hidden">
-  <div class="text-center">
-    <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mb-4"></div>
-    <p class="text-gray-600 dark:text-gray-400 font-medium">Carregando dados...</p>
+<div class="{% if tv_mode %}tv-mode{% endif %}" id="dashboard-root">
+
+{# ─── HEADER ─── #}
+<div class="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 rounded-2xl p-6 mb-6 shadow-lg">
+  <div class="flex flex-wrap items-center justify-between gap-4">
+    <div>
+      <div class="flex items-center gap-3">
+        <div class="bg-white/20 backdrop-blur-sm rounded-xl p-3">
+          <i data-lucide="activity" class="w-7 h-7 text-white"></i>
+        </div>
+        <div>
+          <h1 class="text-2xl lg:text-3xl font-extrabold text-white">Dashboard Operacional</h1>
+          <p class="text-white/80 text-sm">
+            <span class="inline-flex items-center gap-1.5">
+              <span class="relative flex h-2 w-2">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-2 w-2 bg-green-400"></span>
+              </span>
+              {% if is_today %}Tempo real · Hoje{% else %}Histórico · {{ target_date|date:"d/m/Y" }}{% endif %}
+            </span>
+            {% if last_sync %}
+              · Última importação: <span class="font-semibold">{{ last_sync|date:"H:i" }}</span>
+            {% endif %}
+          </p>
+        </div>
+      </div>
+    </div>
+
+    {# Controles: data + modo TV #}
+    <div class="flex items-center gap-3">
+      <form method="get" class="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-lg px-3 py-2">
+        <i data-lucide="calendar" class="w-4 h-4 text-white"></i>
+        <input type="date" name="date" value="{{ target_date|date:'Y-m-d' }}"
+               class="bg-transparent text-white text-sm outline-none [&::-webkit-calendar-picker-indicator]:invert"
+               onchange="this.form.submit()">
+        {% if tv_mode %}<input type="hidden" name="tv" value="1">{% endif %}
+      </form>
+
+      {% if tv_mode %}
+        <a href="?date={{ target_date|date:'Y-m-d' }}" title="Sair do modo TV"
+           class="bg-white/20 hover:bg-white/30 text-white px-3 py-2 rounded-lg transition flex items-center gap-1.5">
+          <i data-lucide="x" class="w-4 h-4"></i>
+          <span class="text-sm font-medium">Sair</span>
+        </a>
+      {% else %}
+        <a href="?date={{ target_date|date:'Y-m-d' }}&tv=1" title="Modo TV (auto-refresh 60s)"
+           class="bg-white/20 hover:bg-white/30 text-white px-3 py-2 rounded-lg transition flex items-center gap-1.5">
+          <i data-lucide="tv" class="w-4 h-4"></i>
+          <span class="text-sm font-medium">Modo TV</span>
+        </a>
+      {% endif %}
+
+      <a href="{% url 'core:partner-list' %}" title="Ver parceiros"
+         class="bg-white/20 hover:bg-white/30 text-white px-3 py-2 rounded-lg transition flex items-center gap-1.5">
+        <i data-lucide="building-2" class="w-4 h-4"></i>
+      </a>
+    </div>
   </div>
 </div>
 
-<div class="max-w-7xl mx-auto space-y-8">
-  <!-- Header do Dashboard -->
-  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 fade-in">
-    {% include 'paack_dashboard/partials/dashboard_header.html' %}
-    {% include 'paack_dashboard/partials/dashboard_status_indicator.html' %}
-  </div>
-  
-  <!-- Cards de Métricas -->
-  <div class="slide-in">
-    {% include 'paack_dashboard/partials/dashboard_cards.html' %}
-  </div>
-  
-  <!-- Gráfico e Top Drivers -->
-  <div class="grid grid-cols-1 xl:grid-cols-2 gap-8">
-    <!-- Gráfico de Performance -->
-    <div class="xl:col-span-1 scale-in">
-      {% include 'paack_dashboard/partials/dashboard_success_chart.html' %}
+{# ─── KPIs PRINCIPAIS ─── #}
+<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
+  {# Volume #}
+  <div class="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-200/50 dark:border-gray-700/50 shadow-sm hover:shadow-md transition">
+    <div class="flex items-center justify-between mb-3">
+      <div class="bg-indigo-100 dark:bg-indigo-900/40 p-2 rounded-lg">
+        <i data-lucide="package" class="w-5 h-5 text-indigo-600 dark:text-indigo-400"></i>
+      </div>
+      {% if compare.delta_total_yest is not None %}
+        <span class="text-xs font-semibold {% if compare.delta_total_yest >= 0 %}text-emerald-600{% else %}text-rose-600{% endif %}">
+          {% if compare.delta_total_yest >= 0 %}↑{% else %}↓{% endif %} {{ compare.delta_total_yest|floatformat:1 }}%
+        </span>
+      {% endif %}
     </div>
-    
-    <!-- Top Drivers -->
-    <div class="xl:col-span-1 scale-in">
-      {% include 'paack_dashboard/partials/dashboard_top_drivers.html' %}
+    <p class="text-xs uppercase font-bold text-gray-500 dark:text-gray-400 tracking-wider">Volume Total</p>
+    <p class="text-3xl font-extrabold text-gray-900 dark:text-white mt-1">{{ kpis.total|default:"0" }}</p>
+    <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
+      Ontem: <span class="font-semibold">{{ compare.total_yest }}</span>
+      · 7d: <span class="font-semibold">{{ compare.total_lastw }}</span>
+    </p>
+  </div>
+
+  {# Taxa de sucesso #}
+  <div class="bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl p-5 shadow-md text-white">
+    <div class="flex items-center justify-between mb-3">
+      <div class="bg-white/20 backdrop-blur-sm p-2 rounded-lg">
+        <i data-lucide="check-circle-2" class="w-5 h-5 text-white"></i>
+      </div>
+      <span class="text-xs font-semibold text-emerald-100">SUCESSO</span>
+    </div>
+    <p class="text-xs uppercase font-bold text-emerald-100 tracking-wider">Taxa de Sucesso</p>
+    <p class="text-3xl font-extrabold mt-1">{{ kpis.success_rate|floatformat:1 }}%</p>
+    <p class="text-[11px] text-emerald-100 mt-1">
+      <span class="font-semibold">{{ kpis.delivered }}</span> entregues de
+      <span class="font-semibold">{{ kpis.completed }}</span> tentadas
+    </p>
+  </div>
+
+  {# Taxa de insucesso #}
+  <div class="bg-gradient-to-br from-rose-500 to-red-600 rounded-xl p-5 shadow-md text-white">
+    <div class="flex items-center justify-between mb-3">
+      <div class="bg-white/20 backdrop-blur-sm p-2 rounded-lg">
+        <i data-lucide="x-circle" class="w-5 h-5 text-white"></i>
+      </div>
+      <span class="text-xs font-semibold text-rose-100">INSUCESSO</span>
+    </div>
+    <p class="text-xs uppercase font-bold text-rose-100 tracking-wider">Taxa de Falha</p>
+    <p class="text-3xl font-extrabold mt-1">{{ kpis.failure_rate|floatformat:1 }}%</p>
+    <p class="text-[11px] text-rose-100 mt-1">
+      <span class="font-semibold">{{ kpis.failures }}</span> falhas de tentativa
+    </p>
+  </div>
+
+  {# Em rota #}
+  <div class="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-200/50 dark:border-gray-700/50 shadow-sm">
+    <div class="flex items-center justify-between mb-3">
+      <div class="bg-amber-100 dark:bg-amber-900/40 p-2 rounded-lg">
+        <i data-lucide="truck" class="w-5 h-5 text-amber-600 dark:text-amber-400"></i>
+      </div>
+    </div>
+    <p class="text-xs uppercase font-bold text-gray-500 dark:text-gray-400 tracking-wider">Em Rota</p>
+    <p class="text-3xl font-extrabold text-gray-900 dark:text-white mt-1">{{ kpis.en_route }}</p>
+    <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
+      Driver Received · pendentes de entrega
+    </p>
+  </div>
+
+  {# Progresso #}
+  <div class="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-200/50 dark:border-gray-700/50 shadow-sm">
+    <div class="flex items-center justify-between mb-3">
+      <div class="bg-blue-100 dark:bg-blue-900/40 p-2 rounded-lg">
+        <i data-lucide="trending-up" class="w-5 h-5 text-blue-600 dark:text-blue-400"></i>
+      </div>
+    </div>
+    <p class="text-xs uppercase font-bold text-gray-500 dark:text-gray-400 tracking-wider">Progresso</p>
+    <p class="text-3xl font-extrabold text-gray-900 dark:text-white mt-1">{{ kpis.progress_pct|floatformat:1 }}%</p>
+    <div class="mt-2 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+      <div class="h-full bg-gradient-to-r from-emerald-500 to-blue-500 rounded-full"
+           style="width:{{ kpis.progress_pct|floatformat:0 }}%"></div>
     </div>
   </div>
 </div>
+
+{# ─── ALERTAS ─── #}
+{% if alerts.stale_total or alerts.backlog_total or alerts.problem_drivers or alerts.hubs_dropping %}
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+  {% if alerts.backlog_total %}
+  <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50 rounded-xl p-4">
+    <div class="flex items-start gap-3">
+      <div class="bg-amber-100 dark:bg-amber-900/40 p-2 rounded-lg">
+        <i data-lucide="clock" class="w-5 h-5 text-amber-600 dark:text-amber-400"></i>
+      </div>
+      <div class="flex-1 min-w-0">
+        <p class="text-xs font-bold text-amber-700 dark:text-amber-300 uppercase">Backlog</p>
+        <p class="text-2xl font-extrabold text-amber-900 dark:text-amber-100 mt-0.5">{{ alerts.backlog_total }}</p>
+        <p class="text-[11px] text-amber-700 dark:text-amber-400 mt-1">Pacotes em rota há mais de 1 dia</p>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if alerts.stale_total %}
+  <div class="bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-700/50 rounded-xl p-4">
+    <div class="flex items-start gap-3">
+      <div class="bg-rose-100 dark:bg-rose-900/40 p-2 rounded-lg">
+        <i data-lucide="package-x" class="w-5 h-5 text-rose-600 dark:text-rose-400"></i>
+      </div>
+      <div class="flex-1 min-w-0">
+        <p class="text-xs font-bold text-rose-700 dark:text-rose-300 uppercase">Stale</p>
+        <p class="text-2xl font-extrabold text-rose-900 dark:text-rose-100 mt-0.5">{{ alerts.stale_total }}</p>
+        <p class="text-[11px] text-rose-700 dark:text-rose-400 mt-1">Esquecidos &gt; 7 dias</p>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if alerts.problem_drivers %}
+  <div class="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-700/50 rounded-xl p-4">
+    <div class="flex items-start gap-3">
+      <div class="bg-orange-100 dark:bg-orange-900/40 p-2 rounded-lg">
+        <i data-lucide="user-x" class="w-5 h-5 text-orange-600 dark:text-orange-400"></i>
+      </div>
+      <div class="flex-1 min-w-0">
+        <p class="text-xs font-bold text-orange-700 dark:text-orange-300 uppercase">Drivers c/ Falhas</p>
+        <p class="text-[11px] text-orange-700 dark:text-orange-400 mt-1">Hoje:</p>
+        <ul class="mt-1 space-y-0.5">
+          {% for d in alerts.problem_drivers|slice:":3" %}
+            <li class="text-xs text-orange-900 dark:text-orange-200">
+              <span class="font-semibold">{{ d.failures }}</span> · {{ d.courier_name|truncatechars:25 }}
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if alerts.hubs_dropping %}
+  <div class="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-700/50 rounded-xl p-4">
+    <div class="flex items-start gap-3">
+      <div class="bg-purple-100 dark:bg-purple-900/40 p-2 rounded-lg">
+        <i data-lucide="trending-down" class="w-5 h-5 text-purple-600 dark:text-purple-400"></i>
+      </div>
+      <div class="flex-1 min-w-0">
+        <p class="text-xs font-bold text-purple-700 dark:text-purple-300 uppercase">Hubs em Queda</p>
+        <p class="text-[11px] text-purple-700 dark:text-purple-400 mt-1">Vs média 7d:</p>
+        <ul class="mt-1 space-y-0.5">
+          {% for hub_name, info in alerts.hubs_dropping.items|slice:":3" %}
+            <li class="text-xs text-purple-900 dark:text-purple-200">
+              <span class="font-semibold">{{ hub_name }}</span>:
+              {{ info.today }} (média {{ info.avg_7d }})
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+
+{# ─── PARCEIROS ─── #}
+{% if partners %}
+<div class="mb-6">
+  <h2 class="text-sm font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+    <i data-lucide="building-2" class="w-4 h-4 text-indigo-500"></i>
+    Por Parceiro
+  </h2>
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    {% for p in partners %}
+    <a href="{{ p.url }}" class="block bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-200/50 dark:border-gray-700/50 shadow-sm hover:shadow-lg hover:border-indigo-300 dark:hover:border-indigo-700 transition group">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-base font-bold text-gray-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition">
+          {{ p.name }}
+        </h3>
+        <i data-lucide="arrow-right" class="w-4 h-4 text-gray-400 group-hover:text-indigo-500 group-hover:translate-x-1 transition"></i>
+      </div>
+      <p class="text-3xl font-extrabold text-gray-900 dark:text-white">{{ p.total }}</p>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">pacotes hoje</p>
+      <div class="mt-3 flex items-center gap-3 text-xs">
+        <span class="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+          <i data-lucide="check" class="w-3 h-3"></i>
+          {{ p.delivered }}
+        </span>
+        <span class="flex items-center gap-1 text-amber-600 dark:text-amber-400">
+          <i data-lucide="truck" class="w-3 h-3"></i>
+          {{ p.en_route }}
+        </span>
+        <span class="flex items-center gap-1 text-rose-600 dark:text-rose-400">
+          <i data-lucide="x" class="w-3 h-3"></i>
+          {{ p.failures }}
+        </span>
+        <span class="ml-auto font-semibold {% if p.success_rate >= 80 %}text-emerald-600{% elif p.success_rate >= 50 %}text-amber-600{% else %}text-rose-600{% endif %}">
+          {{ p.success_rate|floatformat:1 }}%
+        </span>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+{# ─── HISTÓRICO 7 DIAS (gráfico de barras) ─── #}
+<div class="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-200/50 dark:border-gray-700/50 shadow-sm mb-6">
+  <h2 class="text-sm font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+    <i data-lucide="bar-chart-3" class="w-4 h-4 text-indigo-500"></i>
+    Histórico 7 dias
+  </h2>
+  <div class="flex items-end justify-between gap-2 h-40">
+    {% for d in history_7d %}
+      <div class="flex-1 flex flex-col items-center gap-1 group">
+        <div class="text-[10px] font-semibold text-gray-700 dark:text-gray-300 transition">{{ d.total }}</div>
+        <div class="w-full flex flex-col-reverse h-32 bg-gray-100 dark:bg-gray-900/40 rounded-t-lg overflow-hidden relative"
+             title="{{ d.label }}: {{ d.total }} pacotes ({{ d.delivered }} entregues · {{ d.success_rate|floatformat:1 }}% sucesso)">
+          {# Barra de TOTAL relativa ao máximo dos 7 dias (entregues + falhas + restantes) #}
+          {% if d.total %}
+          <div class="bg-gradient-to-t from-emerald-500 to-emerald-400 transition-all"
+               style="height: {% widthratio d.total history_7d_max 100 %}%;"></div>
+          {% endif %}
+        </div>
+        <span class="text-[10px] text-gray-500 dark:text-gray-400 font-medium {% if d.date == target_date %}text-indigo-600 dark:text-indigo-400 font-bold{% endif %}">
+          {{ d.label }}
+        </span>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+
+{# ─── HUBS + TOP DRIVERS + TOP CP4 ─── #}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+  {# HUBS #}
+  <div class="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-200/50 dark:border-gray-700/50 shadow-sm">
+    <h2 class="text-sm font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+      <i data-lucide="map-pin" class="w-4 h-4 text-purple-500"></i>
+      Por Hub / Área
+    </h2>
+    <div class="space-y-2">
+      {% for h in hubs %}
+        <div class="flex items-center gap-2 p-2 hover:bg-gray-50 dark:hover:bg-gray-700/30 rounded-lg transition">
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center justify-between">
+              <span class="text-sm font-semibold text-gray-900 dark:text-white truncate">{{ h.name }}</span>
+              <span class="text-xs font-bold text-gray-700 dark:text-gray-300">{{ h.total }}</span>
+            </div>
+            <div class="flex items-center gap-2 mt-1">
+              <div class="flex-1 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                <div class="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-full"
+                     style="width:{{ h.success_rate|floatformat:0 }}%"></div>
+              </div>
+              <span class="text-[10px] font-semibold {% if h.success_rate >= 80 %}text-emerald-600{% elif h.success_rate >= 50 %}text-amber-600{% else %}text-rose-600{% endif %}">
+                {{ h.success_rate|floatformat:1 }}%
+              </span>
+            </div>
+          </div>
+        </div>
+      {% empty %}
+        <p class="text-xs text-gray-500 italic">Sem dados</p>
+      {% endfor %}
+    </div>
+  </div>
+
+  {# TOP DRIVERS #}
+  <div class="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-200/50 dark:border-gray-700/50 shadow-sm">
+    <h2 class="text-sm font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+      <i data-lucide="trophy" class="w-4 h-4 text-amber-500"></i>
+      Top Motoristas
+    </h2>
+    <div class="space-y-2">
+      {% for d in top_drivers %}
+        <div class="flex items-center gap-3 p-2 hover:bg-gray-50 dark:hover:bg-gray-700/30 rounded-lg transition">
+          <div class="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold
+            {% if forloop.counter == 1 %}bg-amber-400 text-amber-900
+            {% elif forloop.counter == 2 %}bg-gray-300 text-gray-800
+            {% elif forloop.counter == 3 %}bg-orange-400 text-orange-900
+            {% else %}bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300{% endif %}">
+            {{ forloop.counter }}
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">{{ d.name|truncatechars:24 }}</p>
+            <div class="flex items-center gap-2 text-[11px] text-gray-500 dark:text-gray-400">
+              <span class="font-bold text-gray-700 dark:text-gray-300">{{ d.total }}</span>
+              <span class="text-emerald-600 dark:text-emerald-400">✓ {{ d.delivered }}</span>
+              <span class="text-rose-600 dark:text-rose-400">✗ {{ d.failures }}</span>
+            </div>
+          </div>
+          <span class="text-xs font-bold {% if d.success_rate >= 80 %}text-emerald-600{% elif d.success_rate >= 50 %}text-amber-600{% else %}text-rose-600{% endif %}">
+            {{ d.success_rate|floatformat:0 }}%
+          </span>
+        </div>
+      {% empty %}
+        <p class="text-xs text-gray-500 italic">Sem dados</p>
+      {% endfor %}
+    </div>
+  </div>
+
+  {# TOP CP4 #}
+  <div class="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-200/50 dark:border-gray-700/50 shadow-sm">
+    <h2 class="text-sm font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+      <i data-lucide="map" class="w-4 h-4 text-blue-500"></i>
+      Top CP4 (Zonas)
+    </h2>
+    <div class="space-y-2">
+      {% for c in top_cp4 %}
+        <div class="flex items-center gap-3 p-2 hover:bg-gray-50 dark:hover:bg-gray-700/30 rounded-lg transition">
+          <div class="font-mono text-xs font-bold text-blue-600 dark:text-blue-400 w-12">{{ c.cp4 }}</div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center justify-between">
+              <span class="text-xs text-gray-700 dark:text-gray-300 font-semibold">{{ c.total }} pacotes</span>
+              <span class="text-[11px] {% if c.success_rate >= 80 %}text-emerald-600{% elif c.success_rate >= 50 %}text-amber-600{% else %}text-rose-600{% endif %} font-semibold">{{ c.success_rate|floatformat:0 }}%</span>
+            </div>
+            <div class="flex items-center gap-2 text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">
+              <span class="text-emerald-600">{{ c.delivered }} ok</span>
+              <span class="text-rose-600">{{ c.failures }} fail</span>
+            </div>
+          </div>
+        </div>
+      {% empty %}
+        <p class="text-xs text-gray-500 italic">Sem dados</p>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+</div>{# /dashboard-root #}
+
+{# ─── MODO TV: estilos full-screen ─── #}
+{% if tv_mode %}
+<style>
+  /* Esconde sidebar no modo TV */
+  aside, #sidebar-toggle, footer { display: none !important; }
+  main { padding: 1rem !important; }
+  .tv-mode { font-size: 1.05em; }
+  .tv-mode h1 { font-size: 2.5rem !important; }
+  body { overflow-x: hidden; }
+</style>
+<script>
+  // Auto-refresh a cada 60s no modo TV
+  setTimeout(() => location.reload(), 60000);
+</script>
+{% endif %}
+
 {% endblock %}
 
 {% block extra_js %}
-<!-- Dados JSON para o gráfico -->
-<script id="chart-data" type="application/json">
-{"driver_success_chart":{% if driver_success_chart_json %}{{ driver_success_chart_json|safe }}{% else %}[]{% endif %}}
+<script>
+  // Re-init Lucide icons após carregamento dinâmico
+  if (typeof lucide !== 'undefined') {
+    lucide.createIcons();
+  }
 </script>
-
-<!--<script src="{% static 'paack_dashboard/js/main.js' %}"></script>--> 
-
-<script src="{% static 'paack_dashboard/js/dashboard.js' %}"></script>
-<script src="{% static 'paack_dashboard/js/driver_sucess_chart.js' %}"></script>
-
 {% endblock %}

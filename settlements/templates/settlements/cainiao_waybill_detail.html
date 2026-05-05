@@ -363,6 +363,91 @@
         </div>
         {% endfor %}
       </div>
+
+      {# Histórico de mudanças (timeline operacional preservada) #}
+      {% if history_entries %}
+      <div class="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+        <h3 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-3">
+          <i data-lucide="history" class="w-4 h-4 text-orange-500"></i>
+          Histórico de mudanças
+          <span class="text-xs font-normal text-gray-500 dark:text-gray-400">· {{ history_entries|length }} entrada{{ history_entries|length|pluralize:"s" }}</span>
+        </h3>
+        <div class="space-y-2">
+          {% for h in history_entries %}
+          <div class="flex items-start gap-3 px-3 py-2 rounded-lg
+            {% if h.change_type == 'stale_cleanup' %}bg-rose-50 dark:bg-rose-900/20 border border-rose-200/40 dark:border-rose-700/30
+            {% elif h.change_type == 'date_move' %}bg-blue-50 dark:bg-blue-900/20 border border-blue-200/40 dark:border-blue-700/30
+            {% elif h.change_type == 'courier_change' %}bg-violet-50 dark:bg-violet-900/20 border border-violet-200/40 dark:border-violet-700/30
+            {% elif h.change_type == 'status_change' %}bg-amber-50 dark:bg-amber-900/20 border border-amber-200/40 dark:border-amber-700/30
+            {% elif h.change_type == 'created' %}bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200/40 dark:border-emerald-700/30
+            {% elif h.change_type == 'signature' %}bg-sky-50 dark:bg-sky-900/20 border border-sky-200/40 dark:border-sky-700/30
+            {% else %}bg-gray-50 dark:bg-gray-900/20 border border-gray-200/40 dark:border-gray-700/30{% endif %}">
+            <div class="flex-shrink-0 mt-0.5">
+              {% if h.change_type == 'created' %}
+                <i data-lucide="plus-circle" class="w-4 h-4 text-emerald-500"></i>
+              {% elif h.change_type == 'status_change' %}
+                <i data-lucide="refresh-cw" class="w-4 h-4 text-amber-500"></i>
+              {% elif h.change_type == 'courier_change' %}
+                <i data-lucide="user-cog" class="w-4 h-4 text-violet-500"></i>
+              {% elif h.change_type == 'date_move' %}
+                <i data-lucide="calendar-clock" class="w-4 h-4 text-blue-500"></i>
+              {% elif h.change_type == 'stale_cleanup' %}
+                <i data-lucide="package-x" class="w-4 h-4 text-rose-500"></i>
+              {% elif h.change_type == 'signature' %}
+                <i data-lucide="pen-line" class="w-4 h-4 text-sky-500"></i>
+              {% else %}
+                <i data-lucide="dot" class="w-4 h-4 text-gray-500"></i>
+              {% endif %}
+            </div>
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center justify-between gap-2 flex-wrap">
+                <p class="text-xs font-semibold text-gray-900 dark:text-white">
+                  {{ h.get_change_type_display }}
+                </p>
+                <p class="text-[11px] text-gray-500 dark:text-gray-400">
+                  {{ h.recorded_at|date:"d/m/Y H:i" }}
+                </p>
+              </div>
+              <div class="mt-1 text-xs text-gray-700 dark:text-gray-300">
+                {% if h.change_type == 'created' %}
+                  Pacote registado: <span class="font-semibold">{{ h.task_status }}</span>
+                  {% if h.courier_name %} · <span class="text-violet-600 dark:text-violet-400">{{ h.courier_name }}</span>{% endif %}
+                  · <span class="text-gray-500">{{ h.task_date|date:"d/m/Y" }}</span>
+                {% elif h.change_type == 'status_change' %}
+                  Status: <span class="line-through text-gray-500">{{ h.previous_task_status|default:"∅" }}</span>
+                  <i data-lucide="arrow-right" class="w-3 h-3 inline mx-1"></i>
+                  <span class="font-semibold">{{ h.task_status }}</span>
+                  {% if h.courier_name %} · {{ h.courier_name }}{% endif %}
+                {% elif h.change_type == 'courier_change' %}
+                  Courier: <span class="line-through text-gray-500">{{ h.previous_courier_name|default:"∅" }}</span>
+                  <i data-lucide="arrow-right" class="w-3 h-3 inline mx-1"></i>
+                  <span class="font-semibold text-violet-700 dark:text-violet-300">{{ h.courier_name|default:"∅" }}</span>
+                  · <span class="text-gray-500">{{ h.task_status }}</span>
+                {% elif h.change_type == 'date_move' %}
+                  Data: <span class="line-through text-gray-500">{{ h.previous_task_date|date:"d/m/Y" }}</span>
+                  <i data-lucide="arrow-right" class="w-3 h-3 inline mx-1"></i>
+                  <span class="font-semibold text-blue-700 dark:text-blue-300">{{ h.task_date|date:"d/m/Y" }}</span>
+                  {% if h.courier_name %} · {{ h.courier_name }}{% endif %}
+                {% elif h.change_type == 'stale_cleanup' %}
+                  Marcado como stale (esquecido no armazém).
+                  <span class="text-gray-500">Estava em {{ h.previous_task_date|date:"d/m/Y" }}</span>
+                {% elif h.change_type == 'signature' %}
+                  <span class="font-semibold">{{ h.task_status }}</span>
+                  · <span class="text-violet-700 dark:text-violet-300">{{ h.courier_name|default:"∅" }}</span>
+                  · <span class="text-gray-500">{{ h.task_date|date:"d/m/Y" }}</span>
+                {% else %}
+                  {{ h.previous_task_status|default:"∅" }} → {{ h.task_status|default:"∅" }}
+                {% endif %}
+              </div>
+              {% if h.event_timestamp %}
+                <p class="text-[10px] text-gray-400 mt-0.5">Evento Cainiao: {{ h.event_timestamp|date:"d/m/Y H:i" }}</p>
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
     </div>
 
     {# Sidebar: package + driver + planning info #}

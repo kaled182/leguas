@@ -1,0 +1,115 @@
+{% extends 'drivers_app/portal/_base.html' %}
+
+{% block portal_content %}
+
+{# KPIs #}
+<div class="grid grid-cols-3 gap-3 mb-4">
+  <div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200/50 dark:border-gray-700/50">
+    <p class="text-xs uppercase font-bold text-gray-500">Total</p>
+    <p class="text-2xl font-extrabold text-gray-900 dark:text-white mt-1">{{ total }}</p>
+  </div>
+  <div class="bg-rose-50 dark:bg-rose-900/20 rounded-xl p-4 border border-rose-200/50 dark:border-rose-700/30">
+    <p class="text-xs uppercase font-bold text-rose-700 dark:text-rose-300">Expirados</p>
+    <p class="text-2xl font-extrabold text-rose-700 dark:text-rose-300 mt-1">{{ expired }}</p>
+  </div>
+  <div class="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 border border-amber-200/50 dark:border-amber-700/30">
+    <p class="text-xs uppercase font-bold text-amber-700 dark:text-amber-300">A Expirar (30d)</p>
+    <p class="text-2xl font-extrabold text-amber-700 dark:text-amber-300 mt-1">{{ expiring_soon }}</p>
+  </div>
+</div>
+
+{# Form upload #}
+<form method="post" enctype="multipart/form-data" class="bg-white dark:bg-gray-800 rounded-2xl p-5 border border-gray-200/50 dark:border-gray-700/50 shadow-sm mb-4">
+  {% csrf_token %}
+  <input type="hidden" name="action" value="upload">
+  <h3 class="font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+    <i data-lucide="upload" class="w-5 h-5 text-indigo-500"></i>
+    Carregar Novo Documento
+  </h3>
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+    <div class="md:col-span-2">
+      <label class="block text-xs uppercase font-bold text-gray-500 mb-1">Tipo *</label>
+      <select name="tipo_documento" required
+              class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
+        {% for value, label in tipo_choices %}
+          <option value="{{ value }}">{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="block text-xs uppercase font-bold text-gray-500 mb-1">Validade</label>
+      <input type="date" name="data_validade"
+             class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
+    </div>
+    <div>
+      <label class="block text-xs uppercase font-bold text-gray-500 mb-1">Cat. CNH</label>
+      <input type="text" name="categoria_cnh" maxlength="10" placeholder="ex: B"
+             class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
+    </div>
+    <div class="md:col-span-3">
+      <label class="block text-xs uppercase font-bold text-gray-500 mb-1">Ficheiro *</label>
+      <input type="file" name="arquivo" required
+             accept=".pdf,.jpg,.jpeg,.png"
+             class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
+    </div>
+    <div class="flex items-end">
+      <button type="submit"
+              class="w-full px-4 py-2 text-sm bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-lg font-medium shadow-sm inline-flex items-center justify-center gap-1.5">
+        <i data-lucide="upload" class="w-4 h-4"></i>
+        Carregar
+      </button>
+    </div>
+  </div>
+</form>
+
+{# Lista de documentos #}
+<div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
+  <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
+    <i data-lucide="folder" class="w-5 h-5 text-amber-500"></i>
+    <h3 class="font-bold text-gray-900 dark:text-white">Documentos do Motorista</h3>
+  </div>
+  <div class="divide-y divide-gray-100 dark:divide-gray-700">
+    {% for doc in documents %}
+    <div class="px-5 py-3 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-700/30">
+      <div class="w-10 h-10 rounded-lg flex items-center justify-center
+        {% if doc.is_expired %}bg-rose-100 dark:bg-rose-900/40 text-rose-600 dark:text-rose-400
+        {% else %}bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400{% endif %}">
+        <i data-lucide="file-text" class="w-5 h-5"></i>
+      </div>
+      <div class="flex-1 min-w-0">
+        <p class="font-semibold text-gray-900 dark:text-white">{{ doc.get_tipo_documento_display }}</p>
+        <div class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+          <span>Carregado em {{ doc.uploaded_at|date:"d/m/Y" }}</span>
+          {% if doc.data_validade %}
+            <span>·</span>
+            <span class="{% if doc.is_expired %}text-rose-600 font-bold{% elif doc.days_until_expiration < 30 %}text-amber-600 font-semibold{% endif %}">
+              Validade: {{ doc.data_validade|date:"d/m/Y" }}
+              {% if doc.is_expired %}(expirado){% elif doc.days_until_expiration < 30 %}({{ doc.days_until_expiration }}d){% endif %}
+            </span>
+          {% endif %}
+          {% if doc.categoria_cnh %}<span>· Cat. {{ doc.categoria_cnh }}</span>{% endif %}
+        </div>
+      </div>
+      <a href="{{ doc.arquivo.url }}" target="_blank"
+         class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md text-gray-600 dark:text-gray-400 hover:text-blue-600">
+        <i data-lucide="download" class="w-4 h-4"></i>
+      </a>
+      <form method="post" class="inline">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="delete">
+        <input type="hidden" name="doc_id" value="{{ doc.id }}">
+        <button type="submit" onclick="return confirm('Eliminar este documento?')"
+                class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md text-gray-600 dark:text-gray-400 hover:text-rose-600">
+          <i data-lucide="trash-2" class="w-4 h-4"></i>
+        </button>
+      </form>
+    </div>
+    {% empty %}
+    <div class="px-5 py-12 text-center">
+      <i data-lucide="folder-open" class="w-12 h-12 text-gray-300 mx-auto mb-2"></i>
+      <p class="text-sm text-gray-500 italic">Nenhum documento carregado.</p>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

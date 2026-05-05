@@ -1,0 +1,155 @@
+{% extends 'paack_dashboard/base.html' %}
+
+{% block title %}Pedidos de Alteração de Perfil{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto" x-data="{ openModal: null, modalAction: '' }">
+
+  <div class="flex items-center justify-between mb-6">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center shadow-sm">
+        <i data-lucide="user-check" class="w-5 h-5 text-white"></i>
+      </div>
+      <div>
+        <h1 class="text-xl font-bold text-gray-900 dark:text-white">Pedidos de Alteração de Perfil</h1>
+        <p class="text-xs text-gray-500 dark:text-gray-400">Aprovar / rejeitar pedidos enviados pelos motoristas</p>
+      </div>
+    </div>
+  </div>
+
+  {% if messages %}
+    {% for m in messages %}
+      <div class="mb-3 px-4 py-3 rounded-lg text-sm
+        {% if 'error' in m.tags %}bg-rose-50 dark:bg-rose-900/20 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-700/50
+        {% elif 'warning' in m.tags %}bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-700/50
+        {% else %}bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-700/50{% endif %}">
+        {{ m }}
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  {# Tabs por status #}
+  <div class="flex flex-wrap gap-2 mb-4">
+    <a href="?status=pending" class="px-3 py-2 rounded-lg text-sm font-medium inline-flex items-center gap-2 transition
+       {% if status_filter == 'pending' %}bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300{% else %}border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700{% endif %}">
+      <i data-lucide="clock" class="w-4 h-4"></i> Pendentes <span class="ml-1 px-1.5 py-0.5 rounded bg-amber-500 text-white text-[10px] font-bold">{{ counts.pending }}</span>
+    </a>
+    <a href="?status=approved" class="px-3 py-2 rounded-lg text-sm font-medium inline-flex items-center gap-2 transition
+       {% if status_filter == 'approved' %}bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300{% else %}border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700{% endif %}">
+      <i data-lucide="check-circle" class="w-4 h-4"></i> Aprovados <span class="ml-1 text-[11px] text-gray-500">{{ counts.approved }}</span>
+    </a>
+    <a href="?status=rejected" class="px-3 py-2 rounded-lg text-sm font-medium inline-flex items-center gap-2 transition
+       {% if status_filter == 'rejected' %}bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-300{% else %}border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700{% endif %}">
+      <i data-lucide="x-circle" class="w-4 h-4"></i> Rejeitados <span class="ml-1 text-[11px] text-gray-500">{{ counts.rejected }}</span>
+    </a>
+    <a href="?status=cancelled" class="px-3 py-2 rounded-lg text-sm font-medium inline-flex items-center gap-2 transition
+       {% if status_filter == 'cancelled' %}bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300{% else %}border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700{% endif %}">
+      <i data-lucide="archive" class="w-4 h-4"></i> Cancelados <span class="ml-1 text-[11px] text-gray-500">{{ counts.cancelled }}</span>
+    </a>
+  </div>
+
+  {# Lista #}
+  <div class="space-y-3">
+    {% for r in requests %}
+    <div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200/50 dark:border-gray-700/50 shadow-sm">
+      <div class="flex items-start gap-4">
+        {# Driver avatar #}
+        <a href="{% url 'drivers_app:driver_portal' r.driver_id %}"
+           class="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold flex-shrink-0">
+          {{ r.driver.apelido|default:r.driver.nome_completo|first|upper }}
+        </a>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-start justify-between gap-3 flex-wrap">
+            <div>
+              <a href="{% url 'drivers_app:driver_portal' r.driver_id %}"
+                 class="font-semibold text-gray-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400">
+                {{ r.driver.nome_completo|default:r.driver.apelido }}
+              </a>
+              <span class="text-xs text-gray-500 dark:text-gray-400 ml-2">{{ r.driver.apelido }}</span>
+            </div>
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase
+              {% if r.status == 'pending' %}bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300
+              {% elif r.status == 'approved' %}bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300
+              {% elif r.status == 'rejected' %}bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-300
+              {% else %}bg-gray-100 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300{% endif %}">
+              {{ r.get_status_display }}
+            </span>
+          </div>
+
+          <div class="mt-2 px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-900/40 border border-gray-100 dark:border-gray-700">
+            <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">{{ r.get_field_display }}</p>
+            <div class="flex items-center gap-2 text-sm flex-wrap">
+              <span class="line-through text-gray-500 dark:text-gray-500">{{ r.old_value|default:"∅" }}</span>
+              <i data-lucide="arrow-right" class="w-4 h-4 text-indigo-500"></i>
+              <span class="font-bold text-indigo-700 dark:text-indigo-400">{{ r.new_value }}</span>
+            </div>
+          </div>
+
+          <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-2">
+            Pedido em {{ r.requested_at|date:"d/m/Y H:i" }}
+            {% if r.reviewed_at %}
+              · Revisto em {{ r.reviewed_at|date:"d/m/Y H:i" }}{% if r.reviewed_by %} por <strong>{{ r.reviewed_by.username }}</strong>{% endif %}
+            {% endif %}
+          </p>
+          {% if r.review_notes %}
+            <p class="text-xs italic text-gray-600 dark:text-gray-400 mt-1">"{{ r.review_notes }}"</p>
+          {% endif %}
+
+          {% if r.status == 'pending' %}
+          <div class="mt-3 flex gap-2">
+            <button @click="openModal = {{ r.id }}; modalAction = 'approve'"
+                    class="px-3 py-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium inline-flex items-center gap-1.5">
+              <i data-lucide="check" class="w-3.5 h-3.5"></i> Aprovar
+            </button>
+            <button @click="openModal = {{ r.id }}; modalAction = 'reject'"
+                    class="px-3 py-1.5 text-xs bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-medium inline-flex items-center gap-1.5">
+              <i data-lucide="x" class="w-3.5 h-3.5"></i> Rejeitar
+            </button>
+          </div>
+
+          {# Modal aprovação/rejeição #}
+          <div x-show="openModal === {{ r.id }}" x-cloak
+               class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+               @click.self="openModal = null"
+               @keydown.escape.window="openModal = null">
+            <form method="post" action="{% url 'drivers_app:change_request_action' r.id %}"
+                  class="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4 shadow-xl">
+              {% csrf_token %}
+              <input type="hidden" name="action" :value="modalAction">
+              <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-2">
+                <span x-show="modalAction === 'approve'" class="text-emerald-600">Aprovar pedido</span>
+                <span x-show="modalAction === 'reject'" class="text-rose-600">Rejeitar pedido</span>
+              </h3>
+              <div class="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                <strong>{{ r.driver.apelido }}</strong>: {{ r.get_field_display }}
+                <br>
+                <span class="line-through">{{ r.old_value|default:"∅" }}</span>
+                →
+                <span class="font-semibold">{{ r.new_value }}</span>
+              </div>
+              <textarea name="notes" rows="2"
+                        placeholder="Notas (opcional para aprovar; recomendado para rejeitar)"
+                        class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white mb-3"></textarea>
+              <div class="flex justify-end gap-2">
+                <button type="button" @click="openModal = null"
+                        class="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">Cancelar</button>
+                <button type="submit"
+                        :class="modalAction === 'approve' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-rose-600 hover:bg-rose-700'"
+                        class="px-4 py-1.5 text-sm text-white rounded-lg font-medium">
+                  Confirmar
+                </button>
+              </div>
+            </form>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% empty %}
+    <div class="bg-white dark:bg-gray-800 rounded-xl p-8 text-center text-gray-500 italic">
+      Nenhum pedido com este estado.
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

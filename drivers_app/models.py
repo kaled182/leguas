@@ -778,3 +778,75 @@ class CustomerComplaintAttachment(models.Model):
 
     def __str__(self):
         return f"{self.get_tipo_display()} — {self.complaint.numero_pacote}"
+
+
+class DriverProfileChangeRequest(models.Model):
+    """Pedido de alteração de campo do perfil do motorista — requer aprovação."""
+
+    STATUS_CHOICES = [
+        ("pending", "Pendente"),
+        ("approved", "Aprovado"),
+        ("rejected", "Rejeitado"),
+        ("cancelled", "Cancelado pelo motorista"),
+    ]
+
+    # Campos que o driver pode pedir para alterar (whitelist)
+    EDITABLE_FIELDS = [
+        ("telefone", "Telefone"),
+        ("email", "Email"),
+        ("endereco_residencia", "Endereço"),
+        ("codigo_postal", "Código Postal"),
+        ("cidade", "Cidade"),
+        ("nacionalidade", "Nacionalidade"),
+    ]
+
+    driver = models.ForeignKey(
+        "drivers_app.DriverProfile",
+        on_delete=models.CASCADE,
+        related_name="change_requests",
+    )
+    field = models.CharField(
+        "Campo",
+        max_length=50,
+        choices=EDITABLE_FIELDS,
+        db_index=True,
+    )
+    old_value = models.TextField("Valor anterior", blank=True)
+    new_value = models.TextField("Novo valor", blank=True)
+    status = models.CharField(
+        "Estado", max_length=15,
+        choices=STATUS_CHOICES, default="pending",
+        db_index=True,
+    )
+
+    requested_at = models.DateTimeField(default=timezone.now, db_index=True)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    reviewed_by = models.ForeignKey(
+        "auth.User", null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name="reviewed_change_requests",
+    )
+    review_notes = models.TextField(
+        "Notas da revisão", blank=True,
+        help_text="Motivo de rejeição ou observações da aprovação.",
+    )
+
+    class Meta:
+        verbose_name = "Pedido de Alteração de Perfil"
+        verbose_name_plural = "Pedidos de Alteração de Perfil"
+        ordering = ["-requested_at"]
+        indexes = [
+            models.Index(fields=["status", "-requested_at"]),
+            models.Index(fields=["driver", "-requested_at"]),
+        ]
+
+    def __str__(self):
+        return f"{self.driver.apelido or self.driver_id} · {self.field} · {self.status}"
+
+    def apply_to_driver(self):
+        """Aplica o new_value ao DriverProfile."""
+        if self.status != "pending":
+            return False
+        setattr(self.driver, self.field, self.new_value)
+        self.driver.save(update_fields=[self.field, "updated_at"] if hasattr(self.driver, "updated_at") else [self.field])
+        return True

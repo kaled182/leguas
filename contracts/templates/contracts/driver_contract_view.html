@@ -1,0 +1,76 @@
+{% extends 'drivers_app/portal/_base.html' %}
+
+{% block portal_content %}
+
+<div class="max-w-4xl mx-auto">
+
+  <div class="bg-gradient-to-br from-emerald-500 to-green-600 rounded-2xl p-6 text-white shadow-lg mb-6">
+    <div class="flex items-start gap-4">
+      <div class="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+        <i data-lucide="file-check" class="w-6 h-6"></i>
+      </div>
+      <div class="flex-1">
+        <h1 class="text-xl font-extrabold">{{ contract.template.name }}</h1>
+        <p class="text-sm text-emerald-100 mt-1">
+          Versão {{ contract.template.version }} · Assinado em {{ contract.signed_at|date:"d/m/Y H:i" }}
+        </p>
+      </div>
+      <a href="{% url 'contracts:driver_contracts' driver.id %}"
+         class="px-3 py-2 bg-white/15 hover:bg-white/25 backdrop-blur-sm rounded-lg text-sm font-medium inline-flex items-center gap-1.5">
+        <i data-lucide="arrow-left" class="w-4 h-4"></i>
+        Voltar
+      </a>
+    </div>
+  </div>
+
+  {# Detalhes da assinatura #}
+  <div class="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700/50 rounded-2xl p-5 mb-6">
+    <h3 class="font-bold text-emerald-800 dark:text-emerald-300 mb-3 flex items-center gap-2">
+      <i data-lucide="shield-check" class="w-5 h-5"></i>
+      Detalhes da Assinatura Digital
+    </h3>
+    <dl class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+      <div>
+        <dt class="text-xs text-emerald-700 dark:text-emerald-400 uppercase">Assinante</dt>
+        <dd class="font-semibold text-gray-900 dark:text-white">{{ driver.nome_completo|default:driver.apelido }}</dd>
+      </div>
+      <div>
+        <dt class="text-xs text-emerald-700 dark:text-emerald-400 uppercase">NIF</dt>
+        <dd class="font-semibold text-gray-900 dark:text-white">{{ driver.nif|default:"—" }}</dd>
+      </div>
+      <div>
+        <dt class="text-xs text-emerald-700 dark:text-emerald-400 uppercase">Data e hora</dt>
+        <dd class="font-semibold text-gray-900 dark:text-white">{{ contract.signed_at|date:"d/m/Y H:i:s" }}</dd>
+      </div>
+      <div>
+        <dt class="text-xs text-emerald-700 dark:text-emerald-400 uppercase">IP</dt>
+        <dd class="font-mono text-gray-900 dark:text-white">{{ contract.ip_address|default:"—" }}</dd>
+      </div>
+      <div class="md:col-span-2">
+        <dt class="text-xs text-emerald-700 dark:text-emerald-400 uppercase">Frase de aceitação</dt>
+        <dd class="italic text-gray-700 dark:text-gray-300">"{{ contract.signature_text }}"</dd>
+      </div>
+      <div class="md:col-span-2">
+        <dt class="text-xs text-emerald-700 dark:text-emerald-400 uppercase">Hash de integridade (SHA-256)</dt>
+        <dd class="font-mono text-[10px] text-gray-600 dark:text-gray-400 break-all">{{ contract.content_hash }}</dd>
+      </div>
+    </dl>
+  </div>
+
+  {# Conteúdo do contrato #}
+  <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 shadow-sm">
+    <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
+      <i data-lucide="file-text" class="w-5 h-5 text-gray-500"></i>
+      <h2 class="font-bold text-gray-900 dark:text-white">Texto do Contrato (no momento da assinatura)</h2>
+    </div>
+    <div class="p-6 prose dark:prose-invert prose-sm max-w-none">
+      {{ contract.content_snapshot|safe|linebreaks }}
+    </div>
+  </div>
+
+  <p class="text-center text-xs text-gray-400 dark:text-gray-500 mt-6">
+    Este contrato é imutável. Qualquer alteração futura ao template original não afecta este registo.
+  </p>
+</div>
+
+{% endblock %}

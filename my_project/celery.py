@@ -103,6 +103,22 @@ app.conf.beat_schedule = {
         'options': {'expires': 3600},
     },
 
+    # Roll-forward backlog activo — move pacotes Driver_received de até 7
+    # dias para hoje. Corre 02:30 diária (antes do stale-cleanup).
+    'cainiao-roll-forward-active': {
+        'task': 'settlements.roll_forward_active_packages',
+        'schedule': crontab(hour=2, minute=30),
+        'options': {'expires': 3600},
+    },
+
+    # Stale auto-cleanup — marca pacotes 'esquecidos' (qualquer courier)
+    # com Driver_received há mais de N dias como Stale_Armazem. Corre 03:00.
+    'cainiao-mark-stale-armazem': {
+        'task': 'settlements.mark_stale_armazem',
+        'schedule': crontab(hour=3, minute=0),
+        'options': {'expires': 3600},
+    },
+
     # Gerar instâncias de contas recorrentes — todos os dias 06:00
     'accounting-generate-recurring-bills': {
         'task': 'accounting.generate_recurring_bills',

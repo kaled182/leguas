@@ -734,3 +734,10 @@ class CompanyProfile(models.Model):
 
     def __str__(self) -> str:
         return self.company_name
+
+
+# ─── Modelos do módulo de Atualização (importados de models_updates) ───
+from .models_updates import (  # noqa: E402, F401
+    ChangelogEntry, Suggestion, SystemVersionState,
+    today_version_base, suggest_next_version,
+)

@@ -105,19 +105,81 @@
             {% endif %}
           </a>
           
+          <a href="{% url 'drivers_app:drivers_central' %}"
+            class="flex items-center gap-2 p-2 rounded-lg text-sm transition-all {% if request.resolver_match.url_name == 'drivers_central' or request.resolver_match.url_name == 'drivers_central_alias' %}bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 font-medium{% else %}text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:text-indigo-600 dark:hover:text-indigo-400{% endif %}">
+            <i data-lucide="layout-grid" class="w-4 h-4"></i>
+            <span>Central de Motoristas</span>
+            <span class="ml-auto text-xs bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 px-2 py-0.5 rounded-full">
+              {{ active_drivers_count|default:0 }}
+            </span>
+          </a>
           <a href="{% url 'drivers_app:admin_active_drivers' %}"
             class="flex items-center gap-2 p-2 rounded-lg text-sm transition-all {% if request.resolver_match.url_name == 'admin_active_drivers' %}bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 font-medium{% else %}text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-100{% endif %}">
             <i data-lucide="users-round" class="w-4 h-4"></i>
-            <span>Motoristas Ativos</span>
-            <span class="ml-auto text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-2 py-0.5 rounded-full">
-              {{ active_drivers_count|default:0 }}
-            </span>
+            <span>Lista clássica (legacy)</span>
           </a>
 
           <a href="{% url 'drivers_app:admin_complaints_dashboard' %}"
             class="flex items-center gap-2 p-2 rounded-lg text-sm transition-all {% if request.resolver_match.url_name == 'admin_complaints_dashboard' %}bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 font-medium{% else %}text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-100{% endif %}">
             <i data-lucide="message-circle-warning" class="w-4 h-4"></i>
             <span>Reclamações</span>
+          </a>
+
+          <a href="{% url 'drivers_app:change_requests_list' %}"
+            class="flex items-center gap-2 p-2 rounded-lg text-sm transition-all {% if request.resolver_match.url_name == 'change_requests_list' %}bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 font-medium{% else %}text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-100{% endif %}">
+            <i data-lucide="user-check" class="w-4 h-4"></i>
+            <span>Pedidos de Alteração</span>
+            {% if pending_change_requests_count > 0 %}
+              <span class="ml-auto text-xs bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 px-2 py-0.5 rounded-full">{{ pending_change_requests_count }}</span>
+            {% endif %}
+          </a>
+
+        </div>
+      </div>
+
+      <!-- Contratos - Submenu Expansível -->
+      <div x-data="{ open: {% if 'contract' in request.resolver_match.url_name|default:'' or request.resolver_match.app_name == 'contracts' %}true{% else %}false{% endif %} }" class="mb-1">
+        <button @click="open = !open" type="button"
+          class="nav-link flex items-center gap-3 p-3 rounded-lg transition-all duration-200 group w-full text-left {% if 'contract' in request.resolver_match.url_name|default:'' %}bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-300{% else %}text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:text-violet-600 dark:hover:text-violet-400{% endif %}">
+          <i data-lucide="file-signature" class="w-5 h-5 text-current group-hover:scale-110 transition-transform flex-shrink-0"></i>
+          <span class="sidebar-text font-medium flex-1">Contratos</span>
+          <i data-lucide="chevron-down" :class="open ? 'rotate-180' : ''" class="w-4 h-4 transition-transform"></i>
+        </button>
+
+        <div x-show="open" x-cloak
+             x-transition:enter="transition ease-out duration-200"
+             x-transition:enter-start="opacity-0 -translate-y-1"
+             x-transition:enter-end="opacity-100 translate-y-0"
+             x-transition:leave="transition ease-in duration-150"
+             x-transition:leave-start="opacity-100 translate-y-0"
+             x-transition:leave-end="opacity-0 -translate-y-1"
+             class="ml-8 mt-1 space-y-1 border-l-2 border-gray-200 dark:border-gray-700 pl-3">
+
+          <a href="{% url 'contracts:admin_templates_list' %}"
+            class="flex items-center gap-2 p-2 rounded-lg text-sm transition-all {% if request.resolver_match.url_name == 'admin_templates_list' or request.resolver_match.url_name == 'admin_template_create' or request.resolver_match.url_name == 'admin_template_edit' %}bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 font-medium{% else %}text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-100{% endif %}">
+            <i data-lucide="file-stack" class="w-4 h-4"></i>
+            <span>Modelos de Contrato</span>
+          </a>
+
+          <a href="{% url 'contracts:admin_signed_contracts' %}"
+            class="flex items-center gap-2 p-2 rounded-lg text-sm transition-all {% if request.resolver_match.url_name == 'admin_signed_contracts' %}bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 font-medium{% else %}text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-100{% endif %}">
+            <i data-lucide="file-check" class="w-4 h-4"></i>
+            <span>Assinados</span>
+          </a>
+
+          <a href="{% url 'contracts:admin_missing_contracts' %}"
+            class="flex items-center gap-2 p-2 rounded-lg text-sm transition-all {% if request.resolver_match.url_name == 'admin_missing_contracts' %}bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 font-medium{% else %}text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-100{% endif %}">
+            <i data-lucide="file-warning" class="w-4 h-4"></i>
+            <span>Por Assinar</span>
+            {% if drivers_missing_contracts > 0 %}
+              <span class="ml-auto text-xs bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 px-2 py-0.5 rounded-full">{{ drivers_missing_contracts }}</span>
+            {% endif %}
+          </a>
+
+          <a href="{% url 'contracts:admin_template_create' %}"
+            class="flex items-center gap-2 p-2 rounded-lg text-sm transition-all text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:text-violet-600 dark:hover:text-violet-400">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            <span>Novo Template</span>
           </a>
 
         </div>
@@ -431,67 +493,58 @@
           <i data-lucide="chevron-down" id="financialChevron" class="w-4 h-4 ml-auto transition-transform"></i>
         </button>
         
-        <!-- Submenu de Financeiro -->
+        <!-- Submenu de Financeiro (simplificado: 4 itens principais + avançado) -->
         <div id="financialSubmenu" class="ml-8 mt-1 space-y-1 hidden">
-          <a href="{% url 'financial-dashboard' %}" class="flex items-center gap-2 p-2 text-sm rounded-lg transition-colors text-gray-600 dark:text-gray-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-600 dark:hover:text-primary-400">
-            <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
-            <span>Dashboard Financeiro</span>
-          </a>
-          
-          <a href="{% url 'invoice-list' %}" class="flex items-center gap-2 p-2 text-sm rounded-lg transition-colors text-gray-600 dark:text-gray-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-600 dark:hover:text-primary-400">
-            <i data-lucide="file-text" class="w-4 h-4"></i>
-            <span>Faturas Parceiros</span>
-          </a>
-          
-          <a href="{% url 'settlement-list' %}" class="flex items-center gap-2 p-2 text-sm rounded-lg transition-colors text-gray-600 dark:text-gray-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-600 dark:hover:text-primary-400">
-            <i data-lucide="wallet" class="w-4 h-4"></i>
-            <span>Acertos Motoristas</span>
+          <a href="{% url 'accounting:payables_inbox' %}" class="flex items-center gap-2 p-2 text-sm rounded-lg transition-colors text-gray-600 dark:text-gray-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-600 dark:hover:text-primary-400">
+            <i data-lucide="inbox" class="w-4 h-4"></i>
+            <span>A Pagar</span>
           </a>
 
-          <a href="{% url 'pre-invoice-admin-list' %}" class="flex items-center gap-2 p-2 text-sm rounded-lg transition-colors text-gray-600 dark:text-gray-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-600 dark:hover:text-primary-400">
-            <i data-lucide="receipt" class="w-4 h-4"></i>
-            <span>Pré-Faturas</span>
+          <a href="{% url 'invoice-list' %}" class="flex items-center gap-2 p-2 text-sm rounded-lg transition-colors text-gray-600 dark:text-gray-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-600 dark:hover:text-primary-400">
+            <i data-lucide="file-text" class="w-4 h-4"></i>
+            <span>A Receber</span>
+          </a>
+
+          <a href="{% url 'financial-dashboard' %}" class="flex items-center gap-2 p-2 text-sm rounded-lg transition-colors text-gray-600 dark:text-gray-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-600 dark:hover:text-primary-400">
+            <i data-lucide="bar-chart-3" class="w-4 h-4"></i>
+            <span>Análise</span>
           </a>
 
           <a href="{% url 'cash-entries-dashboard' %}" class="flex items-center gap-2 p-2 text-sm rounded-lg transition-colors text-gray-600 dark:text-gray-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-600 dark:hover:text-primary-400">
             <i data-lucide="wallet-cards" class="w-4 h-4"></i>
-            <span>Conta-Corrente Motoristas</span>
+            <span>Conta-Corrente</span>
           </a>
 
-          <a href="{% url 'shareholder-dashboard' %}" class="flex items-center gap-2 p-2 text-sm rounded-lg transition-colors text-gray-600 dark:text-gray-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-600 dark:hover:text-primary-400">
-            <i data-lucide="hand-coins" class="w-4 h-4"></i>
-            <span>Sócios &amp; Reembolsos</span>
-          </a>
-
-          <a href="{% url 'accounting:bill_list' %}" class="flex items-center gap-2 p-2 text-sm rounded-lg transition-colors text-gray-600 dark:text-gray-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-600 dark:hover:text-primary-400">
-            <i data-lucide="receipt" class="w-4 h-4"></i>
-            <span>Contas a Pagar</span>
-          </a>
-
-          <a href="{% url 'accounting:dre' %}" class="flex items-center gap-2 p-2 text-sm rounded-lg transition-colors text-gray-600 dark:text-gray-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-600 dark:hover:text-primary-400">
-            <i data-lucide="bar-chart-3" class="w-4 h-4"></i>
-            <span>Demonstração de Resultados</span>
-          </a>
-
-          <a href="{% url 'accounting:cash_flow' %}" class="flex items-center gap-2 p-2 text-sm rounded-lg transition-colors text-gray-600 dark:text-gray-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-600 dark:hover:text-primary-400">
-            <i data-lucide="trending-up" class="w-4 h-4"></i>
-            <span>Fluxo de Caixa</span>
-          </a>
-
-          <a href="{% url 'accounting:bank_statement_list' %}" class="flex items-center gap-2 p-2 text-sm rounded-lg transition-colors text-gray-600 dark:text-gray-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-600 dark:hover:text-primary-400">
-            <i data-lucide="landmark" class="w-4 h-4"></i>
-            <span>Conciliação Bancária</span>
-          </a>
-
-          <a href="{% url 'accounting:break_even' %}" class="flex items-center gap-2 p-2 text-sm rounded-lg transition-colors text-gray-600 dark:text-gray-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-600 dark:hover:text-primary-400">
-            <i data-lucide="gauge" class="w-4 h-4"></i>
-            <span>Monitor Break-Even</span>
-          </a>
-
-          <a href="{% url 'claim-list' %}" class="flex items-center gap-2 p-2 text-sm rounded-lg transition-colors text-gray-600 dark:text-gray-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-600 dark:hover:text-primary-400">
-            <i data-lucide="alert-circle" class="w-4 h-4"></i>
-            <span>Reclamações</span>
-          </a>
+          {# Sub-grupo "Avançado" — links directos para páginas específicas #}
+          <details class="mt-2">
+            <summary class="flex items-center gap-2 p-2 text-xs uppercase font-semibold text-gray-500 dark:text-gray-500 cursor-pointer hover:text-gray-700 dark:hover:text-gray-300 list-none">
+              <i data-lucide="chevron-right" class="w-3 h-3"></i>
+              <span>Avançado</span>
+            </summary>
+            <div class="ml-3 mt-1 space-y-1">
+              <a href="{% url 'pre-invoice-admin-list' %}" class="flex items-center gap-2 p-1.5 text-xs rounded-lg text-gray-600 dark:text-gray-400 hover:bg-primary-50 dark:hover:bg-primary-900/20">
+                <i data-lucide="receipt" class="w-3.5 h-3.5"></i> Pré-Faturas (admin)
+              </a>
+              <a href="{% url 'shareholder-dashboard' %}" class="flex items-center gap-2 p-1.5 text-xs rounded-lg text-gray-600 dark:text-gray-400 hover:bg-primary-50 dark:hover:bg-primary-900/20">
+                <i data-lucide="hand-coins" class="w-3.5 h-3.5"></i> Sócios &amp; Reembolsos
+              </a>
+              <a href="{% url 'accounting:bill_list' %}" class="flex items-center gap-2 p-1.5 text-xs rounded-lg text-gray-600 dark:text-gray-400 hover:bg-primary-50 dark:hover:bg-primary-900/20">
+                <i data-lucide="receipt" class="w-3.5 h-3.5"></i> Contas a Pagar
+              </a>
+              <a href="{% url 'accounting:dre' %}" class="flex items-center gap-2 p-1.5 text-xs rounded-lg text-gray-600 dark:text-gray-400 hover:bg-primary-50 dark:hover:bg-primary-900/20">
+                <i data-lucide="bar-chart-3" class="w-3.5 h-3.5"></i> DRE
+              </a>
+              <a href="{% url 'accounting:cash_flow' %}" class="flex items-center gap-2 p-1.5 text-xs rounded-lg text-gray-600 dark:text-gray-400 hover:bg-primary-50 dark:hover:bg-primary-900/20">
+                <i data-lucide="trending-up" class="w-3.5 h-3.5"></i> Fluxo de Caixa
+              </a>
+              <a href="{% url 'accounting:bank_statement_list' %}" class="flex items-center gap-2 p-1.5 text-xs rounded-lg text-gray-600 dark:text-gray-400 hover:bg-primary-50 dark:hover:bg-primary-900/20">
+                <i data-lucide="landmark" class="w-3.5 h-3.5"></i> Conciliação Bancária
+              </a>
+              <a href="{% url 'accounting:break_even' %}" class="flex items-center gap-2 p-1.5 text-xs rounded-lg text-gray-600 dark:text-gray-400 hover:bg-primary-50 dark:hover:bg-primary-900/20">
+                <i data-lucide="gauge" class="w-3.5 h-3.5"></i> Break-Even
+              </a>
+            </div>
+          </details>
         </div>
       </div>
 
@@ -499,6 +552,13 @@
         <i data-lucide="settings" class="w-5 h-5 text-current group-hover:scale-110 transition-transform flex-shrink-0"></i>
         <span class="sidebar-text font-medium">Configurações</span>
       </a>
+
+      {% if request.user.is_superuser %}
+      <a href="{% url 'system_config:user_list' %}" class="nav-link flex items-center gap-3 p-3 rounded-lg transition-all duration-200 group {% if 'user_' in request.resolver_match.url_name|default:'' %}bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 border-r-2 border-indigo-500{% else %}text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:text-indigo-600 dark:hover:text-indigo-400{% endif %}">
+        <i data-lucide="users" class="w-5 h-5 text-current group-hover:scale-110 transition-transform flex-shrink-0"></i>
+        <span class="sidebar-text font-medium">Utilizadores</span>
+      </a>
+      {% endif %}
     </div>
 
     <!-- Seção Ferramentas -->

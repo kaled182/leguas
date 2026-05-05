@@ -414,29 +414,64 @@ def partner_detail(request, pk):
                         return d.apelido
                 return courier_name
 
-            # Driver breakdown também por estado actual (período_objs já
-            # tem 1 row por waybill = última actividade)
+            # Driver breakdown via "cadeia de assinaturas":
+            # Cada courier conta CADA waybill que assinou no período (mesmo
+            # se o pacote foi depois para outro courier). Reflecte o
+            # dashboard Cainiao que mostra "pacotes que passaram por este
+            # courier no dia". Status do bucket é o estado vigente do waybill.
+            from settlements.models import CainiaoOperationTaskHistory
             _drv_buckets = defaultdict(
                 lambda: {
                     "courier_name": "", "courier_id_cainiao": "",
                     "total": 0, "delivered": 0,
                     "en_route": 0, "failures": 0,
+                    "_seen_waybills": set(),  # dedup por (courier, waybill)
                 },
             )
-            for op in period_objs:
-                if not op.courier_name:
-                    continue
-                key = (op.courier_id_cainiao or "", op.courier_name)
+            # Estado vigente de cada waybill em CainiaoOperationTask
+            current_status_by_wb = {
+                op.waybill_number: op.task_status for op in period_objs
+            }
+
+            def _add_to_bucket(courier_name, courier_id, waybill, status):
+                if not courier_name or not waybill:
+                    return
+                key = (courier_id or "", courier_name)
                 b = _drv_buckets[key]
-                b["courier_name"] = op.courier_name
-                b["courier_id_cainiao"] = op.courier_id_cainiao or ""
+                if waybill in b["_seen_waybills"]:
+                    return  # já contado para este courier
+                b["_seen_waybills"].add(waybill)
+                b["courier_name"] = courier_name
+                b["courier_id_cainiao"] = courier_id or ""
                 b["total"] += 1
-                if op.task_status == STATUS_DELIVERED:
+                if status == STATUS_DELIVERED:
                     b["delivered"] += 1
-                elif op.task_status == STATUS_EN_ROUTE:
+                elif status == STATUS_EN_ROUTE:
                     b["en_route"] += 1
-                elif op.task_status == STATUS_FAILURE:
+                elif status == STATUS_FAILURE:
                     b["failures"] += 1
+
+            # 1. Estado vigente (sempre conta)
+            for op in period_objs:
+                _add_to_bucket(
+                    op.courier_name, op.courier_id_cainiao,
+                    op.waybill_number, op.task_status,
+                )
+            # 2. Signatures do history no período (couriers que tocaram
+            #    o pacote mas já passaram para outro). Status reflectido
+            #    é o estado vigente actual do waybill.
+            sig_qs = CainiaoOperationTaskHistory.objects.filter(
+                change_type="signature",
+                task_date__range=(date_from, date_to),
+            ).values_list(
+                "courier_name", "courier_id_cainiao", "waybill_number",
+            )
+            for cn, cid, wb in sig_qs:
+                status = current_status_by_wb.get(wb, "Driver_received")
+                _add_to_bucket(cn, cid, wb, status)
+            # Limpar set auxiliar antes de serializar
+            for b in _drv_buckets.values():
+                b.pop("_seen_waybills", None)
             driver_qs_raw = sorted(
                 _drv_buckets.values(), key=lambda r: -r["total"],
             )

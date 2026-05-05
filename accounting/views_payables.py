@@ -1,0 +1,402 @@
+"""Inbox unificado de Pagamentos a Fazer.
+
+Agrega 4 fontes de payables:
+  - DriverPreInvoice         (motoristas independentes)
+  - EmpresaParceiraLancamento (empresas parceiras / frotas)
+  - ThirdPartyReimbursement   (sócios)
+  - Bill                      (contas gerais a fornecedores)
+
+Regra de liberação:
+  - Pré-Fatura motorista: precisa fatura_ficheiro anexada
+  - Lançamento empresa: precisa estado APROVADO ou PENDENTE
+  - Reembolso sócio: status PENDENTE
+  - Bill: status PENDING/OVERDUE/AWAITING (AWAITING precisa aprovação primeiro)
+"""
+from dataclasses import dataclass, field
+from datetime import timedelta
+from decimal import Decimal
+from typing import Optional
+
+from django.contrib.auth.decorators import login_required
+from django.db.models import Q
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404, render
+from django.urls import reverse
+from django.utils import timezone
+from django.views.decorators.http import require_http_methods
+
+
+@dataclass
+class PayableRow:
+    entity_type: str          # "pre_invoice" | "fleet" | "shareholder" | "bill"
+    entity_id: int
+    type_label: str
+    type_color: str           # tailwind family: blue/violet/amber/rose
+    icon: str                 # lucide
+    numero: str
+    descricao: str
+    detail_url: str
+    due_date: Optional[object] = None
+    period_label: str = ""
+    amount: Decimal = Decimal("0.00")
+    status: str = ""
+    status_display: str = ""
+    payable: bool = False
+    block_reason: str = ""
+    has_recibo: Optional[bool] = None  # só para PFs
+
+    @property
+    def days_to_due(self) -> Optional[int]:
+        if not self.due_date:
+            return None
+        today = timezone.now().date()
+        return (self.due_date - today).days
+
+    @property
+    def is_overdue(self) -> bool:
+        d = self.days_to_due
+        return d is not None and d < 0
+
+    @property
+    def due_soon(self) -> bool:
+        d = self.days_to_due
+        return d is not None and 0 <= d <= 7
+
+
+def _row_pre_invoice(pf):
+    has_recibo = bool(pf.fatura_ficheiro)
+    payable = pf.status in ("APROVADO", "PENDENTE") and has_recibo
+    block = ""
+    if not has_recibo:
+        block = "Aguardando fatura-recibo do motorista"
+    elif pf.status == "CALCULADO":
+        block = "Falta aprovar a pré-fatura"
+    elif pf.status not in ("APROVADO", "PENDENTE"):
+        block = f"Estado {pf.get_status_display()} não permite pagamento"
+    return PayableRow(
+        entity_type="pre_invoice",
+        entity_id=pf.id,
+        type_label="Pré-Fatura Motorista",
+        type_color="blue",
+        icon="user",
+        numero=pf.numero,
+        descricao=pf.driver.nome_completo,
+        detail_url=reverse(
+            "drivers_app:driver_pre_invoice_detail",
+            kwargs={"driver_id": pf.driver_id, "pre_invoice_id": pf.id},
+        ),
+        due_date=pf.periodo_fim,
+        period_label=(
+            f"{pf.periodo_inicio.strftime('%d/%m')} → "
+            f"{pf.periodo_fim.strftime('%d/%m')}"
+        ),
+        amount=pf.total_a_receber,
+        status=pf.status,
+        status_display=pf.get_status_display(),
+        payable=payable,
+        block_reason=block,
+        has_recibo=has_recibo,
+    )
+
+
+def _row_fleet(lanc):
+    payable = lanc.status in ("APROVADO", "PENDENTE")
+    block = ""
+    if lanc.status == "RASCUNHO":
+        block = "Falta aprovar o lançamento"
+    elif not payable:
+        block = f"Estado {lanc.get_status_display()} não permite pagamento"
+    return PayableRow(
+        entity_type="fleet",
+        entity_id=lanc.id,
+        type_label="Pré-Fatura Frota",
+        type_color="violet",
+        icon="building-2",
+        numero=f"FRT-{lanc.id:04d}",
+        descricao=f"{lanc.empresa.nome} — {lanc.descricao[:60]}",
+        detail_url=reverse(
+            "drivers_app:empresas-parceiras",
+        ) + f"?empresa={lanc.empresa_id}",
+        due_date=lanc.periodo_fim,
+        period_label=(
+            f"{lanc.periodo_inicio.strftime('%d/%m')} → "
+            f"{lanc.periodo_fim.strftime('%d/%m')}"
+        ),
+        amount=lanc.total_a_receber,
+        status=lanc.status,
+        status_display=lanc.get_status_display(),
+        payable=payable,
+        block_reason=block,
+    )
+
+
+def _row_shareholder(reemb):
+    payable = reemb.status == "PENDENTE"
+    block = "" if payable else (
+        f"Estado {reemb.get_status_display()} não permite pagamento"
+    )
+    return PayableRow(
+        entity_type="shareholder",
+        entity_id=reemb.id,
+        type_label="Reembolso Sócio",
+        type_color="amber",
+        icon="hand-coins",
+        numero=f"REE-{reemb.id:04d}",
+        descricao=f"{reemb.lender.nome} — {reemb.descricao[:60]}",
+        detail_url=reverse(
+            "shareholder-dashboard",
+        ) + f"?reemb={reemb.id}",
+        due_date=reemb.data_emprestimo + timedelta(days=30),
+        amount=reemb.valor,
+        status=reemb.status,
+        status_display=reemb.get_status_display(),
+        payable=payable,
+        block_reason=block,
+    )
+
+
+def _row_bill(bill):
+    payable = bill.status in ("PENDING", "OVERDUE")
+    block = ""
+    if bill.status == "AWAITING":
+        block = "Aguardando aprovação"
+    elif not payable:
+        block = f"Estado {bill.get_status_display()} não permite pagamento"
+    return PayableRow(
+        entity_type="bill",
+        entity_id=bill.id,
+        type_label="Conta a Pagar",
+        type_color="rose",
+        icon="receipt",
+        numero=f"CNT-{bill.id:04d}",
+        descricao=f"{bill.supplier} — {bill.description[:60]}",
+        detail_url=reverse("accounting:bill_detail", kwargs={"pk": bill.id}),
+        due_date=bill.due_date,
+        amount=bill.amount_total,
+        status=bill.status,
+        status_display=bill.get_status_display(),
+        payable=payable,
+        block_reason=block,
+    )
+
+
+@login_required
+def payables_inbox(request):
+    """Inbox unificado de pagamentos a fazer."""
+    from drivers_app.models import EmpresaParceiraLancamento
+    from settlements.models import DriverPreInvoice, ThirdPartyReimbursement
+    from .models import Bill
+
+    # Filtros
+    type_filter = request.GET.get("tipo", "all")
+    status_filter = request.GET.get("status", "open")  # open | all | overdue
+    search = (request.GET.get("q") or "").strip()
+
+    rows: list[PayableRow] = []
+
+    # Pré-Faturas motorista
+    if type_filter in ("all", "pre_invoice"):
+        pfs = (
+            DriverPreInvoice.objects
+            .select_related("driver")
+            .filter(status__in=["CALCULADO", "APROVADO", "PENDENTE"])
+        )
+        if search:
+            pfs = pfs.filter(
+                Q(numero__icontains=search) |
+                Q(driver__nome_completo__icontains=search)
+            )
+        for pf in pfs:
+            rows.append(_row_pre_invoice(pf))
+
+    # Lançamentos de Empresas Parceiras (frotas)
+    if type_filter in ("all", "fleet"):
+        lancs = (
+            EmpresaParceiraLancamento.objects
+            .select_related("empresa")
+            .filter(status__in=["RASCUNHO", "APROVADO", "PENDENTE"])
+        )
+        if search:
+            lancs = lancs.filter(
+                Q(descricao__icontains=search) |
+                Q(empresa__nome__icontains=search)
+            )
+        for lanc in lancs:
+            rows.append(_row_fleet(lanc))
+
+    # Reembolsos a sócios
+    if type_filter in ("all", "shareholder"):
+        reembs = (
+            ThirdPartyReimbursement.objects
+            .select_related("lender")
+            .filter(status="PENDENTE")
+        )
+        if search:
+            reembs = reembs.filter(
+                Q(descricao__icontains=search) |
+                Q(lender__nome__icontains=search)
+            )
+        for r in reembs:
+            rows.append(_row_shareholder(r))
+
+    # Bills
+    if type_filter in ("all", "bill"):
+        bills = Bill.objects.filter(
+            status__in=["AWAITING", "PENDING", "OVERDUE"],
+        )
+        if search:
+            bills = bills.filter(
+                Q(supplier__icontains=search) |
+                Q(description__icontains=search)
+            )
+        for b in bills:
+            rows.append(_row_bill(b))
+
+    # Filtro de status
+    if status_filter == "open":
+        rows = [r for r in rows if r.payable or r.block_reason]
+    elif status_filter == "overdue":
+        rows = [r for r in rows if r.is_overdue]
+
+    # Ordenar por data de vencimento (overdue primeiro, depois mais próximas)
+    rows.sort(key=lambda r: (r.due_date or timezone.now().date(), -float(r.amount)))
+
+    # KPIs
+    total_amount = sum((r.amount for r in rows), Decimal("0"))
+    overdue_amount = sum(
+        (r.amount for r in rows if r.is_overdue), Decimal("0"),
+    )
+    due_soon_amount = sum(
+        (r.amount for r in rows if r.due_soon), Decimal("0"),
+    )
+    blocked_amount = sum(
+        (r.amount for r in rows if not r.payable), Decimal("0"),
+    )
+
+    kpis = {
+        "total_count": len(rows),
+        "total_amount": total_amount,
+        "overdue_count": sum(1 for r in rows if r.is_overdue),
+        "overdue_amount": overdue_amount,
+        "due_soon_count": sum(1 for r in rows if r.due_soon),
+        "due_soon_amount": due_soon_amount,
+        "blocked_count": sum(1 for r in rows if not r.payable),
+        "blocked_amount": blocked_amount,
+        "ready_count": sum(1 for r in rows if r.payable),
+    }
+
+    by_type = {}
+    for r in rows:
+        by_type.setdefault(r.entity_type, {"count": 0, "amount": Decimal("0")})
+        by_type[r.entity_type]["count"] += 1
+        by_type[r.entity_type]["amount"] += r.amount
+
+    return render(request, "accounting/payables_inbox.html", {
+        "rows": rows,
+        "kpis": kpis,
+        "by_type": by_type,
+        "type_filter": type_filter,
+        "status_filter": status_filter,
+        "search": search,
+    })
+
+
+@login_required
+@require_http_methods(["POST"])
+def payables_mark_paid(request):
+    """Marca um payable como pago. Inputs (multipart):
+       entity_type, entity_id, paid_date (YYYY-MM-DD),
+       payment_reference, comprovante (file, opcional).
+    """
+    from datetime import datetime
+    from drivers_app.models import EmpresaParceiraLancamento
+    from settlements.models import DriverPreInvoice, ThirdPartyReimbursement
+    from .models import Bill
+
+    entity_type = request.POST.get("entity_type", "")
+    entity_id = request.POST.get("entity_id", "")
+    paid_date_str = request.POST.get("paid_date", "")
+    payment_reference = (request.POST.get("payment_reference") or "").strip()
+    comprovante = request.FILES.get("comprovante")
+
+    try:
+        paid_date = datetime.strptime(paid_date_str, "%Y-%m-%d").date()
+    except (ValueError, TypeError):
+        paid_date = timezone.now().date()
+
+    # Dispatch
+    if entity_type == "pre_invoice":
+        pf = get_object_or_404(DriverPreInvoice, id=entity_id)
+        if not pf.fatura_ficheiro:
+            return JsonResponse({
+                "success": False,
+                "error": "PF sem fatura-recibo. Não pode ser paga.",
+            }, status=400)
+        if pf.status not in ("APROVADO", "PENDENTE"):
+            return JsonResponse({
+                "success": False,
+                "error": f"Estado {pf.get_status_display()} não permite pagamento.",
+            }, status=400)
+        pf.status = "PAGO"
+        pf.data_pagamento = paid_date
+        if payment_reference:
+            pf.referencia_pagamento = payment_reference
+        if comprovante:
+            pf.comprovante_pagamento = comprovante
+        pf.save()
+        return JsonResponse({"success": True, "numero": pf.numero})
+
+    if entity_type == "fleet":
+        lanc = get_object_or_404(EmpresaParceiraLancamento, id=entity_id)
+        if lanc.status not in ("APROVADO", "PENDENTE"):
+            return JsonResponse({
+                "success": False,
+                "error": f"Estado {lanc.get_status_display()} não permite pagamento.",
+            }, status=400)
+        lanc.status = "PAGO"
+        lanc.data_pagamento = paid_date
+        if payment_reference:
+            lanc.referencia_pagamento = payment_reference
+        if comprovante:
+            lanc.comprovante_pagamento = comprovante
+        lanc.save()
+        return JsonResponse({"success": True, "numero": f"FRT-{lanc.id:04d}"})
+
+    if entity_type == "shareholder":
+        reemb = get_object_or_404(ThirdPartyReimbursement, id=entity_id)
+        if reemb.status != "PENDENTE":
+            return JsonResponse({
+                "success": False,
+                "error": f"Estado {reemb.get_status_display()} não permite pagamento.",
+            }, status=400)
+        reemb.status = "PAGO"
+        reemb.data_pagamento = paid_date
+        if payment_reference:
+            reemb.referencia_pagamento = payment_reference
+        if comprovante:
+            reemb.comprovante_pagamento = comprovante
+        if request.user.is_authenticated:
+            reemb.pago_por = request.user
+        reemb.save()
+        return JsonResponse({"success": True, "numero": f"REE-{reemb.id:04d}"})
+
+    if entity_type == "bill":
+        bill = get_object_or_404(Bill, id=entity_id)
+        if bill.status not in ("PENDING", "OVERDUE"):
+            return JsonResponse({
+                "success": False,
+                "error": f"Estado {bill.get_status_display()} não permite pagamento.",
+            }, status=400)
+        bill.status = Bill.STATUS_PAID
+        bill.paid_date = paid_date
+        bill.paid_amount = bill.amount_total
+        if payment_reference:
+            bill.payment_reference = payment_reference
+        if comprovante:
+            bill.payment_proof = comprovante
+        bill.save()
+        return JsonResponse({"success": True, "numero": f"CNT-{bill.id:04d}"})
+
+    return JsonResponse(
+        {"success": False, "error": "entity_type inválido."}, status=400,
+    )

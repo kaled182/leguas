@@ -233,6 +233,17 @@ class PartnerInvoice(models.Model):
         validators=[MinValueValidator(0)],
     )
 
+    payment_reference = models.CharField(
+        "Referência de Pagamento", max_length=200, blank=True,
+        help_text="MB WAY, IBAN, transferência, etc.",
+    )
+
+    payment_proof = models.FileField(
+        "Comprovativo de Pagamento",
+        upload_to="partner_invoices/comprovativos/%Y/%m/",
+        null=True, blank=True,
+    )
+
     # Metadata
     total_orders = models.PositiveIntegerField(
         "Total de Pedidos",
@@ -1527,6 +1538,11 @@ class ThirdPartyReimbursement(models.Model):
     referencia_pagamento = models.CharField(
         "Referência do pagamento", max_length=200, blank=True,
     )
+    comprovante_pagamento = models.FileField(
+        "Comprovativo de pagamento",
+        upload_to="reembolsos_terceiros/comprovativos/%Y/%m/",
+        null=True, blank=True,
+    )
     pago_por = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -2091,6 +2107,77 @@ class CainiaoOperationTask(models.Model):
 
     def __str__(self):
         return f"{self.waybill_number} [{self.task_status}] {self.task_date}"
+
+
+class CainiaoOperationTaskHistory(models.Model):
+    """Histórico de mudanças por waybill — preserva a timeline operacional.
+
+    Cada entry representa um snapshot de mudança detectada num import:
+        - status mudou (ex: Driver_received → Delivered)
+        - courier mudou (ex: ARMAZEM XPT → Driver A → Driver B)
+        - task_date mudou (smart_date moveu para outra data)
+        - Stale cleanup (tarefa marcou como Stale_Armazem)
+
+    Use case principal: backlog operacional. Quando um pacote é entregue ao
+    Driver A, devolvido, e re-atribuído ao Driver B, o history regista cada
+    transição para auditoria e recuperação de operação.
+    """
+
+    waybill_number = models.CharField(max_length=100, db_index=True)
+
+    # Snapshot do estado APÓS a mudança
+    task_date = models.DateField()
+    task_status = models.CharField(max_length=50, blank=True)
+    courier_name = models.CharField(max_length=200, blank=True)
+    courier_id_cainiao = models.CharField(max_length=50, blank=True)
+
+    # Snapshot do estado ANTES da mudança (NULL se for criação)
+    previous_task_date = models.DateField(null=True, blank=True)
+    previous_task_status = models.CharField(max_length=50, blank=True)
+    previous_courier_name = models.CharField(max_length=200, blank=True)
+
+    # Tipo de mudança
+    CHANGE_TYPES = [
+        ("created",         "Criação"),
+        ("status_change",   "Mudança de Status"),
+        ("courier_change",  "Mudança de Courier"),
+        ("date_move",       "Movido para nova data"),
+        ("stale_cleanup",   "Marcado como Stale"),
+        ("manual_edit",     "Edição manual"),
+        ("signature",       "Assinatura (linha da planilha)"),
+        ("rolled_forward",  "Roll-forward (pacote ainda activo)"),
+    ]
+    change_type = models.CharField(
+        max_length=30, choices=CHANGE_TYPES, db_index=True,
+    )
+
+    # Quando o evento ocorreu na realidade (do Cainiao) — last_event_ts da row
+    event_timestamp = models.DateTimeField(null=True, blank=True, db_index=True)
+    # Quando foi importado/registado
+    recorded_at = models.DateTimeField(default=timezone.now, db_index=True)
+
+    # Origem (qual import trouxe esta mudança)
+    batch = models.ForeignKey(
+        CainiaoOperationBatch,
+        on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="history_entries",
+    )
+
+    class Meta:
+        verbose_name = "Histórico de Tarefa Cainiao"
+        verbose_name_plural = "Histórico de Tarefas Cainiao"
+        ordering = ["-recorded_at"]
+        indexes = [
+            models.Index(fields=["waybill_number", "-recorded_at"]),
+            models.Index(fields=["change_type", "-recorded_at"]),
+        ]
+
+    def __str__(self):
+        return (
+            f"{self.waybill_number} [{self.change_type}] "
+            f"{self.previous_task_status or '∅'}→{self.task_status} "
+            f"@ {self.recorded_at:%Y-%m-%d %H:%M}"
+        )
 
 
 # ============================================================================

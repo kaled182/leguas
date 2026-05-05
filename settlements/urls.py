@@ -675,6 +675,31 @@ urlpatterns = [
         name="cainiao-cleanup-stale",
     ),
     path(
+        "cainiao/mark-stale-armazem/",
+        cainiao_views.cainiao_mark_stale_armazem_view,
+        name="cainiao-mark-stale-armazem",
+    ),
+    path(
+        "cainiao/roll-forward/",
+        cainiao_views.cainiao_roll_forward_view,
+        name="cainiao-roll-forward",
+    ),
+    path(
+        "cainiao/consolidate-waybills/",
+        cainiao_views.cainiao_consolidate_waybills_view,
+        name="cainiao-consolidate-waybills",
+    ),
+    path(
+        "cainiao/dedup-signatures/",
+        cainiao_views.cainiao_dedup_signatures_view,
+        name="cainiao-dedup-signatures",
+    ),
+    path(
+        "cainiao/debug-headers/",
+        cainiao_views.cainiao_debug_headers_view,
+        name="cainiao-debug-headers",
+    ),
+    path(
         "cainiao/mark-deliveries-courier-id/",
         cainiao_views.cainiao_mark_deliveries_courier_id,
         name="cainiao-mark-deliveries-courier-id",

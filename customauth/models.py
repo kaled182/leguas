@@ -33,8 +33,34 @@ class DriverAccess(models.Model):
         related_name="driver_accesses",
         null=True,
         blank=True,
-        verbose_name="Motorista",
-        help_text="Motorista do sistema de pedidos",
+        verbose_name="Motorista (Paack legacy)",
+        help_text="Motorista do sistema de pedidos Paack — legacy",
+    )
+    driver_profile = models.OneToOneField(
+        "drivers_app.DriverProfile",
+        on_delete=models.CASCADE,
+        related_name="access",
+        null=True,
+        blank=True,
+        verbose_name="Perfil do Motorista",
+        help_text="Liga ao DriverProfile que dá acesso ao portal moderno.",
+    )
+
+    # Username para login (default: email; pode usar telefone ou apelido)
+    username = models.CharField(
+        max_length=100, unique=True, null=True, blank=True,
+        verbose_name="Username",
+        help_text="Username único de login (default: email).",
+    )
+
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name="Activo",
+        help_text="Desactivar bloqueia o login sem apagar a conta.",
+    )
+    last_login = models.DateTimeField(
+        null=True, blank=True,
+        verbose_name="Último login",
     )
 
     # Informações pessoais

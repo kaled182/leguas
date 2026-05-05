@@ -1,0 +1,132 @@
+{% extends 'paack_dashboard/base.html' %}
+
+{% block title %}Contratos Assinados{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto" x-data="{ revokeModal: null }">
+
+  <div class="flex items-center justify-between mb-6">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl flex items-center justify-center shadow-sm">
+        <i data-lucide="file-check" class="w-5 h-5 text-white"></i>
+      </div>
+      <div>
+        <h1 class="text-xl font-bold text-gray-900 dark:text-white">Contratos Assinados</h1>
+        <p class="text-xs text-gray-500 dark:text-gray-400">Histórico completo de assinaturas</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <a href="{% url 'contracts:admin_templates_list' %}"
+         class="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 inline-flex items-center gap-1.5">
+        <i data-lucide="file-stack" class="w-4 h-4"></i>
+        Templates
+      </a>
+      <a href="{% url 'contracts:admin_missing_contracts' %}"
+         class="px-3 py-2 text-sm border border-amber-300 dark:border-amber-700 rounded-lg text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 inline-flex items-center gap-1.5">
+        <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+        Por Assinar
+      </a>
+    </div>
+  </div>
+
+  {% if messages %}
+    {% for m in messages %}
+      <div class="mb-3 px-4 py-3 rounded-lg text-sm bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-700/50">{{ m }}</div>
+    {% endfor %}
+  {% endif %}
+
+  <form method="get" class="bg-white dark:bg-gray-800 rounded-xl p-3 border border-gray-200/50 dark:border-gray-700/50 mb-4 flex flex-wrap items-center gap-2">
+    <select name="template" onchange="this.form.submit()"
+            class="px-3 py-1.5 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
+      <option value="">Todos os templates</option>
+      {% for t in templates %}
+        <option value="{{ t.id }}" {% if t.id == selected_template_id %}selected{% endif %}>{{ t.name }} v{{ t.version }}</option>
+      {% endfor %}
+    </select>
+    <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 ml-2">
+      <input type="checkbox" name="revoked" value="1" onchange="this.form.submit()"
+             {% if show_revoked %}checked{% endif %}
+             class="w-4 h-4 text-violet-600 rounded">
+      Mostrar revogados
+    </label>
+  </form>
+
+  <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
+    <table class="w-full">
+      <thead class="bg-gray-50 dark:bg-gray-900/40">
+        <tr>
+          <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Motorista</th>
+          <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Contrato</th>
+          <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Data assinatura</th>
+          <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">IP</th>
+          <th class="px-4 py-2 text-center text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Estado</th>
+          <th class="px-4 py-2 w-24"></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+        {% for c in contracts %}
+        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+          <td class="px-4 py-3">
+            <a href="{% url 'drivers_app:driver_portal' c.driver_id %}"
+               class="font-semibold text-gray-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400">
+              {{ c.driver.nome_completo|default:c.driver.apelido }}
+            </a>
+            <p class="text-xs text-gray-500 dark:text-gray-400">{{ c.driver.apelido }} · NIF {{ c.driver.nif|default:"—" }}</p>
+          </td>
+          <td class="px-4 py-3">
+            <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ c.template.name }}</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400">v{{ c.template.version }}</p>
+          </td>
+          <td class="px-4 py-3 text-xs text-gray-700 dark:text-gray-300">{{ c.signed_at|date:"d/m/Y H:i" }}</td>
+          <td class="px-4 py-3 font-mono text-xs text-gray-700 dark:text-gray-300">{{ c.ip_address|default:"—" }}</td>
+          <td class="px-4 py-3 text-center">
+            {% if c.revoked_at %}
+              <span class="px-2 py-0.5 rounded text-xs font-bold bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-300">Revogado</span>
+            {% else %}
+              <span class="px-2 py-0.5 rounded text-xs font-bold bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300">Válido</span>
+            {% endif %}
+          </td>
+          <td class="px-4 py-3 text-right">
+            <a href="{% url 'contracts:driver_contract_view' c.driver_id c.id %}"
+               title="Ver contrato"
+               class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md text-gray-600 dark:text-gray-400 hover:text-blue-600 inline-flex">
+              <i data-lucide="eye" class="w-4 h-4"></i>
+            </a>
+            {% if not c.revoked_at %}
+            <button @click="revokeModal = {{ c.id }}"
+                    title="Revogar"
+                    class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md text-gray-600 dark:text-gray-400 hover:text-rose-600 inline-flex">
+              <i data-lucide="ban" class="w-4 h-4"></i>
+            </button>
+
+            <div x-show="revokeModal === {{ c.id }}" x-cloak
+                 class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+                 @click.self="revokeModal = null"
+                 @keydown.escape.window="revokeModal = null">
+              <form method="post" action="{% url 'contracts:admin_revoke_contract' c.id %}"
+                    class="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4 shadow-xl">
+                {% csrf_token %}
+                <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-2 text-rose-600">Revogar contrato</h3>
+                <p class="text-xs text-gray-500 mb-3">{{ c.driver.apelido }} · {{ c.template.name }} v{{ c.template.version }}</p>
+                <textarea name="reason" rows="2" required
+                          placeholder="Motivo da revogação"
+                          class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white mb-3"></textarea>
+                <div class="flex justify-end gap-2">
+                  <button type="button" @click="revokeModal = null"
+                          class="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300">Cancelar</button>
+                  <button type="submit"
+                          class="px-4 py-1.5 text-sm bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-medium">Revogar</button>
+                </div>
+              </form>
+            </div>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="px-4 py-12 text-center text-sm text-gray-500 italic">Nenhum contrato assinado.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

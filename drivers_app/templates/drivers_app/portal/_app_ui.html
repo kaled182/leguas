@@ -1,0 +1,161 @@
+{% comment %}
+Sistema de toast + modal moderno (substitui alert/confirm/prompt nativos).
+Inclui em ambos layouts (admin sidebar + driver clean).
+{% endcomment %}
+{# Garante que Alpine está disponível (paack_dashboard/base.html já carrega) #}
+<script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer
+        onerror="this.removeAttribute('onerror');"></script>
+
+<div x-data="appUi" @keydown.escape.window="modal.open = false">
+  {# ─── Toasts (canto inferior direito) ─── #}
+  <div class="fixed bottom-6 right-6 z-[200] space-y-2 pointer-events-none">
+    <template x-for="t in toasts" :key="t.id">
+      <div x-show="t.visible" x-transition.duration.300ms
+           class="pointer-events-auto min-w-[280px] max-w-md shadow-xl rounded-xl px-4 py-3 flex items-start gap-3 border"
+           :class="{
+             'bg-emerald-50 border-emerald-300 text-emerald-800': t.type === 'success',
+             'bg-rose-50 border-rose-300 text-rose-800': t.type === 'error',
+             'bg-amber-50 border-amber-300 text-amber-800': t.type === 'warning',
+             'bg-blue-50 border-blue-300 text-blue-800': t.type === 'info'
+           }">
+        <i :data-lucide="t.icon" class="w-5 h-5 flex-shrink-0 mt-0.5"></i>
+        <div class="flex-1 text-sm">
+          <p x-show="t.title" class="font-semibold mb-0.5" x-text="t.title"></p>
+          <p x-text="t.message"></p>
+        </div>
+        <button @click="dismissToast(t.id)" class="flex-shrink-0 opacity-60 hover:opacity-100">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+    </template>
+  </div>
+
+  {# ─── Modal de confirmação / prompt ─── #}
+  <div x-show="modal.open" x-cloak
+       class="fixed inset-0 z-[150] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+       @click.self="modal.resolve(false); modal.open = false">
+    <div x-show="modal.open"
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0 scale-95"
+         x-transition:enter-end="opacity-100 scale-100"
+         class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full mx-4 overflow-hidden">
+      <div class="p-6">
+        <div class="flex items-start gap-3 mb-4">
+          <div class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
+               :class="{
+                 'bg-rose-100 dark:bg-rose-900/40': modal.type === 'danger',
+                 'bg-amber-100 dark:bg-amber-900/40': modal.type === 'warning',
+                 'bg-blue-100 dark:bg-blue-900/40': modal.type === 'info' || modal.type === 'prompt',
+                 'bg-emerald-100 dark:bg-emerald-900/40': modal.type === 'success'
+               }">
+            <i :data-lucide="modal.icon" class="w-5 h-5"
+               :class="{
+                 'text-rose-600 dark:text-rose-400': modal.type === 'danger',
+                 'text-amber-600 dark:text-amber-400': modal.type === 'warning',
+                 'text-blue-600 dark:text-blue-400': modal.type === 'info' || modal.type === 'prompt',
+                 'text-emerald-600 dark:text-emerald-400': modal.type === 'success'
+               }"></i>
+          </div>
+          <div class="flex-1 min-w-0">
+            <h3 class="text-lg font-bold text-gray-900 dark:text-white" x-text="modal.title"></h3>
+            <p class="text-sm text-gray-600 dark:text-gray-400 mt-1" x-text="modal.message" x-show="modal.message"></p>
+          </div>
+        </div>
+        <div x-show="modal.type === 'prompt'" class="mt-2">
+          <input type="text" x-model="modal.value" x-ref="modalInput"
+                 @keydown.enter="modal.resolve(modal.value); modal.open = false"
+                 class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:bg-white dark:focus:bg-gray-800 focus:border-indigo-500">
+        </div>
+      </div>
+      <div class="px-6 py-3 bg-gray-50 dark:bg-gray-900/40 flex justify-end gap-2 border-t border-gray-200 dark:border-gray-700">
+        <button @click="modal.resolve(false); modal.open = false"
+                class="px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-700"
+                x-text="modal.cancelText"></button>
+        <button @click="modal.resolve(modal.type === 'prompt' ? modal.value : true); modal.open = false"
+                class="px-4 py-2 text-sm text-white rounded-lg font-medium"
+                :class="{
+                  'bg-rose-600 hover:bg-rose-700': modal.type === 'danger',
+                  'bg-amber-600 hover:bg-amber-700': modal.type === 'warning',
+                  'bg-indigo-600 hover:bg-indigo-700': modal.type === 'info' || modal.type === 'prompt',
+                  'bg-emerald-600 hover:bg-emerald-700': modal.type === 'success'
+                }"
+                x-text="modal.confirmText"></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('alpine:init', () => {
+    Alpine.data('appUi', () => ({
+      toasts: [],
+      modal: {
+        open: false, type: 'info', title: '', message: '',
+        confirmText: 'Confirmar', cancelText: 'Cancelar',
+        icon: 'info', value: '', resolve: () => {},
+      },
+      nextId: 1,
+      showToast(opts) {
+        const id = this.nextId++;
+        const t = {
+          id, visible: true,
+          type: opts.type || 'info',
+          title: opts.title || '',
+          message: opts.message || '',
+          icon: opts.icon || (
+            opts.type === 'success' ? 'check-circle' :
+            opts.type === 'error' ? 'x-circle' :
+            opts.type === 'warning' ? 'alert-triangle' : 'info'
+          ),
+        };
+        this.toasts.push(t);
+        this.$nextTick(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); });
+        setTimeout(() => this.dismissToast(id), opts.duration || 5000);
+      },
+      dismissToast(id) {
+        const t = this.toasts.find(x => x.id === id);
+        if (t) {
+          t.visible = false;
+          setTimeout(() => { this.toasts = this.toasts.filter(x => x.id !== id); }, 300);
+        }
+      },
+      async confirm(opts) {
+        return new Promise(resolve => {
+          this.modal = {
+            open: true,
+            type: opts.type || 'warning',
+            title: opts.title || 'Confirmar?',
+            message: opts.message || '',
+            confirmText: opts.confirmText || 'Confirmar',
+            cancelText: opts.cancelText || 'Cancelar',
+            icon: opts.icon || (opts.type === 'danger' ? 'alert-triangle' : 'help-circle'),
+            value: '', resolve,
+          };
+          this.$nextTick(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); });
+        });
+      },
+      async prompt(opts) {
+        return new Promise(resolve => {
+          this.modal = {
+            open: true, type: 'prompt',
+            title: opts.title || 'Inserir valor',
+            message: opts.message || '',
+            confirmText: opts.confirmText || 'OK',
+            cancelText: opts.cancelText || 'Cancelar',
+            icon: 'edit', value: opts.default || '', resolve,
+          };
+          this.$nextTick(() => {
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            if (this.$refs.modalInput) this.$refs.modalInput.focus();
+          });
+        });
+      },
+    }));
+
+    // Helpers globais (utilizados em qualquer página do portal)
+    window.appUi = () => Alpine.$data(document.querySelector('[x-data="appUi"]'));
+    window.toast = (opts) => window.appUi().showToast(opts);
+    window.confirmModal = (opts) => window.appUi().confirm(opts);
+    window.promptModal = (opts) => window.appUi().prompt(opts);
+  });
+</script>

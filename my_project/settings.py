@@ -107,6 +107,8 @@ INSTALLED_APPS = [
     "route_allocation",  # Atribuição de Rotas e Turnos
     # Analytics (Fase 2)
     "analytics",  # Métricas, Forecasting e Dashboards
+    # Contratos
+    "contracts",
 ]
 
 # Middleware
@@ -138,6 +140,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "drivers_app.context_processors.drivers_counts",
+                "drivers_app.context_processors.portal_layout",
                 "system_config.context_processors.map_config",
             ],
         },

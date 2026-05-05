@@ -2,12 +2,66 @@
 
 from . import views
 from . import backup_views
+from . import user_views
+from . import views_updates
 
 app_name = "system_config"
 
 urlpatterns = [
     path("", views.system_config_view, name="index"),
     path("save/", views.save_config, name="save"),
+
+    # ─── Atualização: changelog, sugestões e check do GitHub ───
+    path("atualizacao/", views_updates.updates_index, name="updates_index"),
+    path(
+        "atualizacao/changelog/guardar/",
+        views_updates.changelog_save,
+        name="changelog_save",
+    ),
+    path(
+        "atualizacao/changelog/<int:entry_id>/publicar/",
+        views_updates.changelog_publish,
+        name="changelog_publish",
+    ),
+    path(
+        "atualizacao/sugestao/criar/",
+        views_updates.suggestion_create,
+        name="suggestion_create",
+    ),
+    path(
+        "atualizacao/sugestao/<int:suggestion_id>/atualizar/",
+        views_updates.suggestion_update_status,
+        name="suggestion_update_status",
+    ),
+    path(
+        "atualizacao/github/configurar/",
+        views_updates.github_save_config,
+        name="github_save_config",
+    ),
+    path(
+        "atualizacao/verificar/",
+        views_updates.updates_check,
+        name="updates_check",
+    ),
+    path(
+        "atualizacao/aplicar/",
+        views_updates.updates_apply,
+        name="updates_apply",
+    ),
+    path(
+        "atualizacao/status/",
+        views_updates.updates_status,
+        name="updates_status",
+    ),
+
+    # ─── Gestão de Utilizadores ───
+    path("users/", user_views.user_list, name="user_list"),
+    path("users/create/", user_views.user_create, name="user_create"),
+    path("users/<int:pk>/edit/", user_views.user_edit, name="user_edit"),
+    path("users/<int:pk>/delete/", user_views.user_delete, name="user_delete"),
+    path("users/<int:pk>/toggle-active/", user_views.user_toggle_active, name="user_toggle_active"),
+    path("users/<int:pk>/reset-password/", user_views.user_reset_password, name="user_reset_password"),
+
     path("whatsapp/", views.whatsapp_dashboard, name="whatsapp_dashboard"),
     path(
         "whatsapp/start/",

@@ -201,3 +201,251 @@ def send_not_arrived_weekly_report():
     except Exception as e:
         logger.exception("[NotArrivedWeekly] erro: %s", e)
         return {"sent": False, "reason": str(e)}
+
+
+@shared_task(name="settlements.roll_forward_active_packages")
+def roll_forward_active_packages(threshold_days=None, dry_run=False):
+    """Move pacotes Driver_received "vivos" (com Task Date < hoje, mas
+    dentro do threshold) para a data de HOJE.
+
+    Reflecte realidade operacional: pacote que está com driver há 1-7 dias
+    sem entrega ainda está em rota. Cainiao não regista uma "ainda comigo"
+    diariamente, então fazemos o roll-forward para o pacote aparecer no
+    relatório do dia actual como activo.
+
+    Pacotes Driver_received há mais de threshold_days vão para
+    `mark_stale_armazem` (gestão separada).
+
+    Args:
+        threshold_days: pacotes com data >= hoje - threshold_days são
+                        considerados activos. Default: settings.CAINIAO_ROLLFORWARD_DAYS (7).
+        dry_run: se True, apenas conta sem alterar.
+
+    Returns:
+        dict com {rolled, deleted_duplicate, today, threshold_days}
+    """
+    from datetime import timedelta
+    from django.conf import settings as dj_settings
+    from django.db import transaction
+    from django.utils import timezone
+    from .models import (
+        CainiaoOperationTask, CainiaoOperationTaskHistory,
+    )
+
+    if threshold_days is None:
+        threshold_days = getattr(dj_settings, "CAINIAO_ROLLFORWARD_DAYS", 7)
+    threshold_days = int(threshold_days)
+
+    today = timezone.now().date()
+    cutoff_old = today - timedelta(days=threshold_days)
+
+    # Pacotes Driver_received com task_date < hoje E data >= hoje - threshold.
+    # Excluímos hoje (já estão lá) e datas muito antigas (vão para stale).
+    qs = CainiaoOperationTask.objects.filter(
+        task_status="Driver_received",
+        task_date__lt=today,
+        task_date__gte=cutoff_old,
+    )
+
+    total = qs.count()
+    if total == 0:
+        logger.info(
+            "[RollForward] sem pacotes activos a mover (today=%s, cutoff=%s).",
+            today, cutoff_old,
+        )
+        return {
+            "rolled": 0, "today": str(today),
+            "threshold_days": threshold_days, "dry_run": dry_run,
+        }
+
+    if dry_run:
+        from collections import Counter
+        breakdown = Counter(qs.values_list("task_date", "courier_name"))
+        return {
+            "rolled": 0, "would_roll": total,
+            "today": str(today),
+            "threshold_days": threshold_days,
+            "dry_run": True,
+            "by_date_courier": [
+                {"task_date": str(d), "courier": c, "count": n}
+                for (d, c), n in breakdown.most_common(50)
+            ],
+        }
+
+    # Recolher info para criar history entries antes do UPDATE/DELETE
+    rows = list(qs.values(
+        "id", "waybill_number", "task_date", "task_status", "courier_name",
+        "courier_id_cainiao",
+    ))
+
+    # Conflitos: se waybill já existe em HOJE, não duplicar — apaga a row de ontem
+    today_waybills_existing = set(
+        CainiaoOperationTask.objects.filter(
+            task_date=today,
+            waybill_number__in=[r["waybill_number"] for r in rows],
+        ).values_list("waybill_number", flat=True)
+    )
+    rows_to_move = [r for r in rows if r["waybill_number"] not in today_waybills_existing]
+    rows_to_delete = [r for r in rows if r["waybill_number"] in today_waybills_existing]
+
+    # History entries (preserva timeline)
+    history_objs = [
+        CainiaoOperationTaskHistory(
+            waybill_number=r["waybill_number"],
+            task_date=today,
+            task_status=r["task_status"],
+            courier_name=r["courier_name"],
+            courier_id_cainiao=r["courier_id_cainiao"],
+            previous_task_date=r["task_date"],
+            previous_task_status=r["task_status"],
+            previous_courier_name=r["courier_name"],
+            change_type="rolled_forward",
+            event_timestamp=None,
+            batch=None,
+        )
+        for r in rows_to_move
+    ]
+
+    with transaction.atomic():
+        if history_objs:
+            CainiaoOperationTaskHistory.objects.bulk_create(
+                history_objs, batch_size=1000,
+            )
+        if rows_to_move:
+            CainiaoOperationTask.objects.filter(
+                id__in=[r["id"] for r in rows_to_move]
+            ).update(task_date=today)
+        if rows_to_delete:
+            CainiaoOperationTask.objects.filter(
+                id__in=[r["id"] for r in rows_to_delete]
+            ).delete()
+
+    logger.info(
+        "[RollForward] %d pacotes movidos para hoje (%s); "
+        "%d duplicados apagados (já existiam em hoje); threshold=%d dias.",
+        len(rows_to_move), today, len(rows_to_delete), threshold_days,
+    )
+
+    return {
+        "rolled": len(rows_to_move),
+        "deleted_duplicate": len(rows_to_delete),
+        "today": str(today),
+        "threshold_days": threshold_days,
+        "history_created": len(history_objs),
+        "dry_run": False,
+    }
+
+
+@shared_task(name="settlements.mark_stale_armazem")
+def mark_stale_armazem(threshold_days=None, dry_run=False):
+    """Marca pacotes 'esquecidos' no armazém (placeholder courier) com
+    status `Driver_received` há mais de N dias como `Stale_Armazem`.
+
+    Reflecte a realidade: a Cainiao geralmente já reciclou esses pacotes
+    (entrega bem-sucedida posterior, devolução, ou cancelamento), mas as
+    planilhas que recebemos não voltam a trazer essas waybills, deixando
+    o nosso BD com snapshots stale.
+
+    Args:
+        threshold_days: dias após os quais um waybill é considerado stale.
+                        Default = settings.CAINIAO_STALE_DAYS (fallback 5).
+        dry_run: se True, apenas conta sem alterar.
+
+    Cria entry no CainiaoOperationTaskHistory para cada waybill afectado
+    (change_type='stale_cleanup') — preserva timeline.
+
+    Returns:
+        dict com {marked, threshold_days, dry_run, by_date_courier}
+    """
+    from datetime import timedelta
+    from django.conf import settings as dj_settings
+    from django.utils import timezone
+    from .models import (
+        CainiaoOperationTask, CainiaoOperationTaskHistory,
+    )
+
+    if threshold_days is None:
+        threshold_days = getattr(dj_settings, "CAINIAO_STALE_DAYS", 7)
+    threshold_days = int(threshold_days)
+
+    cutoff = timezone.now().date() - timedelta(days=threshold_days)
+
+    # Pacotes "esquecidos" — qualquer courier com Driver_received há mais
+    # de threshold_days. A regra do operador: pacotes activos recentes
+    # (1-7 dias) são movidos para hoje pelo roll_forward; os mais antigos
+    # provavelmente foram entregues/perdidos sem o Cainiao actualizar.
+    qs = CainiaoOperationTask.objects.filter(
+        task_status="Driver_received",
+        task_date__lte=cutoff,
+    )
+
+    total = qs.count()
+    if total == 0:
+        logger.info(
+            "[StaleArmazem] sem pacotes stale a marcar (cutoff=%s).",
+            cutoff,
+        )
+        return {
+            "marked": 0, "threshold_days": threshold_days,
+            "dry_run": dry_run, "cutoff": str(cutoff),
+        }
+
+    if dry_run:
+        # Distribuição p/ inspecção
+        from collections import Counter
+        breakdown = Counter(
+            qs.values_list("task_date", "courier_name")
+        )
+        logger.info(
+            "[StaleArmazem] DRY-RUN: marcaria %d pacotes (cutoff=%s).",
+            total, cutoff,
+        )
+        return {
+            "marked": 0, "would_mark": total,
+            "threshold_days": threshold_days,
+            "dry_run": True, "cutoff": str(cutoff),
+            "by_date_courier": [
+                {"task_date": str(d), "courier": c, "count": n}
+                for (d, c), n in breakdown.most_common(50)
+            ],
+        }
+
+    # Recolher info para criar history entries antes do UPDATE
+    rows = list(qs.values(
+        "id", "waybill_number", "task_date", "task_status", "courier_name",
+        "courier_id_cainiao",
+    ))
+    history_objs = [
+        CainiaoOperationTaskHistory(
+            waybill_number=r["waybill_number"],
+            task_date=r["task_date"],
+            task_status="Stale_Armazem",
+            courier_name=r["courier_name"],
+            courier_id_cainiao=r["courier_id_cainiao"],
+            previous_task_date=r["task_date"],
+            previous_task_status=r["task_status"],
+            previous_courier_name=r["courier_name"],
+            change_type="stale_cleanup",
+            event_timestamp=None,
+            batch=None,
+        )
+        for r in rows
+    ]
+    CainiaoOperationTaskHistory.objects.bulk_create(history_objs, batch_size=1000)
+
+    # UPDATE em massa — só toca em task_status (preserva courier/data)
+    updated = qs.update(task_status="Stale_Armazem")
+
+    logger.info(
+        "[StaleArmazem] marcados %d pacotes como Stale_Armazem "
+        "(cutoff=%s, threshold=%d dias).",
+        updated, cutoff, threshold_days,
+    )
+
+    return {
+        "marked": updated,
+        "threshold_days": threshold_days,
+        "dry_run": False,
+        "cutoff": str(cutoff),
+        "history_created": len(history_objs),
+    }

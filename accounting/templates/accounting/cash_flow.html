@@ -2,6 +2,7 @@
 {% load static %}
 {% block title %}Projecção de Fluxo de Caixa{% endblock %}
 {% block content %}
+{% include 'accounting/_analysis_tabs.html' with current='cash_flow' %}
 <style>
   .num { font-family:monospace; }
   .pos { color:#059669; }

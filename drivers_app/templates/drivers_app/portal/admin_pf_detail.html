@@ -1,0 +1,539 @@
+{% extends 'drivers_app/portal/_base.html' %}
+
+{% block portal_content %}
+
+{# Header da PF #}
+<div class="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-2xl p-6 text-white shadow-lg mb-4">
+  <div class="flex items-center justify-between flex-wrap gap-3">
+    <div class="flex items-center gap-3">
+      <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+        <i data-lucide="receipt" class="w-6 h-6"></i>
+      </div>
+      <div>
+        <p class="font-mono text-sm text-indigo-100">{{ pf.numero }} · {{ linhas.count }} parceiro{{ linhas.count|pluralize:"s" }}</p>
+        <p class="text-2xl font-extrabold">{{ pf.periodo_inicio|date:"d/m/Y" }} → {{ pf.periodo_fim|date:"d/m/Y" }}</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <span class="px-3 py-1 rounded-lg text-xs font-bold uppercase bg-white/20 backdrop-blur-sm">
+        {{ pf.get_status_display }}
+      </span>
+      <a href="{% url 'drivers_app:driver_portal_invoices' driver.id %}"
+         class="px-3 py-2 bg-white/15 hover:bg-white/25 backdrop-blur-sm rounded-lg text-sm font-medium inline-flex items-center gap-1.5">
+        <i data-lucide="arrow-left" class="w-4 h-4"></i> Voltar
+      </a>
+    </div>
+  </div>
+</div>
+
+{# Cards KPIs financeiros #}
+<div class="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
+  <div class="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 border border-amber-200/50 dark:border-amber-700/30">
+    <p class="text-xs uppercase font-bold text-amber-700 dark:text-amber-300">Base Entregas</p>
+    <p class="text-xs text-amber-700 dark:text-amber-400 mt-0.5">{{ linhas.count }} linha{{ linhas.count|pluralize:"s" }}</p>
+    <p class="text-2xl font-extrabold text-amber-700 dark:text-amber-300 mt-1">€ {{ pf.base_entregas|floatformat:2 }}</p>
+  </div>
+  <div class="bg-rose-50 dark:bg-rose-900/20 rounded-xl p-4 border border-rose-200/50 dark:border-rose-700/30">
+    <p class="text-xs uppercase font-bold text-rose-700 dark:text-rose-300">Bónus Dom/Feriado</p>
+    <p class="text-xs text-rose-700 dark:text-rose-400 mt-0.5">{{ bonus|length }} bónus</p>
+    <p class="text-2xl font-extrabold text-rose-700 dark:text-rose-300 mt-1">€ {{ pf.total_bonus|default:"0.00"|floatformat:2 }}</p>
+  </div>
+  <div class="bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl p-4 text-white shadow">
+    <p class="text-xs uppercase font-bold text-emerald-100">Total a Receber</p>
+    <p class="text-3xl font-extrabold mt-1">€ {{ pf.total_a_receber|floatformat:2 }}</p>
+  </div>
+  <div class="bg-rose-50 dark:bg-rose-900/20 rounded-xl p-4 border border-rose-200/50 dark:border-rose-700/30">
+    <p class="text-xs uppercase font-bold text-rose-700 dark:text-rose-300">Pacotes Perdidos</p>
+    <p class="text-xs text-rose-700 dark:text-rose-400 mt-0.5">{{ lost_packages|length }} pacotes</p>
+    <p class="text-2xl font-extrabold text-rose-700 dark:text-rose-300 mt-1">- € {{ pf.total_pacotes_perdidos|default:"0.00"|floatformat:2 }}</p>
+  </div>
+  <div class="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 border border-amber-200/50 dark:border-amber-700/30">
+    <p class="text-xs uppercase font-bold text-amber-700 dark:text-amber-300">Adiantamentos</p>
+    <p class="text-xs text-amber-700 dark:text-amber-400 mt-0.5">{{ advances|length }} lançamentos</p>
+    <p class="text-2xl font-extrabold text-amber-700 dark:text-amber-300 mt-1">- € {{ pf.total_adiantamentos|default:"0.00"|floatformat:2 }}</p>
+  </div>
+  <div class="bg-rose-50 dark:bg-rose-900/20 rounded-xl p-4 border border-rose-200/50 dark:border-rose-700/30">
+    <p class="text-xs uppercase font-bold text-rose-700 dark:text-rose-300">Penalizações</p>
+    <p class="text-2xl font-extrabold text-rose-700 dark:text-rose-300 mt-1">- € {{ pf.penalizacoes_gerais|default:"0.00"|floatformat:2 }}</p>
+  </div>
+</div>
+
+{# Acções rápidas #}
+<div class="bg-white dark:bg-gray-800 rounded-xl p-3 border border-gray-200/50 dark:border-gray-700/50 shadow-sm mb-4 flex flex-wrap items-center gap-2">
+  <button onclick="recalcularPF()"
+          class="px-3 py-2 text-xs bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium inline-flex items-center gap-1.5">
+    <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Recalcular
+  </button>
+  <a href="/settlements/pre-invoices/{{ pf.id }}/pdf/" target="_blank"
+     class="px-3 py-2 text-xs bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-medium inline-flex items-center gap-1.5">
+    <i data-lucide="file-down" class="w-3.5 h-3.5"></i> PDF
+  </a>
+  <button onclick="enviarWhatsapp()"
+          class="px-3 py-2 text-xs bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium inline-flex items-center gap-1.5">
+    <i data-lucide="message-circle" class="w-3.5 h-3.5"></i> Enviar WhatsApp
+  </button>
+  <button onclick="alterarStatus()"
+          class="px-3 py-2 text-xs border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg font-medium inline-flex items-center gap-1.5">
+    <i data-lucide="check-circle" class="w-3.5 h-3.5"></i> Mudar Estado
+  </button>
+  <button onclick="apagarPF()"
+          class="px-3 py-2 text-xs bg-rose-50 dark:bg-rose-900/20 text-rose-700 dark:text-rose-300 hover:bg-rose-100 rounded-lg font-medium inline-flex items-center gap-1.5 ml-auto">
+    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Eliminar PF
+  </button>
+</div>
+
+{# ─── Linhas de Trabalho por Parceiro ─── #}
+<div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden mb-4">
+  <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
+    <i data-lucide="layers" class="w-5 h-5 text-indigo-500"></i>
+    <h3 class="font-bold text-gray-900 dark:text-white">Linhas de Trabalho por Parceiro</h3>
+    <button onclick="addLinha()"
+            class="ml-auto px-3 py-1.5 text-xs bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium inline-flex items-center gap-1.5">
+      <i data-lucide="plus" class="w-3.5 h-3.5"></i> Adicionar
+    </button>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="w-full">
+      <thead class="bg-gray-50 dark:bg-gray-900/40">
+        <tr>
+          <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Parceiro</th>
+          <th class="px-4 py-2 text-right text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Pacotes</th>
+          <th class="px-4 py-2 text-right text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Taxa €</th>
+          <th class="px-4 py-2 text-right text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">DSR %</th>
+          <th class="px-4 py-2 text-right text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Base €</th>
+          <th class="px-4 py-2 w-20"></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+        {% for l in linhas %}
+        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+          <td class="px-4 py-2">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="inline-flex items-center px-2 py-1 rounded text-xs font-bold bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300">
+                {{ l.parceiro.name }}
+              </span>
+              {% if l.is_transfer %}
+                {# ─── Linha de transferências recebidas ─── #}
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300">
+                  <i data-lucide="arrow-right-left" class="w-3 h-3"></i>
+                  Transferências recebidas
+                </span>
+                {% if l.transfer_origins %}
+                  <div class="text-[11px] text-gray-500 dark:text-gray-400 ml-2">
+                    de:
+                    {% for origin, count in l.transfer_origins %}
+                      <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 ml-1">
+                        <span class="font-semibold">{{ origin }}</span>
+                        <span class="text-gray-500">({{ count }})</span>
+                      </span>
+                    {% endfor %}
+                  </div>
+                {% endif %}
+              {% else %}
+                {% if l.display_name %}
+                  <span class="text-xs font-semibold text-gray-700 dark:text-gray-300">{{ l.display_name }}</span>
+                {% endif %}
+                {% if l.courier_id and l.courier_id != l.display_name %}
+                  <span class="text-[11px] font-mono text-gray-500 dark:text-gray-400">· {{ l.courier_id }}</span>
+                {% endif %}
+              {% endif %}
+            </div>
+          </td>
+          <td class="px-4 py-2 text-right text-sm font-bold text-gray-900 dark:text-white">{{ l.total_pacotes }}</td>
+          <td class="px-4 py-2 text-right text-sm text-gray-700 dark:text-gray-300">{{ l.taxa_por_entrega|floatformat:2 }}</td>
+          <td class="px-4 py-2 text-right text-sm text-gray-700 dark:text-gray-300">{{ l.dsr_percentual|default:"0.0"|floatformat:1 }}%</td>
+          <td class="px-4 py-2 text-right text-sm font-bold text-blue-600">€ {{ l.base_entregas|floatformat:2 }}</td>
+          <td class="px-4 py-2 text-right whitespace-nowrap">
+            <button onclick="editLinha({{ l.id }}, {{ l.total_pacotes }}, '{{ l.taxa_por_entrega|stringformat:'.4f' }}', '{{ l.dsr_percentual|default:0|stringformat:'.2f' }}')"
+                    title="Editar"
+                    class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-600 dark:text-gray-400 hover:text-blue-600 inline-flex">
+              <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+            </button>
+            <button onclick="deleteLinha({{ l.id }})"
+                    title="Eliminar"
+                    class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-600 dark:text-gray-400 hover:text-rose-600 inline-flex">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+            </button>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="px-4 py-6 text-center text-sm text-gray-500 italic">Sem linhas registadas.</td></tr>
+        {% endfor %}
+      </tbody>
+      {% if linhas %}
+      <tfoot class="bg-indigo-50 dark:bg-indigo-900/20">
+        <tr>
+          <td colspan="4" class="px-4 py-2 text-right text-xs font-bold text-indigo-700 dark:text-indigo-300 uppercase">Total Base Entregas</td>
+          <td colspan="2" class="px-4 py-2 text-right text-sm font-extrabold text-indigo-700 dark:text-indigo-300">€ {{ pf.base_entregas|floatformat:2 }}</td>
+        </tr>
+      </tfoot>
+      {% endif %}
+    </table>
+  </div>
+</div>
+
+{# ─── Bónus Dom/Feriado ─── #}
+<div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden mb-4">
+  <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
+    <i data-lucide="gift" class="w-5 h-5 text-rose-500"></i>
+    <h3 class="font-bold text-gray-900 dark:text-white">Bonificações Domingo/Feriado</h3>
+    <span class="text-xs text-gray-500">({{ bonus|length }} entradas · €{{ pf.total_bonus|default:"0.00"|floatformat:2 }})</span>
+    <button onclick="addBonus()"
+            class="ml-auto px-3 py-1.5 text-xs bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-medium inline-flex items-center gap-1.5">
+      <i data-lucide="plus" class="w-3.5 h-3.5"></i> Adicionar
+    </button>
+  </div>
+  <div class="divide-y divide-gray-100 dark:divide-gray-700">
+    {% for b in bonus %}
+    <div class="px-5 py-3 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-700/30">
+      <span class="font-mono text-sm font-bold text-gray-900 dark:text-white w-24">{{ b.data|date:"d/m/Y" }}</span>
+      <span class="px-2 py-0.5 rounded text-xs font-semibold w-32
+        {% if b.tipo == 'DOMINGO' %}bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-300
+        {% elif b.tipo == 'FERIADO_NACIONAL' or b.tipo == 'FERIADO' %}bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300
+        {% else %}bg-gray-100 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300{% endif %}">
+        {{ b.get_tipo_display|default:b.tipo }}
+      </span>
+      <span class="text-sm text-gray-700 dark:text-gray-300">{{ b.qtd_entregas_elegiveis }} entregas</span>
+      {% if b.observacoes %}
+      <span class="text-xs italic text-gray-500 truncate">{{ b.observacoes }}</span>
+      {% endif %}
+      <span class="ml-auto font-bold text-rose-600">+ € {{ b.bonus_calculado|floatformat:2 }}</span>
+      <button onclick="deleteBonus({{ b.id }})"
+              class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-600 dark:text-gray-400 hover:text-rose-600">
+        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+      </button>
+    </div>
+    {% empty %}
+    <p class="px-5 py-6 text-center text-sm text-gray-500 italic">Sem bonificações.</p>
+    {% endfor %}
+  </div>
+</div>
+
+{# ─── Pacotes Perdidos ─── #}
+<div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden mb-4">
+  <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
+    <i data-lucide="package-x" class="w-5 h-5 text-rose-500"></i>
+    <h3 class="font-bold text-gray-900 dark:text-white">Pacotes Perdidos</h3>
+    <span class="text-xs text-gray-500">({{ lost_packages|length }} · €{{ pf.total_pacotes_perdidos|default:"0.00"|floatformat:2 }})</span>
+    <button onclick="addLostPackage()"
+            class="ml-auto px-3 py-1.5 text-xs bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-medium inline-flex items-center gap-1.5">
+      <i data-lucide="plus" class="w-3.5 h-3.5"></i> Adicionar
+    </button>
+  </div>
+  <div class="divide-y divide-gray-100 dark:divide-gray-700">
+    {% for p in lost_packages %}
+    <div class="px-5 py-3 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-700/30">
+      <span class="font-mono text-sm text-gray-900 dark:text-white w-24">{{ p.data|date:"d/m/Y" }}</span>
+      <span class="font-mono text-xs text-gray-700 dark:text-gray-300">{{ p.numero_pacote }}</span>
+      <span class="text-sm text-gray-700 dark:text-gray-300 flex-1 truncate">{{ p.descricao|default:"—" }}</span>
+      <span class="font-bold text-rose-600">- € {{ p.valor|floatformat:2 }}</span>
+      <button onclick="deleteLostPackage({{ p.id }})"
+              class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-600 dark:text-gray-400 hover:text-rose-600">
+        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+      </button>
+    </div>
+    {% empty %}
+    <p class="px-5 py-6 text-center text-sm text-gray-500 italic">Sem pacotes perdidos.</p>
+    {% endfor %}
+  </div>
+</div>
+
+{# ─── Adiantamentos Incluídos ─── #}
+<div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden mb-4">
+  <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
+    <i data-lucide="wallet" class="w-5 h-5 text-amber-500"></i>
+    <h3 class="font-bold text-gray-900 dark:text-white">Adiantamentos Incluídos</h3>
+    <span class="text-xs text-gray-500">({{ advances|length }} · €{{ pf.total_adiantamentos|default:"0.00"|floatformat:2 }})</span>
+    <button onclick="addAdvance()"
+            class="ml-auto px-3 py-1.5 text-xs bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-medium inline-flex items-center gap-1.5">
+      <i data-lucide="plus" class="w-3.5 h-3.5"></i> Adicionar
+    </button>
+  </div>
+  <div class="divide-y divide-gray-100 dark:divide-gray-700">
+    {% for a in advances %}
+    <div class="px-5 py-3 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-700/30">
+      <span class="font-mono text-sm text-gray-900 dark:text-white w-24">{{ a.data|date:"d/m/Y" }}</span>
+      <span class="px-2 py-0.5 rounded text-[11px] font-semibold w-32
+        {% if a.tipo == 'COMBUSTIVEL' %}bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300
+        {% elif a.tipo == 'ABASTECIMENTO' %}bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300
+        {% else %}bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300{% endif %}">
+        {{ a.get_tipo_display }}
+      </span>
+      <span class="text-sm text-gray-700 dark:text-gray-300 flex-1 truncate">{{ a.descricao|default:"—" }}</span>
+      <span class="font-bold text-amber-700">- € {{ a.valor|floatformat:2 }}</span>
+      <button onclick="deleteAdvance({{ a.id }})"
+              class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-600 dark:text-gray-400 hover:text-rose-600">
+        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+      </button>
+    </div>
+    {% empty %}
+    <p class="px-5 py-6 text-center text-sm text-gray-500 italic">Sem adiantamentos.</p>
+    {% endfor %}
+  </div>
+</div>
+
+{# ─── Dados Gerais (editáveis) ─── #}
+<form onsubmit="event.preventDefault(); guardarDadosGerais();"
+      class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
+  <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
+    <i data-lucide="settings" class="w-5 h-5 text-gray-500"></i>
+    <h3 class="font-bold text-gray-900 dark:text-white">Dados Gerais</h3>
+    <button type="submit" class="ml-auto px-3 py-1.5 text-xs bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium inline-flex items-center gap-1.5">
+      <i data-lucide="save" class="w-3.5 h-3.5"></i> Guardar
+    </button>
+  </div>
+  <div class="p-5 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+    <div>
+      <label class="block text-xs text-gray-500 dark:text-gray-400 uppercase font-bold mb-1">Ajuste Manual (€)</label>
+      <input type="number" step="0.01" name="ajuste_manual" id="dg-ajuste"
+             value="{{ pf.ajuste_manual|default:0|stringformat:'.2f' }}"
+             class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
+    </div>
+    <div>
+      <label class="block text-xs text-gray-500 dark:text-gray-400 uppercase font-bold mb-1">Penalizações Gerais (€)</label>
+      <input type="number" step="0.01" name="penalizacoes_gerais" id="dg-penalizacoes"
+             value="{{ pf.penalizacoes_gerais|default:0|stringformat:'.2f' }}"
+             class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
+    </div>
+    <div>
+      <label class="block text-xs text-gray-500 dark:text-gray-400 uppercase font-bold mb-1">Status</label>
+      <select name="status" id="dg-status"
+              class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
+        {% for v, l in pf.STATUS_CHOICES %}
+          <option value="{{ v }}" {% if pf.status == v %}selected{% endif %}>{{ l }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="block text-xs text-gray-500 dark:text-gray-400 uppercase font-bold mb-1">Ref. Pagamento</label>
+      <input type="text" name="referencia_pagamento" id="dg-ref" maxlength="100"
+             value="{{ pf.referencia_pagamento }}"
+             placeholder="Ex: TR-2026-0123"
+             class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
+    </div>
+    <div>
+      <label class="block text-xs text-gray-500 dark:text-gray-400 uppercase font-bold mb-1">Data de Pagamento</label>
+      <input type="date" name="data_pagamento" id="dg-datapag"
+             value="{{ pf.data_pagamento|date:'Y-m-d' }}"
+             class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
+    </div>
+    <div>
+      <label class="block text-xs text-gray-500 dark:text-gray-400 uppercase font-bold mb-1">Comprovativo</label>
+      {% if pf.comprovante_pagamento %}
+        <a href="{{ pf.comprovante_pagamento.url }}" target="_blank"
+           class="text-sm text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1">
+          <i data-lucide="paperclip" class="w-3.5 h-3.5"></i> Ver anexo
+        </a>
+      {% else %}
+        <span class="text-xs text-gray-500 italic">Sem anexo (use Admin Django para upload)</span>
+      {% endif %}
+    </div>
+    <div class="md:col-span-2">
+      <label class="block text-xs text-gray-500 dark:text-gray-400 uppercase font-bold mb-1">Observações</label>
+      <textarea name="observacoes" id="dg-obs" rows="2"
+                class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">{{ pf.observacoes }}</textarea>
+    </div>
+  </div>
+</form>
+
+<script>
+const PF_ID = {{ pf.id }};
+const DRIVER_ID = {{ driver.id }};
+const PARTNERS = [
+  {% for p in partners %}{ id: {{ p.id }}, name: "{{ p.name|escapejs }}" }{% if not forloop.last %},{% endif %}{% endfor %}
+];
+
+function _csrf() {
+  return document.cookie.split('csrftoken=')[1]?.split(';')[0] || '';
+}
+
+async function _post(url, data) {
+  const r = await fetch(url, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': _csrf(), 'Content-Type': 'application/json' },
+    body: data ? JSON.stringify(data) : '{}',
+  });
+  return r.json();
+}
+
+async function recalcularPF() {
+  const ok = await window.confirmModal({
+    type: 'info', title: 'Recalcular pré-fatura?',
+    message: 'Bónus, totais e linhas serão actualizados.',
+    confirmText: 'Recalcular', icon: 'refresh-cw',
+  });
+  if (!ok) return;
+  const d = await _post(`/settlements/pre-invoices/${PF_ID}/recalculate/`);
+  if (d.success) { window.toast({type:'success', message:'Recalculada.'}); setTimeout(()=>location.reload(), 600); }
+  else window.toast({type:'error', message: d.error || 'Erro'});
+}
+
+async function enviarWhatsapp() {
+  const ok = await window.confirmModal({
+    type: 'success', title: 'Enviar WhatsApp?',
+    message: 'PDF + resumo será enviado ao motorista.',
+    confirmText: 'Enviar', icon: 'message-circle',
+  });
+  if (!ok) return;
+  const d = await _post(`/settlements/pre-invoices/${PF_ID}/send-whatsapp/`);
+  if (d.success) window.toast({type:'success', message:'Enviado!'});
+  else window.toast({type:'error', message: d.error || 'Erro'});
+}
+
+async function alterarStatus() {
+  const novo = await window.promptModal({
+    title: 'Mudar estado da PF',
+    message: 'RASCUNHO / CALCULADO / APROVADO / PENDENTE / PAGO / CONTESTADO / REPROVADO',
+    default: '{{ pf.status }}',
+  });
+  if (!novo) return;
+  const d = await _post(`/settlements/pre-invoices/${PF_ID}/admin/change-status/`, { status: String(novo).trim().toUpperCase() });
+  if (d.success) { window.toast({type:'success', message:'Estado actualizado.'}); setTimeout(()=>location.reload(), 600); }
+  else window.toast({type:'error', message: d.error || 'Erro'});
+}
+
+async function apagarPF() {
+  const ok = await window.confirmModal({
+    type: 'danger', title: 'Eliminar PF {{ pf.numero }}?',
+    message: 'Esta acção não pode ser desfeita.',
+    confirmText: 'Eliminar', icon: 'trash-2',
+  });
+  if (!ok) return;
+  const d = await _post(`/settlements/pre-invoices/${PF_ID}/delete/`);
+  if (d.success) {
+    window.toast({type:'success', message:'PF eliminada.'});
+    setTimeout(() => { window.location.href = `/driversapp/portal/${DRIVER_ID}/faturas/`; }, 600);
+  } else window.toast({type:'error', message: d.error || 'Erro'});
+}
+
+// ─── Linhas ───
+async function addLinha() {
+  const opts = PARTNERS.map(p => `${p.id}=${p.name}`).join(', ');
+  const partnerId = await window.promptModal({title:'Parceiro (id)', message: opts});
+  if (!partnerId) return;
+  const courierId = await window.promptModal({title:'Courier ID (opcional)', default:''});
+  const totalPacotes = await window.promptModal({title:'Total de pacotes', default:'0'});
+  if (!totalPacotes) return;
+  const taxa = await window.promptModal({title:'Taxa por entrega (€)', default:'1.00'});
+  if (!taxa) return;
+  const dsr = await window.promptModal({title:'DSR % (0 se não aplicável)', default:'0'});
+  const d = await _post(`/settlements/pre-invoices/${PF_ID}/linhas/add/`, {
+    parceiro_id: parseInt(partnerId),
+    courier_id: courierId || '',
+    total_pacotes: parseInt(totalPacotes),
+    taxa_por_entrega: parseFloat(taxa),
+    dsr_percentual: parseFloat(dsr || 0),
+  });
+  if (d.success) { window.toast({type:'success', message:'Linha adicionada.'}); setTimeout(()=>location.reload(), 600); }
+  else window.toast({type:'error', message: d.error || 'Erro'});
+}
+
+async function editLinha(id, totalPacotes, taxa, dsr) {
+  const newTotal = await window.promptModal({title:'Pacotes', default: String(totalPacotes)});
+  if (!newTotal) return;
+  const newTaxa = await window.promptModal({title:'Taxa €', default: String(taxa)});
+  if (!newTaxa) return;
+  const newDsr = await window.promptModal({title:'DSR %', default: String(dsr)});
+  const d = await _post(`/settlements/pre-invoices/${PF_ID}/linhas/${id}/update/`, {
+    total_pacotes: parseInt(newTotal),
+    taxa_por_entrega: parseFloat(newTaxa),
+    dsr_percentual: parseFloat(newDsr || 0),
+  });
+  if (d.success) { window.toast({type:'success', message:'Linha actualizada.'}); setTimeout(()=>location.reload(), 600); }
+  else window.toast({type:'error', message: d.error || 'Erro'});
+}
+
+async function deleteLinha(id) {
+  const ok = await window.confirmModal({type:'danger', title:'Eliminar linha?'});
+  if (!ok) return;
+  const d = await _post(`/settlements/pre-invoices/${PF_ID}/linhas/${id}/delete/`);
+  if (d.success) { window.toast({type:'success', message:'Linha eliminada.'}); setTimeout(()=>location.reload(), 600); }
+  else window.toast({type:'error', message: d.error || 'Erro'});
+}
+
+// ─── Bónus ───
+async function addBonus() {
+  const data = await window.promptModal({title:'Data (YYYY-MM-DD)', default: new Date().toISOString().slice(0,10)});
+  if (!data) return;
+  const tipo = await window.promptModal({title:'Tipo', default:'DOMINGO', message:'DOMINGO ou FERIADO_NACIONAL'});
+  if (!tipo) return;
+  const qtd = await window.promptModal({title:'Quantidade entregas', default:'30'});
+  if (!qtd) return;
+  const valor = await window.promptModal({title:'Bónus calculado €', default:'50.00'});
+  if (!valor) return;
+  const d = await _post(`/settlements/pre-invoices/${PF_ID}/bonus/add/`, {
+    data, tipo: tipo.toUpperCase(),
+    qtd_entregas_elegiveis: parseInt(qtd),
+    bonus_calculado: parseFloat(valor),
+  });
+  if (d.success) { window.toast({type:'success', message:'Bónus adicionado.'}); setTimeout(()=>location.reload(), 600); }
+  else window.toast({type:'error', message: d.error || 'Erro'});
+}
+
+async function deleteBonus(id) {
+  const ok = await window.confirmModal({type:'danger', title:'Eliminar bónus?'});
+  if (!ok) return;
+  const d = await _post(`/settlements/pre-invoices/${PF_ID}/bonus/${id}/delete/`);
+  if (d.success) { window.toast({type:'success', message:'Bónus eliminado.'}); setTimeout(()=>location.reload(), 600); }
+  else window.toast({type:'error', message: d.error || 'Erro'});
+}
+
+// ─── Pacotes Perdidos ───
+async function addLostPackage() {
+  const data = await window.promptModal({title:'Data (YYYY-MM-DD)', default: new Date().toISOString().slice(0,10)});
+  if (!data) return;
+  const numero = await window.promptModal({title:'Nº Pacote'});
+  if (!numero) return;
+  const desc = await window.promptModal({title:'Descrição', default: ''});
+  const valor = await window.promptModal({title:'Valor €', default:'10.00'});
+  if (!valor) return;
+  const d = await _post(`/settlements/pre-invoices/${PF_ID}/lost/add/`, {
+    data, numero_pacote: numero, descricao: desc || '',
+    valor: parseFloat(valor),
+  });
+  if (d.success) { window.toast({type:'success', message:'Pacote perdido adicionado.'}); setTimeout(()=>location.reload(), 600); }
+  else window.toast({type:'error', message: d.error || 'Erro'});
+}
+
+async function deleteLostPackage(id) {
+  const ok = await window.confirmModal({type:'danger', title:'Eliminar pacote perdido?'});
+  if (!ok) return;
+  const d = await _post(`/settlements/pre-invoices/${PF_ID}/lost/${id}/delete/`);
+  if (d.success) { window.toast({type:'success', message:'Eliminado.'}); setTimeout(()=>location.reload(), 600); }
+  else window.toast({type:'error', message: d.error || 'Erro'});
+}
+
+// ─── Adiantamentos ───
+async function addAdvance() {
+  window.toast({
+    type: 'info', title: 'Adicionar adiantamento',
+    message: 'Cria-se na Conta-Corrente e depois se inclui na PF',
+  });
+  setTimeout(() => { window.location.href = `/driversapp/portal/${DRIVER_ID}/faturas/`; }, 1500);
+}
+
+async function deleteAdvance(id) {
+  const ok = await window.confirmModal({type:'danger', title:'Remover adiantamento desta PF?'});
+  if (!ok) return;
+  const d = await _post(`/settlements/pre-invoices/${PF_ID}/advance/${id}/delete/`);
+  if (d.success) { window.toast({type:'success', message:'Removido.'}); setTimeout(()=>location.reload(), 600); }
+  else window.toast({type:'error', message: d.error || 'Erro'});
+}
+
+// ─── Dados Gerais ───
+async function guardarDadosGerais() {
+  const payload = {
+    ajuste_manual: parseFloat(document.getElementById('dg-ajuste').value || 0),
+    penalizacoes_gerais: parseFloat(document.getElementById('dg-penalizacoes').value || 0),
+    status: document.getElementById('dg-status').value,
+    referencia_pagamento: document.getElementById('dg-ref').value,
+    data_pagamento: document.getElementById('dg-datapag').value || null,
+    observacoes: document.getElementById('dg-obs').value,
+  };
+  const d = await _post(`/settlements/pre-invoices/${PF_ID}/update/`, payload);
+  if (d.success) { window.toast({type:'success', message:'Dados guardados.'}); setTimeout(()=>location.reload(), 600); }
+  else window.toast({type:'error', message: d.error || 'Erro'});
+}
+</script>
+
+{% endblock %}

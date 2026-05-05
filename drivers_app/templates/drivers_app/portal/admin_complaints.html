@@ -1,0 +1,78 @@
+{% extends 'drivers_app/portal/_base.html' %}
+
+{% block portal_content %}
+
+<div class="grid grid-cols-4 gap-3 mb-4">
+  <div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200/50 dark:border-gray-700/50">
+    <p class="text-xs uppercase font-bold text-gray-500">Total</p>
+    <p class="text-2xl font-extrabold text-gray-900 dark:text-white mt-1">{{ counts.total }}</p>
+  </div>
+  <div class="bg-rose-50 dark:bg-rose-900/20 rounded-xl p-4 border border-rose-200/50 dark:border-rose-700/30">
+    <p class="text-xs uppercase font-bold text-rose-700 dark:text-rose-300">Abertas</p>
+    <p class="text-2xl font-extrabold text-rose-700 dark:text-rose-300 mt-1">{{ counts.open }}</p>
+  </div>
+  <div class="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 border border-amber-200/50 dark:border-amber-700/30">
+    <p class="text-xs uppercase font-bold text-amber-700 dark:text-amber-300">Respondidas</p>
+    <p class="text-2xl font-extrabold text-amber-700 dark:text-amber-300 mt-1">{{ counts.responded }}</p>
+  </div>
+  <div class="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-4 border border-emerald-200/50 dark:border-emerald-700/30">
+    <p class="text-xs uppercase font-bold text-emerald-700 dark:text-emerald-300">Fechadas</p>
+    <p class="text-2xl font-extrabold text-emerald-700 dark:text-emerald-300 mt-1">{{ counts.closed }}</p>
+  </div>
+</div>
+
+<div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
+  <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
+    <i data-lucide="alert-octagon" class="w-5 h-5 text-rose-500"></i>
+    <h3 class="font-bold text-gray-900 dark:text-white">Reclamações deste Motorista</h3>
+  </div>
+  <div class="divide-y divide-gray-100 dark:divide-gray-700">
+    {% for c in complaints %}
+    <div class="px-5 py-4 hover:bg-gray-50 dark:hover:bg-gray-700/30">
+      <div class="flex items-start gap-3">
+        <div class="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0
+          {% if c.status == 'ABERTO' %}bg-rose-100 dark:bg-rose-900/40 text-rose-600
+          {% elif c.status == 'NOTIFICADO' %}bg-amber-100 dark:bg-amber-900/40 text-amber-600
+          {% elif c.status == 'RESPONDIDO' %}bg-blue-100 dark:bg-blue-900/40 text-blue-600
+          {% elif c.status == 'FECHADO' %}bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600
+          {% else %}bg-gray-100 dark:bg-gray-700/50 text-gray-600{% endif %}">
+          <i data-lucide="alert-octagon" class="w-5 h-5"></i>
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2 flex-wrap">
+            <p class="font-semibold text-gray-900 dark:text-white">
+              {{ c.get_tipo_display }}
+            </p>
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase
+              {% if c.status == 'ABERTO' %}bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-300
+              {% elif c.status == 'NOTIFICADO' %}bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300
+              {% elif c.status == 'RESPONDIDO' %}bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300
+              {% elif c.status == 'FECHADO' %}bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300
+              {% else %}bg-gray-100 dark:bg-gray-700/50 text-gray-700{% endif %}">
+              {{ c.get_status_display }}
+            </span>
+            <span class="text-xs text-gray-500 ml-auto">{{ c.created_at|date:"d/m/Y H:i" }}</span>
+          </div>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            Pacote: <span class="font-mono">{{ c.numero_pacote }}</span>
+            {% if c.data_entrega %} · Entrega: {{ c.data_entrega|date:"d/m/Y H:i" }}{% endif %}
+          </p>
+          <p class="text-sm text-gray-700 dark:text-gray-300 mt-2 italic">"{{ c.descricao|truncatechars:200 }}"</p>
+          <div class="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400 mt-2">
+            <span class="inline-flex items-center gap-1"><i data-lucide="user" class="w-3 h-3"></i>{{ c.nome_cliente }}</span>
+            <span class="inline-flex items-center gap-1"><i data-lucide="phone" class="w-3 h-3"></i>{{ c.telefone_cliente }}</span>
+            <span class="inline-flex items-center gap-1"><i data-lucide="map-pin" class="w-3 h-3"></i>{{ c.cidade }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% empty %}
+    <div class="px-5 py-12 text-center">
+      <i data-lucide="check-circle-2" class="w-12 h-12 text-emerald-400 mx-auto mb-2"></i>
+      <p class="text-sm font-semibold text-emerald-600 dark:text-emerald-400">Sem reclamações!</p>
+      <p class="text-xs text-gray-500 mt-1">Este motorista não tem reclamações registadas.</p>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

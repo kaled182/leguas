@@ -86,8 +86,8 @@ WORKDIR /app
 COPY --chown=django:django . /app/
 
 # Criar dirs necessários e dar permissão ao user django
-RUN mkdir -p /app/staticfiles /app/media /app/logs && \
-    chown -R django:django /app/staticfiles /app/media /app/logs /opt/playwright
+RUN mkdir -p /app/staticfiles /app/media /app/logs /app/database/backups && \
+    chown -R django:django /app/staticfiles /app/media /app/logs /app/database /opt/playwright
 
 # Entrypoint production
 COPY --chown=django:django production/entrypoint.sh /entrypoint.sh

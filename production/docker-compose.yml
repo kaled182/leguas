@@ -72,6 +72,7 @@ services:
       - media_volume:/app/media
       - static_volume:/app/staticfiles
       - logs_data:/app/logs
+      - backups_data:/app/database/backups
     depends_on:
       db:
         condition: service_healthy
@@ -208,6 +209,7 @@ volumes:
   media_volume:    # mantém nome antigo para retro-compat na migração
   static_volume:   # mantém nome antigo para retro-compat na migração
   logs_data:
+  backups_data:    # backups manuais via UI persistem entre recreates
   wppconnect_store:
   wppconnect_tokens:
   caddy_data:    # certificados Let's Encrypt persistem aqui

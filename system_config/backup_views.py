@@ -177,16 +177,36 @@ def restore_backup(request):
                 import pyzipper
             except ImportError:
                 return JsonResponse({"success": False, "message": "pyzipper necessário para restaurar backups cifrados."}, status=500)
-            try:
-                password = _get_backup_password()
-            except ValueError as exc:
-                return JsonResponse({"success": False, "message": str(exc)}, status=400)
+            # Permite o user fornecer a password via UI (útil quando o backup
+            # foi feito com uma instalação anterior que tinha outra password).
+            user_password = (body.get("password") or "").strip()
+            if user_password:
+                password = user_password.encode("utf-8")
+            else:
+                try:
+                    password = _get_backup_password()
+                except ValueError as exc:
+                    return JsonResponse({"success": False, "message": str(exc)}, status=400)
 
             with tempfile.TemporaryDirectory(dir=BACKUP_DIR) as tmp_dir:
                 tmp_path = Path(tmp_dir)
-                with pyzipper.AESZipFile(backup_path) as zf:
-                    zf.pwd = password
-                    zf.extractall(tmp_path)
+                try:
+                    with pyzipper.AESZipFile(backup_path) as zf:
+                        zf.pwd = password
+                        zf.extractall(tmp_path)
+                except (RuntimeError, Exception) as zip_exc:
+                    msg = str(zip_exc)
+                    if "Bad password" in msg or "Bad CRC" in msg:
+                        return JsonResponse({
+                            "success": False,
+                            "message": (
+                                "Password incorrecta para este backup. "
+                                "Se o backup foi feito por uma instalação anterior, "
+                                "preenche o campo 'Password do ZIP' no diálogo."
+                            ),
+                            "needs_password": True,
+                        }, status=400)
+                    raise
 
                 # Restore database
                 candidates = list(tmp_path.glob("*.sql"))

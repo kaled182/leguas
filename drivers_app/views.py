@@ -3573,6 +3573,9 @@ from .central_views import drivers_central
 # ─── Portal Admin: editar / docs / veículos / helpers / reclamações / logins / financeiro ───
 from .portal_admin_views import (
     driver_admin_edit,
+    driver_unify_search,
+    driver_unify_preview,
+    driver_unify_execute,
     driver_documents,
     driver_vehicles,
     driver_helpers,

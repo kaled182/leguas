@@ -447,3 +447,102 @@ def driver_complaints(request, driver_id):
         "complaints": complaints,
         "counts": counts,
     })
+
+
+# ─── UNIFICAÇÃO de Cadastros ─────────────────────────────────────────
+
+@require_http_methods(["GET"])
+@user_passes_test(_is_admin)
+def driver_unify_search(request, driver_id):
+    """Devolve lista de drivers candidatos para unificação (excepto o próprio)."""
+    from django.http import JsonResponse
+    q = (request.GET.get("q") or "").strip()
+    qs = DriverProfile.objects.exclude(id=driver_id)
+    if q:
+        qs = qs.filter(
+            Q(nome_completo__icontains=q) |
+            Q(apelido__icontains=q) |
+            Q(courier_id_cainiao__icontains=q) |
+            Q(nif__icontains=q) |
+            Q(telefone__icontains=q)
+        )
+    items = []
+    for d in qs.order_by("nome_completo")[:30]:
+        items.append({
+            "id": d.id,
+            "nome_completo": d.nome_completo,
+            "apelido": d.apelido or "",
+            "courier_id_cainiao": d.courier_id_cainiao or "",
+            "nif": d.nif or "",
+        })
+    return JsonResponse({"results": items})
+
+
+@require_http_methods(["GET"])
+@user_passes_test(_is_admin)
+def driver_unify_preview(request, driver_id, target_id):
+    """Devolve contagem do que vai ser transferido se source=driver_id → target=target_id."""
+    from django.http import JsonResponse
+    from .services_merge import preview_merge
+    source = get_object_or_404(DriverProfile, pk=driver_id)
+    target = get_object_or_404(DriverProfile, pk=target_id)
+    if source.pk == target.pk:
+        return JsonResponse(
+            {"success": False, "error": "Não podes unificar com o próprio."},
+            status=400,
+        )
+    counts = preview_merge(source, target)
+    return JsonResponse({
+        "success": True,
+        "source": {
+            "id": source.id, "nome": source.nome_completo,
+            "apelido": source.apelido, "courier": source.courier_id_cainiao,
+        },
+        "target": {
+            "id": target.id, "nome": target.nome_completo,
+            "apelido": target.apelido, "courier": target.courier_id_cainiao,
+        },
+        "counts": counts,
+    })
+
+
+@require_http_methods(["POST"])
+@user_passes_test(_is_admin)
+def driver_unify_execute(request, driver_id):
+    """Executa o merge: source=driver_id → target=POST['target_id']."""
+    from django.http import JsonResponse
+    from .services_merge import merge_drivers
+    target_id = request.POST.get("target_id")
+    if not target_id:
+        return JsonResponse(
+            {"success": False, "error": "target_id é obrigatório."},
+            status=400,
+        )
+    try:
+        target_id = int(target_id)
+    except (TypeError, ValueError):
+        return JsonResponse(
+            {"success": False, "error": "target_id inválido."},
+            status=400,
+        )
+
+    source = get_object_or_404(DriverProfile, pk=driver_id)
+    target = get_object_or_404(DriverProfile, pk=target_id)
+    notes = (request.POST.get("notes") or "").strip()
+
+    try:
+        audit = merge_drivers(
+            source=source, target=target, user=request.user, notes=notes,
+        )
+    except (ValueError, RuntimeError) as e:
+        return JsonResponse(
+            {"success": False, "error": str(e)}, status=400,
+        )
+
+    return JsonResponse({
+        "success": True,
+        "audit_id": audit.id,
+        "target_driver_id": target.id,
+        "transferred": audit.transferred_counts,
+        "redirect_to": f"/driversapp/portal/{target.id}/editar/",
+    })

@@ -36,6 +36,18 @@ urlpatterns = [
     ),
     # ─── Portal Admin (substitui modais antigos) ───
     path("portal/<int:driver_id>/editar/", views.driver_admin_edit, name="driver_admin_edit"),
+    path(
+        "portal/<int:driver_id>/unify/search/",
+        views.driver_unify_search, name="driver_unify_search",
+    ),
+    path(
+        "portal/<int:driver_id>/unify/preview/<int:target_id>/",
+        views.driver_unify_preview, name="driver_unify_preview",
+    ),
+    path(
+        "portal/<int:driver_id>/unify/execute/",
+        views.driver_unify_execute, name="driver_unify_execute",
+    ),
     path("portal/<int:driver_id>/documentos/", views.driver_documents, name="driver_documents"),
     path("portal/<int:driver_id>/veiculos/", views.driver_vehicles, name="driver_vehicles"),
     path("portal/<int:driver_id>/helpers/", views.driver_helpers, name="driver_helpers"),

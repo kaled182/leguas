@@ -850,3 +850,45 @@ class DriverProfileChangeRequest(models.Model):
         setattr(self.driver, self.field, self.new_value)
         self.driver.save(update_fields=[self.field, "updated_at"] if hasattr(self.driver, "updated_at") else [self.field])
         return True
+
+
+class DriverMergeAudit(models.Model):
+    """Registo de uma operação de unificação (merge) de dois motoristas.
+
+    Quando dois cadastros do mesmo motorista existem (ex: importação
+    duplicada com courier_ids diferentes), o admin pode unificá-los:
+    todos os FKs do source são reassignados ao target e o source é
+    eliminado. Este registo guarda o histórico para auditoria.
+    """
+    source_driver_repr = models.CharField(
+        "Source (apagado)", max_length=200,
+        help_text="Snapshot textual do driver source antes do delete.",
+    )
+    source_driver_id = models.IntegerField(
+        "Source ID original", db_index=True,
+    )
+    target_driver = models.ForeignKey(
+        "DriverProfile", on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="merges_received",
+        verbose_name="Driver target (que recebeu os dados)",
+    )
+    transferred_counts = models.JSONField(
+        "Quantidades transferidas", default=dict,
+        help_text="Ex: {'pre_invoices': 3, 'access': 2, 'mappings': 5}",
+    )
+    notes = models.TextField("Notas", blank=True)
+    merged_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    merged_by = models.ForeignKey(
+        "auth.User", on_delete=models.SET_NULL,
+        null=True, blank=True, related_name="driver_merges_performed",
+    )
+
+    class Meta:
+        verbose_name = "Auditoria de Unificação"
+        verbose_name_plural = "Auditorias de Unificação"
+        ordering = ["-merged_at"]
+
+    def __str__(self):
+        target = self.target_driver.nome_completo if self.target_driver else "(target removido)"
+        return f"{self.source_driver_repr} → {target}"

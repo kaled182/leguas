@@ -1499,9 +1499,16 @@ def driver_pre_invoice_create(request, driver_id):
 
     pf.recalcular()
 
+    # Auto-inclui DriverClaim APPROVED do período como pacotes perdidos
+    from .services_claims_in_pf import auto_include_approved_claims
+    claims_result = auto_include_approved_claims(pf)
+    if claims_result["included"]:
+        pf.recalcular()  # recalcular para somar os novos pacotes perdidos
+
     return JsonResponse({
         "success": True, "numero": pf.numero, "id": pf.id,
         "total_a_receber": str(pf.total_a_receber),
+        "claims_auto_included": claims_result["included"],
     })
 
 

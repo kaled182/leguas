@@ -816,12 +816,43 @@ class DriverClaim(models.Model):
         return f"{self.get_claim_type_display()} - {self.driver.nome_completo} - €{self.amount}"
 
     def approve(self, user, notes=""):
-        """Aprova o claim"""
+        """Aprova o claim e auto-inclui em PFs em CALCULADO/APROVADO
+        do mesmo driver no período.
+
+        Se já existe DriverPreInvoice em estado editável (CALCULADO,
+        APROVADO ou PENDENTE) cujo período cobre a data do claim,
+        adiciona-o automaticamente como PreInvoiceLostPackage.
+        """
         self.status = "APPROVED"
         self.reviewed_at = timezone.now()
         self.reviewed_by = user
         self.review_notes = notes
         self.save()
+
+        # Auto-inclui em PF aberta do período se houver
+        try:
+            from .services_claims_in_pf import auto_include_approved_claims
+            ref_date = (
+                self.operation_task_date
+                or (self.occurred_at.date() if self.occurred_at else None)
+            )
+            if ref_date is None or self.driver_id is None:
+                return
+            open_pfs = DriverPreInvoice.objects.filter(
+                driver_id=self.driver_id,
+                periodo_inicio__lte=ref_date,
+                periodo_fim__gte=ref_date,
+                status__in=["CALCULADO", "APROVADO", "PENDENTE"],
+            )
+            for pf in open_pfs:
+                result = auto_include_approved_claims(pf)
+                if result["included"]:
+                    pf.recalcular()
+        except Exception:
+            import logging
+            logging.getLogger(__name__).exception(
+                "auto_include_approved_claims falhou na approve()"
+            )
 
     def reject(self, user, notes=""):
         """Rejeita o claim"""

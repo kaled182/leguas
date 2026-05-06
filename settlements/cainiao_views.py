@@ -3299,14 +3299,19 @@ def _cainiao_operation_import_impl(request):
     # criados em imports anteriores.
 
     # 1. Pré-carregar signatures já existentes para os waybills tocados
-    sig_keys_pending = set()  # (wb, courier, status, ts_iso)
+    # Dedup key SEM timestamp: (waybill, courier, status). Se já há uma
+    # signature deste waybill com mesmo courier+status, não cria outra
+    # (timestamps ligeiramente diferentes a cada import EPOD não devem
+    # poluir o histórico — é o mesmo "facto" em diferentes leituras).
+    # Mudanças REAIS aparecem como change_type="status_change" /
+    # "courier_change" / "date_move" — preservadas porque não passam
+    # por este filtro.
+    sig_keys_pending = set()  # (wb, courier, status)
     other_pending = []
     for h in history_pending:
         if h["change_type"] == "signature":
-            ts = h["event_timestamp"]
-            ts_iso = ts.isoformat() if ts else ""
             key = (h["waybill_number"], h["courier_name"] or "",
-                   h["task_status"] or "", ts_iso)
+                   h["task_status"] or "")
             if key in sig_keys_pending:
                 continue  # dedup intra-batch
             sig_keys_pending.add(key)
@@ -3320,22 +3325,18 @@ def _cainiao_operation_import_impl(request):
         for r in CainiaoOperationTaskHistory.objects.filter(
             waybill_number__in=list(waybills_with_sigs),
             change_type="signature",
-        ).values("waybill_number", "courier_name", "task_status", "event_timestamp"):
-            ts = r["event_timestamp"]
-            ts_iso = ts.isoformat() if ts else ""
+        ).values("waybill_number", "courier_name", "task_status"):
             existing_sig_keys.add((
                 r["waybill_number"], r["courier_name"] or "",
-                r["task_status"] or "", ts_iso,
+                r["task_status"] or "",
             ))
 
     history_objs = []
     audit["signatures_skipped_duplicate"] = 0
     for h in history_pending:
         if h["change_type"] == "signature":
-            ts = h["event_timestamp"]
-            ts_iso = ts.isoformat() if ts else ""
             key = (h["waybill_number"], h["courier_name"] or "",
-                   h["task_status"] or "", ts_iso)
+                   h["task_status"] or "")
             if key in existing_sig_keys:
                 audit["signatures_skipped_duplicate"] += 1
                 continue

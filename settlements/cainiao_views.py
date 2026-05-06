@@ -2926,15 +2926,18 @@ def _cainiao_operation_import_impl(request):
                 })
             continue
 
-        # Algoritmo "Task Date mais recente vence" para estado vigente:
+        # Algoritmo "Driver real vence warehouse" para estado vigente:
         # Score (tuple, decrescente):
-        #   1. task_date_row — Task Date da linha (planilha = verdade)
-        #   2. last_event_ts — timestamp do evento (desempate)
-        #   3. priority — desempate quando ts iguais
-        #   4. is_real_driver — prefere driver real sobre placeholder
+        #   1. is_real_driver — driver real SEMPRE prefere warehouse
+        #      (XPT/HUB nunca entrega — só recebe e transfere; se a
+        #       Cainiao envia [XPT-Delivered, Caio_Malta-Driver_received]
+        #       para o mesmo waybill, escolhemos Caio_Malta).
+        #   2. task_date_row — Task Date da linha
+        #   3. last_event_ts — timestamp do evento
+        #   4. priority — desempate final
         from datetime import date as _date_helper
         _DATE_MIN = _date_helper(1970, 1, 1)
-        best_score = (_DATE_MIN, _EPOCH, -1, -1)
+        best_score = (-1, _DATE_MIN, _EPOCH, -1)
         best_row = None
         for row in active_rows:
             row_task_date = _planned_date(row) or _DATE_MIN
@@ -2943,7 +2946,7 @@ def _cainiao_operation_import_impl(request):
             courier = _cell_str(row, ci["courier_name"])
             priority = STATUS_PRIORITY.get(status, 0)
             is_real = 0 if _is_warehouse_courier(courier) else 1
-            score = (row_task_date, last_ts, priority, is_real)
+            score = (is_real, row_task_date, last_ts, priority)
             if score > best_score:
                 best_score = score
                 best_row = row
@@ -2952,6 +2955,19 @@ def _cainiao_operation_import_impl(request):
         if not smart_dt:
             audit["skipped_no_date"] += 1
             continue
+
+        # Guard final: se best_row continua a ser warehouse com
+        # status Delivered/Attempt Failure, registar para downgrade
+        # downstream — warehouse nunca pode aparecer como entregador.
+        best_courier_check = _cell_str(best_row, ci["courier_name"])
+        best_status_check = _cell_str(best_row, ci["task_status"])
+        if (_is_warehouse_courier(best_courier_check)
+                and best_status_check in ("Delivered", "Attempt Failure")):
+            audit.setdefault("warehouse_status_downgraded", 0)
+            audit["warehouse_status_downgraded"] += 1
+            audit.setdefault(
+                "_patched_status_per_wb", {},
+            )[waybill] = "Driver_received"
 
         best_row_per_wb[waybill] = (best_row, smart_dt)
         # Guardar todas as assinaturas em ordem cronológica para o history
@@ -3004,8 +3020,14 @@ def _cainiao_operation_import_impl(request):
     # Entries de timeline a criar (preenche batch=None, atribuído depois)
     history_pending = []  # list[dict] — convertido em CainiaoOperationTaskHistory
 
+    _patched_status_map = audit.get("_patched_status_per_wb", {})
     for waybill, (row, smart_dt) in best_row_per_wb.items():
         new_status = _cell_str(row, ci["task_status"])
+        # Aplica patch — se o best_row ficou como warehouse com
+        # Delivered/Attempt Failure, força para Driver_received
+        # (warehouse não entrega).
+        if waybill in _patched_status_map:
+            new_status = _patched_status_map[waybill]
         new_priority = STATUS_PRIORITY.get(new_status, 0)
         _cn = _cell_str(row, ci["courier_name"])
         _resolved_id = _resolve_courier_id(_cn)

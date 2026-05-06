@@ -506,6 +506,197 @@ def cainiao_billing_create_overrides(request, import_id):
 
 
 @login_required
+def cainiao_billing_export_xlsx(request, import_id, kind):
+    """Exporta listas da tab Reconciliação em XLSX.
+
+    kind ∈ {paid_no_task, delivered_no_billing, all_lines, special_prices,
+            claims}.
+    """
+    from io import BytesIO
+    from django.http import HttpResponse
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill
+    from .models import CainiaoBillingImport, CainiaoOperationTask
+    from .services_cainiao_billing import reconciliation_for_import
+
+    session = get_object_or_404(CainiaoBillingImport, id=import_id)
+
+    wb = Workbook()
+    ws = wb.active
+    header_font = Font(bold=True, color="FFFFFF")
+    header_fill = PatternFill(
+        "solid", fgColor="5B21B6",  # violet
+    )
+
+    def _set_headers(headers):
+        ws.append(headers)
+        for col in range(1, len(headers) + 1):
+            cell = ws.cell(row=1, column=col)
+            cell.font = header_font
+            cell.fill = header_fill
+
+    if kind == "paid_no_task":
+        ws.title = "Pagas s_ task"
+        _set_headers([
+            "Data", "Waybill (REFs)", "Staff ID", "Lote (Billing ID)",
+            "Cidade", "Valor (€)", "Motivo (FB2)",
+        ])
+        recon = reconciliation_for_import(session)
+        for line in recon["paid_no_task"].order_by("biz_time"):
+            ws.append([
+                line.biz_time.strftime("%Y-%m-%d %H:%M:%S"),
+                line.waybill_number,
+                line.staff_id or "",
+                line.cainiao_billing_id or "",
+                line.ciudad or "",
+                float(line.amount),
+                (line.fb2 or "")[:500],
+            ])
+        filename = (
+            f"cainiao_pagas_sem_task_{session.period_from}_"
+            f"{session.period_to}.xlsx"
+        )
+
+    elif kind == "delivered_no_billing":
+        ws.title = "Entregues s_ pagamento"
+        _set_headers([
+            "Task Date", "Waybill", "LP Number", "Courier ID Cainiao",
+            "Courier Name", "Status", "Cidade", "CP",
+        ])
+        recon = reconciliation_for_import(session)
+        for t in recon["delivered_no_billing"].order_by("task_date"):
+            ws.append([
+                t.task_date.strftime("%Y-%m-%d"),
+                t.waybill_number,
+                t.lp_number or "",
+                t.courier_id_cainiao or "",
+                t.courier_name or "",
+                t.task_status,
+                t.destination_city or "",
+                t.zip_code or "",
+            ])
+        filename = (
+            f"cainiao_entregues_sem_pagamento_{session.period_from}_"
+            f"{session.period_to}.xlsx"
+        )
+
+    elif kind == "all_lines":
+        ws.title = "Todas as linhas"
+        _set_headers([
+            "Tipo", "Data", "Waybill (REFs)", "Staff ID",
+            "Driver (sistema)", "Lote (Billing ID)", "Cidade",
+            "Valor (€)", "Motivo (FB2)", "Task local?",
+            "Task Status", "CP4",
+        ])
+        for line in session.lines.select_related("driver", "task").iterator(
+            chunk_size=1000,
+        ):
+            ws.append([
+                line.fee_type,
+                line.biz_time.strftime("%Y-%m-%d %H:%M:%S"),
+                line.waybill_number,
+                line.staff_id or "",
+                line.driver.nome_completo if line.driver else "",
+                line.cainiao_billing_id or "",
+                line.ciudad or "",
+                float(line.amount),
+                (line.fb2 or "")[:500],
+                "SIM" if line.task_id else "NAO",
+                line.task.task_status if line.task else "",
+                (line.task.zip_code[:4] if line.task and line.task.zip_code
+                 else ""),
+            ])
+        filename = (
+            f"cainiao_todas_linhas_{session.period_from}_"
+            f"{session.period_to}.xlsx"
+        )
+
+    elif kind == "special_prices":
+        from decimal import Decimal as D
+        ws.title = "Precos especiais"
+        _set_headers([
+            "Data", "Waybill", "Staff ID", "Driver", "Lote",
+            "CP4", "Valor (€)", "Override Criado?", "Override ID",
+        ])
+        qs = session.lines.filter(fee_type="envio fee").exclude(
+            amount=D("1.60"),
+        ).select_related("driver", "task", "price_override")
+        for line in qs.order_by("-amount"):
+            ws.append([
+                line.biz_time.strftime("%Y-%m-%d %H:%M:%S"),
+                line.waybill_number,
+                line.staff_id or "",
+                line.driver.nome_completo if line.driver else "",
+                line.cainiao_billing_id or "",
+                (line.task.zip_code[:4] if line.task and line.task.zip_code
+                 else ""),
+                float(line.amount),
+                "SIM" if line.price_override_id else "NAO",
+                line.price_override_id or "",
+            ])
+        filename = (
+            f"cainiao_precos_especiais_{session.period_from}_"
+            f"{session.period_to}.xlsx"
+        )
+
+    elif kind == "claims":
+        ws.title = "Compensacoes (claims)"
+        _set_headers([
+            "Data", "Waybill", "Lote", "Driver Sugerido",
+            "DriverClaim Criado?", "DriverClaim ID", "Valor (€)",
+            "Motivo (FB2)",
+        ])
+        qs = session.lines.filter(fee_type="compensacion").select_related(
+            "driver", "task", "claim",
+        )
+        for line in qs.order_by("biz_time"):
+            ws.append([
+                line.biz_time.strftime("%Y-%m-%d %H:%M:%S"),
+                line.waybill_number,
+                line.cainiao_billing_id or "",
+                line.driver.nome_completo if line.driver else "",
+                "SIM" if line.claim_id else "NAO",
+                line.claim_id or "",
+                float(abs(line.amount)),
+                (line.fb2 or "")[:500],
+            ])
+        filename = (
+            f"cainiao_claims_{session.period_from}_"
+            f"{session.period_to}.xlsx"
+        )
+
+    else:
+        return HttpResponse(
+            f"Tipo de export desconhecido: {kind}", status=400,
+        )
+
+    # Auto-resize colunas (best effort)
+    for col_cells in ws.columns:
+        max_len = 0
+        for cell in col_cells:
+            v = str(cell.value) if cell.value is not None else ""
+            if len(v) > max_len:
+                max_len = len(v)
+        col_letter = col_cells[0].column_letter
+        ws.column_dimensions[col_letter].width = min(max_len + 2, 60)
+
+    buf = BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    response = HttpResponse(
+        buf.read(),
+        content_type=(
+            "application/vnd.openxmlformats-officedocument."
+            "spreadsheetml.sheet"
+        ),
+    )
+    response["Content-Disposition"] = (
+        f'attachment; filename="{filename}"'
+    )
+    return response
+
+
+@login_required
 @require_http_methods(["POST"])
 def cainiao_billing_reresolve(request, import_id):
     """Re-corre a resolução de task/driver para um import existente.

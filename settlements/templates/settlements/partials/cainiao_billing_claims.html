@@ -26,17 +26,24 @@
       </div>
     </div>
 
-    {% if claims_with_suggestion %}
-    <form method="post" action="{% url 'cainiao-billing-assign-claims-bulk' session.id %}"
-          onsubmit="return confirm('Criar DriverClaim para todas as compensaciones com driver sugerido (do task local)?\n\nTipo: ORDER_LOSS (perda de pedido).');">
-      {% csrf_token %}
-      <input type="hidden" name="claim_type" value="ORDER_LOSS">
-      <button type="submit" class="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg font-semibold text-sm inline-flex items-center gap-2">
-        <i data-lucide="zap" class="w-4 h-4"></i>
-        Criar todos os {{ claims_with_suggestion }} sugeridos
-      </button>
-    </form>
-    {% endif %}
+    <div class="flex items-center gap-2">
+      <a href="{% url 'cainiao-billing-export' session.id 'claims' %}"
+         class="px-3 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 text-gray-700 dark:text-gray-300 rounded-lg font-semibold text-sm inline-flex items-center gap-2">
+        <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+        Exportar XLSX
+      </a>
+      {% if claims_with_suggestion %}
+      <form method="post" action="{% url 'cainiao-billing-assign-claims-bulk' session.id %}"
+            onsubmit="return confirm('Criar DriverClaim para todas as compensaciones com driver sugerido (do task local)?\n\nTipo: ORDER_LOSS (perda de pedido).');">
+        {% csrf_token %}
+        <input type="hidden" name="claim_type" value="ORDER_LOSS">
+        <button type="submit" class="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg font-semibold text-sm inline-flex items-center gap-2">
+          <i data-lucide="zap" class="w-4 h-4"></i>
+          Criar todos os {{ claims_with_suggestion }} sugeridos
+        </button>
+      </form>
+      {% endif %}
+    </div>
   </div>
 
   {# Tabela detalhada #}

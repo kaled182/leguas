@@ -19,15 +19,22 @@
       </div>
     </div>
 
-    <form method="post" action="{% url 'cainiao-billing-create-overrides' session.id %}"
-          onsubmit="return confirm('Criar PackagePriceOverride para TODAS as linhas com preço ≠ €1,60 que ainda não tenham override?');">
-      {% csrf_token %}
-      <input type="hidden" name="mode" value="all">
-      <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold text-sm inline-flex items-center gap-2">
-        <i data-lucide="zap" class="w-4 h-4"></i>
-        Criar todos os Overrides em falta
-      </button>
-    </form>
+    <div class="flex items-center gap-2">
+      <a href="{% url 'cainiao-billing-export' session.id 'special_prices' %}"
+         class="px-3 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 text-gray-700 dark:text-gray-300 rounded-lg font-semibold text-sm inline-flex items-center gap-2">
+        <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+        Exportar XLSX
+      </a>
+      <form method="post" action="{% url 'cainiao-billing-create-overrides' session.id %}"
+            onsubmit="return confirm('Criar PackagePriceOverride para TODAS as linhas com preço ≠ €1,60 que ainda não tenham override?');">
+        {% csrf_token %}
+        <input type="hidden" name="mode" value="all">
+        <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold text-sm inline-flex items-center gap-2">
+          <i data-lucide="zap" class="w-4 h-4"></i>
+          Criar todos os Overrides em falta
+        </button>
+      </form>
+    </div>
   </div>
 
   {# Distribuição #}

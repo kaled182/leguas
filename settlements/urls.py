@@ -65,6 +65,11 @@ urlpatterns = [
         name="cainiao-billing-reresolve",
     ),
     path(
+        "invoices/cainiao/<int:import_id>/export/<str:kind>/",
+        views_cainiao_billing.cainiao_billing_export_xlsx,
+        name="cainiao-billing-export",
+    ),
+    path(
         "invoices/cainiao/<int:import_id>/create-overrides/",
         views_cainiao_billing.cainiao_billing_create_overrides,
         name="cainiao-billing-create-overrides",

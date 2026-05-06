@@ -26,6 +26,15 @@
     <summary class="cursor-pointer px-4 py-3 flex items-center gap-2 font-semibold text-amber-700 dark:text-amber-300 select-none">
       <i data-lucide="alert-triangle" class="w-4 h-4"></i>
       Cainiao pagou mas <strong>não temos task local</strong> ({{ recon.paid_no_task_count }})
+      {% if recon.paid_no_task_count %}
+        <a href="{% url 'cainiao-billing-export' session.id 'paid_no_task' %}"
+           onclick="event.stopPropagation()"
+           class="ml-3 px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[10px] font-semibold inline-flex items-center gap-1"
+           title="Descarregar lista em Excel">
+          <i data-lucide="file-spreadsheet" class="w-3 h-3"></i>
+          Exportar XLSX
+        </a>
+      {% endif %}
       <span class="ml-auto text-xs font-normal text-gray-500">(clique para expandir)</span>
     </summary>
     <div class="border-t border-amber-200 dark:border-amber-700/40">
@@ -76,6 +85,15 @@
     <summary class="cursor-pointer px-4 py-3 flex items-center gap-2 font-semibold text-rose-700 dark:text-rose-300 select-none">
       <i data-lucide="alert-octagon" class="w-4 h-4"></i>
       Entregamos mas <strong>Cainiao não pagou</strong> ({{ recon.delivered_no_billing_count }})
+      {% if recon.delivered_no_billing_count %}
+        <a href="{% url 'cainiao-billing-export' session.id 'delivered_no_billing' %}"
+           onclick="event.stopPropagation()"
+           class="ml-3 px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[10px] font-semibold inline-flex items-center gap-1"
+           title="Descarregar lista em Excel">
+          <i data-lucide="file-spreadsheet" class="w-3 h-3"></i>
+          Exportar XLSX
+        </a>
+      {% endif %}
       <span class="ml-auto text-xs font-normal text-gray-500">(clique para expandir)</span>
     </summary>
     <div class="border-t border-rose-200 dark:border-rose-700/40">

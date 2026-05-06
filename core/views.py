@@ -410,7 +410,19 @@ def partner_detail(request, pk):
                 return None
 
             def _display_name(courier_id, courier_name):
-                """Apelido/courier_name ATUAL via mapping (login ID estável)."""
+                """Display name consistente com _resolve_driver — usa
+                NOME primeiro. Evita o caso em que tasks do Andre com
+                courier_id partilhado do XPT eram exibidas com o nome
+                do XPT (criando "linhas duplicadas" no dashboard com
+                nomes iguais mas drivers diferentes).
+                """
+                if courier_name:
+                    # Se o nome resolve para um driver, usa o apelido
+                    # desse driver (pode ter sido editado entretanto).
+                    by_name = (mapping_by_name.get(courier_name)
+                               or profile_by_apelido.get(courier_name))
+                    if by_name and by_name.apelido:
+                        return by_name.apelido
                 if courier_id:
                     m = mapping_obj_by_courier_id.get(courier_id)
                     if m and m.courier_name:

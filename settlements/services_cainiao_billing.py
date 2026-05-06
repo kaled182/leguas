@@ -401,6 +401,11 @@ def import_cainiao_billing(file_obj, file_name: str, user=None):
             # bulk_create com update_conflicts (Django 4.1+).
             # Reimports de quinzena que sobreponham → faz UPDATE em
             # vez de duplicar (graças ao unique_together).
+            #
+            # Nota: em MySQL/MariaDB/SQLite, o argumento unique_fields=
+            # NÃO pode ser passado (o backend usa automaticamente os
+            # unique constraints da tabela). Apenas no PostgreSQL é
+            # que ele é obrigatório.
             with transaction.atomic():
                 CainiaoBillingLine.objects.bulk_create(
                     objs,
@@ -409,9 +414,6 @@ def import_cainiao_billing(file_obj, file_name: str, user=None):
                         "import_session", "biz_time", "amount", "moneda",
                         "cp_name", "ciudad", "staff_id", "fb1", "fb2",
                         "task", "driver", "updated_at",
-                    ],
-                    unique_fields=[
-                        "waybill_number", "fee_type", "cainiao_billing_id",
                     ],
                 )
 

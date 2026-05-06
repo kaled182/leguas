@@ -506,6 +506,11 @@ def find_fleets_without_invoice(date_from, date_to,
         if delivered_total == 0:
             continue
 
+        # IVA da frota — taxa_iva guardada na EmpresaParceira
+        vat_rate = (
+            getattr(empresa, "taxa_iva", Decimal("23.00")) or Decimal("0")
+        )
+
         # Cobertura por FleetInvoices existentes
         covered_dates = set()
         for ff in ffs_by_empresa.get(empresa.id, []):
@@ -527,6 +532,14 @@ def find_fleets_without_invoice(date_from, date_to,
         last_uncovered = uncovered[-1] if uncovered else None
 
         estimated = base_amount + bonus_amount
+        # IVA estimado (frota = sempre cobra IVA)
+        if vat_rate:
+            estimated_vat = (
+                estimated * vat_rate / Decimal("100")
+            ).quantize(Decimal("0.01"))
+        else:
+            estimated_vat = Decimal("0.00")
+        estimated_total_com_iva = estimated + estimated_vat
 
         # Última FleetInvoice (qualquer)
         last_ff_info = None
@@ -566,6 +579,9 @@ def find_fleets_without_invoice(date_from, date_to,
             "estimated_amount": estimated,
             "estimated_base": base_amount,
             "estimated_bonus": bonus_amount,
+            "estimated_vat": estimated_vat,
+            "estimated_total_com_iva": estimated_total_com_iva,
+            "vat_rate": vat_rate,
             "bonus_days_count": bonus_days_count,
             "last_ff": last_ff_info,
         })

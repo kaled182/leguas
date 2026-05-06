@@ -2911,6 +2911,28 @@ class FleetInvoice(models.Model):
             "total_claims", "total_a_receber", "updated_at",
         ])
 
+    # ── IVA (calculado dinamicamente a partir de empresa.taxa_iva) ──
+    # As frotas (Empresas Parceiras) cobram sempre IVA — é obrigatório
+    # por serem pessoas colectivas. A taxa é guardada no modelo da
+    # empresa (default 23%). Não persistimos vat_amount aqui para
+    # evitar uma migration; é trivial calcular on-demand.
+    @property
+    def vat_rate(self):
+        return getattr(self.empresa, "taxa_iva", Decimal("23.00")) or Decimal("0")
+
+    @property
+    def vat_amount(self):
+        rate = self.vat_rate
+        if not rate:
+            return Decimal("0.00")
+        return (
+            self.total_a_receber * rate / Decimal("100")
+        ).quantize(Decimal("0.01"))
+
+    @property
+    def total_com_iva(self):
+        return self.total_a_receber + self.vat_amount
+
 
 class FleetInvoiceDriverLine(models.Model):
     """Linha por motorista dentro de uma FleetInvoice."""

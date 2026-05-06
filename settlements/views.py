@@ -4879,6 +4879,9 @@ def empresa_fleet_invoices_list(request, empresa_id):
             "status_display": fi.get_status_display(),
             "total_deliveries": fi.total_deliveries,
             "total_a_receber": str(fi.total_a_receber),
+            "vat_rate": str(fi.vat_rate),
+            "vat_amount": str(fi.vat_amount),
+            "total_com_iva": str(fi.total_com_iva),
             "n_drivers": fi.lines.count(),
         })
     return JsonResponse({"success": True, "rows": rows})
@@ -4957,6 +4960,9 @@ def empresa_fleet_invoice_detail(request, fleet_invoice_id):
             "total_bonus": str(fi.total_bonus),
             "total_claims": str(fi.total_claims),
             "total_a_receber": str(fi.total_a_receber),
+            "vat_rate": str(fi.vat_rate),
+            "vat_amount": str(fi.vat_amount),
+            "total_com_iva": str(fi.total_com_iva),
             "data_pagamento": (
                 fi.data_pagamento.strftime("%Y-%m-%d")
                 if fi.data_pagamento else ""

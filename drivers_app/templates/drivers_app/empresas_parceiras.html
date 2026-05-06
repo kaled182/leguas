@@ -694,7 +694,12 @@
                     <span class="text-xs text-gray-500" x-text="fi.n_drivers + ' drivers · ' + fi.total_deliveries + ' entregas'"></span>
                   </div>
                   <div class="flex items-center gap-3">
-                    <span class="font-bold text-lg" x-text="'€' + parseFloat(fi.total_a_receber).toFixed(2)"></span>
+                    <div class="text-right">
+                      <span class="font-bold text-lg" x-text="'€' + parseFloat(fi.total_com_iva || fi.total_a_receber).toFixed(2)"></span>
+                      <div class="text-[10px] text-violet-600 dark:text-violet-400 font-semibold leading-none mt-0.5"
+                           x-show="parseFloat(fi.vat_amount || 0) > 0"
+                           x-text="'c/ IVA ' + parseFloat(fi.vat_rate).toFixed(0) + '% (€' + parseFloat(fi.vat_amount).toFixed(2) + ')'"></div>
+                    </div>
                     <button @click.stop="changeFIStatus(fi, 'APROVADO')" x-show="fi.status === 'CALCULADO'"
                             class="px-2 py-1 bg-yellow-500 hover:bg-yellow-600 text-white text-xs rounded font-semibold" title="Aprovar">
                       <i data-lucide="check" class="w-3 h-3 inline"></i>
@@ -732,6 +737,26 @@
                       <div class="text-lg font-bold text-rose-600" x-text="'-€' + parseFloat(fleetInvoiceDetail?.total_claims || 0).toFixed(2)"></div>
                     </div>
                   </div>
+
+                  {# Subtotal + IVA + Total c/ IVA #}
+                  <div class="bg-gradient-to-br from-violet-50 to-purple-50 dark:from-violet-900/20 dark:to-purple-900/20 rounded-lg p-3 mb-4 border border-violet-200 dark:border-violet-700/40"
+                       x-show="parseFloat(fleetInvoiceDetail?.vat_amount || 0) > 0">
+                    <div class="grid grid-cols-3 gap-3 text-sm">
+                      <div>
+                        <div class="text-[10px] uppercase text-gray-500">Subtotal s/ IVA</div>
+                        <div class="font-bold" x-text="'€' + parseFloat(fleetInvoiceDetail?.total_a_receber || 0).toFixed(2)"></div>
+                      </div>
+                      <div>
+                        <div class="text-[10px] uppercase text-violet-700 dark:text-violet-300" x-text="'IVA (' + parseFloat(fleetInvoiceDetail?.vat_rate || 0).toFixed(0) + '%)'"></div>
+                        <div class="font-bold text-violet-700 dark:text-violet-300" x-text="'€' + parseFloat(fleetInvoiceDetail?.vat_amount || 0).toFixed(2)"></div>
+                      </div>
+                      <div>
+                        <div class="text-[10px] uppercase text-emerald-700 dark:text-emerald-300">Total c/ IVA</div>
+                        <div class="font-extrabold text-emerald-700 dark:text-emerald-300" x-text="'€' + parseFloat(fleetInvoiceDetail?.total_com_iva || 0).toFixed(2)"></div>
+                      </div>
+                    </div>
+                  </div>
+
                   <div class="text-[10px] uppercase text-gray-500 mb-1.5 font-semibold">Detalhe por Motorista</div>
                   <div class="space-y-2">
                     <template x-for="line in (fleetInvoiceDetail?.lines || [])" :key="line.id">

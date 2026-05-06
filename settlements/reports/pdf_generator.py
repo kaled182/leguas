@@ -1469,19 +1469,34 @@ class PDFGenerator:
         elements.append(Spacer(1, 0.4 * cm))
 
         # ── Sumário totais ───────────────────────────────────────────
+        from decimal import Decimal
         elements.append(Paragraph("Sumário", section_style))
         elements.append(Spacer(1, 0.15 * cm))
+        vat_rate = fi.vat_rate or Decimal("0")
+        vat_amount = fi.vat_amount or Decimal("0")
+        total_com_iva = fi.total_com_iva
         summary = [
             ["Total entregas", str(fi.total_deliveries)],
             ["Base", f"€ {fi.total_base}"],
             ["Bónus", f"€ {fi.total_bonus}"],
             ["Claims", f"-€ {fi.total_claims}"],
-            ["TOTAL A RECEBER", f"€ {fi.total_a_receber}"],
+            ["Subtotal (s/ IVA)", f"€ {fi.total_a_receber}"],
+            [f"IVA ({vat_rate}%)", f"€ {vat_amount}"],
+            ["TOTAL A RECEBER (c/ IVA)", f"€ {total_com_iva}"],
         ]
         t = Table(summary, colWidths=[7 * cm, 5 * cm])
         t.setStyle(TableStyle([
             ("FONTNAME", (0, 0), (-1, -1), "Helvetica"),
             ("FONTSIZE", (0, 0), (-1, -1), 9),
+            # Subtotal: bg subtil
+            ("BACKGROUND", (0, -3), (-1, -3),
+             rlcolors.HexColor("#F3F4F6")),
+            ("FONTNAME", (0, -3), (-1, -3), "Helvetica-Bold"),
+            # IVA: cor de destaque
+            ("BACKGROUND", (0, -2), (-1, -2),
+             rlcolors.HexColor("#FEF3C7")),
+            ("FONTNAME", (0, -2), (-1, -2), "Helvetica-Bold"),
+            # TOTAL c/ IVA: bg purple forte
             ("BACKGROUND", (0, -1), (-1, -1), light_purple),
             ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold"),
             ("FONTSIZE", (0, -1), (-1, -1), 10),

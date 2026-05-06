@@ -700,6 +700,11 @@ def payables_fleets_without_invoice(request):
 
     total_delivered = sum(f["delivered_count"] for f in fleets)
     total_estimated = sum(f["estimated_amount"] for f in fleets)
+    total_estimated_com_iva = sum(
+        f.get("estimated_total_com_iva", f["estimated_amount"])
+        for f in fleets
+    )
+    total_vat = sum(f.get("estimated_vat", 0) for f in fleets)
     total_gap_days = sum(f["gap_days"] for f in fleets)
 
     return render(request, "accounting/payables_no_ff.html", {
@@ -712,6 +717,8 @@ def payables_fleets_without_invoice(request):
         "kpi_total_fleets": len(fleets),
         "kpi_total_delivered": total_delivered,
         "kpi_total_estimated": total_estimated,
+        "kpi_total_estimated_com_iva": total_estimated_com_iva,
+        "kpi_total_vat": total_vat,
         "kpi_total_gap_days": total_gap_days,
     })
 

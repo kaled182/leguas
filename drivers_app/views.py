@@ -3581,6 +3581,8 @@ from .portal_admin_views import (
     driver_vehicles,
     driver_helpers,
     driver_complaints,
+    driver_claims,
+    driver_claim_appeal,
     driver_logins,
     driver_financeiro,
     driver_pre_invoice_detail,

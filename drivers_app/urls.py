@@ -52,6 +52,14 @@ urlpatterns = [
     path("portal/<int:driver_id>/veiculos/", views.driver_vehicles, name="driver_vehicles"),
     path("portal/<int:driver_id>/helpers/", views.driver_helpers, name="driver_helpers"),
     path("portal/<int:driver_id>/reclamacoes/", views.driver_complaints, name="driver_complaints"),
+    path(
+        "portal/<int:driver_id>/descontos/",
+        views.driver_claims, name="driver_claims",
+    ),
+    path(
+        "portal/<int:driver_id>/descontos/<int:claim_id>/recorrer/",
+        views.driver_claim_appeal, name="driver_claim_appeal",
+    ),
     path("portal/<int:driver_id>/logins/", views.driver_logins, name="driver_logins"),
     path("portal/<int:driver_id>/financeiro/", views.driver_financeiro, name="driver_financeiro"),
     path(

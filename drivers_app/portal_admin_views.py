@@ -485,6 +485,86 @@ def driver_complaints(request, driver_id):
     })
 
 
+# ─── DESCONTOS / DriverClaim ────────────────────────────────────────
+
+@admin_required
+def driver_claims(request, driver_id):
+    """Descontos (DriverClaim) aplicados ao motorista — com workflow
+    de recurso para o operador anexar prova de entrega e contestar
+    com a Cainiao.
+    """
+    from settlements.models import DriverClaim
+
+    driver = get_object_or_404(DriverProfile, pk=driver_id)
+    claims = DriverClaim.objects.filter(driver=driver).order_by(
+        "-occurred_at",
+    )
+
+    counts = {
+        "total": claims.count(),
+        "pending": claims.filter(status="PENDING").count(),
+        "approved": claims.filter(status="APPROVED").count(),
+        "rejected": claims.filter(status="REJECTED").count(),
+        "appealed": claims.filter(status="APPEALED").count(),
+    }
+    total_pending_value = claims.filter(status="PENDING").aggregate(
+        s=models.Sum("amount"),
+    )["s"] or 0
+    total_approved_value = claims.filter(status="APPROVED").aggregate(
+        s=models.Sum("amount"),
+    )["s"] or 0
+
+    return render(request, "drivers_app/portal/admin_claims.html", {
+        "driver": driver,
+        "claims": claims,
+        "counts": counts,
+        "total_pending_value": total_pending_value,
+        "total_approved_value": total_approved_value,
+    })
+
+
+@admin_required
+@require_http_methods(["POST"])
+def driver_claim_appeal(request, driver_id, claim_id):
+    """Operador inicia recurso ao claim:
+    - Status passa de PENDING/APPROVED → APPEALED
+    - Anexa prova de entrega (foto/PDF) + justificação
+    - Estado fica em recurso até REJECTED ou cancelado
+    """
+    from settlements.models import DriverClaim
+
+    driver = get_object_or_404(DriverProfile, pk=driver_id)
+    claim = get_object_or_404(DriverClaim, id=claim_id, driver=driver)
+    if claim.status not in ("PENDING", "APPROVED"):
+        messages.error(
+            request,
+            f"Estado {claim.get_status_display()} não permite recurso.",
+        )
+        return redirect("drivers_app:driver_claims", driver_id=driver.id)
+
+    justification = (request.POST.get("justification") or "").strip()
+    evidence = request.FILES.get("evidence_file")
+
+    if not justification:
+        messages.error(request, "Justificação é obrigatória.")
+        return redirect("drivers_app:driver_claims", driver_id=driver.id)
+
+    claim.status = "APPEALED"
+    claim.justification = justification
+    if evidence:
+        claim.evidence_file = evidence
+    claim.save(update_fields=[
+        "status", "justification", "evidence_file", "updated_at",
+    ])
+
+    messages.success(
+        request,
+        f"Recurso aberto para reclamação #{claim.id}. "
+        "Use o detalhe do claim para responder com a Cainiao.",
+    )
+    return redirect("drivers_app:driver_claims", driver_id=driver.id)
+
+
 # ─── UNIFICAÇÃO de Cadastros ─────────────────────────────────────────
 
 @require_http_methods(["GET"])

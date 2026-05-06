@@ -1,0 +1,143 @@
+{% extends 'drivers_app/portal/_base.html' %}
+
+{% block portal_content %}
+
+<div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
+  <div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200/50 dark:border-gray-700/50">
+    <p class="text-xs uppercase font-bold text-gray-500">Total</p>
+    <p class="text-2xl font-extrabold text-gray-900 dark:text-white mt-1">{{ counts.total }}</p>
+  </div>
+  <div class="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 border border-amber-200/50 dark:border-amber-700/30">
+    <p class="text-xs uppercase font-bold text-amber-700 dark:text-amber-300">Pendentes</p>
+    <p class="text-2xl font-extrabold text-amber-700 dark:text-amber-300 mt-1">{{ counts.pending }}</p>
+    <p class="text-[10px] text-amber-600 mt-0.5">€ {{ total_pending_value|floatformat:2 }}</p>
+  </div>
+  <div class="bg-rose-50 dark:bg-rose-900/20 rounded-xl p-4 border border-rose-200/50 dark:border-rose-700/30">
+    <p class="text-xs uppercase font-bold text-rose-700 dark:text-rose-300">Aprovadas</p>
+    <p class="text-2xl font-extrabold text-rose-700 dark:text-rose-300 mt-1">{{ counts.approved }}</p>
+    <p class="text-[10px] text-rose-600 mt-0.5">€ {{ total_approved_value|floatformat:2 }}</p>
+  </div>
+  <div class="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 border border-blue-200/50 dark:border-blue-700/30">
+    <p class="text-xs uppercase font-bold text-blue-700 dark:text-blue-300">Em Recurso</p>
+    <p class="text-2xl font-extrabold text-blue-700 dark:text-blue-300 mt-1">{{ counts.appealed }}</p>
+  </div>
+  <div class="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-4 border border-emerald-200/50 dark:border-emerald-700/30">
+    <p class="text-xs uppercase font-bold text-emerald-700 dark:text-emerald-300">Rejeitadas</p>
+    <p class="text-2xl font-extrabold text-emerald-700 dark:text-emerald-300 mt-1">{{ counts.rejected }}</p>
+  </div>
+</div>
+
+<div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden mb-4">
+  <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+    <div class="flex items-center gap-2">
+      <i data-lucide="circle-dollar-sign" class="w-5 h-5 text-rose-500"></i>
+      <h3 class="font-bold text-gray-900 dark:text-white">Descontos deste Motorista</h3>
+    </div>
+    <div class="text-xs text-gray-500">
+      Aprovadas serão automaticamente incluídas como "Pacotes Perdidos" na próxima Pré-Fatura
+    </div>
+  </div>
+  <div class="divide-y divide-gray-100 dark:divide-gray-700">
+    {% for claim in claims %}
+    <div class="px-5 py-4 hover:bg-gray-50 dark:hover:bg-gray-700/30">
+      <div class="flex items-start justify-between flex-wrap gap-3">
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="font-mono text-xs text-gray-500">#{{ claim.id }}</span>
+            <span class="font-semibold text-gray-900 dark:text-white">{{ claim.get_claim_type_display }}</span>
+            {% if claim.status == 'PENDING' %}
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">Pendente</span>
+            {% elif claim.status == 'APPROVED' %}
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-400">Aprovada</span>
+            {% elif claim.status == 'APPEALED' %}
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">Em Recurso</span>
+            {% elif claim.status == 'REJECTED' %}
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400">Rejeitada</span>
+            {% endif %}
+            <span class="text-xs text-gray-500">{{ claim.occurred_at|date:"d/m/Y H:i" }}</span>
+          </div>
+          {% if claim.waybill_number %}
+            <div class="text-[11px] font-mono text-gray-500 mt-1">Waybill: {{ claim.waybill_number }}</div>
+          {% endif %}
+          <p class="text-sm text-gray-700 dark:text-gray-300 mt-1">{{ claim.description|truncatewords:30 }}</p>
+          {% if claim.justification %}
+            <div class="mt-2 bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-400 px-3 py-2 rounded text-xs">
+              <span class="font-semibold text-blue-700 dark:text-blue-300">Justificação do recurso:</span>
+              <span class="text-gray-700 dark:text-gray-300">{{ claim.justification|truncatewords:40 }}</span>
+            </div>
+          {% endif %}
+          {% if claim.evidence_file %}
+            <a href="{{ claim.evidence_file.url }}" target="_blank"
+               class="text-[11px] text-violet-600 hover:underline mt-1 inline-flex items-center gap-1">
+              <i data-lucide="paperclip" class="w-3 h-3"></i>
+              Prova anexada
+            </a>
+          {% endif %}
+        </div>
+        <div class="text-right flex-shrink-0">
+          <div class="text-xl font-extrabold text-rose-600 dark:text-rose-400">- € {{ claim.amount|floatformat:2 }}</div>
+          <div class="mt-2 flex flex-col gap-1.5 items-end">
+            <a href="/settlements/claims/{{ claim.id }}/" target="_blank"
+               class="text-[11px] text-gray-600 hover:text-violet-600 inline-flex items-center gap-1">
+              <i data-lucide="external-link" class="w-3 h-3"></i> Detalhes
+            </a>
+            {% if claim.status == 'PENDING' or claim.status == 'APPROVED' %}
+              <button type="button"
+                      onclick="document.getElementById('appeal-{{ claim.id }}').classList.toggle('hidden')"
+                      class="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-[11px] font-semibold inline-flex items-center gap-1">
+                <i data-lucide="shield" class="w-3 h-3"></i> Recorrer
+              </button>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      {# Form de recurso (oculto por defeito) #}
+      {% if claim.status == 'PENDING' or claim.status == 'APPROVED' %}
+      <div id="appeal-{{ claim.id }}" class="hidden mt-3 bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-700/40 rounded-lg p-4">
+        <form method="post" action="{% url 'drivers_app:driver_claim_appeal' driver.id claim.id %}"
+              enctype="multipart/form-data" class="space-y-3">
+          {% csrf_token %}
+          <div>
+            <label class="block text-xs uppercase font-bold text-blue-700 dark:text-blue-300 mb-1">
+              Justificação do Recurso (obrigatório)
+            </label>
+            <textarea name="justification" rows="3" required
+                      placeholder="Ex: Pacote foi entregue ao cliente em mãos com assinatura. Anexo foto do POD com timestamp e localização."
+                      class="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-blue-300 dark:border-blue-600 rounded-lg text-gray-900 dark:text-white"></textarea>
+          </div>
+          <div>
+            <label class="block text-xs uppercase font-bold text-blue-700 dark:text-blue-300 mb-1">
+              Prova de Entrega (foto/PDF — opcional)
+            </label>
+            <input type="file" name="evidence_file" accept="image/*,.pdf"
+                   class="block text-sm text-gray-600 dark:text-gray-400">
+            <p class="text-[10px] text-gray-500 mt-1">Anexar POD, foto da entrega, comprovativo do cliente, etc.</p>
+          </div>
+          <div class="flex justify-end gap-2">
+            <button type="button"
+                    onclick="document.getElementById('appeal-{{ claim.id }}').classList.add('hidden')"
+                    class="px-3 py-1.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded text-xs font-semibold">
+              Cancelar
+            </button>
+            <button type="submit"
+                    class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-semibold inline-flex items-center gap-1">
+              <i data-lucide="shield" class="w-3.5 h-3.5"></i>
+              Abrir Recurso
+            </button>
+          </div>
+        </form>
+      </div>
+      {% endif %}
+    </div>
+    {% empty %}
+    <div class="px-5 py-12 text-center">
+      <i data-lucide="check-circle-2" class="w-12 h-12 text-emerald-400 mx-auto mb-3"></i>
+      <p class="text-sm font-semibold text-gray-700 dark:text-gray-300">Sem descontos!</p>
+      <p class="text-xs text-gray-500 mt-1">Este motorista não tem reclamações registadas.</p>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+{% endblock %}

@@ -1315,6 +1315,30 @@ function empresasApp() {
 
     init() {
       this.$nextTick(() => lucide.createIcons());
+      // Deep-link: ?empresa=<id> abre directamente a frota.
+      // Opcional: ?date_from / ?date_to vão para o tab pré-faturas.
+      const params = new URLSearchParams(window.location.search);
+      const empresaId = parseInt(params.get('empresa') || '', 10);
+      if (empresaId) {
+        const e = this.empresas.find(ep => ep.id === empresaId);
+        if (e) {
+          this.openEdit(e);
+          const dFrom = params.get('date_from');
+          const dTo = params.get('date_to');
+          if (dFrom && dTo) {
+            this.$nextTick(() => {
+              this.activeTab = 'prefaturas';
+              if (typeof this.lotePeriodFrom !== 'undefined') {
+                this.lotePeriodFrom = dFrom;
+                this.lotePeriodTo = dTo;
+              }
+              if (typeof this.loadPrefaturas === 'function') {
+                this.loadPrefaturas();
+              }
+            });
+          }
+        }
+      }
     },
 
     filteredEmpresas() {

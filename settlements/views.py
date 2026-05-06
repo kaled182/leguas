@@ -379,7 +379,10 @@ def financial_dashboard(request):
 @login_required
 def invoice_list(request):
     """Lista de invoices de partners"""
-    invoices = PartnerInvoice.objects.select_related("partner").all()
+    from django.db.models import Sum
+    invoices = PartnerInvoice.objects.select_related(
+        "partner",
+    ).prefetch_related("cainiao_import").all()
 
     # Filtros
     status = request.GET.get("status")
@@ -422,9 +425,29 @@ def invoice_list(request):
     except EmptyPage:
         invoices = paginator.page(paginator.num_pages)
 
+    # KPIs (sobre o queryset completo, antes da paginação)
+    base_qs = PartnerInvoice.objects.all()
+    total_pending = base_qs.filter(
+        status__in=["PENDING", "DRAFT"],
+    ).aggregate(s=Sum("net_amount"))["s"] or 0
+    total_overdue = base_qs.filter(status="OVERDUE").aggregate(
+        s=Sum("net_amount"),
+    )["s"] or 0
+    total_paid_year = base_qs.filter(
+        status="PAID",
+        paid_date__year=timezone.now().year,
+    ).aggregate(s=Sum("net_amount"))["s"] or 0
+    count_cainiao_imports = base_qs.filter(
+        cainiao_import__isnull=False,
+    ).count()
+
     context = {
         "invoices": invoices,
         "status_choices": PartnerInvoice.STATUS_CHOICES,
+        "kpi_total_pending": total_pending,
+        "kpi_total_overdue": total_overdue,
+        "kpi_total_paid_year": total_paid_year,
+        "kpi_count_cainiao_imports": count_cainiao_imports,
     }
 
     return render(request, "settlements/invoice_list_v2.html", context)

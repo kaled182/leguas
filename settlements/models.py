@@ -3916,7 +3916,7 @@ class CainiaoBillingImport(models.Model):
 
     imported_by = models.ForeignKey(
         "auth.User", on_delete=models.SET_NULL, null=True, blank=True,
-        related_name="cainiao_imports",
+        related_name="cainiao_billing_imports",
     )
     imported_at = models.DateTimeField(auto_now_add=True)
 

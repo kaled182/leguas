@@ -69,7 +69,7 @@ class Migration(migrations.Migration):
                     models.ForeignKey(
                         blank=True, null=True,
                         on_delete=models.deletion.SET_NULL,
-                        related_name="cainiao_imports",
+                        related_name="cainiao_billing_imports",
                         to=settings.AUTH_USER_MODEL,
                     ),
                 ),

@@ -507,6 +507,40 @@ def cainiao_billing_create_overrides(request, import_id):
 
 @login_required
 @require_http_methods(["POST"])
+def cainiao_billing_reresolve(request, import_id):
+    """Re-corre a resolução de task/driver para um import existente.
+
+    Útil quando o EPOD Task List é importado DEPOIS da pré-fatura
+    Cainiao — as tasks agora existem mas o matching original não
+    as encontrou.
+    """
+    from .models import CainiaoBillingImport
+    from .services_cainiao_billing import reresolve_matching
+
+    session = get_object_or_404(CainiaoBillingImport, id=import_id)
+    try:
+        result = reresolve_matching(session)
+    except Exception as e:
+        log.exception("reresolve_matching falhou")
+        messages.error(request, f"Erro ao reprocessar matching: {e}")
+        return redirect(
+            "cainiao-billing-detail", import_id=session.id,
+        )
+
+    messages.success(
+        request,
+        f"Matching reprocessado: "
+        f"{result['newly_resolved_task']} tasks ligadas, "
+        f"{result['newly_resolved_driver']} drivers ligados "
+        f"(em {result['total']} linhas).",
+    )
+    return redirect(
+        "cainiao-billing-detail", import_id=session.id,
+    )
+
+
+@login_required
+@require_http_methods(["POST"])
 def cainiao_billing_delete(request, import_id):
     """Apagar uma sessão de importação (cascade nas linhas).
 

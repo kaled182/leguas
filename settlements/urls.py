@@ -60,6 +60,11 @@ urlpatterns = [
         name="cainiao-billing-delete",
     ),
     path(
+        "invoices/cainiao/<int:import_id>/reresolve/",
+        views_cainiao_billing.cainiao_billing_reresolve,
+        name="cainiao-billing-reresolve",
+    ),
+    path(
         "invoices/cainiao/<int:import_id>/create-overrides/",
         views_cainiao_billing.cainiao_billing_create_overrides,
         name="cainiao-billing-create-overrides",

@@ -18,10 +18,25 @@
         {% if session.imported_by %} por {{ session.imported_by.username }}{% endif %}
       </p>
     </div>
-    <div class="flex items-center gap-2">
+    <div class="flex items-center gap-2 flex-wrap">
+      <form method="post" action="{% url 'cainiao-billing-reresolve' session.id %}"
+            onsubmit="return confirm('Reprocessar matching de todos os waybills com o estado atual de CainiaoOperationTask e DriverCourierMapping?\n\nNão duplica nada — apenas refaz as ligações.');">
+        {% csrf_token %}
+        <button type="submit" class="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold inline-flex items-center gap-2"
+                title="Re-correr resolução de task/driver. Útil depois de importar EPOD Task List.">
+          <i data-lucide="refresh-cw" class="w-4 h-4"></i> Reprocessar Matching
+        </button>
+      </form>
+      <form method="post" action="{% url 'cainiao-billing-delete' session.id %}"
+            onsubmit="return confirm('Apagar IRREVERSÍVELMENTE esta importação Cainiao?\n\nVai eliminar:\n- {{ session.total_lines }} linhas\n- A PartnerInvoice associada\n- Todos os DriverClaim já criados ficam ÓRFÃOS (sem ligação à billing)\n\nConfirmar?');">
+        {% csrf_token %}
+        <button type="submit" class="px-4 py-2 text-sm bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-semibold inline-flex items-center gap-2">
+          <i data-lucide="trash-2" class="w-4 h-4"></i> Apagar Importação
+        </button>
+      </form>
       <a href="{% url 'invoice-list' %}"
          class="px-4 py-2 text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 rounded-lg font-semibold inline-flex items-center gap-2">
-        <i data-lucide="arrow-left" class="w-4 h-4"></i> Faturas de Parceiros
+        <i data-lucide="arrow-left" class="w-4 h-4"></i> Voltar
       </a>
     </div>
   </div>

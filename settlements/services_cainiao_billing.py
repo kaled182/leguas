@@ -238,11 +238,19 @@ def _build_resolution_caches():
 def _resolve_task(waybill: str):
     """Devolve a CainiaoOperationTask 'Delivered' mais recente para o
     waybill, ou qualquer outra se não houver Delivered.
+
+    O waybill da planilha Cainiao (REFs, ex: LP88020041701064070) pode
+    estar guardado em CainiaoOperationTask como `lp_number` em vez de
+    `waybill_number` — depende da fase em que foi importado o EPOD
+    Task List. Procuramos nos dois campos.
     """
+    from django.db.models import Q
     from .models import CainiaoOperationTask
     if not waybill:
         return None
-    qs = CainiaoOperationTask.objects.filter(waybill_number=waybill)
+    qs = CainiaoOperationTask.objects.filter(
+        Q(waybill_number=waybill) | Q(lp_number=waybill)
+    )
     delivered = qs.filter(task_status="Delivered").order_by(
         "-task_date",
     ).first()
@@ -352,17 +360,30 @@ def import_cainiao_billing(file_obj, file_name: str, user=None):
         for chunk_start in range(0, len(rows), CHUNK_SIZE):
             chunk = rows[chunk_start:chunk_start + CHUNK_SIZE]
 
-            # Pre-fetch de tasks por waybill (batch — 1 query)
+            # Pre-fetch de tasks por waybill OU lp_number (batch — 1 query).
+            # No XLSX Cainiao, REFs (waybill_number da billing) é tipicamente
+            # o LP público (LP88...) — que no CainiaoOperationTask pode estar
+            # guardado em lp_number. Indexamos por ambos para resolver.
+            from django.db.models import Q as _Q
             wbs = [r["waybill_number"] for r in chunk if r["waybill_number"]]
             tasks_by_wb = {}
             if wbs:
-                # Para cada waybill, escolher Delivered mais recente
                 qs_tasks = CainiaoOperationTask.objects.filter(
-                    waybill_number__in=wbs,
-                ).order_by("waybill_number", "-task_date")
+                    _Q(waybill_number__in=wbs) | _Q(lp_number__in=wbs)
+                ).order_by("-task_date")  # mais recente primeiro
+                # Indexar por ambos os campos. Prioridade: Delivered > outros.
                 for t in qs_tasks:
-                    if t.waybill_number not in tasks_by_wb:
-                        tasks_by_wb[t.waybill_number] = t
+                    for key in (t.waybill_number, t.lp_number):
+                        if not key:
+                            continue
+                        existing = tasks_by_wb.get(key)
+                        if existing is None:
+                            tasks_by_wb[key] = t
+                        elif (
+                            existing.task_status != "Delivered"
+                            and t.task_status == "Delivered"
+                        ):
+                            tasks_by_wb[key] = t
 
             objs = []
             for r in chunk:
@@ -469,6 +490,98 @@ def import_cainiao_billing(file_obj, file_name: str, user=None):
         except Exception:
             pass
         raise
+
+
+# ─────────────────────────────────────────────────────────────────────
+#  Re-resolução de matching (sem reimportar)
+# ─────────────────────────────────────────────────────────────────────
+
+def reresolve_matching(session):
+    """Re-corre a resolução de task/driver para um import existente.
+
+    Útil quando:
+      - o EPOD Task List foi importado depois da billing (tasks
+        agora existem mas no momento do import billing não existiam);
+      - o algoritmo de resolução foi melhorado;
+      - DriverCourierMapping novos foram adicionados.
+
+    Não duplica dados — apenas faz UPDATE em CainiaoBillingLine
+    nos campos task_id e driver_id em chunks.
+    """
+    from django.db.models import Q as _Q
+    from .models import CainiaoBillingLine, CainiaoOperationTask
+
+    cid_to_driver, cname_to_driver = _build_resolution_caches()
+
+    qs = session.lines.all().only(
+        "id", "waybill_number", "staff_id", "task_id", "driver_id",
+    )
+    total = qs.count()
+    n_resolved_task = 0
+    n_resolved_driver = 0
+
+    chunk = []
+    chunk_size = CHUNK_SIZE
+
+    def _flush(lines_to_update):
+        if not lines_to_update:
+            return
+        with transaction.atomic():
+            CainiaoBillingLine.objects.bulk_update(
+                lines_to_update, fields=["task_id", "driver_id"],
+            )
+
+    # Pré-buscar tasks em batch para todo o conjunto (1 query única
+    # com __in que cobre todos os waybills do session)
+    wbs = list(set(qs.exclude(waybill_number="").values_list(
+        "waybill_number", flat=True,
+    )))
+    tasks_by_wb = {}
+    # Em chunks de 5k para não estourar query
+    for i in range(0, len(wbs), 5000):
+        sub = wbs[i:i + 5000]
+        for t in CainiaoOperationTask.objects.filter(
+            _Q(waybill_number__in=sub) | _Q(lp_number__in=sub),
+        ).order_by("-task_date"):
+            for key in (t.waybill_number, t.lp_number):
+                if not key:
+                    continue
+                existing = tasks_by_wb.get(key)
+                if existing is None:
+                    tasks_by_wb[key] = t
+                elif (
+                    existing.task_status != "Delivered"
+                    and t.task_status == "Delivered"
+                ):
+                    tasks_by_wb[key] = t
+
+    for line in qs.iterator(chunk_size=chunk_size):
+        old_task = line.task_id
+        old_driver = line.driver_id
+        task = tasks_by_wb.get(line.waybill_number)
+        driver = _resolve_driver(
+            line.staff_id, task, cid_to_driver, cname_to_driver,
+        )
+        new_task = task.id if task else None
+        new_driver = driver.id if driver else None
+        if new_task != old_task or new_driver != old_driver:
+            line.task_id = new_task
+            line.driver_id = new_driver
+            chunk.append(line)
+            if new_task and not old_task:
+                n_resolved_task += 1
+            if new_driver and not old_driver:
+                n_resolved_driver += 1
+        if len(chunk) >= chunk_size:
+            _flush(chunk)
+            chunk = []
+    _flush(chunk)
+
+    return {
+        "total": total,
+        "newly_resolved_task": n_resolved_task,
+        "newly_resolved_driver": n_resolved_driver,
+    }
 
 
 # ─────────────────────────────────────────────────────────────────────

@@ -302,8 +302,20 @@ def import_cainiao_billing(file_obj, file_name: str, user=None):
         file_hash=file_hash,
     ).first()
     if existing:
-        log.info("Cainiao billing import já existe (hash %s)", file_hash[:12])
-        return existing, "already_imported"
+        if existing.status == "FAILED":
+            # Limpa o import anterior falhado para permitir nova tentativa
+            log.info(
+                "Cainiao billing import anterior FAILED (hash %s) — "
+                "removendo para reimport.", file_hash[:12],
+            )
+            if existing.partner_invoice_id:
+                existing.partner_invoice.delete()
+            existing.delete()
+        else:
+            log.info(
+                "Cainiao billing import já existe (hash %s)", file_hash[:12],
+            )
+            return existing, "already_imported"
 
     # Parsear todas as linhas em memória
     rows = list(parse_xlsx_to_rows(file_obj))

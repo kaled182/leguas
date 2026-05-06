@@ -44,6 +44,7 @@ class PayableRow:
     payable: bool = False
     block_reason: str = ""
     has_recibo: Optional[bool] = None  # só para PFs
+    alerts: list = field(default_factory=list)  # anomalias detectadas
 
     @property
     def days_to_due(self) -> Optional[int]:
@@ -64,6 +65,7 @@ class PayableRow:
 
 
 def _row_pre_invoice(pf):
+    from .services_payable_alerts import alerts_for_pre_invoice
     has_recibo = bool(pf.fatura_ficheiro)
     payable = pf.status in ("APROVADO", "PENDENTE") and has_recibo
     block = ""
@@ -73,6 +75,9 @@ def _row_pre_invoice(pf):
         block = "Falta aprovar a pré-fatura"
     elif pf.status not in ("APROVADO", "PENDENTE"):
         block = f"Estado {pf.get_status_display()} não permite pagamento"
+
+    alerts = alerts_for_pre_invoice(pf)
+
     return PayableRow(
         entity_type="pre_invoice",
         entity_id=pf.id,
@@ -96,6 +101,7 @@ def _row_pre_invoice(pf):
         payable=payable,
         block_reason=block,
         has_recibo=has_recibo,
+        alerts=alerts,
     )
 
 

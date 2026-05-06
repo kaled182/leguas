@@ -21,6 +21,86 @@
     </div>
   </div>
 
+  {# Análise diagnóstica das divergências #}
+  {% if diagnosis.total %}
+  <div class="bg-white dark:bg-gray-800 rounded-xl border border-violet-300 dark:border-violet-700/40 overflow-hidden">
+    <div class="bg-violet-50 dark:bg-violet-900/20 px-4 py-3 flex items-center justify-between flex-wrap gap-2">
+      <div>
+        <h3 class="font-semibold text-violet-700 dark:text-violet-300 flex items-center gap-2">
+          <i data-lucide="microscope" class="w-4 h-4"></i>
+          Análise diagnóstica das {{ diagnosis.total }} divergências
+        </h3>
+        <p class="text-[11px] text-violet-700/70 dark:text-violet-300/70 mt-0.5">
+          Para cada task Delivered sem facturação, classificamos a causa provável cruzando com outros imports e compensaciones.
+        </p>
+      </div>
+      <a href="{% url 'cainiao-billing-export' session.id 'diagnosis' %}"
+         class="px-3 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg font-semibold text-sm inline-flex items-center gap-2">
+        <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+        Exportar diagnóstico (XLSX)
+      </a>
+    </div>
+    <div class="divide-y divide-gray-100 dark:divide-gray-700">
+
+      {% if diagnosis.counts.billed_other_import %}
+      <div class="px-4 py-3 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-700/30">
+        <i data-lucide="calendar-clock" class="w-5 h-5 text-blue-500 flex-shrink-0"></i>
+        <div class="flex-1">
+          <div class="font-semibold text-blue-700 dark:text-blue-300">{{ diagnosis.counts.billed_other_import }} pacote{{ diagnosis.counts.billed_other_import|pluralize:"s" }} facturado{{ diagnosis.counts.billed_other_import|pluralize:"s" }} <em>noutro import</em></div>
+          <div class="text-[11px] text-gray-500 mt-0.5">Border effect — Cainiao facturou no mês seguinte ou anterior. <strong>Não há perda</strong>.</div>
+        </div>
+        <span class="text-2xl font-extrabold text-blue-600">{{ diagnosis.counts.billed_other_import }}</span>
+      </div>
+      {% endif %}
+
+      {% if diagnosis.counts.compensation_this_import %}
+      <div class="px-4 py-3 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-700/30">
+        <i data-lucide="alert-octagon" class="w-5 h-5 text-rose-500 flex-shrink-0"></i>
+        <div class="flex-1">
+          <div class="font-semibold text-rose-700 dark:text-rose-300">{{ diagnosis.counts.compensation_this_import }} pacote{{ diagnosis.counts.compensation_this_import|pluralize:"s" }} {{ diagnosis.counts.compensation_this_import|pluralize:"é,são" }} <em>compensación</em> neste import</div>
+          <div class="text-[11px] text-gray-500 mt-0.5">A Cainiao deduziu — não pagou. Devem virar DriverClaim na tab Claims.</div>
+        </div>
+        <span class="text-2xl font-extrabold text-rose-600">{{ diagnosis.counts.compensation_this_import }}</span>
+      </div>
+      {% endif %}
+
+      {% if diagnosis.counts.compensation_other_import %}
+      <div class="px-4 py-3 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-700/30">
+        <i data-lucide="alert-triangle" class="w-5 h-5 text-amber-500 flex-shrink-0"></i>
+        <div class="flex-1">
+          <div class="font-semibold text-amber-700 dark:text-amber-300">{{ diagnosis.counts.compensation_other_import }} pacote{{ diagnosis.counts.compensation_other_import|pluralize:"s" }} compensación{{ diagnosis.counts.compensation_other_import|pluralize:",es" }} <em>noutro import</em></div>
+          <div class="text-[11px] text-gray-500 mt-0.5">Cainiao deduziu num mês diferente. Não há perda — apenas timing.</div>
+        </div>
+        <span class="text-2xl font-extrabold text-amber-600">{{ diagnosis.counts.compensation_other_import }}</span>
+      </div>
+      {% endif %}
+
+      {% if diagnosis.counts.duplicate_locally %}
+      <div class="px-4 py-3 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-700/30">
+        <i data-lucide="copy" class="w-5 h-5 text-orange-500 flex-shrink-0"></i>
+        <div class="flex-1">
+          <div class="font-semibold text-orange-700 dark:text-orange-300">{{ diagnosis.counts.duplicate_locally }} duplicado{{ diagnosis.counts.duplicate_locally|pluralize:"s" }} localmente</div>
+          <div class="text-[11px] text-gray-500 mt-0.5">Mesmo waybill com Delivered em datas diferentes — re-tentativa contabilizada 2× ou import duplicado do EPOD.</div>
+        </div>
+        <span class="text-2xl font-extrabold text-orange-600">{{ diagnosis.counts.duplicate_locally }}</span>
+      </div>
+      {% endif %}
+
+      {% if diagnosis.counts.genuinely_unpaid %}
+      <div class="px-4 py-3 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-700/30">
+        <i data-lucide="circle-dollar-sign" class="w-5 h-5 text-rose-600 flex-shrink-0"></i>
+        <div class="flex-1">
+          <div class="font-semibold text-rose-700 dark:text-rose-300">{{ diagnosis.counts.genuinely_unpaid }} <strong>genuinamente não pago{{ diagnosis.counts.genuinely_unpaid|pluralize:"s" }}</strong></div>
+          <div class="text-[11px] text-gray-500 mt-0.5">⚠ Potencial perda — sem registo em nenhum import Cainiao. <strong>Confirmar com Cainiao</strong>.</div>
+        </div>
+        <span class="text-2xl font-extrabold text-rose-700 dark:text-rose-300">{{ diagnosis.counts.genuinely_unpaid }}</span>
+      </div>
+      {% endif %}
+
+    </div>
+  </div>
+  {% endif %}
+
   {# Pagas s/ task local #}
   <details class="bg-white dark:bg-gray-800 rounded-xl border border-amber-200 dark:border-amber-700/40" {% if recon.paid_no_task_count and recon.paid_no_task_count < 100 %}open{% endif %}>
     <summary class="cursor-pointer px-4 py-3 flex items-center gap-2 font-semibold text-amber-700 dark:text-amber-300 select-none">

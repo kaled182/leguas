@@ -588,6 +588,182 @@ def reresolve_matching(session):
 #  Análise / queries auxiliares
 # ─────────────────────────────────────────────────────────────────────
 
+def diagnose_delivered_no_billing(session):
+    """Categoriza tasks Delivered no período sem linha de envio nesta
+    pré-fatura, identificando a causa provável de cada uma.
+
+    Categorias (mutuamente exclusivas, processadas por ordem):
+      1. billed_other_import: aparece como envio fee em OUTRO
+         CainiaoBillingImport (border effect — Cainiao facturou no
+         mês seguinte ou anterior).
+      2. compensation_this_import: aparece como compensación nesta
+         pré-fatura (foi descontado, não pago).
+      3. compensation_other_import: aparece como compensación noutro
+         import.
+      4. duplicate_locally: o mesmo waybill_number tem várias linhas
+         em CainiaoOperationTask com Delivered em datas diferentes
+         (suspeita de import duplicado ou re-entrega).
+      5. genuinely_unpaid: nenhuma das anteriores → potencial perda
+         genuína.
+    """
+    from collections import defaultdict
+    from django.db.models import Q as _Q
+    from .models import CainiaoBillingLine, CainiaoOperationTask
+
+    # 1. Lista base: Delivered no período, sem linha de envio neste import
+    billed_wbs_this = set(
+        session.lines.filter(fee_type="envio fee").values_list(
+            "waybill_number", flat=True,
+        )
+    )
+    delivered_qs = (
+        CainiaoOperationTask.objects
+        .filter(
+            task_date__range=(session.period_from, session.period_to),
+            task_status="Delivered",
+        )
+        .exclude(waybill_number__in=billed_wbs_this)
+    )
+
+    # 2. Recolher os waybills em estudo (de waybill_number e lp_number)
+    delivered_keys = set()
+    delivered_list = list(delivered_qs.values(
+        "id", "waybill_number", "lp_number", "task_date",
+        "courier_name", "courier_id_cainiao", "destination_city",
+    ))
+    for t in delivered_list:
+        if t["waybill_number"]:
+            delivered_keys.add(t["waybill_number"])
+        if t["lp_number"]:
+            delivered_keys.add(t["lp_number"])
+
+    if not delivered_list:
+        return {
+            "total": 0,
+            "billed_other_import": [],
+            "compensation_this_import": [],
+            "compensation_other_import": [],
+            "duplicate_locally": [],
+            "genuinely_unpaid": [],
+            "counts": {
+                "total": 0, "billed_other_import": 0,
+                "compensation_this_import": 0,
+                "compensation_other_import": 0,
+                "duplicate_locally": 0, "genuinely_unpaid": 0,
+            },
+        }
+
+    # 3. Lookup em todos os CainiaoBillingLine cujos waybills coincidam
+    cross_lines = (
+        CainiaoBillingLine.objects
+        .filter(waybill_number__in=delivered_keys)
+        .select_related("import_session")
+        .values(
+            "waybill_number", "fee_type", "import_session_id",
+            "import_session__period_from", "import_session__period_to",
+        )
+    )
+    by_wb = defaultdict(list)
+    for cl in cross_lines:
+        by_wb[cl["waybill_number"]].append(cl)
+
+    # 4. Detectar duplicados locais (mesmo waybill_number Delivered em
+    #    >= 2 datas diferentes)
+    dup_counts = defaultdict(set)
+    for t in CainiaoOperationTask.objects.filter(
+        task_date__range=(session.period_from, session.period_to),
+        task_status="Delivered",
+        waybill_number__in=[t["waybill_number"] for t in delivered_list],
+    ).values("waybill_number", "task_date"):
+        dup_counts[t["waybill_number"]].add(t["task_date"])
+    duplicates = {wb for wb, dates in dup_counts.items() if len(dates) > 1}
+
+    # 5. Categorizar
+    billed_other = []
+    comp_this = []
+    comp_other = []
+    dup_local = []
+    genuine = []
+
+    for t in delivered_list:
+        wb = t["waybill_number"]
+        lp = t["lp_number"] or ""
+        # Lookup combinando waybill e lp
+        candidates = list(by_wb.get(wb, [])) + list(by_wb.get(lp, []))
+
+        # 5.1 envio fee em outro import
+        billed_other_match = next(
+            (c for c in candidates
+             if c["fee_type"] == "envio fee"
+             and c["import_session_id"] != session.id),
+            None,
+        )
+        if billed_other_match:
+            t["_reason"] = (
+                f"Facturado em import #{billed_other_match['import_session_id']} "
+                f"({billed_other_match['import_session__period_from']}→"
+                f"{billed_other_match['import_session__period_to']})"
+            )
+            billed_other.append(t)
+            continue
+
+        # 5.2 compensación neste import
+        comp_this_match = next(
+            (c for c in candidates
+             if c["fee_type"] == "compensacion"
+             and c["import_session_id"] == session.id),
+            None,
+        )
+        if comp_this_match:
+            t["_reason"] = "Aparece como compensación neste import"
+            comp_this.append(t)
+            continue
+
+        # 5.3 compensación em outro import
+        comp_other_match = next(
+            (c for c in candidates if c["fee_type"] == "compensacion"),
+            None,
+        )
+        if comp_other_match:
+            t["_reason"] = (
+                f"Compensación em import "
+                f"#{comp_other_match['import_session_id']}"
+            )
+            comp_other.append(t)
+            continue
+
+        # 5.4 duplicate local
+        if wb in duplicates:
+            dates = sorted(dup_counts[wb])
+            t["_reason"] = (
+                f"Delivered em {len(dates)} datas: "
+                f"{', '.join(d.strftime('%d/%m') for d in dates)}"
+            )
+            dup_local.append(t)
+            continue
+
+        # 5.5 genuíno
+        t["_reason"] = "Sem facturação em nenhum import — confirmar com Cainiao"
+        genuine.append(t)
+
+    return {
+        "total": len(delivered_list),
+        "billed_other_import": billed_other,
+        "compensation_this_import": comp_this,
+        "compensation_other_import": comp_other,
+        "duplicate_locally": dup_local,
+        "genuinely_unpaid": genuine,
+        "counts": {
+            "total": len(delivered_list),
+            "billed_other_import": len(billed_other),
+            "compensation_this_import": len(comp_this),
+            "compensation_other_import": len(comp_other),
+            "duplicate_locally": len(dup_local),
+            "genuinely_unpaid": len(genuine),
+        },
+    }
+
+
 def reconciliation_for_import(session):
     """Compara CainiaoBillingLine com CainiaoOperationTask local.
 

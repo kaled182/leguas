@@ -165,11 +165,14 @@ def cainiao_billing_detail(request, import_id):
 
     # ── Tab: Reconciliação ───────────────────────────────────────────
     elif active_tab == "reconciliation":
+        from .services_cainiao_billing import diagnose_delivered_no_billing
         recon = reconciliation_for_import(session)
+        diagnosis = diagnose_delivered_no_billing(session)
         # Paginar as duas listas grandes
         from django.core.paginator import Paginator as P
         ctx.update({
             "recon": recon,
+            "diagnosis": diagnosis,
             "paid_no_task_page": P(
                 recon["paid_no_task"], 50,
             ).get_page(request.GET.get("p1", 1)),
@@ -638,6 +641,76 @@ def cainiao_billing_export_xlsx(request, import_id, kind):
             f"cainiao_precos_especiais_{session.period_from}_"
             f"{session.period_to}.xlsx"
         )
+
+    elif kind == "diagnosis":
+        from .services_cainiao_billing import diagnose_delivered_no_billing
+        diag = diagnose_delivered_no_billing(session)
+        # Remove a sheet default; vamos criar uma por categoria
+        wb.remove(ws)
+        categories = [
+            ("billed_other_import", "Facturado outro import"),
+            ("compensation_this_import", "Compensacao este import"),
+            ("compensation_other_import", "Compensacao outro import"),
+            ("duplicate_locally", "Duplicado localmente"),
+            ("genuinely_unpaid", "Genuinamente nao pago"),
+        ]
+        any_data = False
+        for key, sheet_name in categories:
+            items = diag.get(key) or []
+            if not items:
+                continue
+            any_data = True
+            sh = wb.create_sheet(title=sheet_name[:31])
+            sh.append([
+                "Task Date", "Waybill", "LP Number", "Courier ID",
+                "Courier Name", "Cidade", "Causa identificada",
+            ])
+            for col in range(1, 8):
+                cell = sh.cell(row=1, column=col)
+                cell.font = header_font
+                cell.fill = header_fill
+            for t in items:
+                sh.append([
+                    t["task_date"].strftime("%Y-%m-%d") if t.get(
+                        "task_date") else "",
+                    t.get("waybill_number") or "",
+                    t.get("lp_number") or "",
+                    t.get("courier_id_cainiao") or "",
+                    t.get("courier_name") or "",
+                    t.get("destination_city") or "",
+                    t.get("_reason") or "",
+                ])
+            for col_cells in sh.columns:
+                max_len = 0
+                for cell in col_cells:
+                    v = str(cell.value) if cell.value is not None else ""
+                    if len(v) > max_len:
+                        max_len = len(v)
+                sh.column_dimensions[col_cells[0].column_letter].width = (
+                    min(max_len + 2, 60)
+                )
+        if not any_data:
+            sh = wb.create_sheet(title="Sem dados")
+            sh.append(["(Nenhuma divergência detectada)"])
+        filename = (
+            f"cainiao_diagnostico_reconciliacao_{session.period_from}_"
+            f"{session.period_to}.xlsx"
+        )
+        # ... segue para a parte de stream do response
+        buf = BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+        response = HttpResponse(
+            buf.read(),
+            content_type=(
+                "application/vnd.openxmlformats-officedocument."
+                "spreadsheetml.sheet"
+            ),
+        )
+        response["Content-Disposition"] = (
+            f'attachment; filename="{filename}"'
+        )
+        return response
 
     elif kind == "claims":
         ws.title = "Compensacoes (claims)"

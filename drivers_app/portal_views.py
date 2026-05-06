@@ -77,14 +77,43 @@ def _get_driver_courier_names(driver):
     return names
 
 
+def _other_driver_courier_names(this_driver):
+    """Cache leve: courier_names de OUTROS drivers (apelido +
+    DriverCourierMapping.courier_name). Usado para excluir tasks com
+    courier_id partilhado mas courier_name de outro driver real
+    (bug do EPOD em que o id do hub aparece em entregas de drivers
+    normais).
+    """
+    from .models import DriverProfile
+    from settlements.models import DriverCourierMapping
+
+    own_id = this_driver.id
+    names = set()
+    for ap in DriverProfile.objects.exclude(id=own_id).exclude(
+        apelido="",
+    ).values_list("apelido", flat=True):
+        if ap:
+            names.add(ap)
+    for cn in DriverCourierMapping.objects.exclude(
+        driver_id=own_id,
+    ).exclude(courier_name="").values_list("courier_name", flat=True):
+        if cn:
+            names.add(cn)
+    return names
+
+
 def _driver_base_queryset(driver, date_from, date_to):
     """QuerySet canónico das tarefas de um driver no intervalo.
 
-    Replica exactamente a lógica do relatório legacy:
-      - filtra por (courier_id_cainiao OR courier_name) — OR não AND
+    Regra:
+      - Match directo por courier_name → task pertence ao driver
+        (courier_name é específico do driver).
+      - Match por courier_id → task pertence ao driver SE o
+        courier_name NÃO pertencer a outro driver real (evita capturar
+        entregas alheias quando o courier_id do hub é partilhado por
+        bug da Cainiao).
       - exclui waybills transferidos PARA outros drivers
       - inclui (UNION) waybills transferidos PARA este driver
-      - NÃO mistura signatures do history (evita inflar números)
     """
     from settlements.models import (
         CainiaoOperationTask, WaybillAttributionOverride,
@@ -97,11 +126,21 @@ def _driver_base_queryset(driver, date_from, date_to):
     qs = CainiaoOperationTask.objects.filter(
         task_date__range=(date_from, date_to),
     )
+
+    # Names de outros drivers que não pertencem a este driver
+    other_names = _other_driver_courier_names(driver) - set(courier_names)
+
     driver_q = Q()
-    if courier_ids:
-        driver_q |= Q(courier_id_cainiao__in=list(courier_ids))
     if courier_names:
+        # Match directo por nome — específico do driver.
         driver_q |= Q(courier_name__in=list(courier_names))
+    if courier_ids:
+        # Match por id apenas se o nome não pertencer a outro driver
+        # (evita capturar entregas alheias com cid partilhado).
+        cid_q = Q(courier_id_cainiao__in=list(courier_ids))
+        if other_names:
+            cid_q &= ~Q(courier_name__in=list(other_names))
+        driver_q |= cid_q
     qs = qs.filter(driver_q)
 
     # Aplicar transferências

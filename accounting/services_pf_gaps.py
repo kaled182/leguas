@@ -1,19 +1,48 @@
 """Detector de motoristas com entregas mas sem pré-fatura no período.
 
-Cruza `CainiaoOperationTask` (entregas) com `DriverPreInvoice` (PFs)
-para encontrar motoristas que entregaram pacotes mas não têm PF que
-cubra esse intervalo. Garante que ninguém fica sem ser pago.
+Cruza `CainiaoOperationTask` (entregas) com `DriverPreInvoice` (PFs) para
+encontrar motoristas que entregaram pacotes mas não têm PF que cubra esse
+intervalo. Garante que ninguém fica sem ser pago.
 
-Critério "pragmático" (default):
-    - Motorista com ≥1 pacote `Delivered` no período
-    - Soma de dias COM PF (que sobreponha o período) é < total de dias
-      com entregas, com gap ≥ MIN_GAP_DAYS
+──────────────────────────────────────────────────────────────────────
+COMPOSIÇÃO DE UMA PF REAL (espelhada aqui o mais fielmente possível)
+──────────────────────────────────────────────────────────────────────
+Para cada driver, no período:
 
-Cálculo do valor estimado (corrigido):
-    - Conta entregas em TODOS os mappings do motorista (DriverCourierMapping
-      + apelido + courier_id_cainiao), não só os principais
-    - Soma bónus de domingo/feriado pelas faixas €30 (≥30 entregas)
-      ou €50 (≥60 entregas) por dia
+  1. Lista de LOGINS  = courier_id_cainiao/apelido do perfil  +
+                        DriverCourierMapping (todos os couriers extra)
+                        + (opcional) "↻ Transferências recebidas"
+                        (waybills que o WaybillAttributionOverride
+                         atribuiu a este driver vindos de outros logins).
+
+  2. Para CADA login, query independente em CainiaoOperationTask:
+        - filtrada por courier_id OU courier_name desse login
+        - status == 'Delivered'
+        - exclui waybills com WaybillAttributionOverride saindo
+          (ie, atribuídos a outro driver)
+        - exclui task_ids já vistos noutros logins (deduplicação)
+
+  3. PRICING por waybill:
+        - base = resolve_driver_price(driver, partner_cainiao)
+        - se waybill ∈ PackagePriceOverride → preço especial (€1.30, …)
+        - base_amount = Σ (preço aplicável de cada waybill)
+
+  4. BÓNUS por login por dia (tier independente):
+        - dia ∈ Holidays  OU  weekday == 6 (domingo)
+        - n entregas no dia desse login >= 30  → €30
+        - n entregas no dia desse login >= 60  → €50
+        - regra crítica: cada LOGIN avalia o seu tier separadamente.
+          Se o driver teve 35 pacotes em "Otavio_LF" e 30 em
+          "Gabrielle_LF" no mesmo domingo, recebe €30 + €30 (não €50).
+
+  5. Não modelados (delta vs PF real será residual):
+        - ajuste_manual / penalizacoes_gerais (manuais)
+        - pacotes perdidos (claims)
+        - adiantamentos
+        - comissões de indicação (DriverReferral)
+        - DSR (na prática raramente usada nas PFs Cainiao)
+
+──────────────────────────────────────────────────────────────────────
 """
 from collections import defaultdict
 from datetime import timedelta
@@ -21,98 +50,140 @@ from decimal import Decimal
 
 MIN_GAP_DAYS = 7  # Só reporta motoristas com gap >= 7 dias
 
+# Tiers oficiais do PreInvoiceBonus
+LIMIAR_30 = 30
+LIMIAR_60 = 60
+BONUS_30 = Decimal("30.00")
+BONUS_50 = Decimal("50.00")
 
-def _collect_driver_courier_keys():
-    """Constrói (drivers_by_id, courier_id_to_driver, courier_name_to_driver).
 
-    courier_id_to_driver: dict de courier_id → driver (TODOS os mappings)
-    courier_name_to_driver: dict de courier_name (lowercase) → driver
+def _collect_driver_logins():
+    """Retorna driver_logins: dict driver_id → list[(cid, cname)].
+
+    Inclui o login do perfil (courier_id_cainiao + apelido) e todos os
+    DriverCourierMapping. Pares (cid, cname) duplicados são removidos.
     """
     from drivers_app.models import DriverProfile
-    from settlements.models import DriverCourierMapping, CourierNameAlias
+    from settlements.models import DriverCourierMapping
 
     drivers = DriverProfile.objects.exclude(status="IRREGULAR")
     drivers_by_id = {d.id: d for d in drivers}
 
-    cid_to_driver = {}
-    cname_to_driver = {}
+    driver_logins = defaultdict(list)
+    seen_pair_per_driver = defaultdict(set)
 
-    # Direct fields no DriverProfile
+    def _add(driver_id, cid, cname):
+        cid = (cid or "").strip()
+        cname = (cname or "").strip()
+        if not cid and not cname:
+            return
+        key = (cid, cname.lower())
+        if key in seen_pair_per_driver[driver_id]:
+            return
+        seen_pair_per_driver[driver_id].add(key)
+        driver_logins[driver_id].append((cid, cname))
+
+    # 1) Login do perfil
     for d in drivers:
-        if d.courier_id_cainiao:
-            cid_to_driver[d.courier_id_cainiao] = d
-        if d.apelido:
-            cname_to_driver[d.apelido.strip().lower()] = d
+        _add(d.id, d.courier_id_cainiao or "", d.apelido or "")
 
-    # DriverCourierMapping (TODOS os couriers extra do mesmo driver)
-    for m in DriverCourierMapping.objects.select_related("driver", "partner"):
+    # 2) Mappings extra (TODOS os couriers do mesmo driver)
+    for m in DriverCourierMapping.objects.select_related("driver"):
         if not m.driver_id or m.driver_id not in drivers_by_id:
             continue
-        if m.courier_id:
-            cid_to_driver[m.courier_id] = drivers_by_id[m.driver_id]
-        if m.courier_name:
-            cname_to_driver[m.courier_name.strip().lower()] = (
-                drivers_by_id[m.driver_id]
-            )
+        _add(m.driver_id, m.courier_id or "", m.courier_name or "")
 
-    # CourierNameAlias (alternativas de nome para o mesmo courier_id)
-    for a in CourierNameAlias.objects.select_related("partner"):
-        cid = a.courier_id
-        if cid in cid_to_driver and a.courier_name:
-            cname_to_driver[a.courier_name.strip().lower()] = (
-                cid_to_driver[cid]
-            )
-
-    return drivers_by_id, cid_to_driver, cname_to_driver
+    return drivers_by_id, driver_logins
 
 
-def _compute_bonus_for_day(qty):
-    """Faixas: <30→€0, 30-59→€30, 60+→€50 (em domingo ou feriado)."""
-    if qty >= 60:
-        return Decimal("50.00")
-    if qty >= 30:
-        return Decimal("30.00")
+def _bonus_for_login_day(qty):
+    if qty >= LIMIAR_60:
+        return BONUS_50
+    if qty >= LIMIAR_30:
+        return BONUS_30
     return Decimal("0.00")
+
+
+def _is_bonus_day(d, holidays_set, region=None):
+    """Domingo OU feriado (incluindo recorrentes anuais via Holiday)."""
+    if d.weekday() == 6:
+        return True
+    if d in holidays_set:
+        return True
+    # Holidays recorrentes anuais: usa Holiday.is_holiday se necessário.
+    # holidays_set já inclui recorrências expandidas (ver caller).
+    return False
+
+
+def _expand_holidays(date_from, date_to):
+    """Devolve set de datas que são feriado no período, incluindo
+    feriados recorrentes anuais (ex: 25/12 todos os anos).
+    """
+    from settlements.models import Holiday
+
+    holidays = set()
+    # Datas explícitas dentro do range
+    holidays.update(
+        Holiday.objects.filter(
+            date__range=(date_from, date_to), region="",
+        ).values_list("date", flat=True)
+    )
+    # Recorrentes anuais: expandir para datas dentro do range
+    cur = date_from
+    while cur <= date_to:
+        if Holiday.objects.filter(
+            is_recurring_yearly=True,
+            date__day=cur.day,
+            date__month=cur.month,
+            region="",
+        ).exists():
+            holidays.add(cur)
+        cur += timedelta(days=1)
+    return holidays
 
 
 def find_drivers_without_pf(date_from, date_to, min_gap_days=MIN_GAP_DAYS,
                             include_all=False):
     """Devolve lista de motoristas com gap entre entregas e PFs no período.
 
-    Devolve lista de dicts com `estimated_amount` agora a incluir bónus
-    de domingo/feriado pelas faixas standard.
+    Mirror da lógica em settlements.views.driver_pre_invoice_create:
+      - Pricing por waybill (PackagePriceOverride respeitada)
+      - Outgoing transfers excluídas
+      - Bónus PER LOGIN PER DIA (tier independente)
+      - Transferências recebidas como pseudo-login com bónus próprio
     """
     from settlements.models import (
-        CainiaoOperationTask, DriverPreInvoice, Holiday,
+        CainiaoOperationTask, DriverPreInvoice,
+        WaybillAttributionOverride, PackagePriceOverride,
     )
     from core.models import Partner
     from core.finance import resolve_driver_price
+    from django.db.models import Q
 
-    drivers_by_id, cid_to_driver, cname_to_driver = _collect_driver_courier_keys()
+    drivers_by_id, driver_logins = _collect_driver_logins()
+    cainiao = Partner.objects.filter(name__iexact="CAINIAO").first()
+    holidays_set = _expand_holidays(date_from, date_to)
 
-    # Pacotes entregues no período: agrupados por (driver_id, task_date)
-    qs = CainiaoOperationTask.objects.filter(
+    # Outgoing transfers no período (sair do driver "natural" do waybill)
+    # → mapear waybill → driver_id ATRIBUÍDO (incoming) e
+    #   waybill → set de drivers que perderam a atribuição (outgoing).
+    incoming_by_driver = defaultdict(set)  # driver_id → {waybill, ...}
+    outgoing_waybills = set()  # qualquer override remove o waybill
+    for ov in WaybillAttributionOverride.objects.filter(
         task_date__range=(date_from, date_to),
-        task_status="Delivered",
-    ).values("courier_id_cainiao", "courier_name", "task_date")
+    ).values("waybill_number", "attributed_to_driver_id"):
+        wb = ov["waybill_number"]
+        outgoing_waybills.add(wb)
+        if ov["attributed_to_driver_id"]:
+            incoming_by_driver[ov["attributed_to_driver_id"]].add(wb)
 
-    # driver_id → { task_date → count }
-    driver_day_counts = defaultdict(lambda: defaultdict(int))
-
-    for row in qs:
-        cid = (row["courier_id_cainiao"] or "").strip()
-        cname = (row["courier_name"] or "").strip().lower()
-        d = row["task_date"]
-
-        # Resolve para driver: tenta primeiro courier_id, depois courier_name
-        driver = None
-        if cid and cid in cid_to_driver:
-            driver = cid_to_driver[cid]
-        elif cname and cname in cname_to_driver:
-            driver = cname_to_driver[cname]
-        if driver is None:
-            continue
-        driver_day_counts[driver.id][d] += 1
+    # Cache de price overrides
+    price_overrides_map = {
+        po.waybill_number: po
+        for po in PackagePriceOverride.objects.filter(
+            task_date__range=(date_from, date_to),
+        )
+    }
 
     # PFs que sobrepõem o período por driver
     pfs_qs = DriverPreInvoice.objects.filter(
@@ -123,26 +194,97 @@ def find_drivers_without_pf(date_from, date_to, min_gap_days=MIN_GAP_DAYS,
     for pf in pfs_qs:
         pfs_by_driver[pf.driver_id].append(pf)
 
-    # Holidays cache no período
-    holidays = set(
-        Holiday.objects.filter(date__range=(date_from, date_to))
-        .values_list("date", flat=True)
-    )
-
-    cainiao = Partner.objects.filter(name__iexact="CAINIAO").first()
-
+    # ── Iterar drivers e calcular ────────────────────────────────────
     results = []
-    for driver_id, day_counts in driver_day_counts.items():
-        if not day_counts:
-            continue
+    for driver_id, logins in driver_logins.items():
         driver = drivers_by_id.get(driver_id)
         if not driver:
             continue
 
-        active_dates = set(day_counts.keys())
-        delivered_total = sum(day_counts.values())
+        # Preço base do driver (cascata: override → frota → parceiro)
+        base_price, _src = resolve_driver_price(driver, cainiao)
+        base_price = base_price or Decimal("0")
 
-        # Dias cobertos por PFs no período
+        # Acumuladores
+        delivered_total = 0
+        active_dates = set()  # dias com qq entrega (qualquer login)
+        base_amount = Decimal("0")
+        bonus_amount = Decimal("0")
+        bonus_days_count = 0
+        seen_task_ids = set()
+
+        # Helper que processa um conjunto de tasks (rows) como um
+        # "login" — agrega base + bónus por dia desse login isolado.
+        def _process_login(rows):
+            nonlocal delivered_total, base_amount
+            nonlocal bonus_amount, bonus_days_count
+            if not rows:
+                return
+            # base por waybill (com override de preço)
+            day_count = defaultdict(int)
+            for r in rows:
+                wb = r["waybill_number"]
+                d = r["task_date"]
+                po = price_overrides_map.get(wb)
+                unit = po.price if po else base_price
+                base_amount += unit
+                day_count[d] += 1
+                delivered_total += 1
+                active_dates.add(d)
+            # bónus deste login por dia (tier independente)
+            for d, n in day_count.items():
+                if not _is_bonus_day(d, holidays_set):
+                    continue
+                b = _bonus_for_login_day(n)
+                if b > 0:
+                    bonus_amount += b
+                    bonus_days_count += 1
+
+        # 1) Cada login do driver, isolado, com dedupe global de task_ids
+        for cid, cname in logins:
+            login_q = Q()
+            if cid:
+                login_q |= Q(courier_id_cainiao=cid)
+            if cname:
+                login_q |= Q(courier_name=cname)
+            if not login_q:
+                continue
+            qs = CainiaoOperationTask.objects.filter(
+                task_date__range=(date_from, date_to),
+                task_status="Delivered",
+            ).filter(login_q)
+            if outgoing_waybills:
+                qs = qs.exclude(waybill_number__in=outgoing_waybills)
+            if seen_task_ids:
+                qs = qs.exclude(id__in=seen_task_ids)
+            rows = list(qs.values("id", "waybill_number", "task_date"))
+            if not rows:
+                continue
+            seen_task_ids.update(r["id"] for r in rows)
+            _process_login(rows)
+
+        # 2) Transferências recebidas — pseudo-login extra com bónus próprio
+        wbs_in = incoming_by_driver.get(driver_id, set())
+        if wbs_in:
+            qs_inc = CainiaoOperationTask.objects.filter(
+                task_date__range=(date_from, date_to),
+                task_status="Delivered",
+                waybill_number__in=wbs_in,
+            )
+            if seen_task_ids:
+                qs_inc = qs_inc.exclude(id__in=seen_task_ids)
+            rows_inc = list(qs_inc.values(
+                "id", "waybill_number", "task_date",
+            ))
+            if rows_inc:
+                seen_task_ids.update(r["id"] for r in rows_inc)
+                _process_login(rows_inc)
+
+        # 3) Caso o driver não tenha entregas, ignorar
+        if delivered_total == 0:
+            continue
+
+        # 4) Cobertura por PFs existentes
         covered_dates = set()
         for pf in pfs_by_driver.get(driver_id, []):
             cur = max(pf.periodo_inicio, date_from)
@@ -161,23 +303,6 @@ def find_drivers_without_pf(date_from, date_to, min_gap_days=MIN_GAP_DAYS,
         uncovered = sorted(active_dates - covered_dates)
         first_uncovered = uncovered[0] if uncovered else None
         last_uncovered = uncovered[-1] if uncovered else None
-
-        # Pricing base
-        price_per_pkg, _src = resolve_driver_price(driver, cainiao)
-        base_amount = (price_per_pkg or Decimal("0")) * delivered_total
-
-        # Bónus por domingo/feriado (cumulativo por dia eligível)
-        bonus_amount = Decimal("0")
-        bonus_days_count = 0
-        for d, qty in day_counts.items():
-            is_sunday = d.weekday() == 6
-            is_holiday = d in holidays
-            if not (is_sunday or is_holiday):
-                continue
-            day_bonus = _compute_bonus_for_day(qty)
-            if day_bonus > 0:
-                bonus_amount += day_bonus
-                bonus_days_count += 1
 
         estimated = base_amount + bonus_amount
 
@@ -219,6 +344,7 @@ def find_drivers_without_pf(date_from, date_to, min_gap_days=MIN_GAP_DAYS,
             "estimated_base": base_amount,
             "estimated_bonus": bonus_amount,
             "bonus_days_count": bonus_days_count,
+            "logins_count": len(logins) + (1 if wbs_in else 0),
             "last_pf": last_pf_info,
         })
 

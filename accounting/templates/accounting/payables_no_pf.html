@@ -120,10 +120,10 @@
                 <div class="text-[10px] text-gray-500 mt-0.5">
                   Base €{{ d.estimated_base|floatformat:0 }}
                   <span class="text-amber-600">+ Bónus €{{ d.estimated_bonus|floatformat:0 }}</span>
-                  <span class="text-gray-400">({{ d.bonus_days_count }} dia{{ d.bonus_days_count|pluralize:"s" }})</span>
+                  <span class="text-gray-400">({{ d.bonus_days_count }} bónus{{ d.bonus_days_count|pluralize }} · {{ d.logins_count }} login{{ d.logins_count|pluralize:"s" }})</span>
                 </div>
               {% else %}
-                <div class="text-[10px] text-gray-500 mt-0.5">base · sem bónus</div>
+                <div class="text-[10px] text-gray-500 mt-0.5">base · sem bónus · {{ d.logins_count }} login{{ d.logins_count|pluralize:"s" }}</div>
               {% endif %}
             </td>
             <td class="px-3 py-3 text-xs">

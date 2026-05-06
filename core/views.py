@@ -391,6 +391,15 @@ def partner_detail(request, pk):
             }
 
             def _resolve_driver(courier_id, courier_name):
+                # Nome PRIMEIRO — courier_name é específico do driver.
+                # courier_id pode estar partilhado entre múltiplos
+                # couriers por bug do EPOD Cainiao (ex: id do hub usado
+                # em entregas de drivers reais).
+                if courier_name:
+                    by_name = (mapping_by_name.get(courier_name)
+                               or profile_by_apelido.get(courier_name))
+                    if by_name:
+                        return by_name
                 if courier_id:
                     m = mapping_obj_by_courier_id.get(courier_id)
                     if m:
@@ -398,9 +407,6 @@ def partner_detail(request, pk):
                     d = profile_by_courier_id.get(courier_id)
                     if d:
                         return d
-                if courier_name:
-                    return (mapping_by_name.get(courier_name)
-                            or profile_by_apelido.get(courier_name))
                 return None
 
             def _display_name(courier_id, courier_name):
@@ -473,26 +479,47 @@ def partner_detail(request, pk):
                 _drv_buckets.values(), key=lambda r: -r["total"],
             )
 
-            # Mesclar rows respeitando o driver REAL.
+            # Mesclar rows respeitando o driver REAL — nome > id.
             #
             # Bug histórico: o EPOD da Cainiao por vezes envia o
             # courier_id do hub/armazém em entregas feitas por drivers
-            # reais — várias rows acabavam com courier_id partilhado
-            # mas courier_name diferentes (ex: courier_id=XPT_id +
-            # cname=Andre_Queiroz_LF). Mergear apenas por courier_id
-            # juntava 5+ drivers reais no bucket do XPT, inflando os
-            # contadores do armazém com entregas alheias.
+            # reais. Resultado: rows com courier_id partilhado entre
+            # XPT (hub) e drivers reais (Andre_Queiroz_LF, MARCIO_LF, ...).
             #
-            # Regra agora: resolver o driver real PRIMEIRO. Se houver
-            # driver resolvido, mergear por driver_id (junta apelidos
-            # antigos+novos do mesmo driver). Senão, fallback para
-            # (courier_id, courier_name) — separa rows que partilham
-            # courier_id mas pertencem a couriers distintos.
+            # _resolve_driver(cid, cname) resolve primeiro por
+            # courier_id — logo um cid partilhado faz Andre_Queiroz_LF
+            # ser resolvido como XPT, e o merge "por driver real" caía
+            # no mesmo bucket XPT.
+            #
+            # Solução: resolver SEPARADAMENTE por nome e por id.
+            # Se ambos existem e diferem, confiar no NOME (mais
+            # específico — o courier_name "Andre_Queiroz_LF" não é
+            # ambíguo, ao contrário do id partilhado). Se só um deles
+            # resolve, usa esse. Se nenhum, fallback para
+            # (cid, cname).
+            def _resolve_driver_by_name(cname):
+                if not cname:
+                    return None
+                return (mapping_by_name.get(cname)
+                        or profile_by_apelido.get(cname))
+
+            def _resolve_driver_by_id(cid):
+                if not cid:
+                    return None
+                m = mapping_obj_by_courier_id.get(cid)
+                if m:
+                    return m.driver
+                return profile_by_courier_id.get(cid)
+
             merged_by_id = {}
             for r in driver_qs_raw:
                 cid = (r.get("courier_id_cainiao") or "").strip()
                 cname = r["courier_name"]
-                drv = _resolve_driver(cid, cname)
+                drv_by_name = _resolve_driver_by_name(cname)
+                drv_by_id = _resolve_driver_by_id(cid)
+                # Nome ganha em caso de conflito (id pode estar
+                # partilhado por bug da Cainiao).
+                drv = drv_by_name or drv_by_id
                 if drv:
                     key = f"DRV::{drv.id}"
                 elif cid:

@@ -20,6 +20,12 @@
         Pré-faturas de motoristas, frotas, reembolsos a sócios e contas — num só lugar.
       </p>
     </div>
+    <a href="{% url 'accounting:payables_no_pf' %}"
+       class="px-4 py-2 text-sm bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-semibold inline-flex items-center gap-2"
+       title="Motoristas que entregaram mas não têm PF emitida">
+      <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+      Sem PF
+    </a>
   </div>
 
   {# ─── KPIs ─── #}

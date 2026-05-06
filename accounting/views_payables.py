@@ -181,6 +181,59 @@ def _row_bill(bill):
 
 
 @login_required
+def payables_drivers_without_pf(request):
+    """Página dedicada: motoristas com entregas no período e sem PF."""
+    from datetime import datetime, timedelta as td
+    from .services_pf_gaps import find_drivers_without_pf, MIN_GAP_DAYS
+
+    today = timezone.now().date()
+    custom_from = request.GET.get("date_from", "")
+    custom_to = request.GET.get("date_to", "")
+    period = request.GET.get("period", "30d")
+
+    if custom_from and custom_to:
+        try:
+            date_from = datetime.strptime(custom_from, "%Y-%m-%d").date()
+            date_to = datetime.strptime(custom_to, "%Y-%m-%d").date()
+            period = "custom"
+        except ValueError:
+            date_from, date_to = today - td(days=29), today
+    elif period == "7d":
+        date_from, date_to = today - td(days=6), today
+    elif period == "90d":
+        date_from, date_to = today - td(days=89), today
+    else:
+        date_from, date_to = today - td(days=29), today
+
+    include_all = request.GET.get("all") == "1"
+    min_gap = int(request.GET.get("min_gap", MIN_GAP_DAYS) or MIN_GAP_DAYS)
+
+    drivers = find_drivers_without_pf(
+        date_from, date_to,
+        min_gap_days=min_gap,
+        include_all=include_all,
+    )
+
+    # KPIs agregados
+    total_delivered = sum(d["delivered_count"] for d in drivers)
+    total_estimated = sum(d["estimated_amount"] for d in drivers)
+    total_gap_days = sum(d["gap_days"] for d in drivers)
+
+    return render(request, "accounting/payables_no_pf.html", {
+        "drivers": drivers,
+        "date_from": date_from,
+        "date_to": date_to,
+        "period": period,
+        "include_all": include_all,
+        "min_gap": min_gap,
+        "kpi_total_drivers": len(drivers),
+        "kpi_total_delivered": total_delivered,
+        "kpi_total_estimated": total_estimated,
+        "kpi_total_gap_days": total_gap_days,
+    })
+
+
+@login_required
 def payables_inbox(request):
     """Inbox unificado de pagamentos a fazer."""
     from drivers_app.models import EmpresaParceiraLancamento

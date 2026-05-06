@@ -187,6 +187,15 @@ def _row_bill(bill):
 
 
 @login_required
+def payables_pf_health(request, pf_id):
+    """JSON com snapshot completo de Saúde do Motorista para uma PF."""
+    from settlements.models import DriverPreInvoice
+    from .services_driver_health import driver_health_snapshot
+    pf = get_object_or_404(DriverPreInvoice, pk=pf_id)
+    return JsonResponse({"success": True, **driver_health_snapshot(pf)})
+
+
+@login_required
 def payables_drivers_without_pf(request):
     """Página dedicada: motoristas com entregas no período e sem PF."""
     from datetime import datetime, timedelta as td

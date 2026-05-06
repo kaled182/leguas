@@ -191,6 +191,12 @@
               {% endif %}
             </td>
             <td class="px-3 py-3 text-right whitespace-nowrap">
+              {% if r.entity_type == 'pre_invoice' %}
+              <button type="button" @click="openHealth({{ r.entity_id }})" title="Saúde do motorista"
+                      class="p-1.5 hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded-md text-purple-600 hover:text-purple-700 inline-flex">
+                <i data-lucide="activity" class="w-4 h-4"></i>
+              </button>
+              {% endif %}
               <a href="{{ r.detail_url }}" target="_blank" title="Ver detalhe"
                  class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md text-gray-600 dark:text-gray-400 hover:text-blue-600 inline-flex">
                 <i data-lucide="external-link" class="w-4 h-4"></i>
@@ -219,6 +225,142 @@
           {% endfor %}
         </tbody>
       </table>
+    </div>
+  </div>
+
+  {# ─── Modal Saúde do Motorista (sidebar lateral direito) ─── #}
+  <div x-show="health.open" x-cloak
+       class="fixed inset-0 z-[200] flex justify-end bg-black/40"
+       @click.self="health.open = false"
+       @keydown.escape.window="health.open = false">
+    <div class="bg-white dark:bg-gray-800 w-full max-w-2xl h-full overflow-y-auto shadow-2xl">
+      <div class="sticky top-0 bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-6 py-4 flex items-center gap-3 z-10">
+        <i data-lucide="activity" class="w-6 h-6"></i>
+        <div class="flex-1">
+          <h2 class="font-bold" x-text="health.data?.driver?.nome || 'A carregar…'"></h2>
+          <div class="text-xs text-purple-100" x-text="health.data?.current_pf ? (health.data.current_pf.numero + ' · ' + health.data.current_pf.periodo_inicio + ' → ' + health.data.current_pf.periodo_fim) : ''"></div>
+        </div>
+        <button @click="health.open = false" class="p-1.5 hover:bg-white/20 rounded-lg">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="p-6 space-y-5" x-show="health.data && !health.loading">
+
+        {# KPIs gerais #}
+        <div class="grid grid-cols-3 gap-2">
+          <div class="bg-emerald-50 dark:bg-emerald-900/20 rounded-lg p-3">
+            <div class="text-[10px] uppercase font-semibold text-emerald-700 dark:text-emerald-300">Total Pago (vida)</div>
+            <div class="text-lg font-extrabold text-emerald-700 dark:text-emerald-300" x-text="'€' + (health.data?.stats?.total_paid_lifetime || 0).toLocaleString('pt-PT', {minimumFractionDigits: 2, maximumFractionDigits: 2})"></div>
+            <div class="text-[10px] text-emerald-600" x-text="(health.data?.stats?.count_lifetime || 0) + ' PFs'"></div>
+          </div>
+          <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3">
+            <div class="text-[10px] uppercase font-semibold text-blue-700 dark:text-blue-300">Média/PF</div>
+            <div class="text-lg font-extrabold text-blue-700 dark:text-blue-300" x-text="'€' + (health.data?.stats?.avg || 0).toFixed(2)"></div>
+            <div class="text-[10px] text-blue-600" x-text="'σ €' + (health.data?.stats?.stdev || 0).toFixed(2)"></div>
+          </div>
+          <div class="bg-amber-50 dark:bg-amber-900/20 rounded-lg p-3">
+            <div class="text-[10px] uppercase font-semibold text-amber-700 dark:text-amber-300">PF actual</div>
+            <div class="text-lg font-extrabold text-amber-700 dark:text-amber-300" x-text="'€' + (health.data?.current_pf?.total || 0).toFixed(2)"></div>
+            <div class="text-[10px] text-amber-600" x-text="health.data?.current_pf?.status_display || ''"></div>
+          </div>
+        </div>
+
+        {# Histórico mensal — sparkline + tabela #}
+        <div class="bg-gray-50 dark:bg-gray-900/40 rounded-lg p-4">
+          <h3 class="text-sm font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+            <i data-lucide="trending-up" class="w-4 h-4"></i> Histórico (últimos 6 meses)
+          </h3>
+          {# SVG sparkline simples #}
+          <svg :viewBox="'0 0 ' + (health.data?.history?.length * 60 || 360) + ' 80'" class="w-full h-20" x-show="health.data?.history?.length">
+            <template x-for="(h, i) in health.data?.history" :key="i">
+              <g>
+                <rect :x="i * 60 + 6" :y="80 - Math.min(70, ((h.paid_total + h.pending_total) / Math.max(1, Math.max(...health.data.history.map(x => x.paid_total + x.pending_total)))) * 70)"
+                      width="48"
+                      :height="Math.min(70, ((h.paid_total + h.pending_total) / Math.max(1, Math.max(...health.data.history.map(x => x.paid_total + x.pending_total)))) * 70)"
+                      :class="h.pending_total > 0 ? 'fill-amber-400' : 'fill-emerald-400'"/>
+                <text :x="i * 60 + 30" y="78" text-anchor="middle" class="text-[9px] fill-gray-600">
+                  <tspan x-text="h.month_label"></tspan>
+                </text>
+              </g>
+            </template>
+          </svg>
+          <div class="mt-2 grid grid-cols-3 gap-1 text-[10px]">
+            <template x-for="h in health.data?.history" :key="h.month_label">
+              <div class="text-center">
+                <div class="font-bold text-gray-700 dark:text-gray-300" x-text="h.month_label"></div>
+                <div class="text-emerald-600" x-text="'€' + h.paid_total.toFixed(0) + ' (' + h.paid_count + ')'"></div>
+                <div class="text-gray-500" x-text="h.delivered + ' pkgs'"></div>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        {# Alertas #}
+        <div x-show="health.data?.alerts?.length">
+          <h3 class="text-sm font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+            <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-500"></i> Alertas detectados
+          </h3>
+          <div class="space-y-1.5">
+            <template x-for="a in health.data?.alerts">
+              <div class="rounded-lg p-2.5 text-xs"
+                   :class="a.level === 'error' ? 'bg-rose-50 dark:bg-rose-900/20 border border-rose-200' : 'bg-amber-50 dark:bg-amber-900/20 border border-amber-200'">
+                <div class="font-semibold" x-text="a.label"></div>
+                <div class="text-gray-600 dark:text-gray-300 text-[11px] mt-0.5" x-text="a.detail"></div>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        {# Reclamações abertas #}
+        <div x-show="health.data?.open_claims?.length">
+          <h3 class="text-sm font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+            <i data-lucide="alert-octagon" class="w-4 h-4 text-rose-500"></i>
+            Reclamações abertas (<span x-text="health.data?.open_claims?.length"></span>)
+          </h3>
+          <div class="space-y-1">
+            <template x-for="c in health.data?.open_claims">
+              <div class="bg-rose-50 dark:bg-rose-900/20 rounded p-2 text-xs flex items-center gap-2">
+                <span class="font-mono text-[10px] bg-rose-200 dark:bg-rose-900/50 px-1.5 rounded" x-text="c.waybill || '#' + c.id"></span>
+                <span class="flex-1 text-gray-700 dark:text-gray-300" x-text="c.claim_type + ' · ' + c.description"></span>
+                <span class="font-bold text-rose-700" x-text="'€' + c.amount.toFixed(2)"></span>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        {# Adiantamentos #}
+        <div x-show="(health.data?.advances?.included?.length || 0) + (health.data?.advances?.not_included?.length || 0) > 0">
+          <h3 class="text-sm font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+            <i data-lucide="wallet" class="w-4 h-4 text-blue-500"></i> Adiantamentos no período
+          </h3>
+          <div x-show="health.data?.advances?.not_included?.length" class="mb-2">
+            <div class="text-[10px] uppercase font-semibold text-amber-700 mb-1">⚠ Pendentes não incluídos</div>
+            <template x-for="a in health.data?.advances?.not_included">
+              <div class="bg-amber-50 dark:bg-amber-900/20 rounded p-2 text-xs flex items-center gap-2 mb-1">
+                <span class="text-[10px]" x-text="a.data"></span>
+                <span class="flex-1" x-text="a.tipo + ' · ' + a.descricao"></span>
+                <span class="font-bold text-amber-700" x-text="'€' + a.valor.toFixed(2)"></span>
+              </div>
+            </template>
+          </div>
+          <div x-show="health.data?.advances?.included?.length">
+            <div class="text-[10px] uppercase font-semibold text-emerald-700 mb-1">✓ Incluídos nesta PF</div>
+            <template x-for="a in health.data?.advances?.included">
+              <div class="bg-emerald-50 dark:bg-emerald-900/20 rounded p-2 text-xs flex items-center gap-2 mb-1">
+                <span class="text-[10px]" x-text="a.data"></span>
+                <span class="flex-1" x-text="a.tipo + ' · ' + a.descricao"></span>
+                <span class="font-bold text-emerald-700" x-text="'€' + a.valor.toFixed(2)"></span>
+              </div>
+            </template>
+          </div>
+        </div>
+      </div>
+
+      <div class="p-6 text-center text-sm text-gray-500" x-show="health.loading">
+        <i data-lucide="loader-circle" class="w-6 h-6 animate-spin inline-block"></i>
+        A carregar saúde do motorista…
+      </div>
     </div>
   </div>
 
@@ -273,6 +415,23 @@ function payablesInbox() {
       entity_type: '', entity_id: 0, numero: '', amount: '',
       paid_date: new Date().toISOString().slice(0, 10),
       payment_reference: '',
+    },
+    health: { open: false, loading: false, data: null },
+    async openHealth(pfId) {
+      this.health.open = true;
+      this.health.loading = true;
+      this.health.data = null;
+      try {
+        const r = await fetch(`/accounting/a-pagar/pf/${pfId}/health/`);
+        const d = await r.json();
+        if (d.success) {
+          this.health.data = d;
+          setTimeout(() => { if (window.lucide) window.lucide.createIcons(); }, 50);
+        }
+      } catch (e) {
+        (window.toast || alert)({ type: 'error', message: 'Falha a carregar: ' + e.message });
+      }
+      this.health.loading = false;
     },
     setStatus(s) { window.location.href = '?status=' + s; },
     openPay(entity_type, entity_id, numero, amount) {

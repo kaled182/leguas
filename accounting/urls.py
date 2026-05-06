@@ -19,6 +19,11 @@ urlpatterns = [
         views_payables.payables_drivers_without_pf,
         name="payables_no_pf",
     ),
+    path(
+        "a-pagar/pf/<int:pf_id>/health/",
+        views_payables.payables_pf_health,
+        name="payables_pf_health",
+    ),
     # URLs para Receitas
     path("receitas/", views.revenue_list, name="revenue_list"),
     path("receitas/nova/", views.revenue_create, name="revenue_create"),

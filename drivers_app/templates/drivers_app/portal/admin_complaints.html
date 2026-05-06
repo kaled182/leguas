@@ -1,129 +1,415 @@
 {% extends 'drivers_app/portal/_base.html' %}
+{% load static %}
 
 {% block portal_content %}
+<div x-data="complaintsManager()" x-init="init()">
 
-<div class="grid grid-cols-4 gap-3 mb-4">
-  <div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200/50 dark:border-gray-700/50">
-    <p class="text-xs uppercase font-bold text-gray-500">Total</p>
-    <p class="text-2xl font-extrabold text-gray-900 dark:text-white mt-1">{{ counts.total }}</p>
+  {# KPIs + botão Nova #}
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+    <div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200/50 dark:border-gray-700/50">
+      <p class="text-xs uppercase font-bold text-gray-500">Total</p>
+      <p class="text-2xl font-extrabold text-gray-900 dark:text-white mt-1">{{ counts.total }}</p>
+    </div>
+    <div class="bg-rose-50 dark:bg-rose-900/20 rounded-xl p-4 border border-rose-200/50 dark:border-rose-700/30">
+      <p class="text-xs uppercase font-bold text-rose-700 dark:text-rose-300">Abertas</p>
+      <p class="text-2xl font-extrabold text-rose-700 dark:text-rose-300 mt-1">{{ counts.open }}</p>
+    </div>
+    <div class="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 border border-amber-200/50 dark:border-amber-700/30">
+      <p class="text-xs uppercase font-bold text-amber-700 dark:text-amber-300">Respondidas</p>
+      <p class="text-2xl font-extrabold text-amber-700 dark:text-amber-300 mt-1">{{ counts.responded }}</p>
+    </div>
+    <div class="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-4 border border-emerald-200/50 dark:border-emerald-700/30">
+      <p class="text-xs uppercase font-bold text-emerald-700 dark:text-emerald-300">Fechadas</p>
+      <p class="text-2xl font-extrabold text-emerald-700 dark:text-emerald-300 mt-1">{{ counts.closed }}</p>
+    </div>
   </div>
-  <div class="bg-rose-50 dark:bg-rose-900/20 rounded-xl p-4 border border-rose-200/50 dark:border-rose-700/30">
-    <p class="text-xs uppercase font-bold text-rose-700 dark:text-rose-300">Abertas</p>
-    <p class="text-2xl font-extrabold text-rose-700 dark:text-rose-300 mt-1">{{ counts.open }}</p>
-  </div>
-  <div class="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 border border-amber-200/50 dark:border-amber-700/30">
-    <p class="text-xs uppercase font-bold text-amber-700 dark:text-amber-300">Respondidas</p>
-    <p class="text-2xl font-extrabold text-amber-700 dark:text-amber-300 mt-1">{{ counts.responded }}</p>
-  </div>
-  <div class="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-4 border border-emerald-200/50 dark:border-emerald-700/30">
-    <p class="text-xs uppercase font-bold text-emerald-700 dark:text-emerald-300">Fechadas</p>
-    <p class="text-2xl font-extrabold text-emerald-700 dark:text-emerald-300 mt-1">{{ counts.closed }}</p>
-  </div>
-</div>
 
-<div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
-  <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
-    <i data-lucide="alert-octagon" class="w-5 h-5 text-rose-500"></i>
-    <h3 class="font-bold text-gray-900 dark:text-white">Reclamações deste Motorista</h3>
+  {# Botão Nova #}
+  <div class="flex justify-end mb-3">
+    <button type="button" @click="showCreate = !showCreate"
+            class="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-semibold inline-flex items-center gap-2 shadow-sm">
+      <i data-lucide="plus" class="w-4 h-4"></i>
+      <span x-text="showCreate ? 'Cancelar' : '+ Nova Reclamação'"></span>
+    </button>
   </div>
-  <div class="divide-y divide-gray-100 dark:divide-gray-700">
-    {% for c in complaints %}
-    <div class="px-5 py-4 hover:bg-gray-50 dark:hover:bg-gray-700/30">
-      <div class="flex items-start gap-3">
-        <div class="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0
-          {% if c.status == 'ABERTO' %}bg-rose-100 dark:bg-rose-900/40 text-rose-600
-          {% elif c.status == 'NOTIFICADO' %}bg-amber-100 dark:bg-amber-900/40 text-amber-600
-          {% elif c.status == 'RESPONDIDO' %}bg-blue-100 dark:bg-blue-900/40 text-blue-600
-          {% elif c.status == 'FECHADO' %}bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600
-          {% else %}bg-gray-100 dark:bg-gray-700/50 text-gray-600{% endif %}">
-          <i data-lucide="alert-octagon" class="w-5 h-5"></i>
+
+  {# ─── FORM CRIAR ─── #}
+  <div x-show="showCreate" x-cloak
+       class="bg-orange-50 dark:bg-orange-900/10 rounded-2xl border border-orange-200 dark:border-orange-700/40 p-5 mb-4">
+    <h3 class="font-bold text-orange-700 dark:text-orange-300 mb-3 flex items-center gap-2">
+      <i data-lucide="plus-circle" class="w-5 h-5"></i>
+      Registar Nova Reclamação
+    </h3>
+    <form @submit.prevent="saveComplaint($event)" enctype="multipart/form-data"
+          class="space-y-3">
+      {% csrf_token %}
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Nº Pacote / Tracking *</label>
+          <input type="text" name="numero_pacote" required placeholder="Ex: CNPRT38855577123..."
+                 class="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
         </div>
-        <div class="flex-1 min-w-0">
-          <div class="flex items-center gap-2 flex-wrap">
-            <p class="font-semibold text-gray-900 dark:text-white">
-              {{ c.get_tipo_display }}
-            </p>
-            <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase
-              {% if c.status == 'ABERTO' %}bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-300
-              {% elif c.status == 'NOTIFICADO' %}bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300
-              {% elif c.status == 'RESPONDIDO' %}bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300
-              {% elif c.status == 'FECHADO' %}bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300
-              {% else %}bg-gray-100 dark:bg-gray-700/50 text-gray-700{% endif %}">
-              {{ c.get_status_display }}
-            </span>
-            <span class="text-xs text-gray-500 ml-auto">{{ c.created_at|date:"d/m/Y H:i" }}</span>
-          </div>
-          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-            Pacote: <span class="font-mono">{{ c.numero_pacote }}</span>
-            {% if c.data_entrega %} · Entrega: {{ c.data_entrega|date:"d/m/Y H:i" }}{% endif %}
-          </p>
-          <p class="text-sm text-gray-700 dark:text-gray-300 mt-2 italic">"{{ c.descricao|truncatechars:200 }}"</p>
-          <div class="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400 mt-2">
-            <span class="inline-flex items-center gap-1"><i data-lucide="user" class="w-3 h-3"></i>{{ c.nome_cliente }}</span>
-            <span class="inline-flex items-center gap-1"><i data-lucide="phone" class="w-3 h-3"></i>{{ c.telefone_cliente }}</span>
-            <span class="inline-flex items-center gap-1"><i data-lucide="map-pin" class="w-3 h-3"></i>{{ c.cidade }}</span>
-            {% if c.deadline %}
-              <span class="inline-flex items-center gap-1 text-amber-600"><i data-lucide="clock" class="w-3 h-3"></i>Deadline: {{ c.deadline|date:"d/m H:i" }}</span>
-            {% endif %}
-          </div>
-          {# Desconto financeiro vinculado — atalho para a tab Descontos #}
-          {% if c.driver_claims.first %}
-            {% with claim=c.driver_claims.first %}
-            <a href="{% url 'drivers_app:driver_claims' driver.id %}"
-               class="mt-3 inline-flex items-center gap-2 px-3 py-1.5 bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300 rounded-lg text-xs font-semibold hover:bg-rose-200">
-              <i data-lucide="circle-dollar-sign" class="w-3.5 h-3.5"></i>
-              Desconto #{{ claim.id }} · €{{ claim.amount|floatformat:2 }} · {{ claim.get_status_display }}
-              <i data-lucide="external-link" class="w-3 h-3"></i>
-            </a>
-            {% endwith %}
-          {% else %}
-            <details class="mt-3">
-              <summary class="cursor-pointer inline-flex items-center gap-2 px-3 py-1.5 bg-violet-600 hover:bg-violet-700 text-white rounded-lg text-xs font-semibold">
-                <i data-lucide="circle-dollar-sign" class="w-3.5 h-3.5"></i>
-                Aplicar Desconto Financeiro
-              </summary>
-              <form method="post" action="{% url 'drivers_app:driver_complaint_apply_claim' driver.id c.id %}"
-                    class="mt-3 bg-violet-50 dark:bg-violet-900/10 border border-violet-200 dark:border-violet-700/40 rounded-lg p-4 space-y-3">
-                {% csrf_token %}
-                <p class="text-[11px] text-violet-700/80 dark:text-violet-300/70">
-                  Cria um <strong>DriverClaim</strong> vinculado a esta reclamação. Pré-preenchido com cliente/pacote/descrição. Idempotente — só pode haver 1 desconto por reclamação.
-                </p>
-                <div class="grid grid-cols-2 gap-3">
-                  <div>
-                    <label class="block text-[10px] uppercase font-bold text-violet-700 mb-1">Tipo</label>
-                    <select name="claim_type" class="w-full px-2 py-1.5 text-xs bg-white dark:bg-gray-800 border border-violet-300 dark:border-violet-600 rounded">
-                      <option value="CUSTOMER_COMPLAINT">Reclamação Cliente</option>
-                      <option value="ORDER_LOSS">Perda de Pedido</option>
-                      <option value="ORDER_DAMAGE">Dano em Pedido</option>
-                      <option value="LATE_DELIVERY">Entrega Atrasada</option>
-                      <option value="MISSING_POD">Falta de Comprovante</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label class="block text-[10px] uppercase font-bold text-violet-700 mb-1">Valor (€)</label>
-                    <input type="text" name="amount" value="30.00" required
-                           class="w-full px-2 py-1.5 text-xs bg-white dark:bg-gray-800 border border-violet-300 dark:border-violet-600 rounded font-mono">
-                  </div>
-                </div>
-                <div class="flex justify-end">
-                  <button type="submit" class="px-3 py-1.5 bg-violet-600 hover:bg-violet-700 text-white rounded text-xs font-semibold inline-flex items-center gap-1">
-                    <i data-lucide="circle-dollar-sign" class="w-3.5 h-3.5"></i>
-                    Criar Desconto Vinculado
-                  </button>
-                </div>
-              </form>
-            </details>
-          {% endif %}
+        <div>
+          <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Tipo de Reclamação *</label>
+          <select name="tipo" required class="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
+            <option value="ENTREGA_FALSA">Entrega Falsa</option>
+            <option value="ITEM_FALTANDO">Item Faltando</option>
+            <option value="PACOTE_DANIFICADO">Pacote Danificado</option>
+            <option value="ENTREGA_ATRASADA">Entrega Atrasada</option>
+            <option value="OUTRO">Outro</option>
+          </select>
         </div>
       </div>
+      <div>
+        <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Relato do Cliente *</label>
+        <textarea name="descricao" required rows="3" placeholder="Descreva o que o cliente relatou..."
+                  class="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"></textarea>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Nome do Cliente *</label>
+          <input type="text" name="nome_cliente" required placeholder="Nome completo"
+                 class="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Telefone *</label>
+          <input type="text" name="telefone_cliente" required placeholder="9XXXXXXXX"
+                 class="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
+        </div>
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Email (opcional)</label>
+        <input type="email" name="email_cliente" placeholder="cliente@email.com"
+               class="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Morada *</label>
+        <input type="text" name="morada" required placeholder="Rua, nº, andar..."
+               class="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Código Postal *</label>
+          <input type="text" name="codigo_postal" required placeholder="XXXX-XXX"
+                 class="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Cidade *</label>
+          <input type="text" name="cidade" required placeholder="Porto, Lisboa..."
+                 class="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
+        </div>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Data/Hora da Entrega *</label>
+          <input type="datetime-local" name="data_entrega"
+                 class="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Deadline (prazo da plataforma)</label>
+          <input type="datetime-local" name="deadline"
+                 class="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
+        </div>
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Notas Internas (opcional)</label>
+        <input type="text" name="notas" placeholder="Notas para uso interno..."
+               class="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
+      </div>
+
+      {# Anexos #}
+      <div class="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
+        <div class="flex items-center justify-between gap-2 mb-2">
+          <label class="text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1">
+            <i data-lucide="paperclip" class="w-3.5 h-3.5"></i>
+            Anexos Iniciais (opcional — foto do local, POD Detail, prints...)
+          </label>
+          <label class="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded text-xs font-semibold cursor-pointer">
+            + Adicionar Ficheiro(s)
+            <input type="file" name="attachment_files" multiple class="hidden" @change="handleFiles($event)">
+          </label>
+        </div>
+        <ul class="text-xs space-y-1">
+          <template x-for="(f, i) in attachmentFiles" :key="i">
+            <li class="flex items-center justify-between bg-gray-50 dark:bg-gray-900/40 rounded px-2 py-1">
+              <span class="font-mono text-gray-700 dark:text-gray-300" x-text="f.name"></span>
+              <button type="button" @click="removeFile(i)" class="text-rose-500 hover:text-rose-700">
+                <i data-lucide="x" class="w-3.5 h-3.5"></i>
+              </button>
+            </li>
+          </template>
+          <li x-show="!attachmentFiles.length" class="text-gray-400 italic">Nenhum ficheiro adicionado ainda.</li>
+        </ul>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2">
+        <button type="button" @click="showCreate = false"
+                class="px-4 py-2 text-sm bg-gray-200 dark:bg-gray-700 rounded-lg font-semibold text-gray-700 dark:text-gray-300">Cancelar</button>
+        <button type="submit"
+                class="px-4 py-2 text-sm bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-semibold inline-flex items-center gap-2">
+          <i data-lucide="save" class="w-4 h-4"></i>
+          Guardar Reclamação
+        </button>
+      </div>
+    </form>
+  </div>
+
+  {# ─── LISTA ─── #}
+  <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
+    <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
+      <i data-lucide="alert-octagon" class="w-5 h-5 text-rose-500"></i>
+      <h3 class="font-bold text-gray-900 dark:text-white">Reclamações deste Motorista</h3>
     </div>
-    {% empty %}
-    <div class="px-5 py-12 text-center">
-      <i data-lucide="check-circle-2" class="w-12 h-12 text-emerald-400 mx-auto mb-2"></i>
-      <p class="text-sm font-semibold text-emerald-600 dark:text-emerald-400">Sem reclamações!</p>
-      <p class="text-xs text-gray-500 mt-1">Este motorista não tem reclamações registadas.</p>
+    <div class="divide-y divide-gray-100 dark:divide-gray-700">
+      {% for c in complaints %}
+      <div class="px-5 py-4 hover:bg-gray-50 dark:hover:bg-gray-700/30" x-data="{ expanded: false, showResponse: false }">
+        <div class="flex items-start gap-3">
+          <div class="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0
+            {% if c.status == 'ABERTO' %}bg-rose-100 dark:bg-rose-900/40 text-rose-600
+            {% elif c.status == 'NOTIFICADO' %}bg-amber-100 dark:bg-amber-900/40 text-amber-600
+            {% elif c.status == 'RESPONDIDO' %}bg-blue-100 dark:bg-blue-900/40 text-blue-600
+            {% elif c.status == 'FECHADO' %}bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600
+            {% else %}bg-gray-100 dark:bg-gray-700/50 text-gray-600{% endif %}">
+            <i data-lucide="alert-octagon" class="w-5 h-5"></i>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2 flex-wrap">
+              <p class="font-semibold text-gray-900 dark:text-white">{{ c.get_tipo_display }}</p>
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase
+                {% if c.status == 'ABERTO' %}bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-300
+                {% elif c.status == 'NOTIFICADO' %}bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300
+                {% elif c.status == 'RESPONDIDO' %}bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300
+                {% elif c.status == 'FECHADO' %}bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300
+                {% else %}bg-gray-100 dark:bg-gray-700/50 text-gray-700{% endif %}">
+                {{ c.get_status_display }}
+              </span>
+              <span class="text-xs text-gray-500 ml-auto">{{ c.created_at|date:"d/m/Y H:i" }}</span>
+            </div>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              Pacote: <span class="font-mono">{{ c.numero_pacote }}</span>
+              {% if c.data_entrega %} · Entrega: {{ c.data_entrega|date:"d/m/Y H:i" }}{% endif %}
+              {% if c.deadline %} · <span class="text-amber-600">Deadline: {{ c.deadline|date:"d/m H:i" }}</span>{% endif %}
+            </p>
+            <p class="text-sm text-gray-700 dark:text-gray-300 mt-2 italic">"{{ c.descricao|truncatechars:200 }}"</p>
+            <div class="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400 mt-2 flex-wrap">
+              <span class="inline-flex items-center gap-1"><i data-lucide="user" class="w-3 h-3"></i>{{ c.nome_cliente }}</span>
+              <span class="inline-flex items-center gap-1"><i data-lucide="phone" class="w-3 h-3"></i>{{ c.telefone_cliente }}</span>
+              <span class="inline-flex items-center gap-1"><i data-lucide="map-pin" class="w-3 h-3"></i>{{ c.cidade }}</span>
+              {% if c.attachments.count %}
+                <span class="inline-flex items-center gap-1 text-violet-600"><i data-lucide="paperclip" class="w-3 h-3"></i>{{ c.attachments.count }} anexo{{ c.attachments.count|pluralize }}</span>
+              {% endif %}
+            </div>
+            {% if c.resposta_driver %}
+              <div class="mt-2 bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-400 px-3 py-2 rounded text-xs">
+                <div class="font-semibold text-blue-700 dark:text-blue-300">Resposta do motorista:</div>
+                <p class="text-gray-700 dark:text-gray-300 mt-0.5">{{ c.resposta_driver }}</p>
+              </div>
+            {% endif %}
+
+            {# Desconto vinculado #}
+            {% if c.driver_claims.first %}
+              {% with claim=c.driver_claims.first %}
+              <a href="{% url 'drivers_app:driver_claims' driver.id %}"
+                 class="mt-3 inline-flex items-center gap-2 px-3 py-1.5 bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300 rounded-lg text-xs font-semibold hover:bg-rose-200">
+                <i data-lucide="circle-dollar-sign" class="w-3.5 h-3.5"></i>
+                Desconto #{{ claim.id }} · €{{ claim.amount|floatformat:2 }} · {{ claim.get_status_display }}
+                <i data-lucide="external-link" class="w-3 h-3"></i>
+              </a>
+              {% endwith %}
+            {% endif %}
+
+            {# Toolbar de acções #}
+            <div class="mt-3 flex flex-wrap items-center gap-2 text-xs">
+              {# Status transitions #}
+              {% if c.status == 'ABERTO' %}
+                <button type="button" @click="changeStatus({{ c.id }}, 'NOTIFICADO')" class="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded font-semibold inline-flex items-center gap-1">
+                  <i data-lucide="bell" class="w-3 h-3"></i> Notificar driver
+                </button>
+              {% elif c.status == 'NOTIFICADO' %}
+                <button type="button" @click="showResponse = !showResponse" class="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold inline-flex items-center gap-1">
+                  <i data-lucide="reply" class="w-3 h-3"></i> Responder
+                </button>
+              {% elif c.status == 'RESPONDIDO' %}
+                <button type="button" @click="changeStatus({{ c.id }}, 'FECHADO')" class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded font-semibold inline-flex items-center gap-1">
+                  <i data-lucide="check-circle" class="w-3 h-3"></i> Fechar
+                </button>
+              {% endif %}
+
+              {% if c.status != 'FECHADO' and c.status != 'CANCELADO' %}
+                <button type="button" @click="changeStatus({{ c.id }}, 'CANCELADO')" class="px-2.5 py-1 bg-gray-600 hover:bg-gray-700 text-white rounded font-semibold inline-flex items-center gap-1">
+                  <i data-lucide="x-circle" class="w-3 h-3"></i> Cancelar
+                </button>
+              {% endif %}
+
+              <a href="{% url 'drivers_app:driver-complaint-pdf' c.id %}" target="_blank"
+                 class="px-2.5 py-1 bg-violet-600 hover:bg-violet-700 text-white rounded font-semibold inline-flex items-center gap-1">
+                <i data-lucide="file-text" class="w-3 h-3"></i> PDF
+              </a>
+
+              {% if c.attachments.count %}
+                <button type="button" @click="expanded = !expanded" class="px-2.5 py-1 bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 rounded font-semibold inline-flex items-center gap-1">
+                  <i data-lucide="paperclip" class="w-3 h-3"></i>
+                  <span x-text="expanded ? 'Esconder' : 'Ver'"></span> anexos
+                </button>
+              {% endif %}
+
+              {% if not c.driver_claims.first %}
+                <details class="inline-block">
+                  <summary class="cursor-pointer px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded font-semibold inline-flex items-center gap-1 list-none">
+                    <i data-lucide="circle-dollar-sign" class="w-3 h-3"></i> Aplicar Desconto
+                  </summary>
+                  <form method="post" action="{% url 'drivers_app:driver_complaint_apply_claim' driver.id c.id %}"
+                        class="mt-2 bg-rose-50 dark:bg-rose-900/10 rounded-lg p-3 border border-rose-200 dark:border-rose-700/40 space-y-2">
+                    {% csrf_token %}
+                    <div class="grid grid-cols-2 gap-2">
+                      <select name="claim_type" class="px-2 py-1 text-[11px] bg-white dark:bg-gray-800 border border-rose-300 rounded">
+                        <option value="CUSTOMER_COMPLAINT">Reclamação Cliente</option>
+                        <option value="ORDER_LOSS">Perda</option>
+                        <option value="ORDER_DAMAGE">Dano</option>
+                        <option value="LATE_DELIVERY">Atraso</option>
+                      </select>
+                      <input type="text" name="amount" value="30.00" class="px-2 py-1 text-[11px] bg-white dark:bg-gray-800 border border-rose-300 rounded font-mono">
+                    </div>
+                    <button type="submit" class="px-3 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded text-[11px] font-semibold w-full">Confirmar Desconto</button>
+                  </form>
+                </details>
+              {% endif %}
+
+              {% if c.status == 'ABERTO' or c.status == 'CANCELADO' %}
+                <button type="button" @click="deleteComplaint({{ c.id }})"
+                        class="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded font-semibold inline-flex items-center gap-1 ml-auto">
+                  <i data-lucide="trash-2" class="w-3 h-3"></i> Apagar
+                </button>
+              {% endif %}
+            </div>
+
+            {# Form de resposta #}
+            <div x-show="showResponse" x-cloak class="mt-3 bg-blue-50 dark:bg-blue-900/10 rounded-lg p-3 border border-blue-200 dark:border-blue-700/40">
+              <form @submit.prevent="saveResponse({{ c.id }}, $event)" enctype="multipart/form-data" class="space-y-2">
+                {% csrf_token %}
+                <textarea name="resposta_driver" required rows="3" placeholder="O que o motorista respondeu? (com fotos/POD do cliente, etc.)"
+                          class="w-full px-2 py-1.5 text-xs bg-white dark:bg-gray-800 border border-blue-300 dark:border-blue-600 rounded text-gray-900 dark:text-white"></textarea>
+                <input type="hidden" name="status" value="RESPONDIDO">
+                <input type="file" name="attachment_files" multiple class="block text-[11px]">
+                <div class="flex justify-end gap-2">
+                  <button type="button" @click="showResponse = false" class="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded text-xs">Cancelar</button>
+                  <button type="submit" class="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-semibold">Guardar Resposta</button>
+                </div>
+              </form>
+            </div>
+
+            {# Lista de anexos #}
+            <div x-show="expanded" x-cloak class="mt-3 grid grid-cols-2 md:grid-cols-4 gap-2">
+              {% for att in c.attachments.all %}
+                <div class="bg-gray-50 dark:bg-gray-900/40 rounded p-2 border border-gray-200 dark:border-gray-700 text-xs">
+                  <a href="{{ att.ficheiro.url }}" target="_blank" class="font-mono text-violet-600 hover:underline truncate block">
+                    {{ att.ficheiro.name|slice:"-30:" }}
+                  </a>
+                  <div class="text-[10px] text-gray-500 mt-1">{{ att.get_tipo_display|default:"" }}</div>
+                  {% if att.descricao %}<div class="text-[10px] text-gray-700 dark:text-gray-300 mt-0.5">{{ att.descricao }}</div>{% endif %}
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+      {% empty %}
+      <div class="px-5 py-12 text-center">
+        <i data-lucide="check-circle-2" class="w-12 h-12 text-emerald-400 mx-auto mb-2"></i>
+        <p class="text-sm font-semibold text-emerald-600 dark:text-emerald-400">Sem reclamações!</p>
+        <p class="text-xs text-gray-500 mt-1">Este motorista não tem reclamações registadas.</p>
+        <button type="button" @click="showCreate = true"
+                class="mt-3 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-semibold text-sm">
+          + Criar primeira reclamação
+        </button>
+      </div>
+      {% endfor %}
     </div>
-    {% endfor %}
   </div>
 </div>
+
+<script>
+function complaintsManager() {
+  return {
+    showCreate: false,
+    attachmentFiles: [],
+
+    init() {
+      window.addEventListener('alpine:init', () => this.$nextTick(() => lucide.createIcons()));
+    },
+
+    handleFiles(e) {
+      for (const f of e.target.files) this.attachmentFiles.push(f);
+      e.target.value = '';
+    },
+    removeFile(i) { this.attachmentFiles.splice(i, 1); },
+
+    _csrf() {
+      return document.querySelector('[name=csrfmiddlewaretoken]').value;
+    },
+
+    async saveComplaint(e) {
+      const fd = new FormData(e.target);
+      // anexar ficheiros
+      this.attachmentFiles.forEach((f, i) => {
+        fd.append('attachment_files', f);
+        fd.append(`attachment_tipo_${i}`, 'RECLAMACAO');
+      });
+      try {
+        const resp = await fetch(`/driversapp/api/complaints/{{ driver.id }}/create/`, {
+          method: 'POST', body: fd, credentials: 'same-origin',
+          headers: { 'X-CSRFToken': this._csrf() },
+        });
+        const j = await resp.json();
+        if (j.success) {
+          location.reload();
+        } else {
+          alert('Erro: ' + (j.error || 'desconhecido'));
+        }
+      } catch (err) { alert('Erro de rede: ' + err); }
+    },
+
+    async changeStatus(id, status) {
+      if (!confirm(`Mudar reclamação #${id} para ${status}?`)) return;
+      const fd = new FormData();
+      fd.append('status', status);
+      try {
+        const resp = await fetch(`/driversapp/api/complaints/item/${id}/update/`, {
+          method: 'POST', body: fd, credentials: 'same-origin',
+          headers: { 'X-CSRFToken': this._csrf() },
+        });
+        const j = await resp.json();
+        if (j.success) location.reload();
+        else alert('Erro: ' + (j.error || 'desconhecido'));
+      } catch (err) { alert('Erro de rede: ' + err); }
+    },
+
+    async saveResponse(id, e) {
+      const fd = new FormData(e.target);
+      try {
+        const resp = await fetch(`/driversapp/api/complaints/item/${id}/update/`, {
+          method: 'POST', body: fd, credentials: 'same-origin',
+          headers: { 'X-CSRFToken': this._csrf() },
+        });
+        const j = await resp.json();
+        if (j.success) location.reload();
+        else alert('Erro: ' + (j.error || 'desconhecido'));
+      } catch (err) { alert('Erro de rede: ' + err); }
+    },
+
+    async deleteComplaint(id) {
+      if (!confirm(`Apagar reclamação #${id}? Esta acção não pode ser desfeita.`)) return;
+      try {
+        const resp = await fetch(`/driversapp/api/complaints/item/${id}/delete/`, {
+          method: 'POST', credentials: 'same-origin',
+          headers: { 'X-CSRFToken': this._csrf() },
+        });
+        const j = await resp.json();
+        if (j.success) location.reload();
+        else alert('Erro: ' + (j.error || 'desconhecido'));
+      } catch (err) { alert('Erro de rede: ' + err); }
+    },
+  };
+}
+</script>
 {% endblock %}

@@ -3853,3 +3853,201 @@ class PreInvoiceNote(models.Model):
 
     def __str__(self):
         return f"{self.pre_invoice.numero}: {self.body[:50]}"
+
+
+# ════════════════════════════════════════════════════════════════════
+#  CAINIAO BILLING IMPORT
+#  Importação da pré-fatura mensal/quinzenal que a Cainiao envia em
+#  XLSX. 1 import = 1 ficheiro. Reimport idempotente via file_hash +
+#  unique constraint nas linhas. Cria automaticamente uma
+#  PartnerInvoice agregando os totais.
+# ════════════════════════════════════════════════════════════════════
+
+class CainiaoBillingImport(models.Model):
+    """Sessão de importação de uma pré-fatura Cainiao (XLSX)."""
+
+    STATUS_CHOICES = [
+        ("PROCESSING", "Em processamento"),
+        ("COMPLETED", "Concluído"),
+        ("FAILED", "Falhou"),
+    ]
+
+    partner_invoice = models.OneToOneField(
+        PartnerInvoice,
+        on_delete=models.CASCADE,
+        related_name="cainiao_import",
+        null=True, blank=True,
+        help_text=(
+            "PartnerInvoice criada automaticamente com os totais agregados."
+        ),
+    )
+
+    file_name = models.CharField("Nome do Ficheiro", max_length=255)
+    file_hash = models.CharField(
+        "SHA256 do Ficheiro", max_length=64, unique=True, db_index=True,
+        help_text="Bloqueia reimport do mesmo ficheiro (idempotência).",
+    )
+
+    period_from = models.DateField("Período Início", db_index=True)
+    period_to = models.DateField("Período Fim", db_index=True)
+
+    # Contadores cached (reduz queries na listagem)
+    total_lines = models.PositiveIntegerField("Total de Linhas", default=0)
+    total_envio = models.DecimalField(
+        "Total Envios (€)", max_digits=12, decimal_places=2,
+        default=Decimal("0.00"),
+    )
+    total_compensacion = models.DecimalField(
+        "Total Compensações (€)", max_digits=12, decimal_places=2,
+        default=Decimal("0.00"),
+    )
+    n_billing_ids = models.PositiveIntegerField(
+        "Lotes (billing_id)", default=0,
+    )
+    n_staff_ids = models.PositiveIntegerField(
+        "Motoristas distintos", default=0,
+    )
+
+    status = models.CharField(
+        "Estado", max_length=20, choices=STATUS_CHOICES,
+        default="PROCESSING",
+    )
+    error_message = models.TextField("Erro", blank=True)
+
+    imported_by = models.ForeignKey(
+        "auth.User", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="cainiao_imports",
+    )
+    imported_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Importação Cainiao"
+        verbose_name_plural = "Importações Cainiao"
+        ordering = ["-imported_at"]
+        indexes = [
+            models.Index(fields=["period_from", "period_to"]),
+            models.Index(fields=["status", "-imported_at"]),
+        ]
+
+    def __str__(self):
+        return (
+            f"Cainiao {self.period_from}→{self.period_to} "
+            f"({self.total_lines} linhas)"
+        )
+
+    @property
+    def total_amount(self):
+        return self.total_envio + self.total_compensacion
+
+
+class CainiaoBillingLine(models.Model):
+    """Uma linha do XLSX Cainiao — 1 envio fee ou 1 compensación.
+
+    Chave de dedupe (waybill, fee_type, cainiao_billing_id) garante que
+    reimports do mesmo ficheiro ou ficheiros sobrepostos (quinzenas)
+    não criam duplicados.
+    """
+
+    FEE_TYPE_CHOICES = [
+        ("envio fee", "Envio fee"),
+        ("compensacion", "Compensación"),
+    ]
+
+    import_session = models.ForeignKey(
+        CainiaoBillingImport,
+        on_delete=models.CASCADE,
+        related_name="lines",
+    )
+
+    # Campos directos do XLSX
+    fee_type = models.CharField(
+        "Fee Type", max_length=30, choices=FEE_TYPE_CHOICES, db_index=True,
+    )
+    biz_time = models.DateTimeField("Biz Time", db_index=True)
+    amount = models.DecimalField(
+        "Valor (€)", max_digits=10, decimal_places=4,
+    )
+    moneda = models.CharField("Moneda", max_length=10, default="EUR")
+    waybill_number = models.CharField(
+        "Waybill (REFs)", max_length=100, db_index=True,
+    )
+    cp_name = models.CharField("CP Name", max_length=120, blank=True)
+    ciudad = models.CharField("Cidade", max_length=120, blank=True)
+    staff_id = models.CharField(
+        "Staff ID (Cainiao)", max_length=50, blank=True, db_index=True,
+        help_text="courier_id_cainiao do motorista que entregou.",
+    )
+    cainiao_billing_id = models.CharField(
+        "Billing ID Cainiao", max_length=50, blank=True, db_index=True,
+        help_text="ID do lote/corte de facturação Cainiao.",
+    )
+    fb1 = models.TextField("FB1", blank=True)
+    fb2 = models.TextField(
+        "FB2 (motivo)", blank=True,
+        help_text="Razão da compensação (apenas em compensaciones).",
+    )
+
+    # Campos resolvidos no save (matching com modelos locais)
+    task = models.ForeignKey(
+        CainiaoOperationTask,
+        on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="billing_lines",
+        help_text="Task local resolvida pelo waybill_number.",
+    )
+    driver = models.ForeignKey(
+        "drivers_app.DriverProfile",
+        on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="cainiao_billing_lines",
+        help_text=(
+            "Driver resolvido por staff_id (DriverProfile.courier_id_cainiao "
+            "ou DriverCourierMapping). Para compensaciones com staff_id "
+            "vazio, é resolvido via task.courier_id_cainiao."
+        ),
+    )
+    claim = models.ForeignKey(
+        DriverClaim,
+        on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="cainiao_billing_lines",
+        help_text="DriverClaim criado a partir desta linha (se compensación).",
+    )
+    price_override = models.ForeignKey(
+        PackagePriceOverride,
+        on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="cainiao_billing_lines",
+        help_text="PackagePriceOverride criado para preço especial (≠ €1.60).",
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Linha Pré-Fatura Cainiao"
+        verbose_name_plural = "Linhas Pré-Fatura Cainiao"
+        # Idempotência: o mesmo waybill+fee+lote nunca aparece 2× na BD,
+        # mesmo que o operador reimporte o ficheiro ou importe a quinzena
+        # seguinte que sobreponha alguns dias.
+        unique_together = [
+            ("waybill_number", "fee_type", "cainiao_billing_id"),
+        ]
+        ordering = ["-biz_time"]
+        indexes = [
+            models.Index(fields=["fee_type", "-biz_time"]),
+            models.Index(fields=["staff_id", "-biz_time"]),
+            models.Index(fields=["cainiao_billing_id"]),
+            models.Index(fields=["import_session", "fee_type"]),
+        ]
+
+    def __str__(self):
+        return f"{self.fee_type} {self.waybill_number} €{self.amount}"
+
+    @property
+    def is_special_price(self):
+        """Envio fee com preço ≠ €1.60 (preço base padrão Cainiao)."""
+        return (
+            self.fee_type == "envio fee"
+            and self.amount != Decimal("1.60")
+        )
+
+    @property
+    def is_claim(self):
+        return self.fee_type == "compensacion"

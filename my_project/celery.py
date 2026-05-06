@@ -87,6 +87,13 @@ app.conf.beat_schedule = {
         'options': {'expires': 3600},
     },
 
+    # Auto-emit de PFs individuais por motorista — 06:35 (5 min depois)
+    'auto-emit-driver-pre-invoices': {
+        'task': 'core.auto_emit_driver_pre_invoices',
+        'schedule': crontab(hour=6, minute=35),
+        'options': {'expires': 3600},
+    },
+
     # Relatório semanal de Pacotes Not Arrived — sextas às 18h
     'not-arrived-weekly-report': {
         'task': 'settlements.send_not_arrived_weekly_report',

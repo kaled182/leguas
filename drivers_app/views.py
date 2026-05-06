@@ -3556,6 +3556,7 @@ from .portal_views import (
     driver_portal_reports,
     driver_portal_invoices,
     driver_portal_profile,
+    driver_caderneta_pdf,
     driver_pre_invoice_pdf,
     driver_pre_invoice_upload_recibo,
 )

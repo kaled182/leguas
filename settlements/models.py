@@ -3770,3 +3770,30 @@ class PackagePriceOverride(models.Model):
             f"{self.waybill_number} · {self.task_date} · "
             f"€{self.price}/pacote"
         )
+
+
+class PreInvoiceNote(models.Model):
+    """Comentário interno de operadores numa Pré-Fatura.
+
+    Uso: thread de notas para discussão entre operadores antes de
+    pagar (ex: 'verificar com motorista se concorda com €50 desconto').
+    Não visível ao motorista.
+    """
+    pre_invoice = models.ForeignKey(
+        "DriverPreInvoice", on_delete=models.CASCADE,
+        related_name="notes",
+    )
+    author = models.ForeignKey(
+        "auth.User", on_delete=models.SET_NULL,
+        null=True, blank=True, related_name="pf_notes_authored",
+    )
+    body = models.TextField("Conteúdo")
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        verbose_name = "Nota de Pré-Fatura"
+        verbose_name_plural = "Notas de Pré-Fatura"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.pre_invoice.numero}: {self.body[:50]}"

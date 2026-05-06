@@ -859,9 +859,15 @@ def bank_statement_detail(request, pk):
     rows = []
     for tx in txs:
         suggestions = []
+        pf_suggestions = []
         if tx.direction == BankTransaction.DIRECTION_DEBIT and not tx.matched_bill_id:
             suggestions = list(tx.suggest_bill_matches())
-        rows.append({"tx": tx, "suggestions": suggestions})
+            pf_suggestions = tx.suggest_pf_matches()
+        rows.append({
+            "tx": tx,
+            "suggestions": suggestions,
+            "pf_suggestions": pf_suggestions,
+        })
     n_matched = sum(1 for tx in txs if tx.matched_bill_id)
     n_pending = sum(
         1 for tx in txs

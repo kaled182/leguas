@@ -25,6 +25,16 @@ urlpatterns = [
         name="payables_pf_health",
     ),
     path(
+        "a-pagar/pf/<int:pf_id>/compare/",
+        views_payables.payables_pf_compare,
+        name="payables_pf_compare",
+    ),
+    path(
+        "a-pagar/pf/<int:pf_id>/notes/",
+        views_payables.payables_pf_notes,
+        name="payables_pf_notes",
+    ),
+    path(
         "a-pagar/calendario/",
         views_payables.payables_calendar,
         name="payables_calendar",

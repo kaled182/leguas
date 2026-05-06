@@ -852,6 +852,60 @@ class DriverProfileChangeRequest(models.Model):
         return True
 
 
+class DriverAutoEmitConfig(models.Model):
+    """Auto-emissão de pré-faturas individuais por motorista.
+
+    Análogo a FleetAutoEmitConfig mas para drivers. A task Celery
+    `auto_emit_driver_pre_invoices` corre diariamente e cria PFs
+    automaticamente para drivers configurados, no dia escolhido.
+    """
+    PERIOD_CHOICES = [
+        ("monthly", "Mensal (mês anterior completo)"),
+        ("biweekly", "Quinzenal (15 dias anteriores)"),
+        ("weekly", "Semanal (semana anterior, segunda a domingo)"),
+    ]
+    driver = models.OneToOneField(
+        "DriverProfile", on_delete=models.CASCADE,
+        related_name="auto_emit_config",
+    )
+    enabled = models.BooleanField("Activo", default=False)
+    period_type = models.CharField(
+        "Tipo de período", max_length=10,
+        choices=PERIOD_CHOICES, default="monthly",
+    )
+    day_of_month = models.PositiveSmallIntegerField(
+        "Dia do mês para emitir", default=1,
+        help_text="Para mensal/quinzenal — 1-28",
+    )
+    weekday = models.PositiveSmallIntegerField(
+        "Dia da semana para emitir", default=0,
+        help_text="Para semanal — 0=Seg, 6=Dom",
+    )
+    auto_approve = models.BooleanField(
+        "Auto-aprovar (passar a APROVADO)",
+        default=False,
+        help_text="Se desligado, fica em CALCULADO para revisão manual.",
+    )
+    auto_send_whatsapp = models.BooleanField(
+        "Enviar WhatsApp ao motorista após emitir",
+        default=False,
+    )
+    last_emitted_at = models.DateTimeField(null=True, blank=True)
+    last_emitted_period_from = models.DateField(null=True, blank=True)
+    last_emitted_period_to = models.DateField(null=True, blank=True)
+    last_pf_id = models.IntegerField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Auto-emit (Motorista)"
+        verbose_name_plural = "Auto-emit (Motoristas)"
+
+    def __str__(self):
+        state = "ON" if self.enabled else "OFF"
+        return f"{self.driver.nome_completo} — auto-emit [{state}]"
+
+
 class DriverMergeAudit(models.Model):
     """Registo de uma operação de unificação (merge) de dois motoristas.
 

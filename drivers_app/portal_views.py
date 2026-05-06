@@ -568,6 +568,14 @@ def driver_portal_profile(request, driver_id):
 
 
 @portal_access_required
+def driver_caderneta_pdf(request, driver_id, year):
+    """PDF caderneta anual — todas as PFs do motorista no ano."""
+    from .caderneta import render_caderneta_pdf
+    driver = get_object_or_404(DriverProfile, pk=driver_id)
+    return render_caderneta_pdf(driver, int(year))
+
+
+@portal_access_required
 def driver_pre_invoice_pdf(request, driver_id, pre_invoice_id):
     """Download do PDF da pré-fatura — disponível para o próprio driver
     (via DriverAccess) ou admin."""

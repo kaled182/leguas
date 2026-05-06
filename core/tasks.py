@@ -556,3 +556,109 @@ def auto_emit_fleet_invoices():
     logger.info(f"[AUTO_EMIT] Concluído: {len(results)} frotas processadas")
     return {"processed": len(results), "results": results}
 
+
+
+@shared_task(name='core.auto_emit_driver_pre_invoices')
+def auto_emit_driver_pre_invoices():
+    """Análogo a auto_emit_fleet_invoices mas para motoristas individuais.
+
+    Itera DriverAutoEmitConfig com enabled=True. Para cada motorista no
+    dia/condição configurada, cria DriverPreInvoice cobrindo o período.
+    Idempotente via last_emitted_period_to.
+
+    Períodos:
+      - monthly: mês anterior completo, dispara no dia X
+      - biweekly: 15 dias anteriores, dispara no dia X
+      - weekly: semana anterior, dispara no weekday X
+    """
+    from datetime import timedelta
+    from drivers_app.models import DriverAutoEmitConfig
+    from django.test import RequestFactory
+    from django.contrib.auth import get_user_model
+    from settlements.views import driver_pre_invoice_create
+    import json
+
+    today = timezone.now().date()
+    User = get_user_model()
+    bot_user = User.objects.filter(is_superuser=True).first()
+    if not bot_user:
+        logger.warning("[AUTO_EMIT_DRV] Sem superuser para attribuir created_by")
+        return {"error": "no superuser"}
+
+    rf = RequestFactory()
+    results = []
+
+    for cfg in DriverAutoEmitConfig.objects.filter(enabled=True).select_related("driver"):
+        if cfg.period_type == "monthly":
+            if today.day != cfg.day_of_month:
+                continue
+            first_this = today.replace(day=1)
+            period_to = first_this - timedelta(days=1)
+            period_from = period_to.replace(day=1)
+        elif cfg.period_type == "biweekly":
+            if today.day != cfg.day_of_month:
+                continue
+            period_to = today - timedelta(days=1)
+            period_from = period_to - timedelta(days=14)
+        elif cfg.period_type == "weekly":
+            if today.weekday() != cfg.weekday:
+                continue
+            this_monday = today - timedelta(days=today.weekday())
+            period_from = this_monday - timedelta(days=7)
+            period_to = this_monday - timedelta(days=1)
+        else:
+            continue
+
+        if (cfg.last_emitted_period_to
+                and cfg.last_emitted_period_to >= period_to):
+            continue
+
+        body = json.dumps({
+            "periodo_inicio": period_from.strftime("%Y-%m-%d"),
+            "periodo_fim": period_to.strftime("%Y-%m-%d"),
+        }).encode("utf-8")
+        req = rf.post(
+            f"/settlements/pre-invoices/driver/{cfg.driver.id}/create/",
+            data=body, content_type="application/json",
+        )
+        req.user = bot_user
+        try:
+            resp = driver_pre_invoice_create(req, cfg.driver.id)
+            data = json.loads(resp.content)
+        except Exception as e:
+            logger.exception(f"[AUTO_EMIT_DRV] {cfg.driver.nome_completo}: ERRO")
+            results.append({"driver": cfg.driver.nome_completo, "error": str(e)})
+            continue
+
+        if data.get("success"):
+            pf_id = data.get("id") or data.get("pre_invoice_id")
+            cfg.last_emitted_at = timezone.now()
+            cfg.last_emitted_period_from = period_from
+            cfg.last_emitted_period_to = period_to
+            cfg.last_pf_id = pf_id
+            cfg.save(update_fields=[
+                "last_emitted_at", "last_emitted_period_from",
+                "last_emitted_period_to", "last_pf_id",
+            ])
+
+            # Auto-aprovar se configurado
+            if cfg.auto_approve and pf_id:
+                from settlements.models import DriverPreInvoice
+                pf = DriverPreInvoice.objects.filter(pk=pf_id).first()
+                if pf and pf.status == "CALCULADO":
+                    pf.status = "APROVADO"
+                    pf.save(update_fields=["status"])
+
+            results.append({
+                "driver": cfg.driver.nome_completo,
+                "pf_id": pf_id,
+                "period": f"{period_from} → {period_to}",
+            })
+        else:
+            results.append({
+                "driver": cfg.driver.nome_completo,
+                "error": data.get("error", "unknown"),
+            })
+
+    logger.info(f"[AUTO_EMIT_DRV] Concluído: {len(results)} drivers processados")
+    return {"processed": len(results), "results": results}

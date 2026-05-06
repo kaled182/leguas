@@ -869,6 +869,41 @@ class BankTransaction(models.Model):
             ),
         ).order_by("paid_date")[:5]
 
+    def suggest_pf_matches(self, tolerance_days=5):
+        """Sugere PFs (DriverPreInvoice) PAGAS compatíveis com a transacção.
+
+        Match por valor exacto + data próxima de data_pagamento + bonus
+        score se nome do motorista aparece na descrição da transacção.
+        """
+        if self.direction != self.DIRECTION_DEBIT:
+            return []
+        from datetime import timedelta
+        from settlements.models import DriverPreInvoice
+        candidates = list(
+            DriverPreInvoice.objects.filter(
+                total_a_receber=self.amount,
+                status="PAGO",
+                data_pagamento__range=(
+                    self.date - timedelta(days=tolerance_days),
+                    self.date + timedelta(days=tolerance_days),
+                ),
+            ).select_related("driver")[:10]
+        )
+        # Score: nome do motorista presente na descrição → topo
+        desc_lower = (self.description or "").lower()
+        scored = []
+        for pf in candidates:
+            score = 0
+            if pf.driver.apelido and pf.driver.apelido.lower() in desc_lower:
+                score += 10
+            if pf.driver.nome_completo:
+                first = pf.driver.nome_completo.split()[0].lower()
+                if first in desc_lower:
+                    score += 5
+            scored.append((score, pf))
+        scored.sort(key=lambda x: -x[0])
+        return [pf for _s, pf in scored[:5]]
+
 
 class BillAttachment(models.Model):
     """Anexo de uma Conta a Pagar — factura, comprovante, etc."""

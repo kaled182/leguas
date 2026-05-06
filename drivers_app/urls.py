@@ -69,6 +69,11 @@ urlpatterns = [
         views.driver_pre_invoice_pdf,
         name="driver_pre_invoice_pdf",
     ),
+    path(
+        "portal/<int:driver_id>/caderneta/<int:year>/pdf/",
+        views.driver_caderneta_pdf,
+        name="driver_caderneta_pdf",
+    ),
 
     # ─── Admin: aprovar pedidos de alteração ───
     path(

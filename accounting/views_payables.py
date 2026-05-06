@@ -472,6 +472,129 @@ def payables_calendar(request):
 
 
 @login_required
+def payables_pf_compare(request, pf_id):
+    """JSON com comparação entre uma PF e a PF anterior do mesmo motorista.
+
+    Mostra as principais métricas lado a lado com delta percentual.
+    """
+    from settlements.models import DriverPreInvoice
+    pf = get_object_or_404(DriverPreInvoice, pk=pf_id)
+    prev = (
+        DriverPreInvoice.objects
+        .filter(driver=pf.driver, periodo_fim__lt=pf.periodo_inicio)
+        .order_by("-periodo_fim").first()
+    )
+
+    def _delta_pct(curr, prev_v):
+        try:
+            curr_f = float(curr or 0)
+            prev_f = float(prev_v or 0)
+            if prev_f == 0:
+                return None
+            return round(((curr_f - prev_f) / prev_f) * 100, 1)
+        except (TypeError, ValueError):
+            return None
+
+    def _serialize(p):
+        if not p:
+            return None
+        return {
+            "id": p.id,
+            "numero": p.numero,
+            "periodo": (
+                f"{p.periodo_inicio.strftime('%d/%m')}–"
+                f"{p.periodo_fim.strftime('%d/%m/%Y')}"
+            ),
+            "base_entregas": float(p.base_entregas or 0),
+            "total_bonus": float(p.total_bonus or 0),
+            "total_pacotes_perdidos": float(p.total_pacotes_perdidos or 0),
+            "total_adiantamentos": float(p.total_adiantamentos or 0),
+            "total_a_receber": float(p.total_a_receber or 0),
+            "status": p.get_status_display(),
+        }
+
+    metrics = ["base_entregas", "total_bonus", "total_pacotes_perdidos",
+               "total_adiantamentos", "total_a_receber"]
+    deltas = {}
+    if prev:
+        for m in metrics:
+            deltas[m] = _delta_pct(
+                getattr(pf, m), getattr(prev, m),
+            )
+
+    return JsonResponse({
+        "success": True,
+        "current": _serialize(pf),
+        "previous": _serialize(prev),
+        "deltas_pct": deltas,
+    })
+
+
+@login_required
+@require_http_methods(["GET", "POST", "DELETE"])
+def payables_pf_notes(request, pf_id):
+    """CRUD de notas internas duma PF.
+
+    GET: lista notas
+    POST: cria nota com body
+    DELETE: ?note_id=N apaga nota (só autor ou superuser)
+    """
+    from settlements.models import DriverPreInvoice, PreInvoiceNote
+    pf = get_object_or_404(DriverPreInvoice, pk=pf_id)
+
+    if request.method == "GET":
+        notes = list(
+            pf.notes.select_related("author").values(
+                "id", "body", "created_at",
+                "author__username", "author__id",
+            )
+        )
+        return JsonResponse({"success": True, "notes": [
+            {
+                "id": n["id"],
+                "body": n["body"],
+                "author": n["author__username"] or "—",
+                "author_id": n["author__id"],
+                "created_at": n["created_at"].isoformat(),
+            } for n in notes
+        ]})
+
+    if request.method == "POST":
+        body = (request.POST.get("body") or "").strip()
+        if not body:
+            return JsonResponse(
+                {"success": False, "error": "Conteúdo obrigatório."},
+                status=400,
+            )
+        n = PreInvoiceNote.objects.create(
+            pre_invoice=pf, author=request.user, body=body[:2000],
+        )
+        return JsonResponse({
+            "success": True,
+            "note": {
+                "id": n.id, "body": n.body,
+                "author": request.user.username,
+                "author_id": request.user.id,
+                "created_at": n.created_at.isoformat(),
+            },
+        })
+
+    # DELETE
+    note_id = request.GET.get("note_id")
+    if not note_id:
+        return JsonResponse({"success": False, "error": "note_id obrigatório."}, status=400)
+    n = PreInvoiceNote.objects.filter(pk=note_id, pre_invoice=pf).first()
+    if not n:
+        return JsonResponse({"success": False, "error": "Nota não encontrada."}, status=404)
+    if n.author_id != request.user.id and not request.user.is_superuser:
+        return JsonResponse(
+            {"success": False, "error": "Sem permissão."}, status=403,
+        )
+    n.delete()
+    return JsonResponse({"success": True})
+
+
+@login_required
 def payables_pf_health(request, pf_id):
     """JSON com snapshot completo de Saúde do Motorista para uma PF."""
     from settlements.models import DriverPreInvoice

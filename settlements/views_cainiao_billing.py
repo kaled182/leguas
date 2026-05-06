@@ -573,6 +573,7 @@ def cainiao_billing_export_xlsx(request, import_id, kind):
             "Task Date", "Waybill", "LP Number", "Courier ID Cainiao",
             "Courier Name", "Status", "Cidade", "CP",
         ])
+        # Já filtra só 1ª entrega por waybill (re-entregas excluídas)
         recon = reconciliation_for_import(session)
         for t in recon["delivered_no_billing"].order_by("task_date"):
             ws.append([
@@ -702,15 +703,15 @@ def cainiao_billing_export_xlsx(request, import_id, kind):
                 "waybill_number", flat=True,
             )
         )
-        cid_to_driver, _ = (
-            __import__(
-                "settlements.services_cainiao_billing",
-                fromlist=["_build_resolution_caches"],
-            )._build_resolution_caches()
+        from .services_cainiao_billing import (
+            _build_resolution_caches, _first_delivery_task_ids,
+        )
+        cid_to_driver, _ = _build_resolution_caches()
+        first_ids = _first_delivery_task_ids(
+            session.period_from, session.period_to,
         )
         qs = CainiaoOperationTask.objects.filter(
-            task_date__range=(session.period_from, session.period_to),
-            task_status="Delivered",
+            id__in=first_ids,
         ).exclude(
             _Q(waybill_number__in=billed_wbs)
             | _Q(lp_number__in=billed_wbs),

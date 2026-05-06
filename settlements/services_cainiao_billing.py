@@ -622,6 +622,49 @@ def reresolve_matching(session):
 #  Análise / queries auxiliares
 # ─────────────────────────────────────────────────────────────────────
 
+def _first_delivery_task_ids(period_from, period_to):
+    """Devolve set de IDs de CainiaoOperationTask correspondentes à
+    PRIMEIRA entrega Delivered de cada waybill no período.
+
+    Regra de negócio (confirmada com Cainiao): a Cainiao paga apenas
+    a primeira entrega bem-sucedida. Se um pacote é re-entregue por
+    outro driver, essa segunda entrega NÃO é paga e não deve contar
+    como "Delivered s/ pagamento".
+
+    Implementação: para cada waybill, escolhe a task com
+    MIN(task_date), desempate por MIN(id). Usa GROUP BY no MySQL.
+    """
+    from django.db.models import Min
+    from .models import CainiaoOperationTask
+
+    qs = CainiaoOperationTask.objects.filter(
+        task_date__range=(period_from, period_to),
+        task_status="Delivered",
+    )
+    # 1) Para cada waybill, descobrir min(task_date)
+    min_dates = qs.values("waybill_number").annotate(
+        min_date=Min("task_date"),
+    )
+    # 2) Construir set de pares (waybill, min_date) para filtragem
+    pairs = {(d["waybill_number"], d["min_date"]) for d in min_dates}
+    if not pairs:
+        return set()
+
+    # 3) Iterar tasks que matcham qualquer um dos pares e escolher
+    #    o ID com menor id em caso de empate (mesma data, várias rows)
+    chosen = {}  # waybill_number -> task_id (com menor id se empate)
+    candidates = qs.values(
+        "id", "waybill_number", "task_date",
+    ).order_by("waybill_number", "task_date", "id")
+    for c in candidates.iterator(chunk_size=2000):
+        wb = c["waybill_number"]
+        if wb in chosen:
+            continue
+        if (wb, c["task_date"]) in pairs:
+            chosen[wb] = c["id"]
+    return set(chosen.values())
+
+
 def reconciliation_math(session):
     """Matemática completa da reconciliação em distinct waybills.
 
@@ -643,17 +686,21 @@ def reconciliation_math(session):
     n_distinct_billed = len(distinct_billed_wbs)
     n_duplicate_billing_rows = n_billing_lines_envio - n_distinct_billed
 
-    # Lado B — tasks Delivered no período
-    delivered_qs = CainiaoOperationTask.objects.filter(
+    # Lado B — tasks Delivered no período (REGRA: só 1ª entrega
+    # por waybill, conforme política Cainiao)
+    first_ids = _first_delivery_task_ids(*period)
+    all_delivered_qs = CainiaoOperationTask.objects.filter(
         task_date__range=period,
         task_status="Delivered",
     )
-    n_delivered_rows = delivered_qs.count()
+    n_delivered_rows = all_delivered_qs.count()  # inclui re-entregas
+    delivered_qs = all_delivered_qs.filter(id__in=first_ids)
     distinct_delivered_wbs = set(
         delivered_qs.values_list("waybill_number", flat=True)
     )
     n_distinct_delivered = len(distinct_delivered_wbs)
-    n_duplicate_delivery_dates = n_delivered_rows - n_distinct_delivered
+    # n_duplicate_delivery_dates = todas as Delivered EXTRA (re-entregas)
+    n_duplicate_delivery_dates = n_delivered_rows - len(first_ids)
 
     # Match cruzado: tasks cuja chave (waybill_number OU lp_number)
     # está na billing (set de waybills facturados).
@@ -715,15 +762,18 @@ def delivered_no_billing_by_driver(session):
     from drivers_app.models import DriverProfile
 
     # Same filter as reconciliation_for_import (paranoia: mantém
-    # consistência com o KPI "Entregues s/ Pagamento")
+    # consistência com o KPI "Entregues s/ Pagamento").
+    # Apenas a primeira entrega de cada waybill — re-entregas excluídas.
     billed_wbs = set(
         session.lines.filter(fee_type="envio fee").values_list(
             "waybill_number", flat=True,
         )
     )
+    first_ids = _first_delivery_task_ids(
+        session.period_from, session.period_to,
+    )
     qs = CainiaoOperationTask.objects.filter(
-        task_date__range=(session.period_from, session.period_to),
-        task_status="Delivered",
+        id__in=first_ids,
     ).exclude(
         _Q(waybill_number__in=billed_wbs) | _Q(lp_number__in=billed_wbs),
     )
@@ -965,12 +1015,20 @@ def diagnose_delivered_no_billing(session):
 def reconciliation_for_import(session):
     """Compara CainiaoBillingLine com CainiaoOperationTask local.
 
-    Devolve dict com 4 secções:
+    Aplica a regra de negócio: só a PRIMEIRA entrega Delivered de cada
+    waybill conta. Re-entregas (segundo driver entrega o mesmo pacote
+    por engano) não devem inflar "Delivered s/ pagamento" — a Cainiao
+    não as paga e não são uma perda real.
+
+    Devolve dict com:
       - paid_no_task: linhas pagas pela Cainiao mas sem task local
-      - delivered_no_billing: tasks Delivered no período sem linha de envio
-      - both: contagem das que batem certo
-      - special_prices: linhas envio fee com amount != 1.60
+      - delivered_no_billing: 1ª task Delivered de cada waybill no
+        período sem linha de envio
+      - n_re_deliveries: tasks Delivered "extra" descartadas (mesmo
+        waybill já entregue antes — re-entregas)
+      - matched_count, special_prices etc.
     """
+    from django.db.models import Q as _Q
     from .models import CainiaoOperationTask
 
     lines = session.lines.all()
@@ -985,13 +1043,25 @@ def reconciliation_for_import(session):
         )
     )
 
+    # Apenas IDs da primeira entrega Delivered por waybill
+    first_ids = _first_delivery_task_ids(
+        session.period_from, session.period_to,
+    )
+
+    # Total de Delivered (todas) e re-entregas
+    all_delivered_count = CainiaoOperationTask.objects.filter(
+        task_date__range=(session.period_from, session.period_to),
+        task_status="Delivered",
+    ).count()
+    n_re_deliveries = all_delivered_count - len(first_ids)
+
     delivered_no_billing = (
         CainiaoOperationTask.objects
-        .filter(
-            task_date__range=(session.period_from, session.period_to),
-            task_status="Delivered",
+        .filter(id__in=first_ids)
+        .exclude(
+            _Q(waybill_number__in=billed_waybills)
+            | _Q(lp_number__in=billed_waybills),
         )
-        .exclude(waybill_number__in=billed_waybills)
         .order_by("task_date")
     )
 
@@ -1008,6 +1078,7 @@ def reconciliation_for_import(session):
         "paid_no_task_count": paid_no_task.count(),
         "delivered_no_billing": delivered_no_billing,
         "delivered_no_billing_count": delivered_no_billing.count(),
+        "n_re_deliveries": n_re_deliveries,
         "matched_count": matched_count,
         "special_prices": special_prices,
         "special_prices_count": special_prices.count(),

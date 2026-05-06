@@ -76,13 +76,14 @@ def cainiao_billing_upload(request):
 
 @login_required
 def cainiao_billing_detail(request, import_id):
-    """Página de detalhe da importação Cainiao.
-
-    Esta página tem 5 tabs (Resumo, Linhas, Reconciliação,
-    Preços Especiais, Claims). Nesta Fase 2 mostramos apenas um stub
-    com KPIs básicos — as outras tabs serão preenchidas nas Fases 4-7.
-    """
+    """Página de detalhe da importação Cainiao com 5 tabs."""
+    from collections import defaultdict
+    from decimal import Decimal
+    from django.core.paginator import Paginator
+    from django.db.models import Count, Sum
+    from django.db.models.functions import Coalesce
     from .models import CainiaoBillingImport
+    from .services_cainiao_billing import reconciliation_for_import
 
     session = get_object_or_404(
         CainiaoBillingImport.objects.select_related(
@@ -91,13 +92,146 @@ def cainiao_billing_detail(request, import_id):
         id=import_id,
     )
 
+    active_tab = request.GET.get("tab", "summary")
+    ctx = {"session": session, "active_tab": active_tab}
+
+    # ── Tab: Resumo ──────────────────────────────────────────────────
+    if active_tab == "summary":
+        # Top 10 motoristas (envio fee, agregado)
+        top_drivers = list(
+            session.lines.filter(fee_type="envio fee")
+            .values("driver_id", "driver__nome_completo", "staff_id")
+            .annotate(
+                deliveries=Count("id"),
+                total=Coalesce(Sum("amount"), Decimal("0")),
+            )
+            .order_by("-deliveries")[:10]
+        )
+
+        # Breakdown por billing_id (lote/corte)
+        billing_breakdown = list(
+            session.lines.values("cainiao_billing_id")
+            .annotate(
+                lines=Count("id"),
+                total=Coalesce(Sum("amount"), Decimal("0")),
+                envios=Count("id", filter=Q_envio()),
+                claims=Count("id", filter=Q_claim()),
+            )
+            .order_by("-lines")
+        )
+
+        # Distribuição de preços (envio fee)
+        price_dist = list(
+            session.lines.filter(fee_type="envio fee")
+            .values("amount")
+            .annotate(n=Count("id"))
+            .order_by("-n")[:10]
+        )
+
+        ctx.update({
+            "top_drivers": top_drivers,
+            "billing_breakdown": billing_breakdown,
+            "price_dist": price_dist,
+        })
+
+    # ── Tab: Linhas (paginadas) ──────────────────────────────────────
+    elif active_tab == "lines":
+        qs = session.lines.select_related("driver", "task")
+        # Filtros
+        f_fee = request.GET.get("fee_type", "")
+        f_billing = request.GET.get("billing_id", "")
+        f_search = (request.GET.get("q") or "").strip()
+        if f_fee in ("envio fee", "compensacion"):
+            qs = qs.filter(fee_type=f_fee)
+        if f_billing:
+            qs = qs.filter(cainiao_billing_id=f_billing)
+        if f_search:
+            qs = qs.filter(waybill_number__icontains=f_search)
+        paginator = Paginator(qs, 100)
+        page = paginator.get_page(request.GET.get("page", 1))
+        # Listas para os filtros
+        billing_ids = list(
+            session.lines.values_list(
+                "cainiao_billing_id", flat=True,
+            ).distinct().order_by("cainiao_billing_id"),
+        )
+        ctx.update({
+            "lines_page": page,
+            "filter_fee_type": f_fee,
+            "filter_billing_id": f_billing,
+            "filter_search": f_search,
+            "billing_ids_filter": billing_ids,
+        })
+
+    # ── Tab: Reconciliação ───────────────────────────────────────────
+    elif active_tab == "reconciliation":
+        recon = reconciliation_for_import(session)
+        # Paginar as duas listas grandes
+        from django.core.paginator import Paginator as P
+        ctx.update({
+            "recon": recon,
+            "paid_no_task_page": P(
+                recon["paid_no_task"], 50,
+            ).get_page(request.GET.get("p1", 1)),
+            "delivered_no_billing_page": P(
+                recon["delivered_no_billing"], 50,
+            ).get_page(request.GET.get("p2", 1)),
+        })
+
+    # ── Tab: Preços Especiais ────────────────────────────────────────
+    elif active_tab == "special_prices":
+        qs = session.lines.filter(
+            fee_type="envio fee",
+        ).exclude(amount=Decimal("1.60")).select_related(
+            "driver", "task", "price_override",
+        ).order_by("-amount", "-biz_time")
+        paginator = Paginator(qs, 100)
+        page = paginator.get_page(request.GET.get("page", 1))
+        # Distribuição de preços
+        dist = (
+            session.lines.filter(fee_type="envio fee")
+            .exclude(amount=Decimal("1.60"))
+            .values("amount")
+            .annotate(n=Count("id"), total=Sum("amount"))
+            .order_by("-n")
+        )
+        already_overridden = qs.filter(price_override__isnull=False).count()
+        ctx.update({
+            "special_page": page,
+            "special_dist": list(dist),
+            "special_total": qs.count(),
+            "already_overridden": already_overridden,
+        })
+
+    # ── Tab: Claims ──────────────────────────────────────────────────
+    elif active_tab == "claims":
+        qs = (
+            session.lines.filter(fee_type="compensacion")
+            .select_related("driver", "task", "claim")
+            .order_by("-biz_time")
+        )
+        ctx.update({
+            "claims": list(qs),
+            "claims_total_value": qs.aggregate(
+                s=Coalesce(Sum("amount"), Decimal("0")),
+            )["s"],
+            "claims_unassigned": qs.filter(claim__isnull=True).count(),
+            "claims_assigned": qs.filter(claim__isnull=False).count(),
+        })
+
     return render(
-        request, "settlements/cainiao_billing_detail.html",
-        {
-            "session": session,
-            "active_tab": request.GET.get("tab", "summary"),
-        },
+        request, "settlements/cainiao_billing_detail.html", ctx,
     )
+
+
+def Q_envio():
+    from django.db.models import Q
+    return Q(fee_type="envio fee")
+
+
+def Q_claim():
+    from django.db.models import Q
+    return Q(fee_type="compensacion")
 
 
 @login_required

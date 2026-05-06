@@ -1,0 +1,107 @@
+{# Tab Resumo — Top motoristas, breakdown por billing_id, distribuição de preços #}
+
+<div class="space-y-6">
+
+  {# Top 10 motoristas #}
+  <div>
+    <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+      <i data-lucide="users" class="w-4 h-4 text-violet-500"></i>
+      Top 10 Motoristas (por entregas pagas)
+    </h3>
+    {% if top_drivers %}
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-gray-50 dark:bg-gray-900/40">
+            <tr>
+              <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">#</th>
+              <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Motorista</th>
+              <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Staff ID</th>
+              <th class="px-3 py-2 text-right text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Entregas</th>
+              <th class="px-3 py-2 text-right text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Total Pago</th>
+              <th class="px-3 py-2 text-right text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">€/Entrega Médio</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+            {% for d in top_drivers %}
+            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+              <td class="px-3 py-2 font-mono text-xs text-gray-500">{{ forloop.counter }}</td>
+              <td class="px-3 py-2 font-semibold text-gray-900 dark:text-white">
+                {% if d.driver_id %}
+                  <a href="/driversapp/portal/{{ d.driver_id }}/" target="_blank" class="hover:text-violet-600">
+                    {{ d.driver__nome_completo|default:"—" }}
+                  </a>
+                {% else %}
+                  <span class="text-rose-500 italic">Driver não encontrado</span>
+                {% endif %}
+              </td>
+              <td class="px-3 py-2 font-mono text-xs text-gray-500">{{ d.staff_id|default:"—" }}</td>
+              <td class="px-3 py-2 text-right font-bold">{{ d.deliveries }}</td>
+              <td class="px-3 py-2 text-right font-bold text-emerald-600 dark:text-emerald-400">€ {{ d.total|floatformat:2 }}</td>
+              <td class="px-3 py-2 text-right text-xs text-gray-500">
+                {% if d.deliveries %}€ {% widthratio d.total d.deliveries 1 %}{% else %}—{% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="text-xs text-gray-500 italic">Sem dados.</p>
+    {% endif %}
+  </div>
+
+  {# Breakdown por billing_id #}
+  <div>
+    <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+      <i data-lucide="layers" class="w-4 h-4 text-violet-500"></i>
+      Lotes (Billing ID)
+    </h3>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-gray-50 dark:bg-gray-900/40">
+          <tr>
+            <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Billing ID</th>
+            <th class="px-3 py-2 text-right text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Linhas</th>
+            <th class="px-3 py-2 text-right text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Envios</th>
+            <th class="px-3 py-2 text-right text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Claims</th>
+            <th class="px-3 py-2 text-right text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Total €</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+          {% for b in billing_breakdown %}
+          <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+            <td class="px-3 py-2 font-mono text-xs">{{ b.cainiao_billing_id|default:"—" }}</td>
+            <td class="px-3 py-2 text-right font-semibold">{{ b.lines }}</td>
+            <td class="px-3 py-2 text-right text-gray-600">{{ b.envios }}</td>
+            <td class="px-3 py-2 text-right">
+              {% if b.claims %}<span class="text-rose-600 font-bold">{{ b.claims }}</span>{% else %}—{% endif %}
+            </td>
+            <td class="px-3 py-2 text-right font-bold {% if b.total < 0 %}text-rose-600{% else %}text-emerald-600 dark:text-emerald-400{% endif %}">€ {{ b.total|floatformat:2 }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {# Distribuição de preços (envio fee) #}
+  <div>
+    <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+      <i data-lucide="bar-chart-3" class="w-4 h-4 text-violet-500"></i>
+      Distribuição de Preços (Envio Fee)
+    </h3>
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-2">
+      {% for p in price_dist %}
+      <div class="bg-white dark:bg-gray-800 rounded-lg p-3 border {% if p.amount == 1.6 %}border-gray-200 dark:border-gray-700{% else %}border-amber-300 dark:border-amber-700/50{% endif %}">
+        <div class="text-xs text-gray-500">€ {{ p.amount }} {% if p.amount != 1.6 %}<span class="text-amber-600 font-bold ml-1">★</span>{% endif %}</div>
+        <div class="text-lg font-bold {% if p.amount == 1.6 %}text-gray-900 dark:text-white{% else %}text-amber-700 dark:text-amber-300{% endif %}">{{ p.n }}</div>
+        <div class="text-[10px] text-gray-400">entregas</div>
+      </div>
+      {% endfor %}
+    </div>
+    <p class="text-[11px] text-gray-500 mt-2">
+      <i data-lucide="info" class="w-3 h-3 inline"></i>
+      Preços ≠ €1,60 são <strong>preços especiais</strong> — geríveis na tab "Preços Especiais".
+    </p>
+  </div>
+</div>

@@ -1,0 +1,102 @@
+{# Tab Linhas — tabela paginada com filtros #}
+
+<div class="space-y-4">
+
+  {# Filtros #}
+  <form method="get" class="flex flex-wrap items-end gap-2 bg-gray-50 dark:bg-gray-900/40 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
+    <input type="hidden" name="tab" value="lines">
+    <div>
+      <label class="block text-[10px] uppercase font-semibold text-gray-500 mb-1">Tipo</label>
+      <select name="fee_type" class="px-2 py-1.5 text-xs bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white">
+        <option value="">Todos</option>
+        <option value="envio fee" {% if filter_fee_type == "envio fee" %}selected{% endif %}>Envio fee</option>
+        <option value="compensacion" {% if filter_fee_type == "compensacion" %}selected{% endif %}>Compensación</option>
+      </select>
+    </div>
+    <div>
+      <label class="block text-[10px] uppercase font-semibold text-gray-500 mb-1">Lote</label>
+      <select name="billing_id" class="px-2 py-1.5 text-xs bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white max-w-[200px]">
+        <option value="">Todos</option>
+        {% for bid in billing_ids_filter %}
+          <option value="{{ bid }}" {% if filter_billing_id == bid %}selected{% endif %}>{{ bid|default:"(sem ID)" }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="flex-1 min-w-[200px]">
+      <label class="block text-[10px] uppercase font-semibold text-gray-500 mb-1">Pesquisar Waybill</label>
+      <input type="text" name="q" value="{{ filter_search }}" placeholder="LP880200..." class="w-full px-2 py-1.5 text-xs bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white">
+    </div>
+    <button type="submit" class="px-3 py-1.5 text-xs bg-indigo-600 hover:bg-indigo-700 text-white rounded font-semibold">Filtrar</button>
+    <a href="?tab=lines" class="px-3 py-1.5 text-xs bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded font-semibold">Limpar</a>
+  </form>
+
+  {# Tabela #}
+  <div class="overflow-x-auto">
+    <table class="w-full text-xs">
+      <thead class="bg-gray-50 dark:bg-gray-900/40 sticky top-0">
+        <tr>
+          <th class="px-2 py-2 text-left font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">Tipo</th>
+          <th class="px-2 py-2 text-left font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">Data</th>
+          <th class="px-2 py-2 text-left font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">Waybill</th>
+          <th class="px-2 py-2 text-left font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">Motorista</th>
+          <th class="px-2 py-2 text-left font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">Cidade</th>
+          <th class="px-2 py-2 text-left font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">Lote</th>
+          <th class="px-2 py-2 text-right font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">€</th>
+          <th class="px-2 py-2 text-center font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">Task</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+        {% for line in lines_page %}
+        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 {% if line.fee_type == 'compensacion' %}bg-rose-50/50 dark:bg-rose-900/10{% elif line.is_special_price %}bg-amber-50/50 dark:bg-amber-900/10{% endif %}">
+          <td class="px-2 py-1.5">
+            {% if line.fee_type == 'envio fee' %}
+              <span class="text-emerald-700 font-semibold">envio</span>
+            {% else %}
+              <span class="text-rose-700 font-semibold">claim</span>
+            {% endif %}
+          </td>
+          <td class="px-2 py-1.5 text-gray-700 dark:text-gray-300 whitespace-nowrap">{{ line.biz_time|date:"d/m H:i" }}</td>
+          <td class="px-2 py-1.5 font-mono text-[10px] text-gray-700 dark:text-gray-300">{{ line.waybill_number }}</td>
+          <td class="px-2 py-1.5">
+            {% if line.driver %}
+              <span class="text-gray-900 dark:text-white">{{ line.driver.nome_completo }}</span>
+              <span class="text-gray-400 text-[9px] ml-1">{{ line.driver.apelido|default:"" }}</span>
+            {% elif line.staff_id %}
+              <span class="text-gray-500 italic">staff_id: {{ line.staff_id }}</span>
+            {% else %}
+              <span class="text-rose-500 italic">— sem driver —</span>
+            {% endif %}
+          </td>
+          <td class="px-2 py-1.5 text-gray-500">{{ line.ciudad|default:"—" }}</td>
+          <td class="px-2 py-1.5 font-mono text-[10px] text-gray-500">{{ line.cainiao_billing_id|truncatechars:14 }}</td>
+          <td class="px-2 py-1.5 text-right font-bold {% if line.amount < 0 %}text-rose-600{% elif line.is_special_price %}text-amber-700 dark:text-amber-300{% else %}text-emerald-600 dark:text-emerald-400{% endif %}">{{ line.amount|floatformat:2 }}</td>
+          <td class="px-2 py-1.5 text-center">
+            {% if line.task %}
+              <i data-lucide="check-circle-2" class="w-3.5 h-3.5 text-emerald-500 inline" title="Task local: {{ line.task.task_date }} ({{ line.task.task_status }})"></i>
+            {% else %}
+              <i data-lucide="x-circle" class="w-3.5 h-3.5 text-rose-400 inline" title="Sem task local"></i>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8" class="px-3 py-8 text-center text-gray-500 italic">Nenhuma linha corresponde aos filtros.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {# Paginação #}
+  {% if lines_page.has_other_pages %}
+  <div class="flex items-center justify-between text-xs pt-2 border-t border-gray-200 dark:border-gray-700">
+    <span class="text-gray-500">Página {{ lines_page.number }} de {{ lines_page.paginator.num_pages }} · {{ lines_page.paginator.count }} resultados</span>
+    <div class="flex gap-2">
+      {% if lines_page.has_previous %}
+        <a href="?tab=lines&page={{ lines_page.previous_page_number }}{% if filter_fee_type %}&fee_type={{ filter_fee_type }}{% endif %}{% if filter_billing_id %}&billing_id={{ filter_billing_id }}{% endif %}{% if filter_search %}&q={{ filter_search }}{% endif %}" class="px-3 py-1 bg-gray-100 dark:bg-gray-700 rounded">‹ Anterior</a>
+      {% endif %}
+      {% if lines_page.has_next %}
+        <a href="?tab=lines&page={{ lines_page.next_page_number }}{% if filter_fee_type %}&fee_type={{ filter_fee_type }}{% endif %}{% if filter_billing_id %}&billing_id={{ filter_billing_id }}{% endif %}{% if filter_search %}&q={{ filter_search }}{% endif %}" class="px-3 py-1 bg-gray-100 dark:bg-gray-700 rounded">Próxima ›</a>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+</div>

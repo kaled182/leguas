@@ -64,11 +64,17 @@
     </div>
 
     <div class="p-6">
-      <div class="text-center py-12 text-gray-500 dark:text-gray-400">
-        <i data-lucide="construction" class="w-12 h-12 mx-auto mb-3 text-amber-400"></i>
-        <p class="text-sm font-semibold">Esta tab será implementada nas próximas fases.</p>
-        <p class="text-xs mt-1">Fase 2 concluída — importação a funcionar.</p>
-      </div>
+      {% if active_tab == "summary" %}
+        {% include 'settlements/partials/cainiao_billing_summary.html' %}
+      {% elif active_tab == "lines" %}
+        {% include 'settlements/partials/cainiao_billing_lines.html' %}
+      {% elif active_tab == "reconciliation" %}
+        {% include 'settlements/partials/cainiao_billing_reconciliation.html' %}
+      {% elif active_tab == "special_prices" %}
+        {% include 'settlements/partials/cainiao_billing_special_prices.html' %}
+      {% elif active_tab == "claims" %}
+        {% include 'settlements/partials/cainiao_billing_claims.html' %}
+      {% endif %}
     </div>
   </div>
 

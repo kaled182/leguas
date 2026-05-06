@@ -160,7 +160,7 @@ def _row_fleet(lanc):
     return PayableRow(
         entity_type="fleet",
         entity_id=lanc.id,
-        type_label="Pré-Fatura Frota",
+        type_label="Lançamento Frota",
         type_color="violet",
         icon="building-2",
         numero=f"FRT-{lanc.id:04d}",
@@ -176,6 +176,42 @@ def _row_fleet(lanc):
         amount=lanc.total_a_receber,
         status=lanc.status,
         status_display=lanc.get_status_display(),
+        payable=payable,
+        block_reason=block,
+    )
+
+
+def _row_fleet_invoice(fi):
+    """PayableRow para FleetInvoice (FF-NNNN — pré-fatura global da frota).
+
+    Estados pagáveis: CALCULADO ou APROVADO (a frota já tem fatura
+    formal no PDF gerado). Mostra valor c/IVA — é o que o parceiro paga.
+    """
+    payable = fi.status in ("CALCULADO", "APROVADO")
+    block = ""
+    if fi.status == "RASCUNHO":
+        block = "Falta calcular a pré-fatura"
+    elif not payable:
+        block = f"Estado {fi.get_status_display()} não permite pagamento"
+    return PayableRow(
+        entity_type="fleet_invoice",
+        entity_id=fi.id,
+        type_label="Pré-Fatura Frota",
+        type_color="violet",
+        icon="building-2",
+        numero=fi.numero,
+        descricao=fi.empresa.nome,
+        detail_url=reverse(
+            "drivers_app:empresas-parceiras",
+        ) + f"?empresa={fi.empresa_id}",
+        due_date=fi.periodo_fim,
+        period_label=(
+            f"{fi.periodo_inicio.strftime('%d/%m')} → "
+            f"{fi.periodo_fim.strftime('%d/%m')}"
+        ),
+        amount=fi.total_com_iva,
+        status=fi.status,
+        status_display=fi.get_status_display(),
         payable=payable,
         block_reason=block,
     )
@@ -727,7 +763,9 @@ def payables_fleets_without_invoice(request):
 def payables_inbox(request):
     """Inbox unificado de pagamentos a fazer."""
     from drivers_app.models import EmpresaParceiraLancamento
-    from settlements.models import DriverPreInvoice, ThirdPartyReimbursement
+    from settlements.models import (
+        DriverPreInvoice, ThirdPartyReimbursement, FleetInvoice,
+    )
     from .models import Bill
 
     # Filtros
@@ -752,7 +790,22 @@ def payables_inbox(request):
         for pf in pfs:
             rows.append(_row_pre_invoice(pf))
 
-    # Lançamentos de Empresas Parceiras (frotas)
+    # Pré-Faturas Frota (FleetInvoice — FF-NNNN, factura global por período)
+    if type_filter in ("all", "fleet", "fleet_invoice"):
+        ffs = (
+            FleetInvoice.objects
+            .select_related("empresa")
+            .filter(status__in=["CALCULADO", "APROVADO"])
+        )
+        if search:
+            ffs = ffs.filter(
+                Q(numero__icontains=search) |
+                Q(empresa__nome__icontains=search)
+            )
+        for fi in ffs:
+            rows.append(_row_fleet_invoice(fi))
+
+    # Lançamentos manuais de Empresas Parceiras (despesas/serviços avulso)
     if type_filter in ("all", "fleet"):
         lancs = (
             EmpresaParceiraLancamento.objects
@@ -853,7 +906,9 @@ def payables_mark_paid(request):
     """
     from datetime import datetime
     from drivers_app.models import EmpresaParceiraLancamento
-    from settlements.models import DriverPreInvoice, ThirdPartyReimbursement
+    from settlements.models import (
+        DriverPreInvoice, ThirdPartyReimbursement, FleetInvoice,
+    )
     from .models import Bill
 
     entity_type = request.POST.get("entity_type", "")
@@ -906,6 +961,25 @@ def payables_mark_paid(request):
             lanc.comprovante_pagamento = comprovante
         lanc.save()
         return JsonResponse({"success": True, "numero": f"FRT-{lanc.id:04d}"})
+
+    if entity_type == "fleet_invoice":
+        fi = get_object_or_404(FleetInvoice, id=entity_id)
+        if fi.status not in ("CALCULADO", "APROVADO"):
+            return JsonResponse({
+                "success": False,
+                "error": (
+                    f"Estado {fi.get_status_display()} "
+                    "não permite pagamento."
+                ),
+            }, status=400)
+        fi.status = "PAGO"
+        fi.data_pagamento = paid_date
+        if payment_reference:
+            fi.referencia_pagamento = payment_reference
+        fi.save(update_fields=[
+            "status", "data_pagamento", "referencia_pagamento", "updated_at",
+        ])
+        return JsonResponse({"success": True, "numero": fi.numero})
 
     if entity_type == "shareholder":
         reemb = get_object_or_404(ThirdPartyReimbursement, id=entity_id)

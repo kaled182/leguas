@@ -76,7 +76,12 @@
     </div>
     <div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
       <div class="text-[10px] uppercase tracking-wider text-gray-500">Total estimado</div>
-      <div class="text-3xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-1">€ {{ kpi_total_estimated|floatformat:2 }}</div>
+      <div class="text-3xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-1">€ {{ kpi_total_estimated_com_iva|floatformat:2 }}</div>
+      {% if kpi_total_vat %}
+        <div class="text-[10px] text-violet-600 dark:text-violet-400 mt-1">
+          inclui IVA €{{ kpi_total_vat|floatformat:2 }} (base €{{ kpi_total_estimated|floatformat:2 }})
+        </div>
+      {% endif %}
     </div>
     <div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
       <div class="text-[10px] uppercase tracking-wider text-gray-500">Total gap-days</div>
@@ -121,15 +126,26 @@
               {% else %}—{% endif %}
             </td>
             <td class="px-3 py-3 text-right">
-              <span class="font-extrabold text-emerald-600 dark:text-emerald-400">€ {{ d.estimated_amount|floatformat:2 }}</span>
-              {% if d.estimated_bonus %}
+              {% if d.estimated_vat %}
+                <span class="font-extrabold text-emerald-600 dark:text-emerald-400">€ {{ d.estimated_total_com_iva|floatformat:2 }}</span>
+                <div class="text-[10px] text-violet-600 dark:text-violet-400 font-semibold">c/ IVA 23%</div>
                 <div class="text-[10px] text-gray-500 mt-0.5">
-                  Base €{{ d.estimated_base|floatformat:0 }}
-                  <span class="text-amber-600">+ Bónus €{{ d.estimated_bonus|floatformat:0 }}</span>
-                  <span class="text-gray-400">({{ d.bonus_days_count }} bónus{{ d.bonus_days_count|pluralize }} · {{ d.logins_count }} login{{ d.logins_count|pluralize:"s" }})</span>
+                  Base €{{ d.estimated_amount|floatformat:0 }} + IVA €{{ d.estimated_vat|floatformat:0 }}
+                  {% if d.estimated_bonus %}
+                    <span class="text-gray-400">· {{ d.bonus_days_count }} bónus{{ d.bonus_days_count|pluralize }}</span>
+                  {% endif %}
                 </div>
               {% else %}
-                <div class="text-[10px] text-gray-500 mt-0.5">base · sem bónus · {{ d.logins_count }} login{{ d.logins_count|pluralize:"s" }}</div>
+                <span class="font-extrabold text-emerald-600 dark:text-emerald-400">€ {{ d.estimated_amount|floatformat:2 }}</span>
+                {% if d.estimated_bonus %}
+                  <div class="text-[10px] text-gray-500 mt-0.5">
+                    Base €{{ d.estimated_base|floatformat:0 }}
+                    <span class="text-amber-600">+ Bónus €{{ d.estimated_bonus|floatformat:0 }}</span>
+                    <span class="text-gray-400">({{ d.bonus_days_count }} bónus{{ d.bonus_days_count|pluralize }} · {{ d.logins_count }} login{{ d.logins_count|pluralize:"s" }})</span>
+                  </div>
+                {% else %}
+                  <div class="text-[10px] text-gray-500 mt-0.5">base · sem bónus · {{ d.logins_count }} login{{ d.logins_count|pluralize:"s" }}</div>
+                {% endif %}
               {% endif %}
             </td>
             <td class="px-3 py-3 text-xs">

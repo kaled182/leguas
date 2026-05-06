@@ -1118,8 +1118,42 @@ class DriverPreInvoice(models.Model):
             - self.total_adiantamentos
             + self.total_comissoes_indicacao
         )
+
+        # IVA: motoristas em regime Normal cobram 23% na factura.
+        # Isento (art. 53º) e Simplificado: sem IVA.
+        # IVA é adicional ao total_a_receber (não substitui).
+        regime = getattr(self.driver, "vat_regime", "isento") or "isento"
+        if regime == "normal":
+            self.vat_amount = (
+                self.total_a_receber * Decimal("0.23")
+            ).quantize(Decimal("0.01"))
+        else:
+            self.vat_amount = Decimal("0.00")
+
+        # Retenção IRS sobre total_a_receber (sem IVA)
+        irs_pct = getattr(self.driver, "irs_retention_pct", None) or Decimal("0")
+        if irs_pct > 0:
+            self.irs_retention_amount = (
+                self.total_a_receber * irs_pct / Decimal("100")
+            ).quantize(Decimal("0.01"))
+        else:
+            self.irs_retention_amount = Decimal("0.00")
+
         self.status = "CALCULADO"
         self.save()
+
+    @property
+    def total_com_iva(self):
+        """Total a receber + IVA. Para drivers em regime Normal, é o
+        valor que a factura do motorista efectivamente apresenta."""
+        return self.total_a_receber + self.vat_amount
+
+    @property
+    def total_liquido(self):
+        """Valor líquido após retenção IRS (mas mantendo IVA cobrado).
+        total_com_iva - irs_retention_amount.
+        """
+        return self.total_com_iva - self.irs_retention_amount
 
 
 class PreInvoiceLine(models.Model):

@@ -640,6 +640,10 @@ def payables_drivers_without_pf(request):
     # KPIs agregados
     total_delivered = sum(d["delivered_count"] for d in drivers)
     total_estimated = sum(d["estimated_amount"] for d in drivers)
+    total_estimated_com_iva = sum(
+        d.get("estimated_total_com_iva", d["estimated_amount"]) for d in drivers
+    )
+    total_vat = sum(d.get("estimated_vat", 0) for d in drivers)
     total_gap_days = sum(d["gap_days"] for d in drivers)
 
     return render(request, "accounting/payables_no_pf.html", {
@@ -652,6 +656,8 @@ def payables_drivers_without_pf(request):
         "kpi_total_drivers": len(drivers),
         "kpi_total_delivered": total_delivered,
         "kpi_total_estimated": total_estimated,
+        "kpi_total_estimated_com_iva": total_estimated_com_iva,
+        "kpi_total_vat": total_vat,
         "kpi_total_gap_days": total_gap_days,
     })
 

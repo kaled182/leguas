@@ -311,6 +311,17 @@ def find_drivers_without_pf(date_from, date_to, min_gap_days=MIN_GAP_DAYS,
         last_uncovered = uncovered[-1] if uncovered else None
 
         estimated = base_amount + bonus_amount
+        # IVA estimado se driver é regime Normal
+        vat_regime = (
+            getattr(driver, "vat_regime", "isento") or "isento"
+        )
+        if vat_regime == "normal":
+            estimated_vat = (estimated * Decimal("0.23")).quantize(
+                Decimal("0.01"),
+            )
+        else:
+            estimated_vat = Decimal("0.00")
+        estimated_total = estimated + estimated_vat
 
         # Última PF (qualquer)
         last_pf_info = None
@@ -349,6 +360,9 @@ def find_drivers_without_pf(date_from, date_to, min_gap_days=MIN_GAP_DAYS,
             "estimated_amount": estimated,
             "estimated_base": base_amount,
             "estimated_bonus": bonus_amount,
+            "estimated_vat": estimated_vat,
+            "estimated_total_com_iva": estimated_total,
+            "vat_regime": vat_regime,
             "bonus_days_count": bonus_days_count,
             "logins_count": len(logins) + (1 if wbs_in else 0),
             "last_pf": last_pf_info,

@@ -240,7 +240,12 @@ async function emitirPF() {
           <td class="px-4 py-3 text-right text-sm text-gray-700 dark:text-gray-300">€ {{ pf.base_entregas|floatformat:2 }}</td>
           <td class="px-4 py-3 text-right text-sm text-emerald-600 font-semibold">€ {{ pf.total_bonus|default:"0.00"|floatformat:2 }}</td>
           <td class="px-4 py-3 text-right">
-            <span class="font-extrabold text-gray-900 dark:text-white">€ {{ pf.total_a_receber|floatformat:2 }}</span>
+            {% if pf.vat_amount and pf.vat_amount > 0 %}
+              <span class="font-extrabold text-gray-900 dark:text-white">€ {{ pf.total_com_iva|floatformat:2 }}</span>
+              <div class="text-[10px] text-gray-500 mt-0.5">€{{ pf.total_a_receber|floatformat:2 }} + IVA €{{ pf.vat_amount|floatformat:2 }}</div>
+            {% else %}
+              <span class="font-extrabold text-gray-900 dark:text-white">€ {{ pf.total_a_receber|floatformat:2 }}</span>
+            {% endif %}
           </td>
           <td class="px-4 py-3 text-center">
             <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold

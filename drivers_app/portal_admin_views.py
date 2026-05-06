@@ -39,6 +39,8 @@ EDITABLE_BY_ADMIN = [
     # Comerciais
     "daily_capacity", "price_per_package", "advance_monthly_limit",
     "bonus_performance_enabled",
+    # Fiscal
+    "vat_regime", "irs_retention_pct",
     # Status
     "status", "is_active", "notas",
 ]
@@ -54,6 +56,8 @@ def driver_admin_edit(request, driver_id):
     NUMERIC_NULLABLE = (
         "daily_capacity", "price_per_package", "advance_monthly_limit",
     )
+    # Campos numéricos NOT NULL (vazio → 0)
+    NUMERIC_DEFAULT_ZERO = ("irs_retention_pct",)
 
     if request.method == "POST":
         from decimal import Decimal, InvalidOperation
@@ -87,6 +91,19 @@ def driver_admin_edit(request, driver_id):
                         )
                         continue
                     setattr(driver, field, value)
+                    continue
+
+                # Numéricos com default zero (NOT NULL no modelo)
+                if field in NUMERIC_DEFAULT_ZERO:
+                    if not value:
+                        setattr(driver, field, Decimal("0"))
+                        continue
+                    try:
+                        setattr(driver, field, Decimal(value))
+                    except (InvalidOperation, ValueError):
+                        messages.error(
+                            request, f"Valor inválido em {field}: '{value}'",
+                        )
                     continue
 
                 # Strings normais

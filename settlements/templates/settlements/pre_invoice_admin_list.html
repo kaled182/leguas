@@ -174,7 +174,12 @@
               </div>
             </td>
             <td class="px-5 py-4 whitespace-nowrap text-right">
-              <span class="text-sm font-bold text-gray-900 dark:text-white">€{{ pf.total_a_receber|floatformat:2 }}</span>
+              {% if pf.vat_amount and pf.vat_amount > 0 %}
+                <span class="text-sm font-bold text-gray-900 dark:text-white">€{{ pf.total_com_iva|floatformat:2 }}</span>
+                <span class="block text-[10px] text-violet-600 dark:text-violet-400 font-semibold">c/ IVA 23%</span>
+              {% else %}
+                <span class="text-sm font-bold text-gray-900 dark:text-white">€{{ pf.total_a_receber|floatformat:2 }}</span>
+              {% endif %}
             </td>
             <td class="px-5 py-4 whitespace-nowrap text-center">
               <span id="badge-{{ pf.id }}" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold

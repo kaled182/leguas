@@ -1,5 +1,126 @@
-{# Tab Reconciliação — placeholder Fase 5 #}
-<div class="text-center py-12 text-gray-500 dark:text-gray-400">
-  <i data-lucide="git-compare-arrows" class="w-12 h-12 mx-auto mb-3 text-amber-400"></i>
-  <p class="text-sm font-semibold">Reconciliação — Fase 5 (em curso)</p>
+{# Tab Reconciliação — cruzamento Cainiao XLSX × CainiaoOperationTask local #}
+
+<div class="space-y-6">
+
+  {# KPI bar #}
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+    <div class="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-4 border border-emerald-300 dark:border-emerald-700/40">
+      <div class="text-[10px] uppercase tracking-wider text-emerald-700 dark:text-emerald-300">✓ Pagas e Reconciliadas</div>
+      <div class="text-2xl font-extrabold text-emerald-700 dark:text-emerald-300 mt-1">{{ recon.matched_count }}</div>
+      <div class="text-[10px] text-emerald-600/70 mt-1">linhas de envio com task local correspondente</div>
+    </div>
+    <div class="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 border border-amber-300 dark:border-amber-700/40">
+      <div class="text-[10px] uppercase tracking-wider text-amber-700 dark:text-amber-300">⚠ Pagas s/ Task Local</div>
+      <div class="text-2xl font-extrabold text-amber-700 dark:text-amber-300 mt-1">{{ recon.paid_no_task_count }}</div>
+      <div class="text-[10px] text-amber-700/70 mt-1">Cainiao pagou mas waybill não está em CainiaoOperationTask</div>
+    </div>
+    <div class="bg-rose-50 dark:bg-rose-900/20 rounded-xl p-4 border border-rose-300 dark:border-rose-700/40">
+      <div class="text-[10px] uppercase tracking-wider text-rose-700 dark:text-rose-300">✗ Entregues s/ Pagamento</div>
+      <div class="text-2xl font-extrabold text-rose-700 dark:text-rose-300 mt-1">{{ recon.delivered_no_billing_count }}</div>
+      <div class="text-[10px] text-rose-700/70 mt-1">Tasks Delivered no período sem linha de envio na fatura</div>
+    </div>
+  </div>
+
+  {# Pagas s/ task local #}
+  <details class="bg-white dark:bg-gray-800 rounded-xl border border-amber-200 dark:border-amber-700/40" {% if recon.paid_no_task_count and recon.paid_no_task_count < 100 %}open{% endif %}>
+    <summary class="cursor-pointer px-4 py-3 flex items-center gap-2 font-semibold text-amber-700 dark:text-amber-300 select-none">
+      <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+      Cainiao pagou mas <strong>não temos task local</strong> ({{ recon.paid_no_task_count }})
+      <span class="ml-auto text-xs font-normal text-gray-500">(clique para expandir)</span>
+    </summary>
+    <div class="border-t border-amber-200 dark:border-amber-700/40">
+      <p class="text-xs text-gray-600 dark:text-gray-400 px-4 py-2 bg-amber-50 dark:bg-amber-900/10">
+        Estas entregas foram pagas pela Cainiao mas o waybill não consta no <code>CainiaoOperationTask</code>.
+        Possíveis causas: (1) Operation Update do dia ainda não importado; (2) waybill com formato diferente; (3) entrega genuinamente fora do nosso scope.
+      </p>
+      <div class="overflow-x-auto">
+        <table class="w-full text-xs">
+          <thead class="bg-gray-50 dark:bg-gray-900/40">
+            <tr>
+              <th class="px-2 py-2 text-left font-semibold uppercase">Data</th>
+              <th class="px-2 py-2 text-left font-semibold uppercase">Waybill</th>
+              <th class="px-2 py-2 text-left font-semibold uppercase">Staff ID</th>
+              <th class="px-2 py-2 text-left font-semibold uppercase">Cidade</th>
+              <th class="px-2 py-2 text-right font-semibold uppercase">€</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+            {% for line in paid_no_task_page %}
+            <tr class="hover:bg-amber-50 dark:hover:bg-amber-900/10">
+              <td class="px-2 py-1.5 whitespace-nowrap">{{ line.biz_time|date:"d/m H:i" }}</td>
+              <td class="px-2 py-1.5 font-mono text-[10px]">{{ line.waybill_number }}</td>
+              <td class="px-2 py-1.5 font-mono text-[10px] text-gray-500">{{ line.staff_id|default:"—" }}</td>
+              <td class="px-2 py-1.5 text-gray-500">{{ line.ciudad|default:"—" }}</td>
+              <td class="px-2 py-1.5 text-right font-bold text-emerald-700">€ {{ line.amount|floatformat:2 }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" class="px-3 py-6 text-center text-gray-500 italic">Nenhuma — todas as linhas pagas têm task correspondente. ✓</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% if paid_no_task_page.has_other_pages %}
+      <div class="flex justify-between items-center text-xs px-4 py-2 border-t border-gray-200 dark:border-gray-700">
+        <span class="text-gray-500">Página {{ paid_no_task_page.number }}/{{ paid_no_task_page.paginator.num_pages }}</span>
+        <div class="flex gap-2">
+          {% if paid_no_task_page.has_previous %}<a href="?tab=reconciliation&p1={{ paid_no_task_page.previous_page_number }}" class="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded">‹</a>{% endif %}
+          {% if paid_no_task_page.has_next %}<a href="?tab=reconciliation&p1={{ paid_no_task_page.next_page_number }}" class="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded">›</a>{% endif %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </details>
+
+  {# Entregues s/ pagamento (perda potencial) #}
+  <details class="bg-white dark:bg-gray-800 rounded-xl border border-rose-200 dark:border-rose-700/40" {% if recon.delivered_no_billing_count and recon.delivered_no_billing_count < 100 %}open{% endif %}>
+    <summary class="cursor-pointer px-4 py-3 flex items-center gap-2 font-semibold text-rose-700 dark:text-rose-300 select-none">
+      <i data-lucide="alert-octagon" class="w-4 h-4"></i>
+      Entregamos mas <strong>Cainiao não pagou</strong> ({{ recon.delivered_no_billing_count }})
+      <span class="ml-auto text-xs font-normal text-gray-500">(clique para expandir)</span>
+    </summary>
+    <div class="border-t border-rose-200 dark:border-rose-700/40">
+      <p class="text-xs text-gray-600 dark:text-gray-400 px-4 py-2 bg-rose-50 dark:bg-rose-900/10">
+        Tasks com status <code>Delivered</code> dentro do período <strong>{{ session.period_from|date:"d/m" }} → {{ session.period_to|date:"d/m" }}</strong>
+        cujo waybill não aparece na pré-fatura Cainiao. <strong>Potencial perda</strong> — confirmar com a Cainiao.
+      </p>
+      <div class="overflow-x-auto">
+        <table class="w-full text-xs">
+          <thead class="bg-gray-50 dark:bg-gray-900/40">
+            <tr>
+              <th class="px-2 py-2 text-left font-semibold uppercase">Task Date</th>
+              <th class="px-2 py-2 text-left font-semibold uppercase">Waybill</th>
+              <th class="px-2 py-2 text-left font-semibold uppercase">Courier</th>
+              <th class="px-2 py-2 text-left font-semibold uppercase">Cidade</th>
+              <th class="px-2 py-2 text-left font-semibold uppercase">Status</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+            {% for t in delivered_no_billing_page %}
+            <tr class="hover:bg-rose-50 dark:hover:bg-rose-900/10">
+              <td class="px-2 py-1.5 whitespace-nowrap">{{ t.task_date|date:"d/m" }}</td>
+              <td class="px-2 py-1.5 font-mono text-[10px]">{{ t.waybill_number }}</td>
+              <td class="px-2 py-1.5">
+                <span class="text-gray-700 dark:text-gray-300">{{ t.courier_name|default:"—" }}</span>
+                <span class="text-gray-400 text-[9px] ml-1">{{ t.courier_id_cainiao|default:"" }}</span>
+              </td>
+              <td class="px-2 py-1.5 text-gray-500">{{ t.destination_city|default:"—" }}</td>
+              <td class="px-2 py-1.5"><span class="px-1.5 py-0.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded text-[10px] font-semibold">{{ t.task_status }}</span></td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" class="px-3 py-6 text-center text-gray-500 italic">Nenhuma — todas as entregas no período foram pagas pela Cainiao. ✓</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% if delivered_no_billing_page.has_other_pages %}
+      <div class="flex justify-between items-center text-xs px-4 py-2 border-t border-gray-200 dark:border-gray-700">
+        <span class="text-gray-500">Página {{ delivered_no_billing_page.number }}/{{ delivered_no_billing_page.paginator.num_pages }}</span>
+        <div class="flex gap-2">
+          {% if delivered_no_billing_page.has_previous %}<a href="?tab=reconciliation&p2={{ delivered_no_billing_page.previous_page_number }}" class="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded">‹</a>{% endif %}
+          {% if delivered_no_billing_page.has_next %}<a href="?tab=reconciliation&p2={{ delivered_no_billing_page.next_page_number }}" class="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded">›</a>{% endif %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </details>
 </div>

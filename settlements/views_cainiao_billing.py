@@ -205,18 +205,32 @@ def cainiao_billing_detail(request, import_id):
 
     # ── Tab: Claims ──────────────────────────────────────────────────
     elif active_tab == "claims":
+        from drivers_app.models import DriverProfile
+        from .models import DriverClaim
         qs = (
             session.lines.filter(fee_type="compensacion")
             .select_related("driver", "task", "claim")
             .order_by("-biz_time")
         )
+        # Drivers activos para o select (compactos)
+        drivers_options = list(
+            DriverProfile.objects
+            .filter(is_active=True)
+            .values("id", "nome_completo", "apelido", "courier_id_cainiao")
+            .order_by("nome_completo")
+        )
         ctx.update({
-            "claims": list(qs),
+            "claim_lines": list(qs),
             "claims_total_value": qs.aggregate(
                 s=Coalesce(Sum("amount"), Decimal("0")),
             )["s"],
             "claims_unassigned": qs.filter(claim__isnull=True).count(),
             "claims_assigned": qs.filter(claim__isnull=False).count(),
+            "claims_with_suggestion": qs.filter(
+                claim__isnull=True, driver__isnull=False,
+            ).count(),
+            "drivers_options": drivers_options,
+            "claim_types": DriverClaim.CLAIM_TYPES,
         })
 
     return render(
@@ -232,6 +246,163 @@ def Q_envio():
 def Q_claim():
     from django.db.models import Q
     return Q(fee_type="compensacion")
+
+
+@login_required
+@require_http_methods(["POST"])
+def cainiao_billing_assign_claim(request, import_id, line_id):
+    """Cria ou actualiza DriverClaim para uma compensación.
+
+    Body:
+      driver_id: ID do DriverProfile (obrigatório)
+      claim_type: ORDER_LOSS / OTHER / ... (default ORDER_LOSS)
+    """
+    from drivers_app.models import DriverProfile
+    from .models import (
+        CainiaoBillingImport, CainiaoBillingLine, DriverClaim,
+    )
+
+    session = get_object_or_404(CainiaoBillingImport, id=import_id)
+    line = get_object_or_404(
+        CainiaoBillingLine, id=line_id, import_session=session,
+    )
+    if line.fee_type != "compensacion":
+        return JsonResponse({
+            "success": False,
+            "error": "Esta linha não é uma compensación.",
+        }, status=400)
+    if line.claim_id:
+        return JsonResponse({
+            "success": False,
+            "error": (
+                f"Linha já tem DriverClaim #{line.claim_id} "
+                "associado."
+            ),
+        }, status=400)
+
+    driver_id = request.POST.get("driver_id")
+    if not driver_id:
+        return JsonResponse({
+            "success": False, "error": "driver_id obrigatório.",
+        }, status=400)
+    driver = get_object_or_404(DriverProfile, id=driver_id)
+
+    claim_type = request.POST.get("claim_type") or "ORDER_LOSS"
+    if claim_type not in dict(DriverClaim.CLAIM_TYPES):
+        claim_type = "ORDER_LOSS"
+
+    # Valor: o XLSX tem negativo (-30). DriverClaim usa positivo.
+    amount = abs(line.amount)
+
+    description = (
+        f"Cainiao Billing #{session.id} ({line.cainiao_billing_id}). "
+        f"Waybill: {line.waybill_number}. "
+        f"Motivo: {line.fb2 or '—'}"
+    )[:2000]
+
+    claim = DriverClaim.objects.create(
+        driver=driver,
+        claim_type=claim_type,
+        amount=amount,
+        description=description,
+        occurred_at=line.biz_time,
+        waybill_number=line.waybill_number,
+        operation_task_date=(
+            line.task.task_date if line.task else line.biz_time.date()
+        ),
+        auto_detected=False,
+        created_by=(
+            request.user if request.user.is_authenticated else None
+        ),
+    )
+    line.claim = claim
+    line.driver = driver
+    line.save(update_fields=["claim", "driver"])
+
+    return JsonResponse({
+        "success": True,
+        "claim_id": claim.id,
+        "driver_name": driver.nome_completo,
+        "amount": str(amount),
+    })
+
+
+@login_required
+@require_http_methods(["POST"])
+def cainiao_billing_assign_claims_bulk(request, import_id):
+    """Cria DriverClaim para todas as compensaciones com driver sugerido.
+
+    Driver sugerido = line.driver (resolvido no import via task) ou
+    line.task.courier_id_cainiao mapeado para DriverProfile.
+
+    Linhas sem driver sugerido são ignoradas (devolvidas como skipped).
+    """
+    from .models import (
+        CainiaoBillingImport, DriverClaim,
+    )
+    from django.db import transaction
+
+    session = get_object_or_404(CainiaoBillingImport, id=import_id)
+    claim_type = request.POST.get("claim_type") or "ORDER_LOSS"
+    if claim_type not in dict(DriverClaim.CLAIM_TYPES):
+        claim_type = "ORDER_LOSS"
+
+    qs = session.lines.filter(
+        fee_type="compensacion",
+        claim__isnull=True,
+        driver__isnull=False,
+    ).select_related("driver", "task")
+
+    created = 0
+    with transaction.atomic():
+        for line in qs:
+            description = (
+                f"Cainiao Billing #{session.id} "
+                f"({line.cainiao_billing_id}). "
+                f"Waybill: {line.waybill_number}. "
+                f"Motivo: {line.fb2 or '—'}"
+            )[:2000]
+            claim = DriverClaim.objects.create(
+                driver=line.driver,
+                claim_type=claim_type,
+                amount=abs(line.amount),
+                description=description,
+                occurred_at=line.biz_time,
+                waybill_number=line.waybill_number,
+                operation_task_date=(
+                    line.task.task_date if line.task
+                    else line.biz_time.date()
+                ),
+                auto_detected=False,
+                created_by=(
+                    request.user if request.user.is_authenticated else None
+                ),
+            )
+            line.claim = claim
+            line.save(update_fields=["claim"])
+            created += 1
+
+    skipped_no_driver = session.lines.filter(
+        fee_type="compensacion", claim__isnull=True, driver__isnull=True,
+    ).count()
+
+    if created:
+        messages.success(
+            request,
+            f"{created} DriverClaim criados. "
+            f"{skipped_no_driver} ignorados (sem driver sugerido — "
+            "atribua manualmente).",
+        )
+    else:
+        messages.warning(
+            request,
+            f"Nenhum claim criado. "
+            f"{skipped_no_driver} linhas precisam de atribuição manual.",
+        )
+    return redirect(
+        f"{reverse('cainiao-billing-detail', args=[session.id])}"
+        f"?tab=claims",
+    )
 
 
 @login_required

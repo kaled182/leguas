@@ -1,5 +1,159 @@
-{# Tab Claims — placeholder Fase 7 #}
-<div class="text-center py-12 text-gray-500 dark:text-gray-400">
-  <i data-lucide="alert-octagon" class="w-12 h-12 mx-auto mb-3 text-amber-400"></i>
-  <p class="text-sm font-semibold">Claims — Fase 7 (em curso)</p>
+{# Tab Claims — atribuir motorista e criar DriverClaim para compensaciones #}
+
+<div class="space-y-4">
+
+  {# KPIs + bulk action #}
+  <div class="flex flex-wrap items-center gap-3 justify-between">
+    <div class="flex flex-wrap gap-3">
+      <div class="bg-rose-50 dark:bg-rose-900/20 rounded-lg px-4 py-2 border border-rose-300 dark:border-rose-700/40">
+        <div class="text-[10px] uppercase text-rose-700 dark:text-rose-300">Total Compensações</div>
+        <div class="text-xl font-extrabold text-rose-700 dark:text-rose-300">€ {{ claims_total_value|floatformat:2 }}</div>
+        <div class="text-[10px] text-rose-700/70">{{ claim_lines|length }} linha{{ claim_lines|length|pluralize }}</div>
+      </div>
+      <div class="bg-emerald-50 dark:bg-emerald-900/20 rounded-lg px-4 py-2 border border-emerald-300 dark:border-emerald-700/40">
+        <div class="text-[10px] uppercase text-emerald-700 dark:text-emerald-300">DriverClaims Criados</div>
+        <div class="text-xl font-extrabold text-emerald-700 dark:text-emerald-300">{{ claims_assigned }}</div>
+      </div>
+      <div class="bg-amber-50 dark:bg-amber-900/20 rounded-lg px-4 py-2 border border-amber-300 dark:border-amber-700/40">
+        <div class="text-[10px] uppercase text-amber-700 dark:text-amber-300">Pendentes c/ Sugestão</div>
+        <div class="text-xl font-extrabold text-amber-700 dark:text-amber-300">{{ claims_with_suggestion }}</div>
+        <div class="text-[10px] text-amber-700/70">criáveis em massa</div>
+      </div>
+      <div class="bg-gray-50 dark:bg-gray-900/30 rounded-lg px-4 py-2 border border-gray-300 dark:border-gray-700/40">
+        <div class="text-[10px] uppercase text-gray-600 dark:text-gray-400">Pendentes s/ Sugestão</div>
+        <div class="text-xl font-extrabold text-gray-700 dark:text-gray-300">{{ claims_unassigned|add:"-"|add:claims_with_suggestion }}</div>
+        <div class="text-[10px] text-gray-500">requerem atribuição manual</div>
+      </div>
+    </div>
+
+    {% if claims_with_suggestion %}
+    <form method="post" action="{% url 'cainiao-billing-assign-claims-bulk' session.id %}"
+          onsubmit="return confirm('Criar DriverClaim para todas as compensaciones com driver sugerido (do task local)?\n\nTipo: ORDER_LOSS (perda de pedido).');">
+      {% csrf_token %}
+      <input type="hidden" name="claim_type" value="ORDER_LOSS">
+      <button type="submit" class="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg font-semibold text-sm inline-flex items-center gap-2">
+        <i data-lucide="zap" class="w-4 h-4"></i>
+        Criar todos os {{ claims_with_suggestion }} sugeridos
+      </button>
+    </form>
+    {% endif %}
+  </div>
+
+  {# Tabela detalhada #}
+  <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <table class="w-full text-xs">
+      <thead class="bg-gray-50 dark:bg-gray-900/40">
+        <tr>
+          <th class="px-3 py-2 text-left font-semibold text-gray-600 dark:text-gray-400 uppercase">Data</th>
+          <th class="px-3 py-2 text-left font-semibold text-gray-600 dark:text-gray-400 uppercase">Waybill</th>
+          <th class="px-3 py-2 text-left font-semibold text-gray-600 dark:text-gray-400 uppercase">Motivo</th>
+          <th class="px-3 py-2 text-right font-semibold text-gray-600 dark:text-gray-400 uppercase">€</th>
+          <th class="px-3 py-2 text-left font-semibold text-gray-600 dark:text-gray-400 uppercase w-[280px]">Motorista</th>
+          <th class="px-3 py-2 text-center font-semibold text-gray-600 dark:text-gray-400 uppercase">Acção</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+        {% for line in claim_lines %}
+        <tr class="hover:bg-rose-50 dark:hover:bg-rose-900/10">
+          <td class="px-3 py-2 whitespace-nowrap text-gray-700 dark:text-gray-300">{{ line.biz_time|date:"d/m/Y H:i" }}</td>
+          <td class="px-3 py-2 font-mono text-[10px]">
+            {{ line.waybill_number }}
+            {% if line.task %}
+              <span class="block text-[9px] text-gray-400 mt-0.5">task: {{ line.task.task_date|date:"d/m" }} · {{ line.task.task_status }}</span>
+            {% else %}
+              <span class="block text-[9px] text-rose-400 mt-0.5">sem task local</span>
+            {% endif %}
+          </td>
+          <td class="px-3 py-2 text-gray-600 dark:text-gray-400 max-w-[260px]">
+            <span class="text-[11px]">{{ line.fb2|truncatechars:120|default:"—" }}</span>
+          </td>
+          <td class="px-3 py-2 text-right font-bold text-rose-600 dark:text-rose-400 whitespace-nowrap">€ {{ line.amount|floatformat:2 }}</td>
+          {% if line.claim %}
+            <td class="px-3 py-2">
+              <div class="flex items-center gap-2">
+                <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-500"></i>
+                <div>
+                  <div class="font-semibold text-gray-900 dark:text-white">{{ line.driver.nome_completo|default:"—" }}</div>
+                  <div class="text-[10px] text-gray-500">{{ line.claim.get_claim_type_display }} · €{{ line.claim.amount|floatformat:2 }}</div>
+                </div>
+              </div>
+            </td>
+            <td class="px-3 py-2 text-center">
+              <a href="/settlements/claims/{{ line.claim_id }}/" target="_blank"
+                 class="px-2 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded text-[10px] font-semibold inline-flex items-center gap-1">
+                <i data-lucide="external-link" class="w-3 h-3"></i>
+                #{{ line.claim_id }}
+              </a>
+            </td>
+          {% else %}
+            <td class="px-3 py-2">
+              <form method="post" action="{% url 'cainiao-billing-assign-claim' session.id line.id %}"
+                    class="flex items-center gap-1" id="claim-form-{{ line.id }}">
+                {% csrf_token %}
+                <select name="driver_id" required
+                        class="text-[11px] px-1.5 py-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white max-w-[200px]">
+                  <option value="">— escolher motorista —</option>
+                  {% for d in drivers_options %}
+                    <option value="{{ d.id }}" {% if line.driver_id == d.id %}selected{% endif %}>
+                      {{ d.nome_completo }}{% if d.apelido %} ({{ d.apelido }}){% endif %}
+                    </option>
+                  {% endfor %}
+                </select>
+                <select name="claim_type" class="text-[11px] px-1.5 py-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white">
+                  {% for v, lab in claim_types %}
+                    <option value="{{ v }}" {% if v == 'ORDER_LOSS' %}selected{% endif %}>{{ lab }}</option>
+                  {% endfor %}
+                </select>
+              </form>
+              {% if line.driver %}
+                <div class="text-[10px] text-amber-600 mt-1">
+                  <i data-lucide="lightbulb" class="w-3 h-3 inline"></i>
+                  Sugerido pelo task: <strong>{{ line.driver.nome_completo }}</strong>
+                </div>
+              {% endif %}
+            </td>
+            <td class="px-3 py-2 text-center">
+              <button type="submit" form="claim-form-{{ line.id }}"
+                      class="px-2 py-1 bg-violet-600 hover:bg-violet-700 text-white rounded text-[10px] font-semibold inline-flex items-center gap-1">
+                <i data-lucide="check" class="w-3 h-3"></i>
+                Criar
+              </button>
+            </td>
+          {% endif %}
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="px-3 py-12 text-center text-gray-500 italic">Sem compensaciones nesta importação. ✓</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </div>
+
+<script>
+// Submit AJAX para botões individuais (evita reload da página inteira)
+document.querySelectorAll('form[id^="claim-form-"]').forEach(form => {
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fd = new FormData(form);
+    const driverId = fd.get('driver_id');
+    if (!driverId) {
+      alert('Selecciona um motorista primeiro.');
+      return;
+    }
+    try {
+      const resp = await fetch(form.action, {
+        method: 'POST', body: fd, credentials: 'same-origin',
+      });
+      const j = await resp.json();
+      if (j.success) {
+        // Recarrega a página para reflectir o novo estado
+        location.reload();
+      } else {
+        alert('Erro: ' + (j.error || 'desconhecido'));
+      }
+    } catch (err) {
+      alert('Erro de rede: ' + err);
+    }
+  });
+});
+</script>

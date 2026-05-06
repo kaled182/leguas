@@ -64,6 +64,16 @@ urlpatterns = [
         views_cainiao_billing.cainiao_billing_create_overrides,
         name="cainiao-billing-create-overrides",
     ),
+    path(
+        "invoices/cainiao/<int:import_id>/claims/<int:line_id>/assign/",
+        views_cainiao_billing.cainiao_billing_assign_claim,
+        name="cainiao-billing-assign-claim",
+    ),
+    path(
+        "invoices/cainiao/<int:import_id>/claims/bulk/",
+        views_cainiao_billing.cainiao_billing_assign_claims_bulk,
+        name="cainiao-billing-assign-claims-bulk",
+    ),
     # Settlements (Liquidações de Motoristas — vista global de PFs)
     path("settlements/", views.settlement_list, name="settlement-list"),
     # Claims

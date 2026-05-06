@@ -167,15 +167,22 @@ def save_config(request):
         if form_field in request.POST:
             value = request.POST[form_field].strip()
             if hasattr(config, model_field):
-                # Se o valor está vazio, só setar None se o campo aceitar NULL
                 if value:
                     setattr(config, model_field, value)
                 else:
-                    # Verifica se o campo aceita NULL no modelo
+                    # Vazio: respeitar o tipo do campo no modelo.
+                    #  - null=True   → None
+                    #  - CharField/TextField com blank=True → ""
+                    #  - Numérico sem null=True → ignorar (manter valor)
                     field = config._meta.get_field(model_field)
-                    if field.null or field.blank:
+                    internal = field.get_internal_type()
+                    if field.null:
                         setattr(config, model_field, None)
-                    # Se não aceita NULL, não alterar (manter valor padrão)
+                    elif internal in ("CharField", "TextField",
+                                      "EmailField", "URLField",
+                                      "SlugField"):
+                        setattr(config, model_field, "")
+                    # Caso contrário (numérico NOT NULL, etc.) não tocar
 
     # Atualizar checkboxes (campos booleanos)
     boolean_fields = {
@@ -210,17 +217,33 @@ def save_config(request):
 
     # Marcar como configurado
     config.configured = True
-    config.save()
+    try:
+        config.save()
+    except Exception as exc:
+        import logging
+        logging.getLogger(__name__).exception("save_config falhou")
+        messages.error(
+            request,
+            f"Erro ao guardar configurações: {exc}",
+        )
+        return redirect("system_config:index")
 
     # Registrar auditoria
-    ConfigurationAudit.objects.create(
-        user=request.user,
-        action="BULK_UPDATE",
-        field_name="all_fields",
-        old_value="",
-        new_value=f"{len(field_mappings) + len(boolean_fields)} campos atualizados",
-        ip_address=request.META.get("REMOTE_ADDR", ""),
-    )
+    try:
+        ConfigurationAudit.objects.create(
+            user=request.user,
+            action="BULK_UPDATE",
+            field_name="all_fields",
+            old_value="",
+            new_value=(
+                f"{len(field_mappings) + len(boolean_fields)} "
+                "campos atualizados"
+            ),
+            ip_address=request.META.get("REMOTE_ADDR", ""),
+        )
+    except Exception:
+        import logging
+        logging.getLogger(__name__).exception("ConfigurationAudit falhou")
 
     messages.success(request, "Configurações guardadas com sucesso!")
     return redirect("system_config:index")

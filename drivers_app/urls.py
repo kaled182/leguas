@@ -60,6 +60,11 @@ urlpatterns = [
         "portal/<int:driver_id>/descontos/<int:claim_id>/recorrer/",
         views.driver_claim_appeal, name="driver_claim_appeal",
     ),
+    path(
+        "portal/<int:driver_id>/reclamacoes/<int:complaint_id>/aplicar-desconto/",
+        views.driver_complaint_apply_claim,
+        name="driver_complaint_apply_claim",
+    ),
     path("portal/<int:driver_id>/logins/", views.driver_logins, name="driver_logins"),
     path("portal/<int:driver_id>/financeiro/", views.driver_financeiro, name="driver_financeiro"),
     path(

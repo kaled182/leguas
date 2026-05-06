@@ -771,6 +771,19 @@ class DriverClaim(models.Model):
 
     review_notes = models.TextField("Notas da Revisão", blank=True)
 
+    # === LINK À RECLAMAÇÃO DE CLIENTE (protocolo completo) ============
+    customer_complaint = models.ForeignKey(
+        "drivers_app.CustomerComplaint",
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="driver_claims",
+        help_text=(
+            "Reclamação de cliente associada a este desconto — preserva "
+            "todo o protocolo (cliente, morada, deadline, anexos) para "
+            "permitir defesa estruturada."
+        ),
+    )
+
     # === LINK AO PACOTE CAINIAO (Fase 6 — auto-detecção) ================
     waybill_number = models.CharField(
         "Waybill do Pacote",

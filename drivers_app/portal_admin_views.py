@@ -525,6 +525,99 @@ def driver_claims(request, driver_id):
 
 @admin_required
 @require_http_methods(["POST"])
+def driver_complaint_apply_claim(request, driver_id, complaint_id):
+    """A partir de uma CustomerComplaint cria DriverClaim financeiro
+    vinculado.
+
+    Pré-preenche:
+      - waybill_number ← complaint.numero_pacote
+      - description ← complaint.descricao
+      - occurred_at ← complaint.data_entrega ou complaint.created_at
+      - claim_type ← inferido do tipo da reclamação
+      - amount ← do form (default €30 = LM-F7 Cainiao)
+
+    Idempotência: 1 reclamação ↔ no máximo 1 DriverClaim. Se já existe,
+    mostra mensagem.
+    """
+    from settlements.models import DriverClaim
+
+    driver = get_object_or_404(DriverProfile, pk=driver_id)
+    complaint = get_object_or_404(
+        CustomerComplaint, pk=complaint_id, driver=driver,
+    )
+
+    # Idempotente — uma reclamação só dá origem a um claim
+    existing = DriverClaim.objects.filter(
+        customer_complaint=complaint,
+    ).first()
+    if existing:
+        messages.info(
+            request,
+            f"Esta reclamação já tem o desconto #{existing.id} associado.",
+        )
+        return redirect(
+            "drivers_app:driver_complaints", driver_id=driver.id,
+        )
+
+    # Mapear tipo da reclamação → claim_type
+    type_map = {
+        "ENTREGA_FALSA": "CUSTOMER_COMPLAINT",
+        "ITEM_FALTANDO": "ORDER_LOSS",
+        "PACOTE_DANIFICADO": "ORDER_DAMAGE",
+        "ENTREGA_ATRASADA": "LATE_DELIVERY",
+        "OUTRO": "CUSTOMER_COMPLAINT",
+    }
+    default_claim_type = type_map.get(complaint.tipo, "CUSTOMER_COMPLAINT")
+    requested_type = (request.POST.get("claim_type") or "").strip()
+    if requested_type and requested_type in dict(DriverClaim.CLAIM_TYPES):
+        claim_type = requested_type
+    else:
+        claim_type = default_claim_type
+
+    from decimal import Decimal, InvalidOperation
+    raw_amount = (request.POST.get("amount") or "30.00").replace(",", ".")
+    try:
+        amount = Decimal(raw_amount)
+    except (InvalidOperation, ValueError):
+        amount = Decimal("30.00")
+
+    occurred = complaint.data_entrega or complaint.created_at
+
+    description = (
+        f"Reclamação cliente #{complaint.id} — "
+        f"{complaint.get_tipo_display()}\n"
+        f"Cliente: {complaint.nome_cliente} ({complaint.telefone_cliente})\n"
+        f"Pacote: {complaint.numero_pacote}\n"
+        f"Relato: {complaint.descricao}"
+    )[:2000]
+
+    claim = DriverClaim.objects.create(
+        driver=driver,
+        customer_complaint=complaint,
+        claim_type=claim_type,
+        amount=amount,
+        description=description,
+        occurred_at=occurred,
+        waybill_number=complaint.numero_pacote,
+        status="PENDING",
+        created_by=(
+            request.user if request.user.is_authenticated else None
+        ),
+    )
+
+    messages.success(
+        request,
+        f"Desconto #{claim.id} (€{amount:.2f}) criado a partir da "
+        f"reclamação #{complaint.id}. Agora podes abrir recurso/"
+        "anexar prova na tab Descontos.",
+    )
+    return redirect(
+        "drivers_app:driver_claims", driver_id=driver.id,
+    )
+
+
+@admin_required
+@require_http_methods(["POST"])
 def driver_claim_appeal(request, driver_id, claim_id):
     """Operador inicia recurso ao claim:
     - Status passa de PENDING/APPROVED → APPEALED

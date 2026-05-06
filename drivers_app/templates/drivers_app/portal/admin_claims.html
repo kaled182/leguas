@@ -59,6 +59,27 @@
           {% if claim.waybill_number %}
             <div class="text-[11px] font-mono text-gray-500 mt-1">Waybill: {{ claim.waybill_number }}</div>
           {% endif %}
+          {% if claim.customer_complaint %}
+            <div class="mt-2 bg-amber-50 dark:bg-amber-900/10 border-l-4 border-amber-400 px-3 py-2 rounded text-xs">
+              <div class="font-semibold text-amber-700 dark:text-amber-300 flex items-center gap-1">
+                <i data-lucide="alert-octagon" class="w-3 h-3"></i>
+                Reclamação Cliente #{{ claim.customer_complaint.id }} · {{ claim.customer_complaint.get_tipo_display }}
+                <span class="ml-2 px-1.5 py-0.5 rounded text-[10px] font-bold bg-white dark:bg-gray-800">{{ claim.customer_complaint.get_status_display }}</span>
+              </div>
+              <div class="text-gray-700 dark:text-gray-300 mt-1 grid grid-cols-1 md:grid-cols-2 gap-x-4">
+                <div><strong>Cliente:</strong> {{ claim.customer_complaint.nome_cliente }}</div>
+                <div><strong>Telefone:</strong> {{ claim.customer_complaint.telefone_cliente }}</div>
+                <div><strong>Cidade:</strong> {{ claim.customer_complaint.cidade }}</div>
+                {% if claim.customer_complaint.data_entrega %}
+                  <div><strong>Entrega:</strong> {{ claim.customer_complaint.data_entrega|date:"d/m/Y H:i" }}</div>
+                {% endif %}
+                {% if claim.customer_complaint.deadline %}
+                  <div class="text-amber-600"><strong>Deadline:</strong> {{ claim.customer_complaint.deadline|date:"d/m/Y H:i" }}</div>
+                {% endif %}
+              </div>
+              <a href="{% url 'drivers_app:driver_complaints' driver.id %}" class="text-violet-600 hover:underline mt-1 inline-block">→ Ver reclamação completa</a>
+            </div>
+          {% endif %}
           <p class="text-sm text-gray-700 dark:text-gray-300 mt-1">{{ claim.description|truncatewords:30 }}</p>
           {% if claim.justification %}
             <div class="mt-2 bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-400 px-3 py-2 rounded text-xs">

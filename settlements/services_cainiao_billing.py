@@ -81,8 +81,17 @@ def compute_file_hash(file_obj) -> str:
 
 def _detect_billing_sheet(workbook):
     """Devolve a folha que contém os cabeçalhos esperados (Folha 1)."""
+    sheets_summary = []  # para debug do erro
     for sheet_name in workbook.sheetnames:
         ws = workbook[sheet_name]
+        first_headers = []
+        if ws.max_row >= 1 and ws.max_column >= 1:
+            for row in ws.iter_rows(min_row=1, max_row=1, values_only=True):
+                first_headers = [
+                    str(c).strip() if c else "" for c in row
+                ][:8]
+                break
+        sheets_summary.append((sheet_name, first_headers))
         if ws.max_row < 2 or ws.max_column < 5:
             continue
         # Lê a primeira linha não-vazia
@@ -92,9 +101,34 @@ def _detect_billing_sheet(workbook):
             ]
             if "fee type" in row_lower and "refs" in row_lower:
                 return ws, row_lower
+
+    # Detectar tipos de ficheiro Cainiao alternativos (ajuda o operador)
+    alt_hint = ""
+    for _, headers in sheets_summary:
+        joined = " ".join(headers).lower()
+        if "waybill number" in joined and "task date" in joined:
+            alt_hint = (
+                " ⚠ Este ficheiro parece ser uma Operation Update (EPOD "
+                "Task List) — usa o módulo de import de operações em vez "
+                "do importador de pré-fatura."
+            )
+            break
+        if "courier id" in joined and ("signed parcels" in joined
+                                       or "delivery success rate" in joined):
+            alt_hint = (
+                " ⚠ Este ficheiro parece ser um Driver Statistic — "
+                "usa o módulo de import de drivers Cainiao em vez disto."
+            )
+            break
+
+    sheets_desc = "; ".join(
+        f"'{name}' [{', '.join(h for h in headers if h)[:80] or '(vazia)'}]"
+        for name, headers in sheets_summary[:3]
+    )
     raise ValueError(
-        "Folha de pré-fatura Cainiao não encontrada — esperava "
-        "cabeçalhos 'Fee type' e 'REFs' na linha 1-3."
+        "Folha de pré-fatura Cainiao não encontrada — esperava cabeçalhos "
+        "'Fee type' e 'REFs' na linha 1-3. "
+        f"Folhas no ficheiro: {sheets_desc}.{alt_hint}"
     )
 
 

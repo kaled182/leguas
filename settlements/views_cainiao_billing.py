@@ -236,6 +236,106 @@ def Q_claim():
 
 @login_required
 @require_http_methods(["POST"])
+def cainiao_billing_create_overrides(request, import_id):
+    """Cria PackagePriceOverride para linhas com preço ≠ €1.60.
+
+    Body:
+      mode = "all" | "selected"
+      line_ids = "1,2,3" (necessário se mode=selected)
+    """
+    from decimal import Decimal
+    from django.db import transaction
+    from .models import (
+        CainiaoBillingImport, CainiaoBillingLine, PackagePriceOverride,
+    )
+
+    session = get_object_or_404(CainiaoBillingImport, id=import_id)
+    mode = request.POST.get("mode", "selected")
+
+    qs = session.lines.filter(
+        fee_type="envio fee",
+    ).exclude(amount=Decimal("1.60")).filter(price_override__isnull=True)
+
+    if mode == "selected":
+        ids = (request.POST.get("line_ids") or "").split(",")
+        ids = [int(i) for i in ids if i.strip().isdigit()]
+        if not ids:
+            messages.error(request, "Nenhuma linha seleccionada.")
+            return redirect(
+                "cainiao-billing-detail",
+                import_id=session.id,
+            )
+        qs = qs.filter(id__in=ids)
+
+    created = 0
+    skipped_existing = 0
+    skipped_no_waybill = 0
+
+    with transaction.atomic():
+        for line in qs.select_related("task"):
+            if not line.waybill_number:
+                skipped_no_waybill += 1
+                continue
+            # Se já existe override (criado fora desta tab), só liga
+            existing = PackagePriceOverride.objects.filter(
+                waybill_number=line.waybill_number,
+            ).first()
+            if existing:
+                line.price_override = existing
+                line.save(update_fields=["price_override"])
+                skipped_existing += 1
+                continue
+            task_date = (
+                line.task.task_date if line.task
+                else line.biz_time.date()
+            )
+            cp4 = ""
+            original_name = ""
+            if line.task:
+                cp4 = (line.task.zip_code or "")[:4]
+                original_name = line.task.courier_name or ""
+            override = PackagePriceOverride.objects.create(
+                waybill_number=line.waybill_number,
+                task_date=task_date,
+                cp4=cp4,
+                original_courier_name=original_name,
+                price=line.amount,
+                reason=(
+                    f"Cainiao billing import #{session.id} "
+                    f"({session.period_from.strftime('%d/%m')}"
+                    f"–{session.period_to.strftime('%d/%m/%Y')})"
+                )[:200],
+                created_by=(
+                    request.user if request.user.is_authenticated else None
+                ),
+            )
+            line.price_override = override
+            line.save(update_fields=["price_override"])
+            created += 1
+
+    if created:
+        messages.success(
+            request,
+            f"{created} PackagePriceOverride criados. "
+            f"{skipped_existing} já existiam (linkados). "
+            f"{skipped_no_waybill} ignorados (sem waybill).",
+        )
+    elif skipped_existing:
+        messages.info(
+            request,
+            f"{skipped_existing} overrides já existiam — todos linkados.",
+        )
+    else:
+        messages.warning(request, "Nenhum override criado.")
+
+    return redirect(
+        f"{reverse('cainiao-billing-detail', args=[session.id])}"
+        f"?tab=special_prices",
+    )
+
+
+@login_required
+@require_http_methods(["POST"])
 def cainiao_billing_delete(request, import_id):
     """Apagar uma sessão de importação (cascade nas linhas).
 

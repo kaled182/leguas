@@ -1,5 +1,154 @@
-{# Tab Preços Especiais — placeholder Fase 6 #}
-<div class="text-center py-12 text-gray-500 dark:text-gray-400">
-  <i data-lucide="badge-euro" class="w-12 h-12 mx-auto mb-3 text-amber-400"></i>
-  <p class="text-sm font-semibold">Preços Especiais — Fase 6 (em curso)</p>
+{# Tab Preços Especiais — entregas com tarifa ≠ €1.60 + criação de PackagePriceOverride #}
+
+<div class="space-y-4" x-data="specialPrices()">
+
+  {# KPIs + bulk action #}
+  <div class="flex flex-wrap items-center gap-3 justify-between">
+    <div class="flex flex-wrap gap-3">
+      <div class="bg-amber-50 dark:bg-amber-900/20 rounded-lg px-4 py-2 border border-amber-300 dark:border-amber-700/40">
+        <div class="text-[10px] uppercase text-amber-700 dark:text-amber-300">Total Especiais</div>
+        <div class="text-xl font-extrabold text-amber-700 dark:text-amber-300">{{ special_total }}</div>
+      </div>
+      <div class="bg-emerald-50 dark:bg-emerald-900/20 rounded-lg px-4 py-2 border border-emerald-300 dark:border-emerald-700/40">
+        <div class="text-[10px] uppercase text-emerald-700 dark:text-emerald-300">Já com Override</div>
+        <div class="text-xl font-extrabold text-emerald-700 dark:text-emerald-300">{{ already_overridden }}</div>
+      </div>
+      <div class="bg-rose-50 dark:bg-rose-900/20 rounded-lg px-4 py-2 border border-rose-300 dark:border-rose-700/40">
+        <div class="text-[10px] uppercase text-rose-700 dark:text-rose-300">Sem Override</div>
+        <div class="text-xl font-extrabold text-rose-700 dark:text-rose-300">{{ special_total|add:"-"|add:already_overridden }}</div>
+      </div>
+    </div>
+
+    <form method="post" action="{% url 'cainiao-billing-create-overrides' session.id %}"
+          onsubmit="return confirm('Criar PackagePriceOverride para TODAS as linhas com preço ≠ €1,60 que ainda não tenham override?');">
+      {% csrf_token %}
+      <input type="hidden" name="mode" value="all">
+      <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold text-sm inline-flex items-center gap-2">
+        <i data-lucide="zap" class="w-4 h-4"></i>
+        Criar todos os Overrides em falta
+      </button>
+    </form>
+  </div>
+
+  {# Distribuição #}
+  <div class="bg-gray-50 dark:bg-gray-900/40 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
+    <div class="text-[10px] uppercase text-gray-500 mb-2 font-semibold">Distribuição por Preço</div>
+    <div class="flex flex-wrap gap-2">
+      {% for d in special_dist %}
+        <div class="bg-white dark:bg-gray-800 rounded px-3 py-1.5 border border-amber-200 dark:border-amber-700/40 text-xs">
+          <span class="font-bold text-amber-700 dark:text-amber-300">€ {{ d.amount }}</span>
+          <span class="text-gray-500">×</span>
+          <span class="font-bold">{{ d.n }}</span>
+          <span class="text-gray-500"> = € {{ d.total|floatformat:2 }}</span>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  {# Tabela com seleção + criação selectiva #}
+  <form method="post" action="{% url 'cainiao-billing-create-overrides' session.id %}" id="bulk-form">
+    {% csrf_token %}
+    <input type="hidden" name="mode" value="selected">
+    <input type="hidden" name="line_ids" :value="selectedIds.join(',')">
+
+    <div class="flex items-center gap-2 mb-2">
+      <button type="submit"
+              :disabled="!selectedIds.length"
+              :class="selectedIds.length ? 'bg-violet-600 hover:bg-violet-700 text-white' : 'bg-gray-200 text-gray-400 cursor-not-allowed'"
+              class="px-3 py-1.5 rounded text-xs font-semibold inline-flex items-center gap-1"
+              onclick="return confirm('Criar overrides para as linhas seleccionadas?');">
+        <i data-lucide="check-square" class="w-3.5 h-3.5"></i>
+        Criar Override (<span x-text="selectedIds.length">0</span> seleccionadas)
+      </button>
+      <button type="button" @click.prevent="toggleAll($event.target)" class="px-3 py-1.5 bg-gray-100 dark:bg-gray-700 rounded text-xs">Seleccionar todas s/ override (página)</button>
+    </div>
+
+    <div class="overflow-x-auto bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+      <table class="w-full text-xs">
+        <thead class="bg-gray-50 dark:bg-gray-900/40">
+          <tr>
+            <th class="px-2 py-2 w-8"></th>
+            <th class="px-2 py-2 text-left font-semibold uppercase">Data</th>
+            <th class="px-2 py-2 text-left font-semibold uppercase">Waybill</th>
+            <th class="px-2 py-2 text-left font-semibold uppercase">Motorista</th>
+            <th class="px-2 py-2 text-left font-semibold uppercase">CP4</th>
+            <th class="px-2 py-2 text-right font-semibold uppercase">€ Pago</th>
+            <th class="px-2 py-2 text-center font-semibold uppercase">Override</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+          {% for line in special_page %}
+          <tr class="hover:bg-amber-50 dark:hover:bg-amber-900/10">
+            <td class="px-2 py-1.5">
+              {% if not line.price_override %}
+                <input type="checkbox" :value="{{ line.id }}" @change="toggle({{ line.id }})"
+                       class="rounded text-violet-600 focus:ring-violet-500">
+              {% endif %}
+            </td>
+            <td class="px-2 py-1.5 whitespace-nowrap">{{ line.biz_time|date:"d/m H:i" }}</td>
+            <td class="px-2 py-1.5 font-mono text-[10px]">{{ line.waybill_number }}</td>
+            <td class="px-2 py-1.5">
+              {% if line.driver %}
+                {{ line.driver.nome_completo }}
+              {% elif line.staff_id %}
+                <span class="text-gray-500">staff: {{ line.staff_id }}</span>
+              {% else %}
+                <span class="text-rose-500 italic">—</span>
+              {% endif %}
+            </td>
+            <td class="px-2 py-1.5 font-mono text-[10px] text-gray-500">
+              {% if line.task.zip_code %}{{ line.task.zip_code|slice:":4" }}{% else %}—{% endif %}
+            </td>
+            <td class="px-2 py-1.5 text-right font-bold text-amber-700 dark:text-amber-300">€ {{ line.amount|floatformat:2 }}</td>
+            <td class="px-2 py-1.5 text-center">
+              {% if line.price_override %}
+                <span class="inline-flex items-center gap-1 px-1.5 py-0.5 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 rounded text-[10px] font-semibold">
+                  <i data-lucide="check" class="w-3 h-3"></i> #{{ line.price_override.id }}
+                </span>
+              {% else %}
+                <span class="text-rose-500 text-[10px]">pendente</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="7" class="px-3 py-8 text-center text-gray-500 italic">Nenhum preço especial nesta importação. ✓</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if special_page.has_other_pages %}
+    <div class="flex justify-between items-center text-xs pt-2 border-t border-gray-200 dark:border-gray-700 mt-2">
+      <span class="text-gray-500">Página {{ special_page.number }}/{{ special_page.paginator.num_pages }} · {{ special_page.paginator.count }} resultados</span>
+      <div class="flex gap-2">
+        {% if special_page.has_previous %}<a href="?tab=special_prices&page={{ special_page.previous_page_number }}" class="px-3 py-1 bg-gray-100 dark:bg-gray-700 rounded">‹</a>{% endif %}
+        {% if special_page.has_next %}<a href="?tab=special_prices&page={{ special_page.next_page_number }}" class="px-3 py-1 bg-gray-100 dark:bg-gray-700 rounded">›</a>{% endif %}
+      </div>
+    </div>
+    {% endif %}
+  </form>
 </div>
+
+<script>
+function specialPrices() {
+  return {
+    selectedIds: [],
+    toggle(id) {
+      const i = this.selectedIds.indexOf(id);
+      if (i >= 0) this.selectedIds.splice(i, 1);
+      else this.selectedIds.push(id);
+    },
+    toggleAll(btn) {
+      const cbs = btn.closest('form').querySelectorAll('input[type=checkbox]');
+      const allChecked = Array.from(cbs).every(c => c.checked);
+      cbs.forEach(c => {
+        c.checked = !allChecked;
+        const id = parseInt(c.value, 10);
+        const idx = this.selectedIds.indexOf(id);
+        if (!allChecked && idx < 0) this.selectedIds.push(id);
+        if (allChecked && idx >= 0) this.selectedIds.splice(idx, 1);
+      });
+    },
+  };
+}
+</script>

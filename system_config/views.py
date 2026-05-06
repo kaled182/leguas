@@ -162,27 +162,55 @@ def save_config(request):
         "cron_alerts_last_status": "cron_alerts_last_status",
     }
 
+    # Tipos de campo numérico que precisam normalização e conversão.
+    NUMERIC_TYPES = (
+        "DecimalField", "FloatField",
+        "IntegerField", "PositiveIntegerField",
+        "PositiveSmallIntegerField", "SmallIntegerField",
+        "BigIntegerField",
+    )
+
     # Atualizar todos os campos de texto
     for form_field, model_field in field_mappings.items():
         if form_field in request.POST:
             value = request.POST[form_field].strip()
-            if hasattr(config, model_field):
-                if value:
-                    setattr(config, model_field, value)
+            if not hasattr(config, model_field):
+                continue
+            field = config._meta.get_field(model_field)
+            internal = field.get_internal_type()
+
+            if value:
+                # Normalizar numéricos: aceitar formato PT (vírgula decimal,
+                # espaços de milhar) → ponto. Ignorar campos não numéricos.
+                if internal in NUMERIC_TYPES:
+                    norm = value.replace(" ", "").replace(",", ".")
+                    try:
+                        if internal in ("DecimalField",):
+                            from decimal import Decimal
+                            setattr(config, model_field, Decimal(norm))
+                        elif internal == "FloatField":
+                            setattr(config, model_field, float(norm))
+                        else:
+                            setattr(config, model_field, int(float(norm)))
+                    except (ValueError, ArithmeticError):
+                        messages.error(
+                            request,
+                            f"Valor inválido em {form_field}: '{value}'",
+                        )
                 else:
-                    # Vazio: respeitar o tipo do campo no modelo.
-                    #  - null=True   → None
-                    #  - CharField/TextField com blank=True → ""
-                    #  - Numérico sem null=True → ignorar (manter valor)
-                    field = config._meta.get_field(model_field)
-                    internal = field.get_internal_type()
-                    if field.null:
-                        setattr(config, model_field, None)
-                    elif internal in ("CharField", "TextField",
-                                      "EmailField", "URLField",
-                                      "SlugField"):
-                        setattr(config, model_field, "")
-                    # Caso contrário (numérico NOT NULL, etc.) não tocar
+                    setattr(config, model_field, value)
+            else:
+                # Vazio: respeitar o tipo do campo no modelo.
+                #  - null=True   → None
+                #  - CharField/TextField com blank=True → ""
+                #  - Numérico sem null=True → ignorar (manter valor)
+                if field.null:
+                    setattr(config, model_field, None)
+                elif internal in ("CharField", "TextField",
+                                  "EmailField", "URLField",
+                                  "SlugField"):
+                    setattr(config, model_field, "")
+                # Caso contrário (numérico NOT NULL, etc.) não tocar
 
     # Atualizar checkboxes (campos booleanos)
     boolean_fields = {

@@ -89,6 +89,10 @@ urlpatterns = [
     # Claims
     path("claims/", views.claim_list, name="claim-list"),
     path("claims/<int:claim_id>/", views.claim_detail, name="claim-detail"),
+    path(
+        "claims/<int:claim_id>/delete/",
+        views.claim_delete, name="claim-delete",
+    ),
 
     # Pré-Faturas — Gestão / Backoffice
     path(

@@ -691,6 +691,43 @@ def claim_list(request):
 
 
 @login_required
+@require_http_methods(["POST"])
+def claim_delete(request, claim_id):
+    """Apaga uma reclamação (DriverClaim).
+
+    Bloqueia se já estiver associada a um DriverSettlement (foi
+    descontada num acerto fechado) ou a uma CainiaoBillingLine
+    confirmada — nesses casos é preciso desfazer o link primeiro.
+    """
+    from django.contrib import messages
+    from django.shortcuts import redirect
+
+    claim = get_object_or_404(DriverClaim, id=claim_id)
+
+    if claim.settlement_id:
+        messages.error(
+            request,
+            f"Não é possível apagar — Reclamação #{claim.id} já foi "
+            f"descontada no Acerto #{claim.settlement_id}. "
+            "Desvincule do acerto primeiro.",
+        )
+        return redirect("claim-detail", claim_id=claim.id)
+
+    cainiao_lines = claim.cainiao_billing_lines.all()
+    if cainiao_lines.exists():
+        # Apenas desliga as billing lines (não apaga as billing lines)
+        cainiao_lines.update(claim=None)
+
+    summary = (
+        f"#{claim.id} {claim.driver.nome_completo} "
+        f"€{claim.amount} ({claim.get_claim_type_display()})"
+    )
+    claim.delete()
+    messages.success(request, f"Reclamação eliminada: {summary}")
+    return redirect("claim-list")
+
+
+@login_required
 def claim_detail(request, claim_id):
     """Detalhes de um claim, com ações de aprovação/rejeição"""
     from django.contrib import messages

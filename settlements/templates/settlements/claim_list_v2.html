@@ -126,8 +126,16 @@
                   <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">{{ claim.get_status_display }}</span>
                 {% endif %}
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-3">
                 <a href="{% url 'claim-detail' claim.id %}" class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300">Ver Detalhes</a>
+                <form method="post" action="{% url 'claim-delete' claim.id %}" class="inline"
+                      onsubmit="return confirm('Apagar reclamação #{{ claim.id }} ({{ claim.driver.nome_completo }}, €{{ claim.amount }})?\n\nEsta acção não pode ser desfeita.');">
+                  {% csrf_token %}
+                  <button type="submit" class="text-rose-600 hover:text-rose-800 dark:text-rose-400 dark:hover:text-rose-300 inline-flex items-center gap-1">
+                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                    Apagar
+                  </button>
+                </form>
               </td>
             </tr>
             {% endfor %}

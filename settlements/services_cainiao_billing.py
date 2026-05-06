@@ -270,7 +270,9 @@ def _resolve_driver(staff_id: str, task, cid_to_driver,
 #  Importação principal
 # ─────────────────────────────────────────────────────────────────────
 
-@transaction.atomic
+CHUNK_SIZE = 500
+
+
 def import_cainiao_billing(file_obj, file_name: str, user=None):
     """Importa o XLSX e devolve a CainiaoBillingImport.
 
@@ -279,9 +281,19 @@ def import_cainiao_billing(file_obj, file_name: str, user=None):
         criar nada novo).
       - Linhas existentes (waybill+fee+billing_id) são actualizadas
         em vez de duplicadas.
+
+    Performance:
+      - Sem @transaction.atomic global: 30k linhas numa única
+        transação geram MySQL "Lock wait timeout exceeded" (errno
+        1205) quando o servidor tem outras queries concorrentes.
+      - bulk_create(update_conflicts=True) em chunks de 500 linhas,
+        cada chunk em transação curta independente.
+      - Resolução de driver em batch: pré-fetch de tasks por waybill
+        de cada chunk, evita 30k queries individuais.
     """
     from .models import (
-        CainiaoBillingImport, CainiaoBillingLine, PartnerInvoice,
+        CainiaoBillingImport, CainiaoBillingLine, CainiaoOperationTask,
+        PartnerInvoice,
     )
     from core.models import Partner
 
@@ -293,7 +305,7 @@ def import_cainiao_billing(file_obj, file_name: str, user=None):
         log.info("Cainiao billing import já existe (hash %s)", file_hash[:12])
         return existing, "already_imported"
 
-    # Parsear todas as linhas em memória para conseguir o período min/max
+    # Parsear todas as linhas em memória
     rows = list(parse_xlsx_to_rows(file_obj))
     if not rows:
         raise ValueError("Ficheiro vazio ou sem linhas válidas.")
@@ -301,15 +313,18 @@ def import_cainiao_billing(file_obj, file_name: str, user=None):
     period_from = min(r["biz_time"] for r in rows).date()
     period_to = max(r["biz_time"] for r in rows).date()
 
-    # Criar sessão de import
-    session = CainiaoBillingImport.objects.create(
-        file_name=file_name[:255],
-        file_hash=file_hash,
-        period_from=period_from,
-        period_to=period_to,
-        status="PROCESSING",
-        imported_by=user if user and user.is_authenticated else None,
-    )
+    # Sessão criada num transaction curto (commit imediato)
+    with transaction.atomic():
+        session = CainiaoBillingImport.objects.create(
+            file_name=file_name[:255],
+            file_hash=file_hash,
+            period_from=period_from,
+            period_to=period_to,
+            status="PROCESSING",
+            imported_by=(
+                user if user and user.is_authenticated else None
+            ),
+        )
 
     cid_to_driver, cname_to_driver = _build_resolution_caches()
 
@@ -321,88 +336,124 @@ def import_cainiao_billing(file_obj, file_name: str, user=None):
     staff_ids = set()
 
     try:
-        for r in rows:
-            task = _resolve_task(r["waybill_number"])
-            driver = _resolve_driver(
-                r["staff_id"], task, cid_to_driver, cname_to_driver,
-            )
+        # Processar em chunks (cada chunk = transaction curta)
+        for chunk_start in range(0, len(rows), CHUNK_SIZE):
+            chunk = rows[chunk_start:chunk_start + CHUNK_SIZE]
 
-            defaults = {
-                "import_session": session,
-                "biz_time": r["biz_time"],
-                "amount": r["amount"],
-                "moneda": r["moneda"],
-                "cp_name": r["cp_name"],
-                "ciudad": r["ciudad"],
-                "staff_id": r["staff_id"],
-                "fb1": r["fb1"],
-                "fb2": r["fb2"],
-                "task": task,
-                "driver": driver,
-            }
-            CainiaoBillingLine.objects.update_or_create(
-                waybill_number=r["waybill_number"],
-                fee_type=r["fee_type"],
-                cainiao_billing_id=r["cainiao_billing_id"],
-                defaults=defaults,
-            )
+            # Pre-fetch de tasks por waybill (batch — 1 query)
+            wbs = [r["waybill_number"] for r in chunk if r["waybill_number"]]
+            tasks_by_wb = {}
+            if wbs:
+                # Para cada waybill, escolher Delivered mais recente
+                qs_tasks = CainiaoOperationTask.objects.filter(
+                    waybill_number__in=wbs,
+                ).order_by("waybill_number", "-task_date")
+                for t in qs_tasks:
+                    if t.waybill_number not in tasks_by_wb:
+                        tasks_by_wb[t.waybill_number] = t
 
-            if r["fee_type"] == "envio fee":
-                n_envio += 1
-                total_envio += r["amount"]
-            elif r["fee_type"] == "compensacion":
-                n_compensacion += 1
-                total_comp += r["amount"]
+            objs = []
+            for r in chunk:
+                task = tasks_by_wb.get(r["waybill_number"])
+                driver = _resolve_driver(
+                    r["staff_id"], task, cid_to_driver, cname_to_driver,
+                )
+                objs.append(CainiaoBillingLine(
+                    import_session=session,
+                    fee_type=r["fee_type"],
+                    biz_time=r["biz_time"],
+                    amount=r["amount"],
+                    moneda=r["moneda"],
+                    waybill_number=r["waybill_number"],
+                    cp_name=r["cp_name"],
+                    ciudad=r["ciudad"],
+                    staff_id=r["staff_id"],
+                    cainiao_billing_id=r["cainiao_billing_id"],
+                    fb1=r["fb1"],
+                    fb2=r["fb2"],
+                    task=task,
+                    driver=driver,
+                ))
 
-            if r["cainiao_billing_id"]:
-                billing_ids.add(r["cainiao_billing_id"])
-            if r["staff_id"]:
-                staff_ids.add(r["staff_id"])
+                if r["fee_type"] == "envio fee":
+                    n_envio += 1
+                    total_envio += r["amount"]
+                elif r["fee_type"] == "compensacion":
+                    n_compensacion += 1
+                    total_comp += r["amount"]
+                if r["cainiao_billing_id"]:
+                    billing_ids.add(r["cainiao_billing_id"])
+                if r["staff_id"]:
+                    staff_ids.add(r["staff_id"])
 
-        # PartnerInvoice agregada
-        cainiao_partner = Partner.objects.filter(
-            name__iexact="CAINIAO",
-        ).first()
+            # bulk_create com update_conflicts (Django 4.1+).
+            # Reimports de quinzena que sobreponham → faz UPDATE em
+            # vez de duplicar (graças ao unique_together).
+            with transaction.atomic():
+                CainiaoBillingLine.objects.bulk_create(
+                    objs,
+                    update_conflicts=True,
+                    update_fields=[
+                        "import_session", "biz_time", "amount", "moneda",
+                        "cp_name", "ciudad", "staff_id", "fb1", "fb2",
+                        "task", "driver", "updated_at",
+                    ],
+                    unique_fields=[
+                        "waybill_number", "fee_type", "cainiao_billing_id",
+                    ],
+                )
+
+        # PartnerInvoice agregada (transaction curta)
         partner_invoice = None
-        if cainiao_partner:
-            invoice_number = (
-                f"CAINIAO-{period_from.strftime('%Y%m%d')}-"
-                f"{period_to.strftime('%Y%m%d')}-{session.id}"
-            )
-            gross = total_envio + total_comp  # net (com claims já deduzidos)
-            partner_invoice = PartnerInvoice.objects.create(
-                partner=cainiao_partner,
-                invoice_number=invoice_number,
-                external_reference="; ".join(sorted(billing_ids))[:200],
-                period_start=period_from,
-                period_end=period_to,
-                gross_amount=gross,
-                tax_amount=Decimal("0.00"),
-                net_amount=gross,
-                status="PENDING",
-                issue_date=timezone.now().date(),
-                due_date=period_to + timedelta(days=30),
-            )
+        with transaction.atomic():
+            cainiao_partner = Partner.objects.filter(
+                name__iexact="CAINIAO",
+            ).first()
+            if cainiao_partner:
+                invoice_number = (
+                    f"CAINIAO-{period_from.strftime('%Y%m%d')}-"
+                    f"{period_to.strftime('%Y%m%d')}-{session.id}"
+                )
+                gross = total_envio + total_comp
+                partner_invoice = PartnerInvoice.objects.create(
+                    partner=cainiao_partner,
+                    invoice_number=invoice_number,
+                    external_reference=(
+                        "; ".join(sorted(billing_ids))[:200]
+                    ),
+                    period_start=period_from,
+                    period_end=period_to,
+                    gross_amount=gross,
+                    tax_amount=Decimal("0.00"),
+                    net_amount=gross,
+                    status="PENDING",
+                    issue_date=timezone.now().date(),
+                    due_date=period_to + timedelta(days=30),
+                )
 
-        session.partner_invoice = partner_invoice
-        session.total_lines = n_envio + n_compensacion
-        session.total_envio = total_envio
-        session.total_compensacion = total_comp
-        session.n_billing_ids = len(billing_ids)
-        session.n_staff_ids = len(staff_ids)
-        session.status = "COMPLETED"
-        session.save(update_fields=[
-            "partner_invoice", "total_lines", "total_envio",
-            "total_compensacion", "n_billing_ids", "n_staff_ids",
-            "status",
-        ])
+            session.partner_invoice = partner_invoice
+            session.total_lines = n_envio + n_compensacion
+            session.total_envio = total_envio
+            session.total_compensacion = total_comp
+            session.n_billing_ids = len(billing_ids)
+            session.n_staff_ids = len(staff_ids)
+            session.status = "COMPLETED"
+            session.save(update_fields=[
+                "partner_invoice", "total_lines", "total_envio",
+                "total_compensacion", "n_billing_ids", "n_staff_ids",
+                "status",
+            ])
+
         return session, "created"
 
     except Exception as e:
         log.exception("Erro a importar Cainiao billing")
-        session.status = "FAILED"
-        session.error_message = str(e)[:2000]
-        session.save(update_fields=["status", "error_message"])
+        try:
+            session.status = "FAILED"
+            session.error_message = str(e)[:2000]
+            session.save(update_fields=["status", "error_message"])
+        except Exception:
+            pass
         raise
 
 

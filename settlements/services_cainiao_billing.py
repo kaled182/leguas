@@ -625,12 +625,11 @@ def reresolve_matching(session):
 def reconciliation_math(session):
     """Matemática completa da reconciliação em distinct waybills.
 
-    O dashboard de KPIs mistura contagens de lados diferentes:
-      - matched_count (30 833) é no lado das BillingLines
-      - delivered_no_billing_count (31 041) é no lado das Tasks
-
-    Esta função devolve a conta correcta em distinct waybills.
+    A intersecção/subtracção é feita ao nível da TASK (1 task = 1
+    waybill_number). Para detectar tasks cujo waybill na billing
+    aparece como lp_number da task, usamos um match cruzado.
     """
+    from django.db.models import Q as _Q
     from .models import CainiaoBillingLine, CainiaoOperationTask
 
     period = (session.period_from, session.period_to)
@@ -656,18 +655,31 @@ def reconciliation_math(session):
     n_distinct_delivered = len(distinct_delivered_wbs)
     n_duplicate_delivery_dates = n_delivered_rows - n_distinct_delivered
 
-    # Também os lp_numbers — a billing usa LP, as tasks podem
-    # guardá-lo no lp_number
-    distinct_delivered_lps = set(
-        delivered_qs.exclude(lp_number="")
-        .values_list("lp_number", flat=True)
+    # Match cruzado: tasks cuja chave (waybill_number OU lp_number)
+    # está na billing (set de waybills facturados).
+    matched_task_wbs = set(
+        delivered_qs.filter(
+            _Q(waybill_number__in=distinct_billed_wbs) |
+            _Q(lp_number__in=distinct_billed_wbs),
+        ).values_list("waybill_number", flat=True)
     )
-    delivered_keys = distinct_delivered_wbs | distinct_delivered_lps
 
-    # Intersecção
-    in_both = distinct_billed_wbs & delivered_keys
-    only_billing = distinct_billed_wbs - delivered_keys
-    only_delivered = delivered_keys - distinct_billed_wbs
+    # Intersecção/diferenças no nível certo
+    n_in_both = len(matched_task_wbs)
+    only_delivered_wbs = distinct_delivered_wbs - matched_task_wbs
+
+    # Para "só na billing": waybills da billing que NÃO bateram com
+    # nenhuma task (nem por waybill_number nem por lp_number).
+    matched_billed_wbs = set()
+    matched_billed_wbs.update(
+        delivered_qs.filter(waybill_number__in=distinct_billed_wbs)
+        .values_list("waybill_number", flat=True),
+    )
+    matched_billed_wbs.update(
+        delivered_qs.filter(lp_number__in=distinct_billed_wbs)
+        .values_list("lp_number", flat=True),
+    )
+    only_billing_wbs = distinct_billed_wbs - matched_billed_wbs
 
     return {
         "n_billing_lines_envio": n_billing_lines_envio,
@@ -676,10 +688,102 @@ def reconciliation_math(session):
         "n_delivered_rows": n_delivered_rows,
         "n_distinct_delivered": n_distinct_delivered,
         "n_duplicate_delivery_dates": n_duplicate_delivery_dates,
-        "n_in_both": len(in_both),
-        "n_only_billing": len(only_billing),
-        "n_only_delivered": len(only_delivered),
+        "n_in_both": n_in_both,
+        "n_only_billing": len(only_billing_wbs),
+        "n_only_delivered": len(only_delivered_wbs),
     }
+
+
+def delivered_no_billing_by_driver(session):
+    """Agrupa as tasks Delivered s/ facturação por driver.
+
+    Devolve lista de dicts ordenada por contagem desc:
+      [{
+        "driver_id": int|None,
+        "driver_name": str,
+        "courier_id_cainiao": str,
+        "n_packages": int,
+        "estimated_loss": Decimal (n × €1.60),
+        "first_date": date,
+        "last_date": date,
+      }, ...]
+    """
+    from collections import defaultdict
+    from decimal import Decimal as D
+    from django.db.models import Q as _Q
+    from .models import CainiaoOperationTask
+    from drivers_app.models import DriverProfile
+
+    # Same filter as reconciliation_for_import (paranoia: mantém
+    # consistência com o KPI "Entregues s/ Pagamento")
+    billed_wbs = set(
+        session.lines.filter(fee_type="envio fee").values_list(
+            "waybill_number", flat=True,
+        )
+    )
+    qs = CainiaoOperationTask.objects.filter(
+        task_date__range=(session.period_from, session.period_to),
+        task_status="Delivered",
+    ).exclude(
+        _Q(waybill_number__in=billed_wbs) | _Q(lp_number__in=billed_wbs),
+    )
+
+    # Resolução de driver via courier_id_cainiao
+    cid_to_driver, _ = _build_resolution_caches()
+
+    grouped = defaultdict(lambda: {
+        "driver_id": None,
+        "driver_name": "",
+        "apelido": "",
+        "courier_id_cainiao": "",
+        "courier_name": "",
+        "n_packages": 0,
+        "first_date": None,
+        "last_date": None,
+        "tasks": [],  # primeiros 50 IDs para drill-down rápido
+    })
+
+    for t in qs.values(
+        "id", "waybill_number", "lp_number", "task_date",
+        "courier_id_cainiao", "courier_name", "destination_city",
+    ).order_by("courier_id_cainiao", "task_date"):
+        cid = t["courier_id_cainiao"] or ""
+        cname = t["courier_name"] or ""
+        # chave do agrupamento: courier_id se houver, senão courier_name
+        key = cid or f"name::{cname.lower()}"
+        bucket = grouped[key]
+        if not bucket["courier_id_cainiao"]:
+            bucket["courier_id_cainiao"] = cid
+            bucket["courier_name"] = cname
+            d = cid_to_driver.get(cid) if cid else None
+            if d:
+                bucket["driver_id"] = d.id
+                bucket["driver_name"] = d.nome_completo
+                bucket["apelido"] = d.apelido or ""
+        bucket["n_packages"] += 1
+        td = t["task_date"]
+        if bucket["first_date"] is None or td < bucket["first_date"]:
+            bucket["first_date"] = td
+        if bucket["last_date"] is None or td > bucket["last_date"]:
+            bucket["last_date"] = td
+        if len(bucket["tasks"]) < 50:
+            bucket["tasks"].append({
+                "id": t["id"],
+                "waybill": t["waybill_number"],
+                "lp": t["lp_number"] or "",
+                "date": td,
+                "city": t["destination_city"] or "",
+            })
+
+    base_price = D("1.60")
+    result = []
+    for bucket in grouped.values():
+        bucket["estimated_loss"] = (
+            D(bucket["n_packages"]) * base_price
+        ).quantize(D("0.01"))
+        result.append(bucket)
+    result.sort(key=lambda b: -b["n_packages"])
+    return result
 
 
 def diagnose_delivered_no_billing(session):

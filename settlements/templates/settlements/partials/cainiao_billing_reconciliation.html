@@ -98,6 +98,105 @@
   </div>
   {% endif %}
 
+  {# Pacotes não pagos AGRUPADOS POR DRIVER — accionável #}
+  {% if by_driver %}
+  <div class="bg-white dark:bg-gray-800 rounded-xl border border-rose-300 dark:border-rose-700/40 overflow-hidden">
+    <div class="bg-rose-50 dark:bg-rose-900/10 px-4 py-3 flex items-center justify-between flex-wrap gap-2">
+      <div>
+        <h3 class="font-semibold text-rose-700 dark:text-rose-300 flex items-center gap-2">
+          <i data-lucide="user-x" class="w-4 h-4"></i>
+          Pacotes Entregues s/ Pagamento — agrupados por driver
+        </h3>
+        <p class="text-[11px] text-rose-700/80 dark:text-rose-300/70 mt-0.5">
+          Estes são os drivers a quem vais pagar mas que a Cainiao não nos pagou. <strong>Confirmar com a Cainiao</strong> ou tratar como compensação interna.
+        </p>
+      </div>
+      <a href="{% url 'cainiao-billing-export' session.id 'unpaid_by_driver' %}"
+         class="px-3 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-semibold text-sm inline-flex items-center gap-2">
+        <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+        Exportar (XLSX 2 sheets)
+      </a>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full text-xs">
+        <thead class="bg-gray-50 dark:bg-gray-900/40">
+          <tr>
+            <th class="px-3 py-2 text-left font-semibold uppercase">Driver</th>
+            <th class="px-3 py-2 text-left font-semibold uppercase">Courier ID</th>
+            <th class="px-3 py-2 text-right font-semibold uppercase">Pacotes</th>
+            <th class="px-3 py-2 text-right font-semibold uppercase">Perda Est.</th>
+            <th class="px-3 py-2 text-left font-semibold uppercase">Período</th>
+            <th class="px-3 py-2 text-center font-semibold uppercase w-10"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+          {% for g in by_driver %}
+          <tr class="hover:bg-rose-50 dark:hover:bg-rose-900/10">
+            <td class="px-3 py-2">
+              {% if g.driver_id %}
+                <a href="/driversapp/portal/{{ g.driver_id }}/" target="_blank"
+                   class="font-semibold text-gray-900 dark:text-white hover:text-violet-600">
+                  {{ g.driver_name }}
+                </a>
+                {% if g.apelido %}
+                  <span class="text-[10px] text-gray-400 ml-1">({{ g.apelido }})</span>
+                {% endif %}
+              {% else %}
+                <span class="text-rose-500 italic">Driver não resolvido</span>
+                {% if g.courier_name %}
+                  <span class="text-[10px] text-gray-500 ml-1">— XLSX courier: {{ g.courier_name }}</span>
+                {% endif %}
+              {% endif %}
+            </td>
+            <td class="px-3 py-2 font-mono text-[10px] text-gray-500">{{ g.courier_id_cainiao|default:"—" }}</td>
+            <td class="px-3 py-2 text-right font-bold {% if g.n_packages >= 50 %}text-rose-700 dark:text-rose-300{% else %}text-gray-900 dark:text-white{% endif %}">
+              {{ g.n_packages }}
+            </td>
+            <td class="px-3 py-2 text-right font-bold text-emerald-600 dark:text-emerald-400">
+              € {{ g.estimated_loss|floatformat:2 }}
+            </td>
+            <td class="px-3 py-2 text-[10px] text-gray-500">
+              {{ g.first_date|date:"d/m" }}{% if g.first_date != g.last_date %} → {{ g.last_date|date:"d/m" }}{% endif %}
+            </td>
+            <td class="px-3 py-2 text-center">
+              <details>
+                <summary class="cursor-pointer text-violet-600 hover:text-violet-800 list-none">
+                  <i data-lucide="chevron-down" class="w-4 h-4 inline"></i>
+                </summary>
+                <div class="absolute right-4 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-3 z-10 max-w-md">
+                  <div class="text-[10px] uppercase font-bold text-gray-500 mb-1">Primeiros {{ g.tasks|length }} pacotes:</div>
+                  <ul class="text-[10px] space-y-0.5">
+                    {% for t in g.tasks %}
+                      <li class="font-mono">
+                        <span class="text-gray-500">{{ t.date|date:"d/m" }}</span>
+                        <span class="text-gray-700 dark:text-gray-300">{{ t.waybill }}</span>
+                        {% if t.lp %}<span class="text-gray-400 ml-1">({{ t.lp }})</span>{% endif %}
+                      </li>
+                    {% endfor %}
+                  </ul>
+                </div>
+              </details>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot class="bg-gray-50 dark:bg-gray-900/40 font-bold">
+          <tr>
+            <td class="px-3 py-2" colspan="2">TOTAL — {{ by_driver|length }} drivers</td>
+            <td class="px-3 py-2 text-right">{% with totals=by_driver|length %}—{% endwith %}</td>
+            <td class="px-3 py-2 text-right text-emerald-600 dark:text-emerald-400">
+              {# Soma calculada no template #}
+              {% with sum=0 %}{% endwith %}
+            </td>
+            <td colspan="2"></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
   {# Análise diagnóstica das divergências #}
   {% if diagnosis.total %}
   <div class="bg-white dark:bg-gray-800 rounded-xl border border-violet-300 dark:border-violet-700/40 overflow-hidden">

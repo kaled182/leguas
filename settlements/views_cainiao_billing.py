@@ -167,16 +167,19 @@ def cainiao_billing_detail(request, import_id):
     elif active_tab == "reconciliation":
         from .services_cainiao_billing import (
             diagnose_delivered_no_billing, reconciliation_math,
+            delivered_no_billing_by_driver,
         )
         recon = reconciliation_for_import(session)
         diagnosis = diagnose_delivered_no_billing(session)
         recon_math = reconciliation_math(session)
+        by_driver = delivered_no_billing_by_driver(session)
         # Paginar as duas listas grandes
         from django.core.paginator import Paginator as P
         ctx.update({
             "recon": recon,
             "diagnosis": diagnosis,
             "recon_math": recon_math,
+            "by_driver": by_driver,
             "paid_no_task_page": P(
                 recon["paid_no_task"], 50,
             ).get_page(request.GET.get("p1", 1)),
@@ -645,6 +648,121 @@ def cainiao_billing_export_xlsx(request, import_id, kind):
             f"cainiao_precos_especiais_{session.period_from}_"
             f"{session.period_to}.xlsx"
         )
+
+    elif kind == "unpaid_by_driver":
+        from .services_cainiao_billing import (
+            delivered_no_billing_by_driver,
+        )
+        from .models import CainiaoOperationTask
+        from django.db.models import Q as _Q
+
+        wb.remove(ws)
+
+        # Sheet 1 — Resumo agrupado
+        sh = wb.create_sheet(title="Resumo por driver")
+        sh.append([
+            "Driver (sistema)", "Apelido", "Courier ID Cainiao",
+            "Courier Name (XLSX)", "Pacotes não pagos",
+            "Perda estimada (€)", "Primeira data", "Última data",
+        ])
+        for col in range(1, 9):
+            cell = sh.cell(row=1, column=col)
+            cell.font = header_font
+            cell.fill = header_fill
+
+        groups = delivered_no_billing_by_driver(session)
+        for g in groups:
+            sh.append([
+                g["driver_name"] or "(não resolvido)",
+                g["apelido"],
+                g["courier_id_cainiao"],
+                g["courier_name"],
+                g["n_packages"],
+                float(g["estimated_loss"]),
+                (g["first_date"].strftime("%Y-%m-%d")
+                 if g["first_date"] else ""),
+                (g["last_date"].strftime("%Y-%m-%d")
+                 if g["last_date"] else ""),
+            ])
+
+        # Sheet 2 — Lista completa de pacotes
+        sh2 = wb.create_sheet(title="Pacotes detalhados")
+        sh2.append([
+            "Task Date", "Waybill", "LP Number", "Driver (sistema)",
+            "Courier ID Cainiao", "Courier Name", "Cidade", "CP",
+            "Status", "Perda estimada (€)",
+        ])
+        for col in range(1, 11):
+            cell = sh2.cell(row=1, column=col)
+            cell.font = header_font
+            cell.fill = header_fill
+
+        billed_wbs = set(
+            session.lines.filter(fee_type="envio fee").values_list(
+                "waybill_number", flat=True,
+            )
+        )
+        cid_to_driver, _ = (
+            __import__(
+                "settlements.services_cainiao_billing",
+                fromlist=["_build_resolution_caches"],
+            )._build_resolution_caches()
+        )
+        qs = CainiaoOperationTask.objects.filter(
+            task_date__range=(session.period_from, session.period_to),
+            task_status="Delivered",
+        ).exclude(
+            _Q(waybill_number__in=billed_wbs)
+            | _Q(lp_number__in=billed_wbs),
+        ).order_by("courier_name", "task_date")
+
+        for t in qs.iterator(chunk_size=1000):
+            d = (
+                cid_to_driver.get(t.courier_id_cainiao)
+                if t.courier_id_cainiao else None
+            )
+            sh2.append([
+                t.task_date.strftime("%Y-%m-%d"),
+                t.waybill_number,
+                t.lp_number or "",
+                d.nome_completo if d else "",
+                t.courier_id_cainiao or "",
+                t.courier_name or "",
+                t.destination_city or "",
+                t.zip_code or "",
+                t.task_status,
+                1.60,
+            ])
+
+        for sheet in (sh, sh2):
+            for col_cells in sheet.columns:
+                max_len = 0
+                for cell in col_cells:
+                    v = str(cell.value) if cell.value is not None else ""
+                    if len(v) > max_len:
+                        max_len = len(v)
+                sheet.column_dimensions[
+                    col_cells[0].column_letter
+                ].width = min(max_len + 2, 60)
+
+        filename = (
+            f"cainiao_nao_pagos_por_driver_{session.period_from}_"
+            f"{session.period_to}.xlsx"
+        )
+        buf = BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+        response = HttpResponse(
+            buf.read(),
+            content_type=(
+                "application/vnd.openxmlformats-officedocument."
+                "spreadsheetml.sheet"
+            ),
+        )
+        response["Content-Disposition"] = (
+            f'attachment; filename="{filename}"'
+        )
+        return response
 
     elif kind == "diagnosis":
         from .services_cainiao_billing import diagnose_delivered_no_billing

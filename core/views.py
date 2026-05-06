@@ -473,13 +473,32 @@ def partner_detail(request, pk):
                 _drv_buckets.values(), key=lambda r: -r["total"],
             )
 
-            # Mesclar rows com mesmo courier_id (mesmo driver com nomes
-            # antigos + atualizados). Sem courier_id, fallback p/ courier_name.
+            # Mesclar rows respeitando o driver REAL.
+            #
+            # Bug histórico: o EPOD da Cainiao por vezes envia o
+            # courier_id do hub/armazém em entregas feitas por drivers
+            # reais — várias rows acabavam com courier_id partilhado
+            # mas courier_name diferentes (ex: courier_id=XPT_id +
+            # cname=Andre_Queiroz_LF). Mergear apenas por courier_id
+            # juntava 5+ drivers reais no bucket do XPT, inflando os
+            # contadores do armazém com entregas alheias.
+            #
+            # Regra agora: resolver o driver real PRIMEIRO. Se houver
+            # driver resolvido, mergear por driver_id (junta apelidos
+            # antigos+novos do mesmo driver). Senão, fallback para
+            # (courier_id, courier_name) — separa rows que partilham
+            # courier_id mas pertencem a couriers distintos.
             merged_by_id = {}
             for r in driver_qs_raw:
                 cid = (r.get("courier_id_cainiao") or "").strip()
                 cname = r["courier_name"]
-                key = cid if cid else f"NAME::{cname}"
+                drv = _resolve_driver(cid, cname)
+                if drv:
+                    key = f"DRV::{drv.id}"
+                elif cid:
+                    key = f"CID::{cid}::{cname}"
+                else:
+                    key = f"NAME::{cname}"
                 if key not in merged_by_id:
                     merged_by_id[key] = {
                         "courier_name": cname,

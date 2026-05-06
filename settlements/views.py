@@ -692,6 +692,77 @@ def claim_list(request):
 
 @login_required
 @require_http_methods(["POST"])
+def claim_update(request, claim_id):
+    """Edita campos do DriverClaim antes de aprovar/rejeitar.
+
+    Permite ao operador ajustar o valor a deduzir (a Cainiao pode
+    descontar €30 mas a empresa pode decidir repassar só parte ao
+    driver) e o tipo da reclamação.
+
+    Bloqueia se já foi descontado num settlement fechado.
+    """
+    from django.contrib import messages
+    from django.shortcuts import redirect
+    from decimal import Decimal, InvalidOperation
+
+    claim = get_object_or_404(DriverClaim, id=claim_id)
+
+    if claim.settlement_id:
+        messages.error(
+            request,
+            f"Não é possível editar — já foi descontado no Acerto "
+            f"#{claim.settlement_id}. Desvincule primeiro.",
+        )
+        return redirect("claim-detail", claim_id=claim.id)
+
+    # amount
+    raw_amount = (request.POST.get("amount") or "").replace(",", ".").strip()
+    if raw_amount:
+        try:
+            new_amount = Decimal(raw_amount)
+            if new_amount < 0:
+                raise ValueError("negativo")
+            claim.amount = new_amount
+        except (InvalidOperation, ValueError):
+            messages.error(request, f"Valor inválido: {raw_amount}")
+            return redirect("claim-detail", claim_id=claim.id)
+
+    # claim_type
+    new_type = (request.POST.get("claim_type") or "").strip()
+    if new_type and new_type in dict(DriverClaim.CLAIM_TYPES):
+        claim.claim_type = new_type
+
+    # description
+    new_desc = request.POST.get("description")
+    if new_desc is not None:
+        claim.description = new_desc.strip()[:2000]
+
+    claim.save(update_fields=[
+        "amount", "claim_type", "description", "updated_at",
+    ])
+
+    # Se o claim já estava APPROVED e o valor mudou, propagar para
+    # qualquer PreInvoiceLostPackage gerado a partir deste claim.
+    if claim.status == "APPROVED":
+        from .models import PreInvoiceLostPackage
+        marker = f"auto:driver_claim:{claim.id}"
+        affected_pfs = []
+        for pkg in PreInvoiceLostPackage.objects.filter(api_source=marker):
+            pkg.valor = claim.amount
+            pkg.save(update_fields=["valor"])
+            affected_pfs.append(pkg.pre_invoice)
+        for pf in {p.id: p for p in affected_pfs}.values():
+            pf.recalcular()
+
+    messages.success(
+        request,
+        f"Reclamação #{claim.id} atualizada para €{claim.amount:.2f}.",
+    )
+    return redirect("claim-detail", claim_id=claim.id)
+
+
+@login_required
+@require_http_methods(["POST"])
 def claim_delete(request, claim_id):
     """Apaga uma reclamação (DriverClaim).
 

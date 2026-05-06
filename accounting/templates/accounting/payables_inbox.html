@@ -31,9 +31,15 @@
       </a>
       <a href="{% url 'accounting:payables_no_pf' %}"
          class="px-4 py-2 text-sm bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-semibold inline-flex items-center gap-2"
-         title="Motoristas que entregaram mas não têm PF emitida">
+         title="Motoristas independentes que entregaram mas não têm PF emitida">
         <i data-lucide="alert-triangle" class="w-4 h-4"></i>
         Sem PF
+      </a>
+      <a href="{% url 'accounting:payables_no_ff' %}"
+         class="px-4 py-2 text-sm bg-violet-600 hover:bg-violet-700 text-white rounded-lg font-semibold inline-flex items-center gap-2"
+         title="Frotas que entregaram mas não têm FleetInvoice emitida">
+        <i data-lucide="building-2" class="w-4 h-4"></i>
+        Sem FF
       </a>
     </div>
   </div>

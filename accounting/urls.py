@@ -20,6 +20,11 @@ urlpatterns = [
         name="payables_no_pf",
     ),
     path(
+        "a-pagar/sem-ff/",
+        views_payables.payables_fleets_without_invoice,
+        name="payables_no_ff",
+    ),
+    path(
         "a-pagar/pf/<int:pf_id>/health/",
         views_payables.payables_pf_health,
         name="payables_pf_health",

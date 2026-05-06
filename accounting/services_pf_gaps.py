@@ -57,16 +57,22 @@ BONUS_30 = Decimal("30.00")
 BONUS_50 = Decimal("50.00")
 
 
-def _collect_driver_logins():
+def _collect_driver_logins(exclude_fleet=True):
     """Retorna driver_logins: dict driver_id → list[(cid, cname)].
 
     Inclui o login do perfil (courier_id_cainiao + apelido) e todos os
     DriverCourierMapping. Pares (cid, cname) duplicados são removidos.
+
+    Se `exclude_fleet=True` (default), motoristas vinculados a uma
+    `EmpresaParceira` são excluídos — a sua PF é gerada via lote da
+    frota (FleetInvoice), não como pré-fatura individual.
     """
     from drivers_app.models import DriverProfile
     from settlements.models import DriverCourierMapping
 
     drivers = DriverProfile.objects.exclude(status="IRREGULAR")
+    if exclude_fleet:
+        drivers = drivers.filter(empresa_parceira__isnull=True)
     drivers_by_id = {d.id: d for d in drivers}
 
     driver_logins = defaultdict(list)
@@ -346,6 +352,208 @@ def find_drivers_without_pf(date_from, date_to, min_gap_days=MIN_GAP_DAYS,
             "bonus_days_count": bonus_days_count,
             "logins_count": len(logins) + (1 if wbs_in else 0),
             "last_pf": last_pf_info,
+        })
+
+    results.sort(key=lambda r: (-r["gap_days"], -r["delivered_count"]))
+    return results
+
+
+# ─────────────────────────────────────────────────────────────────────
+# Detector análogo para FROTAS (EmpresaParceira)
+# ─────────────────────────────────────────────────────────────────────
+
+def find_fleets_without_invoice(date_from, date_to,
+                                min_gap_days=MIN_GAP_DAYS,
+                                include_all=False):
+    """Devolve lista de frotas com entregas no período sem FleetInvoice
+    a cobrir todos os dias activos.
+
+    Espelha a lógica em settlements.views.empresa_lote_emit:
+      - Itera DriverProfile.filter(empresa_parceira=empresa, is_active=True)
+      - Cada driver: bónus per-login per-day (tier independente)
+      - Não modela claims/penalizações (residual aceitável)
+      - Cobertura por FleetInvoice no período
+    """
+    from settlements.models import (
+        CainiaoOperationTask, FleetInvoice, Holiday,
+    )
+    from drivers_app.models import EmpresaParceira, DriverProfile
+    from core.models import Partner
+    from core.finance import resolve_driver_price
+    from django.db.models import Q
+
+    cainiao = Partner.objects.filter(name__iexact="CAINIAO").first()
+    holidays_set = _expand_holidays(date_from, date_to)
+
+    # Empresas activas
+    empresas = list(EmpresaParceira.objects.filter(ativo=True))
+    if not empresas:
+        return []
+
+    # FleetInvoices que sobrepõem o período por empresa
+    ffs_qs = FleetInvoice.objects.filter(
+        periodo_inicio__lte=date_to,
+        periodo_fim__gte=date_from,
+    ).exclude(status="CANCELADO").order_by("empresa_id", "-periodo_fim")
+    ffs_by_empresa = defaultdict(list)
+    for ff in ffs_qs:
+        ffs_by_empresa[ff.empresa_id].append(ff)
+
+    results = []
+    for empresa in empresas:
+        # Drivers activos da frota
+        drivers = list(
+            DriverProfile.objects.filter(
+                empresa_parceira=empresa, is_active=True,
+            )
+        )
+        if not drivers:
+            continue
+
+        active_dates = set()
+        delivered_total = 0
+        base_amount = Decimal("0")
+        bonus_amount = Decimal("0")
+        bonus_days_count = 0
+        drivers_with_deliveries = 0
+
+        for d in drivers:
+            # Logins deste driver
+            logins = []
+            seen_pairs = set()
+
+            def _add(cid, cname):
+                cid = (cid or "").strip()
+                cname = (cname or "").strip()
+                if not cid and not cname:
+                    return
+                key = (cid, cname.lower())
+                if key in seen_pairs:
+                    return
+                seen_pairs.add(key)
+                logins.append((cid, cname))
+
+            _add(d.courier_id_cainiao or "", d.apelido or "")
+            for m in d.courier_mappings.filter(partner=cainiao):
+                _add(m.courier_id or "", m.courier_name or "")
+            if not logins:
+                continue
+
+            base_price, _src = resolve_driver_price(d, cainiao)
+            base_price = base_price or Decimal("0")
+
+            seen_task_ids = set()
+            d_delivered = 0
+            d_active_dates = set()
+
+            for cid, cname in logins:
+                login_q = Q()
+                if cid:
+                    login_q |= Q(courier_id_cainiao=cid)
+                if cname:
+                    login_q |= Q(courier_name=cname)
+                if not login_q:
+                    continue
+                qs = CainiaoOperationTask.objects.filter(
+                    task_date__range=(date_from, date_to),
+                    task_status="Delivered",
+                ).filter(login_q)
+                if seen_task_ids:
+                    qs = qs.exclude(id__in=seen_task_ids)
+                rows = list(qs.values("id", "task_date"))
+                if not rows:
+                    continue
+                seen_task_ids.update(r["id"] for r in rows)
+
+                # Base: aqui não modelamos PackagePriceOverride (a
+                # FleetInvoice usa price uniforme do driver — ver
+                # empresa_lote_emit linha 4570: base = price * n)
+                day_count = defaultdict(int)
+                for r in rows:
+                    base_amount += base_price
+                    day_count[r["task_date"]] += 1
+                    d_delivered += 1
+                    d_active_dates.add(r["task_date"])
+
+                # Bónus per login per day
+                for day, n in day_count.items():
+                    if not _is_bonus_day(day, holidays_set):
+                        continue
+                    b = _bonus_for_login_day(n)
+                    if b > 0:
+                        bonus_amount += b
+                        bonus_days_count += 1
+
+            if d_delivered > 0:
+                drivers_with_deliveries += 1
+                delivered_total += d_delivered
+                active_dates.update(d_active_dates)
+
+        if delivered_total == 0:
+            continue
+
+        # Cobertura por FleetInvoices existentes
+        covered_dates = set()
+        for ff in ffs_by_empresa.get(empresa.id, []):
+            cur = max(ff.periodo_inicio, date_from)
+            end = min(ff.periodo_fim, date_to)
+            while cur <= end:
+                covered_dates.add(cur)
+                cur += timedelta(days=1)
+
+        active_days = len(active_dates)
+        covered_days = len(active_dates & covered_dates)
+        gap_days = active_days - covered_days
+
+        if not include_all and gap_days < min_gap_days:
+            continue
+
+        uncovered = sorted(active_dates - covered_dates)
+        first_uncovered = uncovered[0] if uncovered else None
+        last_uncovered = uncovered[-1] if uncovered else None
+
+        estimated = base_amount + bonus_amount
+
+        # Última FleetInvoice (qualquer)
+        last_ff_info = None
+        if ffs_by_empresa.get(empresa.id):
+            lff = ffs_by_empresa[empresa.id][0]
+            last_ff_info = {
+                "numero": lff.numero,
+                "periodo_fim": lff.periodo_fim.isoformat(),
+                "status": lff.status,
+                "status_display": lff.get_status_display(),
+            }
+        else:
+            any_ff = (
+                FleetInvoice.objects.filter(empresa=empresa)
+                .exclude(status="CANCELADO")
+                .order_by("-periodo_fim").first()
+            )
+            if any_ff:
+                last_ff_info = {
+                    "numero": any_ff.numero,
+                    "periodo_fim": any_ff.periodo_fim.isoformat(),
+                    "status": any_ff.status,
+                    "status_display": any_ff.get_status_display(),
+                }
+
+        results.append({
+            "empresa_id": empresa.id,
+            "empresa_nome": empresa.nome,
+            "n_drivers": len(drivers),
+            "n_drivers_with_deliveries": drivers_with_deliveries,
+            "delivered_count": delivered_total,
+            "active_days": active_days,
+            "covered_days": covered_days,
+            "gap_days": gap_days,
+            "first_uncovered_date": first_uncovered,
+            "last_uncovered_date": last_uncovered,
+            "estimated_amount": estimated,
+            "estimated_base": base_amount,
+            "estimated_bonus": bonus_amount,
+            "bonus_days_count": bonus_days_count,
+            "last_ff": last_ff_info,
         })
 
     results.sort(key=lambda r: (-r["gap_days"], -r["delivered_count"]))

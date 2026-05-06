@@ -1,6 +1,6 @@
 {% extends 'settlements/base.html' %}
 {% load static %}
-{% block title %}Motoristas sem Pré-Fatura{% endblock %}
+{% block title %}Frotas sem Pré-Fatura{% endblock %}
 {% block content %}
 
 <div class="max-w-screen-2xl mx-auto px-4 py-6 space-y-4">
@@ -10,16 +10,16 @@
     <div>
       <h1 class="text-2xl font-bold flex items-center gap-2 dark:text-white">
         <i data-lucide="alert-triangle" class="w-6 h-6 text-amber-500"></i>
-        Motoristas sem Pré-Fatura
+        Frotas sem Pré-Fatura
       </h1>
       <p class="text-sm text-gray-500 dark:text-gray-400">
-        Motoristas que entregaram pacotes no período mas <strong>não têm PF</strong> a cobrir todos os dias activos. Ninguém deve ficar sem ser pago.
+        Empresas parceiras (frotas) cujos motoristas entregaram pacotes mas <strong>não têm FleetInvoice</strong> a cobrir todos os dias activos.
       </p>
     </div>
     <div class="flex items-center gap-2">
-      <a href="{% url 'accounting:payables_no_ff' %}"
-         class="px-4 py-2 text-sm bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 hover:bg-violet-200 rounded-lg font-semibold inline-flex items-center gap-2">
-        <i data-lucide="building-2" class="w-4 h-4"></i> Frotas sem PF
+      <a href="{% url 'accounting:payables_no_pf' %}"
+         class="px-4 py-2 text-sm bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 hover:bg-blue-200 rounded-lg font-semibold inline-flex items-center gap-2">
+        <i data-lucide="users" class="w-4 h-4"></i> Motoristas individuais
       </a>
       <a href="{% url 'accounting:payables_inbox' %}"
          class="px-4 py-2 text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 rounded-lg font-semibold inline-flex items-center gap-2">
@@ -54,7 +54,7 @@
       <label class="ml-3 inline-flex items-center gap-1 text-xs text-gray-700 dark:text-gray-300">
         <input type="checkbox" name="all" value="1" {% if include_all %}checked{% endif %}
                class="w-3 h-3 text-amber-600 rounded">
-        Mostrar todos (sem filtro de gap)
+        Mostrar todas (sem filtro de gap)
       </label>
 
       <button type="submit"
@@ -67,8 +67,8 @@
   {# KPIs #}
   <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
     <div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-amber-300 dark:border-amber-700/50">
-      <div class="text-[10px] uppercase tracking-wider text-amber-700 dark:text-amber-300">Motoristas em falta</div>
-      <div class="text-3xl font-extrabold text-amber-700 dark:text-amber-300 mt-1">{{ kpi_total_drivers }}</div>
+      <div class="text-[10px] uppercase tracking-wider text-amber-700 dark:text-amber-300">Frotas em falta</div>
+      <div class="text-3xl font-extrabold text-amber-700 dark:text-amber-300 mt-1">{{ kpi_total_fleets }}</div>
     </div>
     <div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
       <div class="text-[10px] uppercase tracking-wider text-gray-500">Pacotes não facturados</div>
@@ -90,72 +90,74 @@
       <table class="w-full">
         <thead class="bg-gray-50 dark:bg-gray-900/40">
           <tr>
-            <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Motorista</th>
+            <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Frota</th>
+            <th class="px-3 py-2 text-center text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Drivers</th>
             <th class="px-3 py-2 text-center text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Entregas</th>
             <th class="px-3 py-2 text-center text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Dias activos</th>
-            <th class="px-3 py-2 text-center text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Sem PF</th>
+            <th class="px-3 py-2 text-center text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Sem FF</th>
             <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Gap</th>
             <th class="px-3 py-2 text-right text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">€ Estimado</th>
-            <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Última PF</th>
+            <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Última FF</th>
             <th class="px-3 py-2 text-right text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Acções</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-          {% for d in drivers %}
+          {% for f in fleets %}
           <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
             <td class="px-3 py-3">
-              <a href="/driversapp/portal/{{ d.driver_id }}/"
+              <a href="/empresa/{{ f.empresa_id }}/dashboard/"
                  class="font-semibold text-gray-900 dark:text-white hover:text-indigo-600">
-                {{ d.driver_nome }}
+                {{ f.empresa_nome }}
               </a>
-              <div class="text-[11px] text-gray-500">
-                {{ d.driver_apelido|default:"—" }} · <span class="font-mono">{{ d.courier_id_cainiao|default:"sem courier" }}</span>
-              </div>
+              <div class="text-[11px] text-gray-500">ID frota #{{ f.empresa_id }}</div>
             </td>
-            <td class="px-3 py-3 text-center font-semibold text-gray-900 dark:text-white">{{ d.delivered_count }}</td>
-            <td class="px-3 py-3 text-center text-sm text-gray-700 dark:text-gray-300">{{ d.active_days }}</td>
-            <td class="px-3 py-3 text-center text-sm text-rose-600 font-bold">{{ d.gap_days }}</td>
+            <td class="px-3 py-3 text-center text-sm text-gray-700 dark:text-gray-300">
+              {{ f.n_drivers_with_deliveries }}<span class="text-gray-400">/{{ f.n_drivers }}</span>
+            </td>
+            <td class="px-3 py-3 text-center font-semibold text-gray-900 dark:text-white">{{ f.delivered_count }}</td>
+            <td class="px-3 py-3 text-center text-sm text-gray-700 dark:text-gray-300">{{ f.active_days }}</td>
+            <td class="px-3 py-3 text-center text-sm text-rose-600 font-bold">{{ f.gap_days }}</td>
             <td class="px-3 py-3 text-xs text-gray-500">
-              {% if d.first_uncovered_date %}
-                {{ d.first_uncovered_date|date:"d/m" }} → {{ d.last_uncovered_date|date:"d/m" }}
+              {% if f.first_uncovered_date %}
+                {{ f.first_uncovered_date|date:"d/m" }} → {{ f.last_uncovered_date|date:"d/m" }}
               {% else %}—{% endif %}
             </td>
             <td class="px-3 py-3 text-right">
-              <span class="font-extrabold text-emerald-600 dark:text-emerald-400">€ {{ d.estimated_amount|floatformat:2 }}</span>
-              {% if d.estimated_bonus %}
+              <span class="font-extrabold text-emerald-600 dark:text-emerald-400">€ {{ f.estimated_amount|floatformat:2 }}</span>
+              {% if f.estimated_bonus %}
                 <div class="text-[10px] text-gray-500 mt-0.5">
-                  Base €{{ d.estimated_base|floatformat:0 }}
-                  <span class="text-amber-600">+ Bónus €{{ d.estimated_bonus|floatformat:0 }}</span>
-                  <span class="text-gray-400">({{ d.bonus_days_count }} bónus{{ d.bonus_days_count|pluralize }} · {{ d.logins_count }} login{{ d.logins_count|pluralize:"s" }})</span>
+                  Base €{{ f.estimated_base|floatformat:0 }}
+                  <span class="text-amber-600">+ Bónus €{{ f.estimated_bonus|floatformat:0 }}</span>
+                  <span class="text-gray-400">({{ f.bonus_days_count }} bónus{{ f.bonus_days_count|pluralize }})</span>
                 </div>
               {% else %}
-                <div class="text-[10px] text-gray-500 mt-0.5">base · sem bónus · {{ d.logins_count }} login{{ d.logins_count|pluralize:"s" }}</div>
+                <div class="text-[10px] text-gray-500 mt-0.5">base · sem bónus</div>
               {% endif %}
             </td>
             <td class="px-3 py-3 text-xs">
-              {% if d.last_pf %}
-                <span class="font-mono text-gray-700 dark:text-gray-300">{{ d.last_pf.numero }}</span>
+              {% if f.last_ff %}
+                <span class="font-mono text-gray-700 dark:text-gray-300">{{ f.last_ff.numero }}</span>
                 <span class="block text-[10px] text-gray-500">
-                  até {{ d.last_pf.periodo_fim|slice:":10" }} · {{ d.last_pf.status_display }}
+                  até {{ f.last_ff.periodo_fim|slice:":10" }} · {{ f.last_ff.status_display }}
                 </span>
               {% else %}
                 <span class="italic text-rose-500">Nunca emitida</span>
               {% endif %}
             </td>
             <td class="px-3 py-3 text-right whitespace-nowrap">
-              <a href="/driversapp/portal/{{ d.driver_id }}/faturas/?period=custom&date_from={{ d.first_uncovered_date|date:'Y-m-d' }}&date_to={{ d.last_uncovered_date|date:'Y-m-d' }}"
-                 target="_blank" title="Abrir Faturas com período pré-preenchido"
+              <a href="/empresa/{{ f.empresa_id }}/dashboard/?from={{ f.first_uncovered_date|date:'Y-m-d' }}&to={{ f.last_uncovered_date|date:'Y-m-d' }}"
+                 target="_blank" title="Abrir frota com período pré-preenchido"
                  class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold inline-flex items-center gap-1">
-                <i data-lucide="receipt" class="w-3 h-3"></i> Emitir PF
+                <i data-lucide="receipt" class="w-3 h-3"></i> Emitir FF
               </a>
             </td>
           </tr>
           {% empty %}
-          <tr><td colspan="8" class="px-3 py-12 text-center">
+          <tr><td colspan="9" class="px-3 py-12 text-center">
             <i data-lucide="check-circle-2" class="w-10 h-10 text-emerald-400 mx-auto mb-2"></i>
-            <p class="text-sm font-semibold text-gray-700 dark:text-gray-300">Nenhum motorista em falta!</p>
+            <p class="text-sm font-semibold text-gray-700 dark:text-gray-300">Nenhuma frota em falta!</p>
             <p class="text-xs text-gray-500 mt-1">
-              Todos os motoristas com entregas no período {{ date_from|date:"d/m/Y" }} → {{ date_to|date:"d/m/Y" }} têm PF emitida (com gap < {{ min_gap }} dias).
+              Todas as frotas com entregas no período {{ date_from|date:"d/m/Y" }} → {{ date_to|date:"d/m/Y" }} têm FleetInvoice emitida (com gap < {{ min_gap }} dias).
             </p>
           </td></tr>
           {% endfor %}

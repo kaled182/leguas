@@ -3,6 +3,7 @@
 from . import (
     cainiao_views, forecast_plan_views, holiday_views, plan_api,
     views, views_cash_entries, views_shareholder,
+    views_cainiao_billing,
 )
 
 urlpatterns = [
@@ -41,6 +42,22 @@ urlpatterns = [
         "invoices/<int:invoice_id>/pdf/",
         views.invoice_download_pdf,
         name="invoice-pdf",
+    ),
+    # Importação Cainiao Billing (XLSX)
+    path(
+        "invoices/cainiao/upload/",
+        views_cainiao_billing.cainiao_billing_upload,
+        name="cainiao-billing-upload",
+    ),
+    path(
+        "invoices/cainiao/<int:import_id>/",
+        views_cainiao_billing.cainiao_billing_detail,
+        name="cainiao-billing-detail",
+    ),
+    path(
+        "invoices/cainiao/<int:import_id>/delete/",
+        views_cainiao_billing.cainiao_billing_delete,
+        name="cainiao-billing-delete",
     ),
     # Settlements (Liquidações de Motoristas — vista global de PFs)
     path("settlements/", views.settlement_list, name="settlement-list"),

@@ -6,7 +6,25 @@
 <div class="max-w-7xl mx-auto space-y-8">
   <!-- Header -->
   <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 fade-in">
-    {% include 'settlements/partials/financial_header.html' with page_title="Faturas de Parceiros" page_subtitle="Gestão e acompanhamento de faturas emitidas para parceiros" icon="file-text" %}
+    <div class="flex items-start justify-between flex-wrap gap-3">
+      <div class="flex-1">
+        {% include 'settlements/partials/financial_header.html' with page_title="Faturas de Parceiros" page_subtitle="Gestão e acompanhamento de faturas emitidas para parceiros" icon="file-text" %}
+      </div>
+      <form method="post" enctype="multipart/form-data"
+            action="{% url 'cainiao-billing-upload' %}"
+            class="flex items-center gap-2">
+        {% csrf_token %}
+        <input type="file" name="file" accept=".xlsx" required
+               id="cainiao-billing-file"
+               class="hidden"
+               onchange="this.form.submit()">
+        <label for="cainiao-billing-file"
+               class="px-4 py-2.5 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white rounded-lg font-medium shadow-sm cursor-pointer inline-flex items-center gap-2">
+          <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+          Importar Pré-fatura Cainiao
+        </label>
+      </form>
+    </div>
   </div>
   
   <!-- Filtros -->

@@ -24,6 +24,16 @@ urlpatterns = [
         views_payables.payables_pf_health,
         name="payables_pf_health",
     ),
+    path(
+        "a-pagar/calendario/",
+        views_payables.payables_calendar,
+        name="payables_calendar",
+    ),
+    path(
+        "a-pagar/forecast/",
+        views_payables.payables_forecast,
+        name="payables_forecast",
+    ),
     # URLs para Receitas
     path("receitas/", views.revenue_list, name="revenue_list"),
     path("receitas/nova/", views.revenue_create, name="revenue_create"),

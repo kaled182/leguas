@@ -1,0 +1,85 @@
+{% extends 'settlements/base.html' %}
+{% load static %}
+{% block title %}Calendário de Pagamentos{% endblock %}
+{% block content %}
+<div class="max-w-screen-2xl mx-auto px-4 py-6 space-y-4">
+
+  <div class="flex items-center justify-between flex-wrap gap-3">
+    <div>
+      <h1 class="text-2xl font-bold flex items-center gap-2 dark:text-white">
+        <i data-lucide="calendar" class="w-6 h-6 text-emerald-500"></i>
+        Calendário de Pagamentos
+      </h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400">
+        Vencimentos por dia · {{ month_count }} item{{ month_count|pluralize:"s" }} · <strong>€ {{ month_total|floatformat:2 }}</strong> este mês
+      </p>
+    </div>
+    <a href="{% url 'accounting:payables_inbox' %}"
+       class="px-4 py-2 text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 rounded-lg font-semibold inline-flex items-center gap-2">
+      <i data-lucide="inbox" class="w-4 h-4"></i> A Pagar
+    </a>
+  </div>
+
+  {# Navigation #}
+  <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 flex items-center justify-between">
+    <a href="?year={{ prev_year }}&month={{ prev_month }}"
+       class="px-3 py-1.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 rounded-lg text-sm font-semibold inline-flex items-center gap-1">
+      <i data-lucide="chevron-left" class="w-4 h-4"></i> Anterior
+    </a>
+    <h2 class="text-lg font-bold text-gray-900 dark:text-white">{{ month_label }}</h2>
+    <a href="?year={{ next_year }}&month={{ next_month }}"
+       class="px-3 py-1.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 rounded-lg text-sm font-semibold inline-flex items-center gap-1">
+      Seguinte <i data-lucide="chevron-right" class="w-4 h-4"></i>
+    </a>
+  </div>
+
+  {# Calendário grid #}
+  <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <div class="grid grid-cols-7 bg-gray-50 dark:bg-gray-900/40">
+      {% for d in 'SegTerQuaQuiSexSábDom'|make_list %}{% endfor %}
+      {% for label in 'Seg,Ter,Qua,Qui,Sex,Sáb,Dom'|cut:' '|cut:'_'|make_list %}{% endfor %}
+      <div class="px-3 py-2 text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Seg</div>
+      <div class="px-3 py-2 text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Ter</div>
+      <div class="px-3 py-2 text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Qua</div>
+      <div class="px-3 py-2 text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Qui</div>
+      <div class="px-3 py-2 text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Sex</div>
+      <div class="px-3 py-2 text-xs font-semibold text-rose-600 uppercase">Sáb</div>
+      <div class="px-3 py-2 text-xs font-semibold text-rose-600 uppercase">Dom</div>
+    </div>
+    {% for week in weeks %}
+    <div class="grid grid-cols-7 border-t border-gray-100 dark:border-gray-700">
+      {% for cell in week %}
+      <div class="min-h-24 p-2 border-r border-gray-100 dark:border-gray-700 last:border-r-0
+        {% if cell.is_today %}bg-emerald-50 dark:bg-emerald-900/10{% endif %}
+        {% if not cell %}bg-gray-50 dark:bg-gray-900/20{% endif %}">
+        {% if cell %}
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-xs font-bold {% if cell.is_today %}text-emerald-600{% else %}text-gray-700 dark:text-gray-300{% endif %}">{{ cell.day }}</span>
+            {% if cell.total %}
+            <span class="text-[10px] font-bold text-gray-500" title="Total do dia">€{{ cell.total|floatformat:0 }}</span>
+            {% endif %}
+          </div>
+          {% for it in cell.items|slice:":3" %}
+          <div class="text-[10px] mb-0.5 px-1.5 py-0.5 rounded bg-{{ it.color }}-100 dark:bg-{{ it.color }}-900/40 text-{{ it.color }}-700 dark:text-{{ it.color }}-300 truncate" title="{{ it.label }} — €{{ it.amount|floatformat:2 }}">
+            <span class="font-semibold">€{{ it.amount|floatformat:0 }}</span> · {{ it.label|truncatechars:18 }}
+          </div>
+          {% endfor %}
+          {% if cell.items|length > 3 %}
+          <div class="text-[10px] text-gray-500 italic">+{{ cell.items|length|add:"-3" }} mais</div>
+          {% endif %}
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% endfor %}
+  </div>
+
+  {# Legenda #}
+  <div class="flex flex-wrap gap-3 text-xs text-gray-600 dark:text-gray-400">
+    <div class="flex items-center gap-1"><span class="w-3 h-3 bg-blue-400 rounded"></span> PF Motorista</div>
+    <div class="flex items-center gap-1"><span class="w-3 h-3 bg-violet-400 rounded"></span> PF Frota</div>
+    <div class="flex items-center gap-1"><span class="w-3 h-3 bg-amber-400 rounded"></span> Reembolso Sócio</div>
+    <div class="flex items-center gap-1"><span class="w-3 h-3 bg-rose-400 rounded"></span> Conta a Pagar</div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,104 @@
+{% extends 'settlements/base.html' %}
+{% load static %}
+{% block title %}Forecast {{ days }} dias{% endblock %}
+{% block content %}
+<div class="max-w-screen-2xl mx-auto px-4 py-6 space-y-4">
+
+  <div class="flex items-center justify-between flex-wrap gap-3">
+    <div>
+      <h1 class="text-2xl font-bold flex items-center gap-2 dark:text-white">
+        <i data-lucide="trending-up" class="w-6 h-6 text-emerald-500"></i>
+        Forecast de Pagamentos
+      </h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400">
+        Previsão de necessidade de caixa nos próximos <strong>{{ days }} dias</strong> ({{ today|date:"d/m" }} → {{ horizon|date:"d/m/Y" }})
+      </p>
+    </div>
+    <div class="flex gap-1">
+      <a href="?days=7" class="px-3 py-1.5 rounded-lg text-xs font-semibold {% if days == 7 %}bg-emerald-600 text-white{% else %}bg-gray-100 dark:bg-gray-700{% endif %}">7d</a>
+      <a href="?days=15" class="px-3 py-1.5 rounded-lg text-xs font-semibold {% if days == 15 %}bg-emerald-600 text-white{% else %}bg-gray-100 dark:bg-gray-700{% endif %}">15d</a>
+      <a href="?days=30" class="px-3 py-1.5 rounded-lg text-xs font-semibold {% if days == 30 %}bg-emerald-600 text-white{% else %}bg-gray-100 dark:bg-gray-700{% endif %}">30d</a>
+      <a href="?days=60" class="px-3 py-1.5 rounded-lg text-xs font-semibold {% if days == 60 %}bg-emerald-600 text-white{% else %}bg-gray-100 dark:bg-gray-700{% endif %}">60d</a>
+    </div>
+  </div>
+
+  {# KPIs #}
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+    <div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-emerald-300 dark:border-emerald-700/50">
+      <div class="text-[10px] uppercase font-semibold text-emerald-700 dark:text-emerald-300">Saldo necessário</div>
+      <div class="text-3xl font-extrabold text-emerald-700 dark:text-emerald-300 mt-1">€ {{ total_all|floatformat:2 }}</div>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-blue-200 dark:border-blue-700/50">
+      <div class="text-[10px] uppercase font-semibold text-blue-700 dark:text-blue-300">Confirmado</div>
+      <div class="text-3xl font-extrabold text-blue-700 dark:text-blue-300 mt-1">€ {{ total_high|floatformat:2 }}</div>
+      <div class="text-[10px] text-blue-600">PFs/Bills emitidos</div>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+      <div class="text-[10px] uppercase font-semibold text-gray-700 dark:text-gray-300">Estimado</div>
+      <div class="text-3xl font-extrabold text-gray-600 dark:text-gray-400 mt-1">€ {{ total_low|floatformat:2 }}</div>
+      <div class="text-[10px] text-gray-500">extrapolação histórica</div>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-amber-200 dark:border-amber-700/50">
+      <div class="text-[10px] uppercase font-semibold text-amber-700 dark:text-amber-300">Adiantamentos pendentes</div>
+      <div class="text-3xl font-extrabold text-amber-700 dark:text-amber-300 mt-1">€ {{ advances_pending_total|floatformat:2 }}</div>
+      <div class="text-[10px] text-amber-600">{{ advances_pending_count }} motorista{{ advances_pending_count|pluralize:"s" }}</div>
+    </div>
+  </div>
+
+  {# Tabela #}
+  <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <table class="w-full">
+      <thead class="bg-gray-50 dark:bg-gray-900/40">
+        <tr>
+          <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Vencimento</th>
+          <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Tipo</th>
+          <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Descrição</th>
+          <th class="px-3 py-2 text-center text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Certeza</th>
+          <th class="px-3 py-2 text-right text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Valor</th>
+          <th class="px-3 py-2 w-12"></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+        {% for r in rows %}
+        <tr class="{% if r.certainty == 'low' %}bg-gray-50/50 dark:bg-gray-900/20{% endif %}">
+          <td class="px-3 py-2 text-sm">
+            <span class="font-semibold {% if r.days_to_due <= 3 %}text-rose-600{% elif r.days_to_due <= 7 %}text-amber-600{% else %}text-gray-700 dark:text-gray-300{% endif %}">
+              {{ r.due_date|date:"d/m/Y" }}
+            </span>
+            <span class="block text-[10px] text-gray-500">em {{ r.days_to_due }}d</span>
+          </td>
+          <td class="px-3 py-2">
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-{{ r.type_color }}-100 dark:bg-{{ r.type_color }}-900/40 text-{{ r.type_color }}-700 dark:text-{{ r.type_color }}-300">
+              {{ r.type_label }}
+            </span>
+          </td>
+          <td class="px-3 py-2 text-sm text-gray-700 dark:text-gray-300">{{ r.desc }}</td>
+          <td class="px-3 py-2 text-center">
+            {% if r.certainty == 'high' %}
+              <span class="text-xs font-semibold text-blue-600">Confirmado</span>
+            {% else %}
+              <span class="text-xs font-semibold text-gray-500 italic">Estimado</span>
+            {% endif %}
+          </td>
+          <td class="px-3 py-2 text-right">
+            <span class="font-bold {% if r.certainty == 'high' %}text-gray-900 dark:text-white{% else %}text-gray-500{% endif %}">€ {{ r.amount|floatformat:2 }}</span>
+          </td>
+          <td class="px-3 py-2 text-right">
+            {% if r.source_url %}
+            <a href="{{ r.source_url }}" target="_blank" class="text-gray-400 hover:text-indigo-600">
+              <i data-lucide="external-link" class="w-4 h-4"></i>
+            </a>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="px-3 py-12 text-center">
+          <i data-lucide="check-circle-2" class="w-10 h-10 text-emerald-400 mx-auto mb-2"></i>
+          <p class="text-sm text-gray-500">Nenhum pagamento previsto nos próximos {{ days }} dias.</p>
+        </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

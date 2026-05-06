@@ -26,6 +26,51 @@ from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
 
+def _notify_driver_payment_async(pf):
+    """Envia WhatsApp ao motorista a confirmar pagamento da PF.
+
+    Best-effort: erros loggados mas não propagados (não impede o save).
+    Usa o helper system_config.whatsapp_helper.WhatsAppAPI.
+    """
+    import logging
+    log = logging.getLogger(__name__)
+    try:
+        from system_config.whatsapp_helper import WhatsAppWPPConnectAPI
+        from system_config.models import SystemConfiguration
+    except ImportError:
+        return
+    phone = (pf.driver.telefone or "").strip()
+    if not phone or phone == "000000000":
+        return
+    try:
+        api = WhatsAppWPPConnectAPI.from_config()
+    except Exception as e:
+        log.warning("WhatsApp API not configured: %s", e)
+        return
+    try:
+        cfg = SystemConfiguration.get_config()
+        empresa = cfg.company_name or "Léguas Franzinas"
+    except Exception:
+        empresa = "Léguas Franzinas"
+    msg = (
+        f"Olá {pf.driver.nome_completo.split()[0]} 👋\n\n"
+        f"A tua pré-fatura *{pf.numero}* "
+        f"({pf.periodo_inicio.strftime('%d/%m')} → "
+        f"{pf.periodo_fim.strftime('%d/%m/%Y')}) "
+        f"foi paga.\n\n"
+        f"💰 Valor: *€{pf.total_a_receber:.2f}*\n"
+        f"📅 Data: {pf.data_pagamento.strftime('%d/%m/%Y') if pf.data_pagamento else '—'}\n"
+    )
+    if pf.referencia_pagamento:
+        msg += f"📋 Referência: {pf.referencia_pagamento}\n"
+    msg += f"\n_{empresa}_"
+    try:
+        api.send_text(phone, msg)
+        log.info("WhatsApp PF-paid notification sent to %s", phone)
+    except Exception as e:
+        log.warning("Failed to send WhatsApp notification: %s", e)
+
+
 @dataclass
 class PayableRow:
     entity_type: str          # "pre_invoice" | "fleet" | "shareholder" | "bill"
@@ -184,6 +229,246 @@ def _row_bill(bill):
         payable=payable,
         block_reason=block,
     )
+
+
+@login_required
+def payables_forecast(request):
+    """Previsão de necessidade de caixa nos próximos N dias.
+
+    Inclui:
+    - PFs já emitidas com vencimento no horizonte
+    - Bills pendentes com vencimento no horizonte
+    - PFs estimadas baseadas em entregas em curso desde a última PF
+      do motorista (heuristic: extrapola valor proporcional ao período)
+    - Adiantamentos PENDENTE (devem ser cobrados na próxima PF)
+    """
+    from datetime import date as _date
+    from drivers_app.models import EmpresaParceiraLancamento
+    from settlements.models import (
+        DriverPreInvoice, ThirdPartyReimbursement, PreInvoiceAdvance,
+    )
+    from .models import Bill
+
+    today = timezone.now().date()
+    try:
+        days = int(request.GET.get("days", 30))
+    except (ValueError, TypeError):
+        days = 30
+    horizon = today + timedelta(days=days)
+
+    rows = []
+
+    def _row(due, type_label, type_color, desc, amount, certainty, source_url=""):
+        rows.append({
+            "due_date": due, "type_label": type_label,
+            "type_color": type_color, "desc": desc,
+            "amount": float(amount or 0), "certainty": certainty,
+            "days_to_due": (due - today).days,
+            "source_url": source_url,
+        })
+
+    # 1. PFs emitidas pendentes (alta certeza)
+    for pf in DriverPreInvoice.objects.filter(
+        periodo_fim__range=(today, horizon),
+        status__in=["CALCULADO", "APROVADO", "PENDENTE"],
+    ).select_related("driver"):
+        _row(pf.periodo_fim, "PF Motorista", "blue",
+             f"{pf.numero} · {pf.driver.nome_completo}",
+             pf.total_a_receber, "high",
+             f"/driversapp/portal/{pf.driver_id}/pf/{pf.id}/")
+
+    # 2. Frotas
+    for lanc in EmpresaParceiraLancamento.objects.filter(
+        periodo_fim__range=(today, horizon),
+        status__in=["RASCUNHO", "APROVADO", "PENDENTE"],
+    ).select_related("empresa"):
+        _row(lanc.periodo_fim, "PF Frota", "violet",
+             f"FRT-{lanc.id:04d} · {lanc.empresa.nome}",
+             lanc.total_a_receber, "high")
+
+    # 3. Reembolsos a sócios (data + 30 dias)
+    for r in ThirdPartyReimbursement.objects.filter(status="PENDENTE"):
+        due = r.data_emprestimo + timedelta(days=30)
+        if today <= due <= horizon:
+            _row(due, "Sócio", "amber",
+                 f"REE-{r.id:04d} · {r.lender.nome}",
+                 r.valor, "high")
+
+    # 4. Bills pendentes
+    for b in Bill.objects.filter(
+        due_date__range=(today, horizon),
+        status__in=["PENDING", "OVERDUE", "AWAITING"],
+    ):
+        _row(b.due_date, "Conta", "rose",
+             f"CNT-{b.id:04d} · {b.supplier}",
+             b.amount_total, "high",
+             f"/accounting/contas-a-pagar/{b.id}/")
+
+    # 5. PFs estimadas (baixa certeza) — drivers sem PF actual mas com
+    #    histórico de pagamento mensal
+    last_pf_per_driver = {}
+    for pf in (
+        DriverPreInvoice.objects
+        .filter(status__in=["PAGO", "APROVADO", "PENDENTE"])
+        .order_by("driver_id", "-periodo_fim")
+        .select_related("driver")
+    ):
+        if pf.driver_id not in last_pf_per_driver:
+            last_pf_per_driver[pf.driver_id] = pf
+
+    for driver_id, last_pf in last_pf_per_driver.items():
+        gap_days = (today - last_pf.periodo_fim).days
+        if gap_days < 7:
+            continue  # PF recente, esperar
+        if gap_days > 90:
+            continue  # motorista inactivo, não estimar
+        # Estima nova PF baseada no valor médio diário
+        prev_period_days = (last_pf.periodo_fim - last_pf.periodo_inicio).days + 1
+        if prev_period_days <= 0:
+            continue
+        avg_daily = float(last_pf.total_a_receber or 0) / prev_period_days
+        next_period_days = min(gap_days, 30)
+        estimated = avg_daily * next_period_days
+        if estimated < 50:
+            continue  # ignore tiny estimates
+        # Vencimento estimado: hoje + 7 dias
+        due = today + timedelta(days=7)
+        if due > horizon:
+            continue
+        _row(due, "PF Estimada", "gray",
+             f"~ {last_pf.driver.nome_completo} ({next_period_days}d)",
+             estimated, "low",
+             f"/driversapp/portal/{driver_id}/faturas/")
+
+    # 6. Total de adiantamentos pendentes (por motorista)
+    advance_by_driver = {}
+    for adv in PreInvoiceAdvance.objects.filter(status="PENDENTE"):
+        advance_by_driver.setdefault(adv.driver_id, Decimal("0"))
+        advance_by_driver[adv.driver_id] += adv.valor or Decimal("0")
+    advances_total = sum(advance_by_driver.values())
+
+    # Ordenar por data
+    rows.sort(key=lambda r: r["due_date"])
+
+    # KPIs
+    total_high = sum(r["amount"] for r in rows if r["certainty"] == "high")
+    total_low = sum(r["amount"] for r in rows if r["certainty"] == "low")
+
+    return render(request, "accounting/payables_forecast.html", {
+        "rows": rows, "today": today, "horizon": horizon, "days": days,
+        "total_high": total_high, "total_low": total_low,
+        "total_all": total_high + total_low,
+        "advances_pending_count": sum(1 for _ in advance_by_driver),
+        "advances_pending_total": float(advances_total),
+    })
+
+
+@login_required
+def payables_calendar(request):
+    """Calendário mensal de pagamentos a fazer."""
+    from calendar import monthrange
+    from datetime import date as _date
+    from drivers_app.models import EmpresaParceiraLancamento
+    from settlements.models import DriverPreInvoice, ThirdPartyReimbursement
+    from .models import Bill
+
+    today = timezone.now().date()
+    try:
+        year = int(request.GET.get("year", today.year))
+        month = int(request.GET.get("month", today.month))
+    except (ValueError, TypeError):
+        year, month = today.year, today.month
+
+    first_day = _date(year, month, 1)
+    last_day = _date(year, month, monthrange(year, month)[1])
+
+    # Recolhe items com vencimento neste mês
+    items_by_day = {}
+    totals_by_day = {}
+
+    def _add(day, label, amount, color):
+        items_by_day.setdefault(day, []).append({
+            "label": label, "amount": float(amount or 0), "color": color,
+        })
+        totals_by_day[day] = totals_by_day.get(day, 0) + float(amount or 0)
+
+    # PFs (vencem no periodo_fim)
+    for pf in DriverPreInvoice.objects.filter(
+        periodo_fim__range=(first_day, last_day),
+        status__in=["CALCULADO", "APROVADO", "PENDENTE"],
+    ).select_related("driver"):
+        _add(pf.periodo_fim.day,
+             f"{pf.numero} · {pf.driver.nome_completo}",
+             pf.total_a_receber, "blue")
+
+    # Frotas
+    for lanc in EmpresaParceiraLancamento.objects.filter(
+        periodo_fim__range=(first_day, last_day),
+        status__in=["RASCUNHO", "APROVADO", "PENDENTE"],
+    ).select_related("empresa"):
+        _add(lanc.periodo_fim.day,
+             f"FRT-{lanc.id:04d} · {lanc.empresa.nome}",
+             lanc.total_a_receber, "violet")
+
+    # Sócios (data_emprestimo + 30d)
+    for r in ThirdPartyReimbursement.objects.filter(status="PENDENTE"):
+        due = r.data_emprestimo + timedelta(days=30)
+        if first_day <= due <= last_day:
+            _add(due.day,
+                 f"REE-{r.id:04d} · {r.lender.nome}",
+                 r.valor, "amber")
+
+    # Bills
+    for b in Bill.objects.filter(
+        due_date__range=(first_day, last_day),
+        status__in=["PENDING", "OVERDUE", "AWAITING"],
+    ):
+        _add(b.due_date.day,
+             f"CNT-{b.id:04d} · {b.supplier}",
+             b.amount_total, "rose")
+
+    # Construir grid de calendário (semanas)
+    first_weekday = first_day.weekday()  # 0=Mon
+    days_in_month = (last_day - first_day).days + 1
+    cells = []
+    # padding inicial
+    for _ in range(first_weekday):
+        cells.append(None)
+    for d in range(1, days_in_month + 1):
+        cells.append({
+            "day": d,
+            "items": items_by_day.get(d, []),
+            "total": totals_by_day.get(d, 0),
+            "is_today": (year == today.year and month == today.month and d == today.day),
+        })
+    # padding final até completar 7×N
+    while len(cells) % 7 != 0:
+        cells.append(None)
+    weeks = [cells[i:i+7] for i in range(0, len(cells), 7)]
+
+    # Navegação prev/next
+    if month == 1:
+        prev_year, prev_month = year - 1, 12
+    else:
+        prev_year, prev_month = year, month - 1
+    if month == 12:
+        next_year, next_month = year + 1, 1
+    else:
+        next_year, next_month = year, month + 1
+
+    month_total = sum(totals_by_day.values())
+    month_count = sum(len(v) for v in items_by_day.values())
+
+    PT_MONTHS = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+                 "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"]
+    return render(request, "accounting/payables_calendar.html", {
+        "year": year, "month": month,
+        "month_label": f"{PT_MONTHS[month - 1]} {year}",
+        "weeks": weeks,
+        "month_total": month_total, "month_count": month_count,
+        "prev_year": prev_year, "prev_month": prev_month,
+        "next_year": next_year, "next_month": next_month,
+    })
 
 
 @login_required
@@ -412,6 +697,8 @@ def payables_mark_paid(request):
         if comprovante:
             pf.comprovante_pagamento = comprovante
         pf.save()
+        # Notifica motorista via WhatsApp (best-effort, não bloqueia)
+        _notify_driver_payment_async(pf)
         return JsonResponse({"success": True, "numero": pf.numero})
 
     if entity_type == "fleet":

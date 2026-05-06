@@ -165,14 +165,18 @@ def cainiao_billing_detail(request, import_id):
 
     # ── Tab: Reconciliação ───────────────────────────────────────────
     elif active_tab == "reconciliation":
-        from .services_cainiao_billing import diagnose_delivered_no_billing
+        from .services_cainiao_billing import (
+            diagnose_delivered_no_billing, reconciliation_math,
+        )
         recon = reconciliation_for_import(session)
         diagnosis = diagnose_delivered_no_billing(session)
+        recon_math = reconciliation_math(session)
         # Paginar as duas listas grandes
         from django.core.paginator import Paginator as P
         ctx.update({
             "recon": recon,
             "diagnosis": diagnosis,
+            "recon_math": recon_math,
             "paid_no_task_page": P(
                 recon["paid_no_task"], 50,
             ).get_page(request.GET.get("p1", 1)),

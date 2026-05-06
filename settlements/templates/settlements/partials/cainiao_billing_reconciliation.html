@@ -21,6 +21,83 @@
     </div>
   </div>
 
+  {# Matemática completa em distinct waybills #}
+  {% if recon_math %}
+  <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <div class="px-4 py-3 bg-gray-50 dark:bg-gray-900/40 border-b border-gray-200 dark:border-gray-700">
+      <h3 class="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+        <i data-lucide="calculator" class="w-4 h-4 text-blue-500"></i>
+        Conta exacta (distinct waybills)
+      </h3>
+      <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+        Os KPIs do topo misturam contagens de lados diferentes (billing-rows vs task-rows). Aqui a conta correcta em <strong>waybills únicos</strong>.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-gray-200 dark:divide-gray-700">
+      {# Lado Billing #}
+      <div class="p-4 space-y-2">
+        <div class="text-[10px] uppercase font-bold text-gray-500">Lado Billing (XLSX Cainiao)</div>
+        <div class="flex items-center justify-between text-sm">
+          <span class="text-gray-700 dark:text-gray-300">Linhas de envio fee no XLSX</span>
+          <span class="font-mono font-bold">{{ recon_math.n_billing_lines_envio }}</span>
+        </div>
+        <div class="flex items-center justify-between text-sm pl-4">
+          <span class="text-gray-500">↳ Waybills <em>únicos</em></span>
+          <span class="font-mono font-bold text-emerald-600">{{ recon_math.n_distinct_billed }}</span>
+        </div>
+        {% if recon_math.n_duplicate_billing_rows %}
+          <div class="flex items-center justify-between text-sm pl-4">
+            <span class="text-amber-600">↳ Linhas duplicadas (mesmo waybill em billing_ids diferentes)</span>
+            <span class="font-mono font-bold text-amber-600">{{ recon_math.n_duplicate_billing_rows }}</span>
+          </div>
+        {% endif %}
+      </div>
+
+      {# Lado Tasks #}
+      <div class="p-4 space-y-2">
+        <div class="text-[10px] uppercase font-bold text-gray-500">Lado Tasks (CainiaoOperationTask)</div>
+        <div class="flex items-center justify-between text-sm">
+          <span class="text-gray-700 dark:text-gray-300">Tasks Delivered no período</span>
+          <span class="font-mono font-bold">{{ recon_math.n_delivered_rows }}</span>
+        </div>
+        <div class="flex items-center justify-between text-sm pl-4">
+          <span class="text-gray-500">↳ Waybills <em>únicos</em></span>
+          <span class="font-mono font-bold text-emerald-600">{{ recon_math.n_distinct_delivered }}</span>
+        </div>
+        {% if recon_math.n_duplicate_delivery_dates %}
+          <div class="flex items-center justify-between text-sm pl-4">
+            <span class="text-orange-600">↳ Mesmo waybill Delivered em datas diferentes (re-tentativas)</span>
+            <span class="font-mono font-bold text-orange-600">{{ recon_math.n_duplicate_delivery_dates }}</span>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    {# Cruzamento #}
+    <div class="px-4 py-3 bg-blue-50 dark:bg-blue-900/10 border-t border-blue-200 dark:border-blue-700/40">
+      <div class="text-[10px] uppercase font-bold text-blue-700 dark:text-blue-300 mb-2">Cruzamento (waybills únicos)</div>
+      <div class="grid grid-cols-3 gap-3 text-sm">
+        <div class="text-center">
+          <div class="text-xs text-emerald-700 dark:text-emerald-400 font-semibold">Em ambos lados</div>
+          <div class="text-2xl font-extrabold text-emerald-700 dark:text-emerald-300">{{ recon_math.n_in_both }}</div>
+          <div class="text-[10px] text-gray-500">facturados E entregues</div>
+        </div>
+        <div class="text-center">
+          <div class="text-xs text-amber-700 dark:text-amber-400 font-semibold">Só na billing</div>
+          <div class="text-2xl font-extrabold text-amber-700 dark:text-amber-300">{{ recon_math.n_only_billing }}</div>
+          <div class="text-[10px] text-gray-500">facturados sem task</div>
+        </div>
+        <div class="text-center">
+          <div class="text-xs text-rose-700 dark:text-rose-400 font-semibold">Só nas tasks</div>
+          <div class="text-2xl font-extrabold text-rose-700 dark:text-rose-300">{{ recon_math.n_only_delivered }}</div>
+          <div class="text-[10px] text-gray-500">entregues sem facturação</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
   {# Análise diagnóstica das divergências #}
   {% if diagnosis.total %}
   <div class="bg-white dark:bg-gray-800 rounded-xl border border-violet-300 dark:border-violet-700/40 overflow-hidden">

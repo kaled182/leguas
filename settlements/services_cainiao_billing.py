@@ -588,6 +588,66 @@ def reresolve_matching(session):
 #  Análise / queries auxiliares
 # ─────────────────────────────────────────────────────────────────────
 
+def reconciliation_math(session):
+    """Matemática completa da reconciliação em distinct waybills.
+
+    O dashboard de KPIs mistura contagens de lados diferentes:
+      - matched_count (30 833) é no lado das BillingLines
+      - delivered_no_billing_count (31 041) é no lado das Tasks
+
+    Esta função devolve a conta correcta em distinct waybills.
+    """
+    from .models import CainiaoBillingLine, CainiaoOperationTask
+
+    period = (session.period_from, session.period_to)
+
+    # Lado A — billing
+    billing_lines_envio = session.lines.filter(fee_type="envio fee")
+    n_billing_lines_envio = billing_lines_envio.count()
+    distinct_billed_wbs = set(
+        billing_lines_envio.values_list("waybill_number", flat=True)
+    )
+    n_distinct_billed = len(distinct_billed_wbs)
+    n_duplicate_billing_rows = n_billing_lines_envio - n_distinct_billed
+
+    # Lado B — tasks Delivered no período
+    delivered_qs = CainiaoOperationTask.objects.filter(
+        task_date__range=period,
+        task_status="Delivered",
+    )
+    n_delivered_rows = delivered_qs.count()
+    distinct_delivered_wbs = set(
+        delivered_qs.values_list("waybill_number", flat=True)
+    )
+    n_distinct_delivered = len(distinct_delivered_wbs)
+    n_duplicate_delivery_dates = n_delivered_rows - n_distinct_delivered
+
+    # Também os lp_numbers — a billing usa LP, as tasks podem
+    # guardá-lo no lp_number
+    distinct_delivered_lps = set(
+        delivered_qs.exclude(lp_number="")
+        .values_list("lp_number", flat=True)
+    )
+    delivered_keys = distinct_delivered_wbs | distinct_delivered_lps
+
+    # Intersecção
+    in_both = distinct_billed_wbs & delivered_keys
+    only_billing = distinct_billed_wbs - delivered_keys
+    only_delivered = delivered_keys - distinct_billed_wbs
+
+    return {
+        "n_billing_lines_envio": n_billing_lines_envio,
+        "n_distinct_billed": n_distinct_billed,
+        "n_duplicate_billing_rows": n_duplicate_billing_rows,
+        "n_delivered_rows": n_delivered_rows,
+        "n_distinct_delivered": n_distinct_delivered,
+        "n_duplicate_delivery_dates": n_duplicate_delivery_dates,
+        "n_in_both": len(in_both),
+        "n_only_billing": len(only_billing),
+        "n_only_delivered": len(only_delivered),
+    }
+
+
 def diagnose_delivered_no_billing(session):
     """Categoriza tasks Delivered no período sem linha de envio nesta
     pré-fatura, identificando a causa provável de cada uma.

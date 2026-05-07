@@ -1354,6 +1354,13 @@ def driver_pre_invoice_create(request, driver_id):
             from core.finance import resolve_driver_price
             price, _src = resolve_driver_price(driver, cainiao_partner)
 
+            # PUDO: se activo, tasks com delivery_type=PUDO são pagas
+            # pela fórmula 1ª + (N-1) × adicional por PUDO distinto.
+            # São acumuladas em pudo_tasks_global e calculadas no fim
+            # como uma única PreInvoiceLine agregada.
+            pudo_active = bool(getattr(cainiao_partner, "pudo_enabled", False))
+            pudo_tasks_global = []  # lista de tasks PUDO de todos os logins
+
             base_qs = CainiaoOperationTask.objects.filter(
                 task_date__range=(periodo_inicio, periodo_fim),
                 task_status="Delivered",  # ← REGRA: só Delivered
@@ -1402,19 +1409,43 @@ def driver_pre_invoice_create(request, driver_id):
                 if seen_task_ids:
                     qs_login = qs_login.exclude(id__in=seen_task_ids)
                 rows_this = list(
-                    qs_login.values("id", "waybill_number"),
+                    qs_login.values(
+                        "id", "waybill_number", "delivery_type",
+                        "receiver_latitude", "receiver_longitude",
+                        "actual_latitude", "actual_longitude",
+                        "zip_code", "detailed_address",
+                    ),
                 )
                 if not rows_this:
                     continue
                 ids_this = [r["id"] for r in rows_this]
                 seen_task_ids.update(ids_this)
-                n_login = len(ids_this)
 
                 login_label = cname or cid
 
-                # Agrupar por preço (base + cada override)
+                # Separar PUDO de Door (PUDO calculado depois,
+                # agregado por todos os logins do driver).
+                rows_door = []
+                if pudo_active:
+                    from settlements.services_pudo import _PudoTaskLite_dict_to_obj
+                    for r in rows_this:
+                        dt = (r.get("delivery_type") or "").upper().strip()
+                        if dt == "PUDO":
+                            pudo_tasks_global.append(
+                                _PudoTaskLite_dict_to_obj(r)
+                            )
+                        else:
+                            rows_door.append(r)
+                else:
+                    rows_door = rows_this
+
+                if not rows_door:
+                    # Tudo era PUDO — sem linha door para este login
+                    continue
+
+                # Agrupar por preço (base + cada override) — só Door
                 price_groups = {}
-                for r in rows_this:
+                for r in rows_door:
                     po = price_overrides_map.get(r["waybill_number"])
                     unit_price = po.price if po else price
                     if unit_price not in price_groups:
@@ -1489,14 +1520,36 @@ def driver_pre_invoice_create(request, driver_id):
                 if seen_task_ids:
                     inc_qs = inc_qs.exclude(id__in=seen_task_ids)
                 rows_inc = list(
-                    inc_qs.values("id", "waybill_number"),
+                    inc_qs.values(
+                        "id", "waybill_number", "delivery_type",
+                        "receiver_latitude", "receiver_longitude",
+                        "actual_latitude", "actual_longitude",
+                        "zip_code", "detailed_address",
+                    ),
                 )
                 if rows_inc:
                     ids_inc = [r["id"] for r in rows_inc]
 
-                    # Agrupar por preço (base + cada override)
+                    # Separar PUDO de Door
+                    if pudo_active:
+                        from settlements.services_pudo import (
+                            _PudoTaskLite_dict_to_obj,
+                        )
+                        rows_inc_door = []
+                        for r in rows_inc:
+                            dt = (r.get("delivery_type") or "").upper().strip()
+                            if dt == "PUDO":
+                                pudo_tasks_global.append(
+                                    _PudoTaskLite_dict_to_obj(r)
+                                )
+                            else:
+                                rows_inc_door.append(r)
+                    else:
+                        rows_inc_door = rows_inc
+
+                    # Agrupar por preço (base + cada override) — só Door
                     price_groups_inc = {}
-                    for r in rows_inc:
+                    for r in rows_inc_door:
                         po = price_overrides_map.get(r["waybill_number"])
                         unit_price = po.price if po else price
                         if unit_price not in price_groups_inc:
@@ -1567,6 +1620,44 @@ def driver_pre_invoice_create(request, driver_id):
                                 f"· Login: ↻ Transferências recebidas"
                             ),
                         )
+
+            # ── PUDO: linha agregada por driver ────────────────────
+            # Aplica fórmula 1ª + (N-1) × adicional por PUDO distinto.
+            if pudo_active and pudo_tasks_global:
+                from settlements.services_pudo import (
+                    compute_pudo_total_for_driver,
+                )
+                pudo_total, n_pudos, _bd = compute_pudo_total_for_driver(
+                    pudo_tasks_global, cainiao_partner,
+                )
+                n_pudo_pkgs = len(pudo_tasks_global)
+                # Taxa "média" para o modelo (que multiplica
+                # total_pacotes × taxa). Guardamos em 4 decimais para
+                # preservar o total exacto.
+                avg_rate = (
+                    pudo_total / Decimal(n_pudo_pkgs)
+                    if n_pudo_pkgs else Decimal("0")
+                ).quantize(Decimal("0.0001"))
+                # Pequeno ajuste: garantir que pacotes × taxa = total
+                # (arredondamento). Se diferir, somamos a diferença.
+                line_pudo = PreInvoiceLine(
+                    pre_invoice=pf,
+                    parceiro=cainiao_partner,
+                    courier_id="(PUDO)",
+                    total_pacotes=n_pudo_pkgs,
+                    taxa_por_entrega=avg_rate,
+                    dsr_percentual=Decimal("0"),
+                    api_source="auto:pudo",
+                    observacoes=(
+                        f"PUDO: {n_pudo_pkgs} pacote{'s' if n_pudo_pkgs > 1 else ''} "
+                        f"em {n_pudos} PUDO{'s' if n_pudos > 1 else ''} distinto"
+                        f"{'s' if n_pudos > 1 else ''}. "
+                        f"1ª: €{cainiao_partner.pudo_first_delivery_price} · "
+                        f"adicional: €{cainiao_partner.pudo_additional_delivery_price} · "
+                        f"total: €{pudo_total:.2f}"
+                    )[:300],
+                )
+                line_pudo.calcular_e_salvar()
 
     pf.recalcular()
 

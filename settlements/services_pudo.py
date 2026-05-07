@@ -8,12 +8,42 @@ Contém:
 - `compute_pudo_payment(n, partner)`: 1ª + (N-1) × adicional.
 - `aggregate_pudo_packages(tasks_qs)`: agrupa tasks PUDO por chave e
   devolve {pudo_key: [tasks...]}.
+- `_PudoTaskLite_dict_to_obj(d)`: helper para converter dict do
+  .values() em namedtuple compatível com pudo_key/etc.
 """
 from __future__ import annotations
 
 import math
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 from decimal import Decimal
+
+
+# Tipo leve para passar tasks PUDO entre módulos sem precisar de
+# CainiaoOperationTask completo. Compatível com as funções
+# pudo_key/is_fake_delivery_suspect que só lêem estes atributos.
+_PudoTaskLite = namedtuple("_PudoTaskLite", [
+    "id", "waybill_number", "task_date",
+    "receiver_latitude", "receiver_longitude",
+    "actual_latitude", "actual_longitude",
+    "zip_code", "detailed_address",
+])
+
+
+def _PudoTaskLite_dict_to_obj(d):
+    """Converte um dict (ex: do .values() do queryset) em
+    _PudoTaskLite. Tolerante a chaves em falta.
+    """
+    return _PudoTaskLite(
+        id=d.get("id"),
+        waybill_number=d.get("waybill_number") or "",
+        task_date=d.get("task_date"),
+        receiver_latitude=d.get("receiver_latitude") or "",
+        receiver_longitude=d.get("receiver_longitude") or "",
+        actual_latitude=d.get("actual_latitude") or "",
+        actual_longitude=d.get("actual_longitude") or "",
+        zip_code=d.get("zip_code") or "",
+        detailed_address=d.get("detailed_address") or "",
+    )
 
 
 def haversine_meters(lat1, lng1, lat2, lng2):

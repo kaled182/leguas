@@ -114,6 +114,21 @@
           <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Data de Pagamento</label>
           {{ form.paid_date }}
         </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">
+            Pago por
+            <span class="text-gray-400 font-normal">— quem desembolsou o dinheiro</span>
+          </label>
+          {{ form.paid_by_source }}
+        </div>
+        <div id="paid-by-lender-wrap" class="md:col-span-2">
+          <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">
+            Sócio que adiantou
+            <span class="text-amber-600">— obrigatório quando "Pago por" = Sócio</span>
+          </label>
+          {{ form.paid_by_lender }}
+          {% if form.paid_by_lender.errors %}<div class="text-xs text-red-600 mt-1">{{ form.paid_by_lender.errors.0 }}</div>{% endif %}
+        </div>
         <div class="md:col-span-3">
           <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Estado</label>
           {{ form.status }}
@@ -262,6 +277,21 @@ document.addEventListener('DOMContentLoaded', () => {
   net?.addEventListener('input', () => { recompute(); updateIvaBadge(); });
   rate?.addEventListener('input', () => { recompute(); updateIvaBadge(); });
   tot?.addEventListener('input', updateIvaBadge);
+
+  // Pago por: mostra/esconde campo do sócio
+  const paidBySrc = document.querySelector('[data-paid-by-source]');
+  const lenderWrap = document.getElementById('paid-by-lender-wrap');
+  function togglePaidByLender() {
+    if (!paidBySrc || !lenderWrap) return;
+    const isTerceiro = paidBySrc.value === 'TERCEIRO';
+    lenderWrap.style.display = isTerceiro ? '' : 'none';
+    const lenderEl = lenderWrap.querySelector('select');
+    if (lenderEl) {
+      if (!isTerceiro) lenderEl.value = '';
+    }
+  }
+  togglePaidByLender();
+  paidBySrc?.addEventListener('change', togglePaidByLender);
 
   // Estado: o fornecedor seleccionado tem iva_dedutivel?
   let _fornecedorIvaDedutivel = false;

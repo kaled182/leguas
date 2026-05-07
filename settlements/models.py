@@ -1606,6 +1606,17 @@ class ThirdPartyReimbursement(models.Model):
         related_name="reembolsos_terceiros",
         verbose_name="Lançamento de origem",
     )
+    origem_bill = models.ForeignKey(
+        "accounting.Bill",
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="reembolsos_terceiros",
+        verbose_name="Bill de origem",
+        help_text=(
+            "Conta a Pagar paga por um sócio. Cria reembolso quando "
+            "a Bill fica PAID com paid_by_source=TERCEIRO."
+        ),
+    )
 
     status = models.CharField(
         "Status", max_length=20, choices=STATUS_CHOICES,

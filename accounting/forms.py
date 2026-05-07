@@ -16,7 +16,9 @@ class BillForm(forms.ModelForm):
             "category", "cost_center",
             "amount_net", "iva_rate", "amount_total",
             "issue_date", "due_date", "paid_date",
-            "status", "recurrence", "notes",
+            "status", "recurrence",
+            "paid_by_source", "paid_by_lender",
+            "notes",
         ]
         widgets = {
             "description": forms.TextInput(attrs={
@@ -55,6 +57,11 @@ class BillForm(forms.ModelForm):
             ),
             "status": forms.Select(attrs={"class": "fld"}),
             "recurrence": forms.Select(attrs={"class": "fld"}),
+            "paid_by_source": forms.Select(attrs={
+                "class": "fld",
+                "data-paid-by-source": "1",
+            }),
+            "paid_by_lender": forms.Select(attrs={"class": "fld"}),
             "notes": forms.Textarea(attrs={"class": "fld", "rows": 2}),
         }
 
@@ -85,6 +92,15 @@ class BillForm(forms.ModelForm):
                 cleaned["supplier"] = f.name
             if not (cleaned.get("supplier_nif") or "").strip() and f.nif:
                 cleaned["supplier_nif"] = f.nif
+        # Se pago por sócio, lender é obrigatório
+        if (
+            cleaned.get("paid_by_source") == Bill.PAID_BY_SOURCE_TERCEIRO
+            and not cleaned.get("paid_by_lender")
+        ):
+            self.add_error(
+                "paid_by_lender",
+                "Selecciona qual sócio adiantou o pagamento desta conta.",
+            )
         return cleaned
 
 

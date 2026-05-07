@@ -945,6 +945,32 @@ class Bill(models.Model):
         verbose_name="Conta-mãe (recorrência)",
     )
     notes = models.TextField("Notas internas", blank=True)
+
+    # Quem pagou: empresa (caixa) ou sócio (terceiro). Mesmo padrão de
+    # PreInvoiceAdvance — quando TERCEIRO, paid_by_lender é obrigatório
+    # e gera ThirdPartyReimbursement automático no momento em que a
+    # Bill ficar PAID.
+    PAID_BY_SOURCE_EMPRESA = "EMPRESA"
+    PAID_BY_SOURCE_TERCEIRO = "TERCEIRO"
+    PAID_BY_SOURCE_CHOICES = [
+        (PAID_BY_SOURCE_EMPRESA, "Empresa (caixa)"),
+        (PAID_BY_SOURCE_TERCEIRO, "Sócio (terceiro)"),
+    ]
+    paid_by_source = models.CharField(
+        "Pago por",
+        max_length=20,
+        choices=PAID_BY_SOURCE_CHOICES,
+        default=PAID_BY_SOURCE_EMPRESA,
+        db_index=True,
+    )
+    paid_by_lender = models.ForeignKey(
+        "settlements.Shareholder",
+        on_delete=models.PROTECT,
+        null=True, blank=True,
+        related_name="bills_pagas",
+        verbose_name="Sócio que adiantou",
+    )
+
     created_by = models.ForeignKey(
         User, on_delete=models.SET_NULL,
         null=True, blank=True, related_name="bills_created",
@@ -1005,6 +1031,58 @@ class Bill(models.Model):
         ):
             self.status = self.STATUS_PENDING
         super().save(*args, **kwargs)
+        # Sincroniza ThirdPartyReimbursement com base em paid_by_source +
+        # status. Importante: depois do super().save() para termos pk.
+        try:
+            self._sync_reimbursement_for_bill()
+        except Exception:
+            import logging
+            logging.getLogger(__name__).exception(
+                "[bill] sync_reimbursement falhou para Bill #%s", self.pk,
+            )
+
+    def _sync_reimbursement_for_bill(self):
+        """Cria/atualiza ThirdPartyReimbursement quando esta Bill foi
+        paga por um sócio. Espelha a lógica de PreInvoiceAdvance.
+
+        Regra:
+          - paid_by_source == TERCEIRO + paid_by_lender + status == PAID
+            → cria/atualiza reembolso PENDENTE ligado.
+          - Outros casos (incluindo Bill ainda PENDING/AWAITING) → cancela
+            qualquer reembolso PENDENTE deste registo.
+        """
+        from settlements.models import ThirdPartyReimbursement
+        from datetime import date as _d
+        existing = ThirdPartyReimbursement.objects.filter(
+            origem_bill=self, status="PENDENTE",
+        ).first()
+        should_have = (
+            self.paid_by_source == self.PAID_BY_SOURCE_TERCEIRO
+            and self.paid_by_lender_id is not None
+            and self.status == self.STATUS_PAID
+        )
+        if should_have:
+            data_emp = self.paid_date or self.due_date or _d.today()
+            desc = f"Bill {self.description}"[:300]
+            if existing:
+                existing.lender = self.paid_by_lender
+                existing.valor = self.amount_total
+                existing.data_emprestimo = data_emp
+                existing.descricao = desc
+                existing.save()
+            else:
+                ThirdPartyReimbursement.objects.create(
+                    lender=self.paid_by_lender,
+                    valor=self.amount_total,
+                    data_emprestimo=data_emp,
+                    descricao=desc,
+                    origem_bill=self,
+                    status="PENDENTE",
+                )
+        else:
+            if existing:
+                existing.status = "CANCELADO"
+                existing.save()
 
     # ── Recorrência ─────────────────────────────────────────────────────
     OFFSET_MONTHS = {

@@ -144,6 +144,7 @@ def reimbursement_list_api(request):
     """
     qs = ThirdPartyReimbursement.objects.select_related(
         "lender", "origem_advance__pre_invoice__driver",
+        "origem_bill__fornecedor",
         "pago_por", "created_by",
     )
     statuses = request.GET.getlist("status")
@@ -162,11 +163,20 @@ def reimbursement_list_api(request):
     rows = []
     for r in qs.order_by("status", "-data_emprestimo", "-id"):
         adv = r.origem_advance
+        bill = r.origem_bill
         driver_nome = ""
         pf_numero = ""
+        bill_supplier = ""
+        bill_id = None
         if adv and adv.pre_invoice_id:
             driver_nome = adv.pre_invoice.driver.nome_completo
             pf_numero = adv.pre_invoice.numero
+        elif bill:
+            bill_supplier = (
+                bill.fornecedor.name if bill.fornecedor_id
+                else (bill.supplier or "")
+            )
+            bill_id = bill.id
         rows.append({
             "id": r.id,
             "lender_id": r.lender_id,
@@ -185,8 +195,10 @@ def reimbursement_list_api(request):
                 r.pago_por.get_full_name() or r.pago_por.username
             ) if r.pago_por_id else "",
             "origem_advance_id": r.origem_advance_id,
+            "origem_bill_id": bill_id,
             "driver_nome": driver_nome,
             "pf_numero": pf_numero,
+            "bill_supplier": bill_supplier,
             "created_at": r.created_at.strftime("%Y-%m-%d %H:%M"),
         })
 

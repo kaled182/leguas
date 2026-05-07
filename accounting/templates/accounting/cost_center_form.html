@@ -1,0 +1,70 @@
+{% extends 'settlements/base.html' %}
+{% block title %}{% if is_create %}Novo{% else %}Editar{% endif %} Centro de Custo{% endblock %}
+{% block content %}
+<style>
+  .fld { width:100%; padding:0.5rem 0.75rem; border:1px solid #d1d5db; border-radius:0.5rem; font-size:0.875rem; background:#fff; }
+  .dark .fld { background:#1f2937; border-color:#374151; color:#fff; }
+  .grp { background:#fff; border:1px solid #e5e7eb; border-radius:0.75rem; padding:1.25rem; }
+  .dark .grp { background:#1f2937; border-color:#374151; }
+  .lbl { display:block; font-size:0.75rem; font-weight:600; color:#6b7280; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.25rem; }
+  .err { color:#dc2626; font-size:0.75rem; margin-top:0.25rem; }
+</style>
+<div class="max-w-3xl mx-auto px-4 py-6 space-y-4">
+
+  <div class="flex items-center gap-2">
+    <a href="{% url 'accounting:cost_center_list' %}" class="text-gray-500 hover:text-gray-700 dark:hover:text-white">
+      <i data-lucide="arrow-left" class="w-5 h-5"></i>
+    </a>
+    <h1 class="text-2xl font-bold flex items-center gap-2">
+      <i data-lucide="layers-3" class="w-6 h-6 text-emerald-500"></i>
+      {% if is_create %}Novo Centro de Custo{% else %}Editar — {{ centro.code }}{% endif %}
+    </h1>
+  </div>
+
+  {% if form.non_field_errors %}
+    <div class="bg-red-50 border border-red-200 text-red-700 rounded-lg p-3 text-sm">{{ form.non_field_errors }}</div>
+  {% endif %}
+
+  <form method="post" class="space-y-4">
+    {% csrf_token %}
+    <div class="grp">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div>
+          <label class="lbl">Código *</label>
+          {{ form.code }}
+          {% if form.code.errors %}<div class="err">{{ form.code.errors.0 }}</div>{% endif %}
+          <p class="text-[10px] text-gray-500 mt-1">Curto e único (ex: HUB-AVEIRO, FROTA-1)</p>
+        </div>
+        <div>
+          <label class="lbl">Nome *</label>
+          {{ form.name }}
+        </div>
+        <div>
+          <label class="lbl">Tipo *</label>
+          {{ form.type }}
+        </div>
+        <div>
+          <label class="lbl">HUB Cainiao Vinculado</label>
+          {{ form.cainiao_hub }}
+          <p class="text-[10px] text-gray-500 mt-1">Se preenchido, a receita Cainiao do HUB é alocada a este centro no DRE.</p>
+        </div>
+        <div class="md:col-span-2">
+          <label class="lbl">Notas</label>
+          {{ form.notes }}
+        </div>
+        <div class="md:col-span-2 flex items-center gap-2">
+          {{ form.is_active }}
+          <label class="text-sm">Activo</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex justify-between items-center">
+      <a href="{% url 'accounting:cost_center_list' %}" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-lg text-sm font-semibold">Cancelar</a>
+      <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold flex items-center gap-1.5">
+        <i data-lucide="save" class="w-4 h-4"></i> Guardar
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}

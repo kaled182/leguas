@@ -2,7 +2,7 @@
 
 from . import (
     views, views_payables, views_suppliers, views_taxes,
-    views_treasury, views_ocr,
+    views_treasury, views_ocr, views_cost_centers,
 )
 
 app_name = "accounting"
@@ -220,5 +220,29 @@ urlpatterns = [
     path(
         "ocr/extract/",
         views_ocr.ocr_extract_api, name="ocr_extract",
+    ),
+
+    # ── Centros de Custo ──────────────────────────────────────────────
+    path(
+        "centros-custo/",
+        views_cost_centers.cost_center_list, name="cost_center_list",
+    ),
+    path(
+        "centros-custo/novo/",
+        views_cost_centers.cost_center_create, name="cost_center_create",
+    ),
+    path(
+        "centros-custo/<int:pk>/editar/",
+        views_cost_centers.cost_center_edit, name="cost_center_edit",
+    ),
+    path(
+        "centros-custo/<int:pk>/toggle-ativo/",
+        views_cost_centers.cost_center_toggle_active,
+        name="cost_center_toggle_active",
+    ),
+    path(
+        "centros-custo/sync-hubs/",
+        views_cost_centers.cost_center_sync_hubs,
+        name="cost_center_sync_hubs",
     ),
 ]

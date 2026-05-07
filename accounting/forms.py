@@ -2,7 +2,7 @@
 from django.core.exceptions import ValidationError
 
 from .models import (
-    Bill, BillAttachment, Expenses, Fornecedor, FornecedorTag,
+    Bill, BillAttachment, CostCenter, Expenses, Fornecedor, FornecedorTag,
     Imposto, Revenues,
 )
 
@@ -260,6 +260,41 @@ class ImpostoForm(forms.ModelForm):
                 "Para marcar PAGO, preenche a data de pagamento.",
             )
         return cleaned
+
+
+class CostCenterForm(forms.ModelForm):
+    """Cadastro / edição de Centro de Custo. HUB FK opcional."""
+
+    class Meta:
+        model = CostCenter
+        fields = [
+            "code", "name", "type", "cainiao_hub",
+            "is_active", "notes",
+        ]
+        widgets = {
+            "code": forms.TextInput(attrs={
+                "class": "fld",
+                "placeholder": "ex: HUB-AVEIRO, FROTA-1, ADMIN",
+            }),
+            "name": forms.TextInput(attrs={"class": "fld"}),
+            "type": forms.Select(attrs={"class": "fld"}),
+            "cainiao_hub": forms.Select(attrs={"class": "fld"}),
+            "is_active": forms.CheckboxInput(),
+            "notes": forms.Textarea(attrs={"class": "fld", "rows": 2}),
+        }
+
+    def clean_code(self):
+        code = (self.cleaned_data.get("code") or "").strip().upper()
+        if not code:
+            raise ValidationError("Código obrigatório.")
+        qs = CostCenter.objects.filter(code=code)
+        if self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise ValidationError(
+                f"Já existe centro de custo com código {code}.",
+            )
+        return code
 
 
 class FornecedorTagForm(forms.ModelForm):

@@ -82,11 +82,23 @@ def fornecedor_create(request):
             messages.success(
                 request, f"Fornecedor '{obj.name}' criado com sucesso.",
             )
+            # Se veio de uma sugestão OCR (?from=ocr), volta para a Bill
+            if request.GET.get("from") == "ocr":
+                return redirect("accounting:bill_create")
             return redirect("accounting:fornecedor_list")
     else:
-        form = FornecedorForm()
+        # Pré-preenche a partir de query params (ex: vindo do OCR no Bill form)
+        initial = {}
+        for key in ("name", "nif", "default_iva_rate"):
+            v = (request.GET.get(key) or "").strip()
+            if v:
+                initial[key] = v
+        if request.GET.get("iva_dedutivel") in ("1", "true", "True"):
+            initial["iva_dedutivel"] = True
+        form = FornecedorForm(initial=initial)
     return render(request, "accounting/fornecedor_form.html", {
         "form": form, "is_create": True,
+        "from_ocr": request.GET.get("from") == "ocr",
     })
 
 

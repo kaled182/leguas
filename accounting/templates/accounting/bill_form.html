@@ -168,6 +168,19 @@
                 <i data-lucide="user-check" class="w-3.5 h-3.5 inline"></i>
                 Fornecedor existente: <strong id="ocr-suggested-name">—</strong>
               </div>
+              <div id="ocr-create-suggestion" class="md:col-span-3 mt-1 hidden">
+                <div class="flex items-center justify-between p-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50">
+                  <div class="text-xs text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
+                    <i data-lucide="user-plus" class="w-3.5 h-3.5"></i>
+                    <span><strong id="ocr-new-name">—</strong> não está cadastrado.</span>
+                  </div>
+                  <button type="button" id="ocr-create-supplier"
+                    class="text-xs px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded font-semibold flex items-center gap-1">
+                    <i data-lucide="plus" class="w-3 h-3"></i>
+                    Criar fornecedor
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -364,11 +377,21 @@ document.addEventListener('DOMContentLoaded', () => {
       'bg-rose-100 text-rose-700'
     }`;
     const sug = document.getElementById('ocr-suggested');
+    const createSug = document.getElementById('ocr-create-suggestion');
     if (suggested) {
       document.getElementById('ocr-suggested-name').textContent = suggested.name + ' (#' + suggested.id + ')';
       sug.classList.remove('hidden');
+      createSug.classList.add('hidden');
     } else {
       sug.classList.add('hidden');
+      // Mostra sugestão de criar se OCR detectou nome (com ou sem NIF)
+      if (d.supplier_name) {
+        document.getElementById('ocr-new-name').textContent =
+          d.supplier_name + (d.supplier_nif ? ' · NIF ' + d.supplier_nif : '');
+        createSug.classList.remove('hidden');
+      } else {
+        createSug.classList.add('hidden');
+      }
     }
     ocrPreview.classList.remove('hidden');
     if (window.lucide) lucide.createIcons();
@@ -424,6 +447,24 @@ document.addEventListener('DOMContentLoaded', () => {
     ocrPreview.classList.add('hidden');
     _ocrLastData = null;
     _ocrLastSuggested = null;
+  });
+
+  // Abrir form de criação de Fornecedor com dados OCR pré-preenchidos
+  document.getElementById('ocr-create-supplier')?.addEventListener('click', () => {
+    if (!_ocrLastData) return;
+    const d = _ocrLastData;
+    const params = new URLSearchParams({
+      from: 'ocr',
+      name: d.supplier_name || '',
+      nif: d.supplier_nif || '',
+      default_iva_rate: d.iva_rate || '23.00',
+    });
+    // Combustíveis/peças tipicamente têm IVA dedutível — sugerimos por defeito
+    // se a taxa for ≥ 23 (IVA normal). Operador pode desmarcar.
+    if (d.iva_rate && parseFloat(d.iva_rate) >= 23) {
+      params.set('iva_dedutivel', '1');
+    }
+    window.open(`/accounting/fornecedores/novo/?${params.toString()}`, '_blank');
   });
 });
 </script>

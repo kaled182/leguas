@@ -331,6 +331,46 @@ def partner_detail(request, pk):
             failures = sum(
                 1 for op in period_objs if op.task_status == STATUS_FAILURE
             )
+            _is_pudo = (
+                lambda op: (op.delivery_type or "").strip().upper() == "PUDO"
+            )
+            pudo_delivered = sum(
+                1 for op in period_objs
+                if op.task_status == STATUS_DELIVERED and _is_pudo(op)
+            )
+            pudo_received = sum(
+                1 for op in period_objs
+                if op.task_status == STATUS_EN_ROUTE and _is_pudo(op)
+            )
+            pudo_assigned = sum(
+                1 for op in period_objs
+                if op.task_status in (STATUS_ASSIGNED, STATUS_UNASSIGN)
+                and _is_pudo(op)
+            )
+            pudo_failure = sum(
+                1 for op in period_objs
+                if op.task_status == STATUS_FAILURE and _is_pudo(op)
+            )
+            pudo_total = (
+                pudo_delivered + pudo_received + pudo_assigned + pudo_failure
+            )
+
+            # Fake Delivery (PUDO Delivered fora da tolerância geo) — só
+            # contamos se PUDO ativo no parceiro. Reaproveita o serviço.
+            pudo_fake_count = 0
+            if (pudo_delivered and partner
+                    and getattr(partner, "pudo_enabled", False)):
+                try:
+                    from settlements.services_pudo import (
+                        find_fake_delivery_suspects,
+                    )
+                    pudo_fake_count = len(
+                        find_fake_delivery_suspects(
+                            date_from, date_to, partner,
+                        )
+                    )
+                except Exception:
+                    pudo_fake_count = 0
 
             # Integer percentages (avoid locale decimal-comma in CSS)
             delivery_pct  = round(delivered / total * 100) if total else 0
@@ -707,6 +747,12 @@ def partner_detail(request, pk):
                 "en_route": en_route,
                 "assigned": assigned,
                 "failures": failures,
+                "pudo_total": pudo_total,
+                "pudo_delivered": pudo_delivered,
+                "pudo_received": pudo_received,
+                "pudo_assigned": pudo_assigned,
+                "pudo_failure": pudo_failure,
+                "pudo_fake_count": pudo_fake_count,
                 "returned": returned_count,
                 "delivery_pct": delivery_pct,
                 "en_route_pct": en_route_pct,

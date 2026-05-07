@@ -5123,11 +5123,29 @@ def cainiao_drivers_by_status(request):
     status_raw = request.GET.get("status", "")
     parts = [s.strip() for s in status_raw.split(",") if s.strip()]
     is_returned_filter = "returned" in parts
-    focus_statuses = [s for s in parts if s in _DRILL_VALID_STATUSES]
+
+    # Aliases PUDO → focus_statuses subjacente. `pudo_received` é alias
+    # do legado `pudo_pending` (Driver_received).
+    _PUDO_ALIASES = {
+        "pudo_delivered": ["Delivered"],
+        "pudo_pending":   ["Driver_received"],
+        "pudo_received":  ["Driver_received"],
+        "pudo_assigned":  ["Assigned", "Unassign"],
+        "pudo_failure":   ["Attempt Failure"],
+    }
+    pudo_alias = next((p for p in parts if p in _PUDO_ALIASES), None)
+    is_pudo_filter = pudo_alias is not None
+
+    if is_pudo_filter:
+        focus_statuses = list(_PUDO_ALIASES[pudo_alias])
+    else:
+        focus_statuses = [s for s in parts if s in _DRILL_VALID_STATUSES]
     if not focus_statuses and not is_returned_filter:
         return JsonResponse({"success": False, "error": "status inválido"}, status=400)
 
     base_qs = CainiaoOperationTask.objects.filter(task_status__in=_DRILL_VALID_STATUSES)
+    if is_pudo_filter:
+        base_qs = base_qs.filter(delivery_type__iexact="PUDO")
     base_qs, info = _apply_operation_filters(base_qs, request)
 
     # Pacotes devolvidos: separar do queryset principal e tratar como
@@ -5238,11 +5256,15 @@ def cainiao_drivers_by_status(request):
 
     result.sort(key=lambda r: -r["focus_count"])
 
+    if is_pudo_filter:
+        statuses_out = [pudo_alias]
+    elif is_returned_filter:
+        statuses_out = ["returned"]
+    else:
+        statuses_out = focus_statuses
     return JsonResponse({
         "success": True,
-        "statuses": (
-            ["returned"] if is_returned_filter else focus_statuses
-        ),
+        "statuses": statuses_out,
         "total_drivers": len(result),
         "total_packages": sum(r["focus_count"] for r in result),
         "drivers": result,
@@ -5261,14 +5283,28 @@ def cainiao_driver_packages(request):
         return HttpResponse("Parâmetro 'courier' obrigatório.", status=400)
 
     status_filter = request.GET.get("status", "")
-    _ALLOWED_FILTERS = _DRILL_VALID_STATUSES + ("returned",)
+    _PUDO_PKG_ALIASES = {
+        "pudo_delivered": ["Delivered"],
+        "pudo_pending":   ["Driver_received"],
+        "pudo_received":  ["Driver_received"],
+        "pudo_assigned":  ["Assigned", "Unassign"],
+        "pudo_failure":   ["Attempt Failure"],
+    }
+    _ALLOWED_FILTERS = (
+        _DRILL_VALID_STATUSES + ("returned",) + tuple(_PUDO_PKG_ALIASES.keys())
+    )
     if status_filter and status_filter not in _ALLOWED_FILTERS:
         status_filter = ""
+
+    pudo_alias = status_filter if status_filter in _PUDO_PKG_ALIASES else None
+    is_pudo_filter = pudo_alias is not None
 
     base_qs = CainiaoOperationTask.objects.filter(
         courier_name=courier_name,
         task_status__in=_DRILL_VALID_STATUSES,
     )
+    if is_pudo_filter:
+        base_qs = base_qs.filter(delivery_type__iexact="PUDO")
     base_qs, info = _apply_operation_filters(base_qs, request)
 
     # Pacotes com WaybillReturn fechada
@@ -5350,6 +5386,15 @@ def cainiao_driver_packages(request):
     # do courier). Mas usamos o courier_row_by_wb para info auxiliar.
     if status_filter == "returned":
         target_wbs = list(returns_by_wb.keys())
+    elif is_pudo_filter:
+        # base_qs já filtrada por delivery_type=PUDO; restrinja ao(s)
+        # task_status do alias.
+        _allowed_states = set(_PUDO_PKG_ALIASES[pudo_alias])
+        target_wbs = [
+            wb for wb, op in latest_global.items()
+            if wb not in returns_by_wb
+            and op.task_status in _allowed_states
+        ]
     elif status_filter:
         target_wbs = [
             wb for wb, op in latest_global.items()

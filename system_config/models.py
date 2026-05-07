@@ -489,6 +489,52 @@ class SystemConfiguration(models.Model):
         editable=False,
     )
 
+    # ── OCR / IA ─────────────────────────────────────────────────────
+    # Provedor activo para OCR de facturas no formulário Conta a Pagar.
+    # Se vazio, fallback para settings.OCR_PROVIDER (env var).
+    ocr_provider = models.CharField(
+        "Provedor OCR / IA",
+        max_length=20,
+        blank=True,
+        null=True,
+        choices=[
+            ("", "— Usar variável de ambiente —"),
+            ("gemini", "Google Gemini (free tier)"),
+            ("anthropic", "Anthropic Claude (pago)"),
+        ],
+        default="",
+    )
+    ocr_anthropic_api_key = EncryptedCharField(
+        "Anthropic API Key",
+        max_length=512,
+        blank=True,
+        null=True,
+        help_text="API key para Claude Vision (formato sk-ant-...).",
+    )
+    ocr_anthropic_model = models.CharField(
+        "Modelo Claude",
+        max_length=80,
+        blank=True,
+        null=True,
+        default="claude-sonnet-4-6",
+        help_text="ID do modelo (ex: claude-sonnet-4-6, claude-opus-4-7).",
+    )
+    ocr_gemini_api_key = EncryptedCharField(
+        "Gemini API Key",
+        max_length=512,
+        blank=True,
+        null=True,
+        help_text="API key do Google AI Studio (free tier 1500 req/dia).",
+    )
+    ocr_gemini_model = models.CharField(
+        "Modelo Gemini",
+        max_length=80,
+        blank=True,
+        null=True,
+        default="gemini-2.0-flash-exp",
+        help_text="ID do modelo (ex: gemini-2.0-flash-exp, gemini-1.5-pro).",
+    )
+
     # System Status
     configured = models.BooleanField("Sistema Configurado", default=False)
     configured_at = models.DateTimeField("Configurado em", auto_now_add=True)

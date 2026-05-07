@@ -160,6 +160,12 @@ def save_config(request):
         "cron_alerts_schedule": "cron_alerts_schedule",
         "cron_alerts_check_days": "cron_alerts_check_days",
         "cron_alerts_last_status": "cron_alerts_last_status",
+        # OCR / IA
+        "ocr_provider": "ocr_provider",
+        "ocr_anthropic_api_key": "ocr_anthropic_api_key",
+        "ocr_anthropic_model": "ocr_anthropic_model",
+        "ocr_gemini_api_key": "ocr_gemini_api_key",
+        "ocr_gemini_model": "ocr_gemini_model",
     }
 
     # Tipos de campo numérico que precisam normalização e conversão.

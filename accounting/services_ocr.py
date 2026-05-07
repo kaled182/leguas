@@ -28,6 +28,50 @@ from django.conf import settings
 logger = logging.getLogger(__name__)
 
 
+def _get_ocr_settings():
+    """Resolve config OCR: prefere SystemConfiguration (DB), fallback ao
+    settings (env vars). Permite ao operador configurar via UI sem editar
+    .env e reiniciar.
+    """
+    try:
+        from system_config.models import SystemConfiguration
+        cfg = SystemConfiguration.get_config()
+    except Exception:
+        cfg = None
+
+    def _pick(db_val, env_val):
+        return db_val if (db_val or "").strip() else env_val
+
+    if cfg:
+        provider = _pick(cfg.ocr_provider, settings.OCR_PROVIDER)
+        anthropic_key = _pick(
+            cfg.ocr_anthropic_api_key, settings.ANTHROPIC_API_KEY,
+        )
+        anthropic_model = _pick(
+            cfg.ocr_anthropic_model, settings.ANTHROPIC_OCR_MODEL,
+        )
+        gemini_key = _pick(
+            cfg.ocr_gemini_api_key, settings.GEMINI_API_KEY,
+        )
+        gemini_model = _pick(
+            cfg.ocr_gemini_model, settings.GEMINI_OCR_MODEL,
+        )
+    else:
+        provider = settings.OCR_PROVIDER
+        anthropic_key = settings.ANTHROPIC_API_KEY
+        anthropic_model = settings.ANTHROPIC_OCR_MODEL
+        gemini_key = settings.GEMINI_API_KEY
+        gemini_model = settings.GEMINI_OCR_MODEL
+
+    return {
+        "provider": (provider or "gemini").lower(),
+        "anthropic_key": anthropic_key,
+        "anthropic_model": anthropic_model or "claude-sonnet-4-6",
+        "gemini_key": gemini_key,
+        "gemini_model": gemini_model or "gemini-2.0-flash-exp",
+    }
+
+
 # Prompt único para ambos os providers.
 _PROMPT = """És um assistente especializado em extracção de dados de
 facturas e recibos portugueses. Analisa o documento anexado e devolve
@@ -128,11 +172,15 @@ def _read_file_b64(file_obj) -> tuple[str, str]:
 
 # ── Provider: Anthropic Claude ──────────────────────────────────────────
 
-def _extract_anthropic(file_obj) -> dict:
-    if not settings.ANTHROPIC_API_KEY:
-        raise RuntimeError("ANTHROPIC_API_KEY não configurada.")
+def _extract_anthropic(file_obj, ocr_cfg=None) -> dict:
+    cfg = ocr_cfg or _get_ocr_settings()
+    if not cfg["anthropic_key"]:
+        raise RuntimeError(
+            "Anthropic API key não configurada (ver Configurações → "
+            "Inteligência Artificial ou ANTHROPIC_API_KEY no .env)."
+        )
     from anthropic import Anthropic
-    client = Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+    client = Anthropic(api_key=cfg["anthropic_key"])
     b64, media_type = _read_file_b64(file_obj)
 
     if media_type == "application/pdf":
@@ -161,7 +209,7 @@ def _extract_anthropic(file_obj) -> dict:
         ]
 
     resp = client.messages.create(
-        model=settings.ANTHROPIC_OCR_MODEL,
+        model=cfg["anthropic_model"],
         max_tokens=1024,
         messages=[{"role": "user", "content": content}],
     )
@@ -171,12 +219,16 @@ def _extract_anthropic(file_obj) -> dict:
 
 # ── Provider: Google Gemini ─────────────────────────────────────────────
 
-def _extract_gemini(file_obj) -> dict:
-    if not settings.GEMINI_API_KEY:
-        raise RuntimeError("GEMINI_API_KEY não configurada.")
+def _extract_gemini(file_obj, ocr_cfg=None) -> dict:
+    cfg = ocr_cfg or _get_ocr_settings()
+    if not cfg["gemini_key"]:
+        raise RuntimeError(
+            "Gemini API key não configurada (ver Configurações → "
+            "Inteligência Artificial ou GEMINI_API_KEY no .env)."
+        )
     import google.generativeai as genai
-    genai.configure(api_key=settings.GEMINI_API_KEY)
-    model = genai.GenerativeModel(settings.GEMINI_OCR_MODEL)
+    genai.configure(api_key=cfg["gemini_key"])
+    model = genai.GenerativeModel(cfg["gemini_model"])
 
     b64, media_type = _read_file_b64(file_obj)
     raw = base64.b64decode(b64)
@@ -196,11 +248,12 @@ def extract_invoice_data(file_obj, provider: str | None = None) -> dict:
 
     Args:
       file_obj: ficheiro Django (request.FILES['file']).
-      provider: 'anthropic' | 'gemini' | None (usa settings.OCR_PROVIDER).
+      provider: 'anthropic' | 'gemini' | None (usa SystemConfiguration > settings).
     """
-    provider = (provider or settings.OCR_PROVIDER or "gemini").lower()
-    if provider == "anthropic":
-        return _extract_anthropic(file_obj)
-    if provider == "gemini":
-        return _extract_gemini(file_obj)
-    raise ValueError(f"OCR provider desconhecido: {provider}")
+    cfg = _get_ocr_settings()
+    chosen = (provider or cfg["provider"]).lower()
+    if chosen == "anthropic":
+        return _extract_anthropic(file_obj, ocr_cfg=cfg)
+    if chosen == "gemini":
+        return _extract_gemini(file_obj, ocr_cfg=cfg)
+    raise ValueError(f"OCR provider desconhecido: {chosen}")

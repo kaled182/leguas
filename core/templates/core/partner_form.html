@@ -194,6 +194,53 @@
         </div>
       </div>
 
+      <!-- PUDO (Pickup & Drop-Off) -->
+      <div class="space-y-4 bg-violet-50 dark:bg-violet-900/10 rounded-xl p-4 border border-violet-200 dark:border-violet-700/40">
+        <h2 class="text-lg font-semibold text-violet-700 dark:text-violet-300 flex items-center gap-2 pb-2 border-b border-violet-200 dark:border-violet-700/40">
+          <i data-lucide="package" class="w-5 h-5"></i>
+          PUDO — Pickup &amp; Drop-Off
+        </h2>
+        <p class="text-xs text-violet-700/80 dark:text-violet-300/70">
+          Pacotes com <code>Delivery Type = PUDO</code> no EPOD seguem regras de pagamento próprias: 1ª entrega num PUDO + valor menor para cada adicional no mesmo. Se desactivado, são pagos pelo preço padrão.
+        </p>
+
+        <label class="flex items-center gap-2 cursor-pointer pt-1">
+          {{ form.pudo_enabled }}
+          <span class="text-sm font-semibold text-gray-900 dark:text-white">Activar regras PUDO</span>
+        </label>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+          <div>
+            <label for="{{ form.pudo_first_delivery_price.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              1ª entrega no mesmo PUDO (€)
+            </label>
+            {{ form.pudo_first_delivery_price }}
+            <p class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">{{ form.pudo_first_delivery_price.help_text }}</p>
+          </div>
+          <div>
+            <label for="{{ form.pudo_additional_delivery_price.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Cada entrega adicional (€)
+            </label>
+            {{ form.pudo_additional_delivery_price }}
+            <p class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">Fórmula: 1ª + (N-1) × adicional</p>
+          </div>
+          <div>
+            <label for="{{ form.pudo_fake_delivery_penalty.id_for_label }}" class="block text-sm font-medium text-rose-700 dark:text-rose-400 mb-2">
+              Penalização Fake Delivery (€)
+            </label>
+            {{ form.pudo_fake_delivery_penalty }}
+            <p class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">{{ form.pudo_fake_delivery_penalty.help_text }}</p>
+          </div>
+          <div>
+            <label for="{{ form.pudo_geo_tolerance_meters.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Tolerância geográfica (metros)
+            </label>
+            {{ form.pudo_geo_tolerance_meters }}
+            <p class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">Acima desta distância (PUDO vs entrega real) → suspeita</p>
+          </div>
+        </div>
+      </div>
+
       <!-- Observações e Status -->
       <div class="space-y-4">
         <h2 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2 pb-2 border-b border-gray-200 dark:border-gray-700">

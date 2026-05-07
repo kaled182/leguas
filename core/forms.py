@@ -22,6 +22,13 @@ class PartnerForm(forms.ModelForm):
             "bonus_performance_enabled",
             "bonus_sunday_holiday_enabled",
             "bonus_volume_enabled",
+            # PUDO
+            "pudo_enabled",
+            "pudo_first_delivery_price",
+            "pudo_additional_delivery_price",
+            "pudo_fake_delivery_penalty",
+            "pudo_geo_tolerance_meters",
+            # Fiscal
             "vat_regime",
             "vat_rate_override",
             "irs_retention_pct",
@@ -99,6 +106,38 @@ class PartnerForm(forms.ModelForm):
             ),
             "bonus_volume_enabled": forms.CheckboxInput(
                 attrs={"class": "w-4 h-4 text-blue-600 rounded focus:ring-2 dark:bg-gray-700 dark:border-gray-600"}
+            ),
+            "pudo_enabled": forms.CheckboxInput(
+                attrs={"class": "w-4 h-4 text-violet-600 rounded focus:ring-2 dark:bg-gray-700 dark:border-gray-600"}
+            ),
+            "pudo_first_delivery_price": forms.NumberInput(
+                attrs={
+                    "class": "w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-violet-500 dark:bg-gray-700 dark:text-white",
+                    "step": "0.0001",
+                    "placeholder": "1.0000",
+                }
+            ),
+            "pudo_additional_delivery_price": forms.NumberInput(
+                attrs={
+                    "class": "w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-violet-500 dark:bg-gray-700 dark:text-white",
+                    "step": "0.0001",
+                    "placeholder": "0.2000",
+                }
+            ),
+            "pudo_fake_delivery_penalty": forms.NumberInput(
+                attrs={
+                    "class": "w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-rose-500 dark:bg-gray-700 dark:text-white",
+                    "step": "0.0001",
+                    "placeholder": "1.3000",
+                }
+            ),
+            "pudo_geo_tolerance_meters": forms.NumberInput(
+                attrs={
+                    "class": "w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-violet-500 dark:bg-gray-700 dark:text-white",
+                    "step": "10",
+                    "min": "10",
+                    "placeholder": "200",
+                }
             ),
             "vat_regime": forms.Select(
                 attrs={

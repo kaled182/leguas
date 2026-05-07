@@ -2,8 +2,8 @@
 from django.core.exceptions import ValidationError
 
 from .models import (
-    Bill, BillAttachment, CostCenter, Expenses, Fornecedor, FornecedorTag,
-    Imposto, Revenues,
+    Bill, BillAttachment, CostCenter, ExpenseCategory, Expenses,
+    Fornecedor, FornecedorTag, Imposto, Revenues,
 )
 
 
@@ -260,6 +260,41 @@ class ImpostoForm(forms.ModelForm):
                 "Para marcar PAGO, preenche a data de pagamento.",
             )
         return cleaned
+
+
+class ExpenseCategoryForm(forms.ModelForm):
+    """Categoria de despesa (DRE)."""
+
+    class Meta:
+        model = ExpenseCategory
+        fields = ["code", "name", "nature", "icon", "is_active", "sort_order"]
+        widgets = {
+            "code": forms.TextInput(attrs={
+                "class": "fld",
+                "placeholder": "ex: COMB, RENDA, PEC, INT",
+            }),
+            "name": forms.TextInput(attrs={"class": "fld"}),
+            "nature": forms.Select(attrs={"class": "fld"}),
+            "icon": forms.TextInput(attrs={
+                "class": "fld",
+                "placeholder": "ex: fuel, wrench, building, wifi",
+            }),
+            "is_active": forms.CheckboxInput(),
+            "sort_order": forms.NumberInput(attrs={"class": "fld"}),
+        }
+
+    def clean_code(self):
+        code = (self.cleaned_data.get("code") or "").strip().upper()
+        if not code:
+            raise ValidationError("Código obrigatório.")
+        qs = ExpenseCategory.objects.filter(code=code)
+        if self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise ValidationError(
+                f"Já existe categoria com código {code}.",
+            )
+        return code
 
 
 class CostCenterForm(forms.ModelForm):

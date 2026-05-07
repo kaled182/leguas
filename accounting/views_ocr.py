@@ -5,7 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 
-from .models import Fornecedor
+from .models import ExpenseCategory, Fornecedor
 from .services_ocr import extract_invoice_data
 
 logger = logging.getLogger(__name__)
@@ -58,8 +58,33 @@ def ocr_extract_api(request):
                 "iva_dedutivel": s.iva_dedutivel,
             }
 
+    # Sugerir ExpenseCategory existente por nome (icontains do hint)
+    suggested_category = None
+    hint = (data.get("category_hint") or "").strip()
+    if hint:
+        # 1ª tentativa: match exacto (case-insensitive) por name
+        cat = ExpenseCategory.objects.filter(
+            is_active=True, name__iexact=hint,
+        ).first()
+        # 2ª: match parcial — qualquer palavra do hint contida no name
+        if not cat:
+            for token in hint.split():
+                if len(token) < 3:
+                    continue
+                cat = ExpenseCategory.objects.filter(
+                    is_active=True, name__icontains=token,
+                ).first()
+                if cat:
+                    break
+        if cat:
+            suggested_category = {
+                "id": cat.id, "name": cat.name, "code": cat.code,
+                "matched_via": hint,
+            }
+
     return JsonResponse({
         "success": True,
         "data": data,
         "suggested_fornecedor": suggested,
+        "suggested_category": suggested_category,
     })

@@ -2,7 +2,7 @@
 
 from . import (
     views, views_payables, views_suppliers, views_taxes,
-    views_treasury, views_ocr, views_cost_centers,
+    views_treasury, views_ocr, views_cost_centers, views_categories,
 )
 
 app_name = "accounting"
@@ -244,5 +244,19 @@ urlpatterns = [
         "centros-custo/sync-hubs/",
         views_cost_centers.cost_center_sync_hubs,
         name="cost_center_sync_hubs",
+    ),
+
+    # ── Categorias de Despesa ─────────────────────────────────────────
+    path(
+        "categorias/",
+        views_categories.category_list, name="category_list",
+    ),
+    path(
+        "categorias/nova/",
+        views_categories.category_create, name="category_create",
+    ),
+    path(
+        "categorias/<int:pk>/editar/",
+        views_categories.category_edit, name="category_edit",
     ),
 ]

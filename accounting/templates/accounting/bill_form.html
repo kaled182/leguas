@@ -181,6 +181,28 @@
                   </button>
                 </div>
               </div>
+
+              <!-- Sugestão de Categoria -->
+              <div id="ocr-category-match" class="md:col-span-3 mt-1 text-blue-700 dark:text-blue-300 hidden">
+                <i data-lucide="folder-check" class="w-3.5 h-3.5 inline"></i>
+                Categoria existente: <strong id="ocr-category-name">—</strong>
+                <span id="ocr-category-hint" class="text-gray-500 italic">(detectada como "—")</span>
+              </div>
+              <div id="ocr-category-create" class="md:col-span-3 mt-1 hidden">
+                <div class="flex items-center justify-between p-2 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700/50">
+                  <div class="text-xs text-blue-800 dark:text-blue-300 flex items-center gap-1.5">
+                    <i data-lucide="folder-plus" class="w-3.5 h-3.5"></i>
+                    <span>Categoria <strong id="ocr-cat-hint">—</strong> não cadastrada.
+                      <span id="ocr-cat-keywords" class="text-blue-600/60 italic">(produtos: —)</span>
+                    </span>
+                  </div>
+                  <button type="button" id="ocr-create-category"
+                    class="text-xs px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold flex items-center gap-1">
+                    <i data-lucide="plus" class="w-3 h-3"></i>
+                    Criar categoria
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -323,6 +345,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const ocrStatus = document.getElementById('ocr-status');
   let _ocrLastData = null;
   let _ocrLastSuggested = null;
+  let _ocrLastSuggestedCategory = null;
 
   function setOcrStatus(text, color) {
     if (!ocrStatus) return;
@@ -354,14 +377,15 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       _ocrLastData = data.data;
       _ocrLastSuggested = data.suggested_fornecedor;
-      renderOcrPreview(data.data, data.suggested_fornecedor);
+      _ocrLastSuggestedCategory = data.suggested_category;
+      renderOcrPreview(data.data, data.suggested_fornecedor, data.suggested_category);
       setOcrStatus('✓ Extraído — revê os campos', 'text-emerald-600');
     } catch (e) {
       setOcrStatus(`Erro: ${e.message}`, 'text-rose-600');
     }
   }
 
-  function renderOcrPreview(d, suggested) {
+  function renderOcrPreview(d, suggested, suggestedCat) {
     document.getElementById('ocr-supplier').textContent = d.supplier_name || '—';
     document.getElementById('ocr-nif').textContent = d.supplier_nif || '—';
     document.getElementById('ocr-invoice').textContent = d.invoice_number || '—';
@@ -393,6 +417,29 @@ document.addEventListener('DOMContentLoaded', () => {
         createSug.classList.add('hidden');
       }
     }
+
+    // Categoria — match ou criar
+    const catMatch = document.getElementById('ocr-category-match');
+    const catCreate = document.getElementById('ocr-category-create');
+    if (suggestedCat) {
+      document.getElementById('ocr-category-name').textContent =
+        suggestedCat.name + ' [' + suggestedCat.code + ']';
+      document.getElementById('ocr-category-hint').textContent =
+        '(detectada como "' + (d.category_hint || suggestedCat.matched_via || '?') + '")';
+      catMatch.classList.remove('hidden');
+      catCreate.classList.add('hidden');
+    } else {
+      catMatch.classList.add('hidden');
+      if (d.category_hint) {
+        document.getElementById('ocr-cat-hint').textContent = '"' + d.category_hint + '"';
+        document.getElementById('ocr-cat-keywords').textContent =
+          d.category_keywords ? '(produtos: ' + d.category_keywords + ')' : '';
+        catCreate.classList.remove('hidden');
+      } else {
+        catCreate.classList.add('hidden');
+      }
+    }
+
     ocrPreview.classList.remove('hidden');
     if (window.lucide) lucide.createIcons();
   }
@@ -431,6 +478,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (desc && !desc.value && d.invoice_number) {
       desc.value = `Fatura ${d.invoice_number} — ${d.supplier_name}`;
     }
+    // Categoria detectada pelo OCR (sobrepõe-se à default do fornecedor)
+    if (_ocrLastSuggestedCategory) {
+      const catEl = document.querySelector('[name=category]');
+      if (catEl) {
+        catEl.value = _ocrLastSuggestedCategory.id;
+        catEl.dispatchEvent(new Event('change'));
+      }
+    }
     recompute();
     updateIvaBadge();
     setOcrStatus('✓ Aplicado', 'text-emerald-600');
@@ -465,6 +520,39 @@ document.addEventListener('DOMContentLoaded', () => {
       params.set('iva_dedutivel', '1');
     }
     window.open(`/accounting/fornecedores/novo/?${params.toString()}`, '_blank');
+  });
+
+  // Abrir form de criação de ExpenseCategory com category_hint pré-preenchido
+  document.getElementById('ocr-create-category')?.addEventListener('click', () => {
+    if (!_ocrLastData) return;
+    const d = _ocrLastData;
+    // Heurística: gerar code a partir do hint (ex: "Combustível" → "COMB")
+    const hint = d.category_hint || '';
+    const code = hint.toUpperCase()
+      .normalize('NFD').replace(/[̀-ͯ]/g, '')  // sem acentos
+      .replace(/[^A-Z0-9]+/g, ' ').trim().split(/\s+/)
+      .map(w => w.slice(0, 4)).join('-').slice(0, 20);
+    const params = new URLSearchParams({
+      from: 'ocr',
+      name: hint,
+      code: code,
+      nature: 'VARIAVEL',
+    });
+    // Ícone heurístico baseado em palavras-chave
+    const lo = hint.toLowerCase();
+    let icon = 'tag';
+    if (lo.includes('combustível') || lo.includes('combustivel')) icon = 'fuel';
+    else if (lo.includes('peça') || lo.includes('peca') || lo.includes('manuten')) icon = 'wrench';
+    else if (lo.includes('renda') || lo.includes('arrenda')) icon = 'building-2';
+    else if (lo.includes('internet') || lo.includes('telecom')) icon = 'wifi';
+    else if (lo.includes('eletric') || lo.includes('luz')) icon = 'zap';
+    else if (lo.includes('água') || lo.includes('agua')) icon = 'droplet';
+    else if (lo.includes('seguro')) icon = 'shield';
+    else if (lo.includes('imposto')) icon = 'landmark';
+    else if (lo.includes('limpeza')) icon = 'spray-can';
+    else if (lo.includes('honor') || lo.includes('serviço')) icon = 'briefcase';
+    params.set('icon', icon);
+    window.open(`/accounting/categorias/nova/?${params.toString()}`, '_blank');
   });
 });
 </script>

@@ -1,0 +1,90 @@
+{% extends 'settlements/base.html' %}
+{% block title %}Categorias de Despesa{% endblock %}
+{% block content %}
+<style>
+  .fld { width:100%; padding:0.5rem 0.75rem; border:1px solid #d1d5db; border-radius:0.5rem; font-size:0.875rem; background:#fff; }
+  .dark .fld { background:#1f2937; border-color:#374151; color:#fff; }
+  .pill { padding:0.125rem 0.5rem; border-radius:9999px; font-size:0.7rem; font-weight:600; }
+  .pill-DIRETO { background:#fef3c7; color:#92400e; }
+  .pill-VARIAVEL { background:#dbeafe; color:#1e40af; }
+  .pill-FIXO { background:#ede9fe; color:#5b21b6; }
+  .pill-FINANCEIRO { background:#fce7f3; color:#9d174d; }
+</style>
+<div class="max-w-screen-2xl mx-auto px-4 py-6 space-y-4">
+  <div class="flex items-center justify-between flex-wrap gap-3">
+    <div>
+      <h1 class="text-2xl font-bold flex items-center gap-2">
+        <i data-lucide="folder-tree" class="w-6 h-6 text-blue-500"></i>
+        Categorias de Despesa
+      </h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400">
+        Para agrupar Bills no DRE — combustível, peças, rendas, internet, etc.
+      </p>
+    </div>
+    <a href="{% url 'accounting:category_create' %}"
+      class="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold flex items-center gap-1.5">
+      <i data-lucide="plus" class="w-4 h-4"></i> Nova Categoria
+    </a>
+  </div>
+
+  {% if messages %}
+  <div class="space-y-2">{% for m in messages %}
+    <div class="px-4 py-2.5 rounded-lg text-sm
+      {% if m.tags == 'success' %}bg-emerald-50 dark:bg-emerald-900/20 text-emerald-800
+      {% else %}bg-blue-50 dark:bg-blue-900/20 text-blue-800{% endif %}">{{ m }}</div>
+    {% endfor %}</div>
+  {% endif %}
+
+  <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+    <form method="get" class="flex gap-2 items-end">
+      <div>
+        <label class="text-xs uppercase tracking-wide text-gray-500 mb-1 block">Estado</label>
+        <select name="show" class="fld">
+          <option value="active" {% if filters.show == 'active' %}selected{% endif %}>Activas</option>
+          <option value="inactive" {% if filters.show == 'inactive' %}selected{% endif %}>Inactivas</option>
+          <option value="all" {% if filters.show == 'all' %}selected{% endif %}>Todas</option>
+        </select>
+      </div>
+      <button type="submit" class="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm">Filtrar</button>
+    </form>
+  </div>
+
+  <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+      <thead class="bg-gray-50 dark:bg-gray-900">
+        <tr>
+          <th class="px-3 py-2.5 text-left text-xs font-medium uppercase">Código</th>
+          <th class="px-3 py-2.5 text-left text-xs font-medium uppercase">Nome</th>
+          <th class="px-3 py-2.5 text-left text-xs font-medium uppercase">Natureza DRE</th>
+          <th class="px-3 py-2.5 text-left text-xs font-medium uppercase">Ícone</th>
+          <th class="px-3 py-2.5 text-center text-xs font-medium uppercase">Bills</th>
+          <th class="px-3 py-2.5 text-right text-xs font-medium uppercase">Despesas {{ year }}</th>
+          <th class="px-3 py-2.5 text-right text-xs font-medium uppercase">Acções</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+        {% for c in categorias %}
+        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 {% if not c.is_active %}opacity-60{% endif %}">
+          <td class="px-3 py-2.5 font-mono text-xs font-bold">{{ c.code }}</td>
+          <td class="px-3 py-2.5 text-sm">{{ c.name }}</td>
+          <td class="px-3 py-2.5"><span class="pill pill-{{ c.nature }}">{{ c.get_nature_display }}</span></td>
+          <td class="px-3 py-2.5 text-xs">
+            {% if c.icon %}<i data-lucide="{{ c.icon }}" class="w-4 h-4 inline"></i> <code>{{ c.icon }}</code>{% else %}—{% endif %}
+          </td>
+          <td class="px-3 py-2.5 text-center text-xs">{{ c.n_bills }}</td>
+          <td class="px-3 py-2.5 text-right font-mono text-xs">€{{ c.total_ytd|default:"0.00"|floatformat:2 }}</td>
+          <td class="px-3 py-2.5 text-right">
+            <a href="{% url 'accounting:category_edit' c.pk %}" class="text-indigo-600 dark:text-indigo-400 hover:underline text-sm">Editar</a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" class="px-4 py-12 text-center text-sm text-gray-500">
+          <i data-lucide="folder-tree" class="w-10 h-10 mx-auto text-gray-300 mb-2"></i>
+          Nenhuma categoria. <a href="{% url 'accounting:category_create' %}" class="text-indigo-600 hover:underline">Criar a primeira →</a>
+        </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

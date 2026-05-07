@@ -86,6 +86,8 @@ seguinte estrutura:
   "amount_net": "valor sem IVA com ponto decimal (ex: 123.45)",
   "iva_rate": "taxa IVA % (ex: 23.00 ou 6.00 ou 13.00)",
   "amount_total": "valor com IVA com ponto decimal (ex: 151.84)",
+  "category_hint": "categoria curta em PT, ex: 'Combustível', 'Peças e Manutenção', 'Renda', 'Internet/Telecom', 'Eletricidade', 'Água', 'Honorários', 'Material de Escritório', 'Limpeza', 'Seguros', 'Imposto'",
+  "category_keywords": "1-3 palavras-chave dos produtos/serviços facturados, ex: 'gasóleo abastecimento', 'pneus alinhamento', 'fibra 1Gbps'",
   "confidence": "low | medium | high"
 }
 
@@ -95,6 +97,10 @@ Regras estritas:
 - Valores SEMPRE com ponto decimal (não vírgula).
 - NIF SEM espaços nem prefixo "PT".
 - supplier_name é o emissor da factura (não o cliente).
+- category_hint deve refletir o TIPO DE DESPESA, não o nome do fornecedor.
+  Analisa as descrições das linhas/produtos. Ex: factura da BP com gasóleo
+  → "Combustível"; factura da MEO com fibra → "Internet/Telecom"; factura
+  do mecânico com peças e mão de obra → "Peças e Manutenção".
 - confidence: 'high' se conseguiste ler tudo claramente; 'medium' se
   alguns campos foram inferidos; 'low' se documento ilegível ou parcial.
 - Não inventes dados — se um campo não está no documento, usa "".
@@ -137,6 +143,8 @@ def _normalize_response(raw_json: str) -> dict:
         "amount_net": _dec(data.get("amount_net")),
         "iva_rate": _dec(data.get("iva_rate")),
         "amount_total": _dec(data.get("amount_total")),
+        "category_hint": (data.get("category_hint") or "").strip(),
+        "category_keywords": (data.get("category_keywords") or "").strip(),
         "confidence": (data.get("confidence") or "low").lower(),
         "raw_text": "",
     }

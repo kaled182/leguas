@@ -531,8 +531,8 @@ class SystemConfiguration(models.Model):
         max_length=80,
         blank=True,
         null=True,
-        default="gemini-2.0-flash-exp",
-        help_text="ID do modelo (ex: gemini-2.0-flash-exp, gemini-1.5-pro).",
+        default="gemini-2.5-flash",
+        help_text="ID do modelo (ex: gemini-2.5-flash, gemini-2.0-flash, gemini-1.5-pro).",
     )
 
     # System Status

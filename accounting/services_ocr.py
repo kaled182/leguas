@@ -68,7 +68,7 @@ def _get_ocr_settings():
         "anthropic_key": anthropic_key,
         "anthropic_model": anthropic_model or "claude-sonnet-4-6",
         "gemini_key": gemini_key,
-        "gemini_model": gemini_model or "gemini-2.0-flash-exp",
+        "gemini_model": gemini_model or "gemini-2.5-flash",
     }
 
 

@@ -68,7 +68,7 @@ ANTHROPIC_OCR_MODEL = env(
     "ANTHROPIC_OCR_MODEL", default="claude-sonnet-4-6",
 )
 GEMINI_OCR_MODEL = env(
-    "GEMINI_OCR_MODEL", default="gemini-2.0-flash-exp",
+    "GEMINI_OCR_MODEL", default="gemini-2.5-flash",
 )
 
 # WPPConnect Server (Leguas)

@@ -1078,10 +1078,11 @@
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Modelo</label>
-                            <input type="text" name="ocr_gemini_model" value="{{ config.ocr_gemini_model|default:'gemini-2.0-flash-exp' }}"
+                            <input type="text" name="ocr_gemini_model" value="{{ config.ocr_gemini_model|default:'gemini-2.5-flash' }}"
                                    class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-mono">
                             <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
-                                Recomendado: <code>gemini-2.0-flash-exp</code> (rápido + free) ou <code>gemini-1.5-pro</code> (mais preciso)
+                                Recomendado: <code>gemini-2.5-flash</code> (rápido + free + multimodal) ou <code>gemini-2.5-pro</code> (mais preciso, pago).
+                                Modelos descontinuados: <code>gemini-2.0-flash-exp</code>, <code>gemini-pro-vision</code>.
                             </p>
                         </div>
                     </div>

@@ -1,0 +1,153 @@
+"""Helpers para regras PUDO (Pickup & Drop-Off).
+
+Contém:
+- `pudo_key(task)`: chave única do PUDO para agregação.
+- `haversine_meters(lat1, lng1, lat2, lng2)`: distância entre pontos.
+- `is_fake_delivery_suspect(task, tolerance_m)`: True se receiver vs
+  actual coords excedem a tolerância.
+- `compute_pudo_payment(n, partner)`: 1ª + (N-1) × adicional.
+- `aggregate_pudo_packages(tasks_qs)`: agrupa tasks PUDO por chave e
+  devolve {pudo_key: [tasks...]}.
+"""
+from __future__ import annotations
+
+import math
+from collections import defaultdict
+from decimal import Decimal
+
+
+def haversine_meters(lat1, lng1, lat2, lng2):
+    """Distância em metros entre 2 coordenadas (haversine)."""
+    try:
+        lat1 = float(lat1)
+        lng1 = float(lng1)
+        lat2 = float(lat2)
+        lng2 = float(lng2)
+    except (TypeError, ValueError):
+        return None
+    R = 6371000.0  # raio da Terra em metros
+    phi1 = math.radians(lat1)
+    phi2 = math.radians(lat2)
+    dphi = math.radians(lat2 - lat1)
+    dlmb = math.radians(lng2 - lng1)
+    a = (math.sin(dphi / 2) ** 2
+         + math.cos(phi1) * math.cos(phi2) * math.sin(dlmb / 2) ** 2)
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    return R * c
+
+
+def _norm_coord(s):
+    """Arredonda string lat/lng a 4 decimais (≈11m precisão)."""
+    if not s:
+        return None
+    try:
+        return round(float(s), 4)
+    except (TypeError, ValueError):
+        return None
+
+
+def pudo_key(task):
+    """Devolve chave estável que identifica o PUDO da task.
+
+    Prioridade:
+      1. (receiver_lat, receiver_lng) arredondado a 4 decimais — mais
+         preciso e robusto contra variações de digitação da morada.
+      2. (zip_code, detailed_address normalizado) como fallback se
+         coordenadas indisponíveis.
+      3. None se não há dados suficientes (task não agregável).
+    """
+    lat = _norm_coord(task.receiver_latitude)
+    lng = _norm_coord(task.receiver_longitude)
+    if lat is not None and lng is not None:
+        return ("geo", lat, lng)
+    addr = (task.detailed_address or "").strip().lower()
+    zc = (task.zip_code or "").strip()
+    if addr:
+        return ("addr", zc, addr)
+    return None
+
+
+def is_fake_delivery_suspect(task, tolerance_m):
+    """True se o local de entrega real (actual_*) está a > tolerance_m
+    do receiver_*. Devolve (suspeita: bool, distance_m: float|None).
+    """
+    if not (task.actual_latitude and task.actual_longitude
+            and task.receiver_latitude and task.receiver_longitude):
+        return False, None
+    d = haversine_meters(
+        task.receiver_latitude, task.receiver_longitude,
+        task.actual_latitude, task.actual_longitude,
+    )
+    if d is None:
+        return False, None
+    return d > tolerance_m, d
+
+
+def compute_pudo_payment(n, partner):
+    """Pagamento total para N pacotes entregues no MESMO PUDO.
+
+    Fórmula: 1ª + (N-1) × adicional. Mínimo 1 pacote = preço da 1ª.
+    """
+    if n <= 0:
+        return Decimal("0")
+    first = (
+        partner.pudo_first_delivery_price
+        if partner else Decimal("1.00")
+    )
+    extra = (
+        partner.pudo_additional_delivery_price
+        if partner else Decimal("0.20")
+    )
+    if n == 1:
+        return first
+    return first + (n - 1) * extra
+
+
+def aggregate_pudo_packages(tasks):
+    """Agrupa tasks PUDO por pudo_key. Tasks sem chave caem em
+    bucket "_unkeyed" (cada uma conta como 1 PUDO isolado, garante
+    pelo menos 1ª entrega).
+    """
+    grouped = defaultdict(list)
+    for t in tasks:
+        k = pudo_key(t)
+        if k is None:
+            grouped[("solo", t.id)].append(t)
+        else:
+            grouped[k].append(t)
+    return grouped
+
+
+def split_pudo_and_door_tasks(tasks_iterable):
+    """Separa tasks num par (pudo_tasks, door_tasks) com base em
+    delivery_type. Aceita queryset ou lista.
+    """
+    pudo, door = [], []
+    for t in tasks_iterable:
+        if (t.delivery_type or "").upper().strip() == "PUDO":
+            pudo.append(t)
+        else:
+            door.append(t)
+    return pudo, door
+
+
+def compute_pudo_total_for_driver(pudo_tasks, partner):
+    """Calcula o total de pagamento para uma lista de tasks PUDO de
+    um driver, agrupando por PUDO e aplicando a fórmula.
+
+    Devolve: (total_amount Decimal, n_pudos_distintos int, breakdown
+    list[{pudo_key, n_packages, amount}]).
+    """
+    grouped = aggregate_pudo_packages(pudo_tasks)
+    total = Decimal("0.00")
+    breakdown = []
+    for k, tasks_in_pudo in grouped.items():
+        n = len(tasks_in_pudo)
+        amt = compute_pudo_payment(n, partner)
+        total += amt
+        breakdown.append({
+            "pudo_key": k,
+            "n_packages": n,
+            "amount": amt,
+        })
+    return total, len(grouped), breakdown

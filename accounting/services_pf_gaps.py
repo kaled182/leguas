@@ -44,9 +44,19 @@ Para cada driver, no período:
 
 ──────────────────────────────────────────────────────────────────────
 """
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 from datetime import timedelta
 from decimal import Decimal
+
+# Tipo leve usado para agregação PUDO (compatível com a interface
+# esperada por settlements.services_pudo.pudo_key e cia. — só
+# precisa dos campos lidos).
+_PudoTaskLite = namedtuple("_PudoTaskLite", [
+    "id", "waybill_number", "task_date",
+    "receiver_latitude", "receiver_longitude",
+    "actual_latitude", "actual_longitude",
+    "zip_code", "detailed_address",
+])
 
 MIN_GAP_DAYS = 7  # Só reporta motoristas com gap >= 7 dias
 
@@ -217,27 +227,54 @@ def find_drivers_without_pf(date_from, date_to, min_gap_days=MIN_GAP_DAYS,
         base_amount = Decimal("0")
         bonus_amount = Decimal("0")
         bonus_days_count = 0
+        # PUDO accumulators (só aplicado no fim, agregando por PUDO)
+        pudo_task_objs = []  # tasks com delivery_type=PUDO
+        pudo_enabled = (
+            cainiao and getattr(cainiao, "pudo_enabled", False)
+        )
         seen_task_ids = set()
 
         # Helper que processa um conjunto de tasks (rows) como um
         # "login" — agrega base + bónus por dia desse login isolado.
+        # Tasks com delivery_type=PUDO ficam de fora do base_amount e
+        # vão para pudo_task_objs (calculadas no fim com a fórmula
+        # 1ª + (N-1)×adicional por PUDO distinto).
         def _process_login(rows):
             nonlocal delivered_total, base_amount
             nonlocal bonus_amount, bonus_days_count
             if not rows:
                 return
-            # base por waybill (com override de preço)
             day_count = defaultdict(int)
             for r in rows:
                 wb = r["waybill_number"]
                 d = r["task_date"]
-                po = price_overrides_map.get(wb)
-                unit = po.price if po else base_price
-                base_amount += unit
+                dt = (r.get("delivery_type") or "").upper().strip()
+                is_pudo = pudo_enabled and dt == "PUDO"
+
+                if is_pudo:
+                    # Adia para cálculo agregado por PUDO no fim.
+                    # Cria um "pseudo-task" com os campos necessários.
+                    pudo_task_objs.append(_PudoTaskLite(
+                        id=r["id"],
+                        waybill_number=wb,
+                        task_date=d,
+                        receiver_latitude=r.get("receiver_latitude") or "",
+                        receiver_longitude=r.get("receiver_longitude") or "",
+                        actual_latitude=r.get("actual_latitude") or "",
+                        actual_longitude=r.get("actual_longitude") or "",
+                        zip_code=r.get("zip_code") or "",
+                        detailed_address=r.get("detailed_address") or "",
+                    ))
+                else:
+                    # Door normal: aplica preço base + override.
+                    po = price_overrides_map.get(wb)
+                    unit = po.price if po else base_price
+                    base_amount += unit
+
                 day_count[d] += 1
                 delivered_total += 1
                 active_dates.add(d)
-            # bónus deste login por dia (tier independente)
+            # bónus deste login por dia (tier independente, conta tudo)
             for d, n in day_count.items():
                 if not _is_bonus_day(d, holidays_set):
                     continue
@@ -263,7 +300,12 @@ def find_drivers_without_pf(date_from, date_to, min_gap_days=MIN_GAP_DAYS,
                 qs = qs.exclude(waybill_number__in=outgoing_waybills)
             if seen_task_ids:
                 qs = qs.exclude(id__in=seen_task_ids)
-            rows = list(qs.values("id", "waybill_number", "task_date"))
+            rows = list(qs.values(
+                "id", "waybill_number", "task_date",
+                "delivery_type", "receiver_latitude", "receiver_longitude",
+                "actual_latitude", "actual_longitude",
+                "zip_code", "detailed_address",
+            ))
             if not rows:
                 continue
             seen_task_ids.update(r["id"] for r in rows)
@@ -281,12 +323,30 @@ def find_drivers_without_pf(date_from, date_to, min_gap_days=MIN_GAP_DAYS,
                 qs_inc = qs_inc.exclude(id__in=seen_task_ids)
             rows_inc = list(qs_inc.values(
                 "id", "waybill_number", "task_date",
+                "delivery_type", "receiver_latitude", "receiver_longitude",
+                "actual_latitude", "actual_longitude",
+                "zip_code", "detailed_address",
             ))
             if rows_inc:
                 seen_task_ids.update(r["id"] for r in rows_inc)
                 _process_login(rows_inc)
 
-        # 3) Caso o driver não tenha entregas, ignorar
+        # 3) PUDO: agregar por chave de PUDO e aplicar fórmula
+        #    1ª + (N-1) × adicional por PUDO distinto.
+        pudo_total = Decimal("0.00")
+        n_pudos_distintos = 0
+        n_pudo_packages = 0
+        if pudo_task_objs:
+            from settlements.services_pudo import (
+                compute_pudo_total_for_driver,
+            )
+            pudo_total, n_pudos_distintos, _bd = (
+                compute_pudo_total_for_driver(pudo_task_objs, cainiao)
+            )
+            n_pudo_packages = len(pudo_task_objs)
+            base_amount += pudo_total
+
+        # 4) Caso o driver não tenha entregas, ignorar
         if delivered_total == 0:
             continue
 
@@ -366,6 +426,9 @@ def find_drivers_without_pf(date_from, date_to, min_gap_days=MIN_GAP_DAYS,
             "bonus_days_count": bonus_days_count,
             "logins_count": len(logins) + (1 if wbs_in else 0),
             "last_pf": last_pf_info,
+            "n_pudo_packages": n_pudo_packages,
+            "n_pudos_distintos": n_pudos_distintos,
+            "pudo_amount": pudo_total,
         })
 
     results.sort(key=lambda r: (-r["gap_days"], -r["delivered_count"]))

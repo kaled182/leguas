@@ -1,0 +1,195 @@
+{% extends 'settlements/base.html' %}
+
+{% block title %}Suspeitas Fake Delivery (PUDO){% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-8">
+
+  <!-- Header -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 fade-in">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+          <i data-lucide="map-pinned" class="w-6 h-6 text-violet-600"></i>
+          Suspeitas Fake Delivery (PUDO)
+        </h1>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          Pacotes PUDO marcados como Delivered cuja entrega real ficou a mais de
+          <strong>{{ tolerance_m }}m</strong> do destino.
+          Confirmar gera desconto de <strong>€{{ penalty|floatformat:2 }}</strong> ao motorista.
+        </p>
+      </div>
+      <div class="flex items-center gap-3">
+        <div class="px-3 py-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-300 text-sm font-medium">
+          <i data-lucide="alert-triangle" class="w-4 h-4 inline-block"></i>
+          {{ n_pending }} pendente{{ n_pending|pluralize }}
+        </div>
+        <div class="px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium">
+          {{ n_total }} total
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mensagens -->
+  {% if messages %}
+  <div class="space-y-2">
+    {% for message in messages %}
+    <div class="px-4 py-3 rounded-lg text-sm font-medium
+      {% if message.tags == 'success' %}bg-emerald-50 dark:bg-emerald-900/20 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-700
+      {% elif message.tags == 'error' %}bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-700
+      {% elif message.tags == 'warning' %}bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-700
+      {% else %}bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-700{% endif %}">
+      {{ message }}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if not pudo_enabled %}
+  <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl p-6">
+    <div class="flex items-start gap-3">
+      <i data-lucide="alert-octagon" class="w-6 h-6 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5"></i>
+      <div>
+        <h3 class="text-base font-semibold text-amber-900 dark:text-amber-200">PUDO desativado no parceiro CAINIAO</h3>
+        <p class="text-sm text-amber-800 dark:text-amber-300 mt-1">
+          Active a opção "PUDO Habilitado" nas configurações do parceiro para poder analisar suspeitas.
+        </p>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Filtros de período -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6">
+    <form method="get" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">De</label>
+        <input type="date" name="date_from" value="{{ date_from|date:'Y-m-d' }}"
+          class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-violet-500">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Até</label>
+        <input type="date" name="date_to" value="{{ date_to|date:'Y-m-d' }}"
+          class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-violet-500">
+      </div>
+      <div class="md:col-span-2 flex items-end gap-2">
+        <button type="submit" class="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg font-medium transition-colors duration-200 flex items-center gap-2">
+          <i data-lucide="search" class="w-4 h-4"></i>
+          Filtrar
+        </button>
+        <a href="{% url 'pudo-fake-delivery-suspects' %}" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg font-medium transition-colors duration-200">
+          Limpar
+        </a>
+      </div>
+    </form>
+  </div>
+
+  <!-- Tabela de suspeitas -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <thead class="bg-gray-50 dark:bg-gray-900">
+          <tr>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Data</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Waybill</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Motorista</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Cidade</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Endereço</th>
+            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Distância</th>
+            <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Mapa</th>
+            <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Ação</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+          {% for s in suspects %}
+          <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+              {{ s.task_date|date:"d/m/Y" }}
+            </td>
+            <td class="px-4 py-3 whitespace-nowrap text-sm font-mono text-gray-900 dark:text-white">
+              <a href="{% url 'cainiao-waybill-detail' s.waybill_number %}" class="text-violet-600 dark:text-violet-400 hover:underline">
+                {{ s.waybill_number }}
+              </a>
+            </td>
+            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+              {% if s.driver %}
+                {{ s.driver.nome_completo }}
+                <div class="text-xs text-gray-500 dark:text-gray-400">{{ s.courier_name }}</div>
+              {% else %}
+                <span class="text-amber-600 dark:text-amber-400 text-xs">⚠ não resolvido</span>
+                <div class="text-xs text-gray-500 dark:text-gray-400">{{ s.courier_name }}</div>
+              {% endif %}
+            </td>
+            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+              {{ s.destination_city|default:"—" }}
+            </td>
+            <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 max-w-xs truncate" title="{{ s.detailed_address }}">
+              {{ s.detailed_address|truncatechars:50 }}
+            </td>
+            <td class="px-4 py-3 whitespace-nowrap text-sm text-right">
+              <span class="font-semibold text-red-600 dark:text-red-400">
+                {{ s.distance_m }}m
+              </span>
+              <div class="text-xs text-gray-400">tol. {{ tolerance_m }}m</div>
+            </td>
+            <td class="px-4 py-3 whitespace-nowrap text-sm text-center">
+              <a href="https://www.google.com/maps/dir/{{ s.receiver_latitude }},{{ s.receiver_longitude }}/{{ s.actual_latitude }},{{ s.actual_longitude }}"
+                 target="_blank" rel="noopener"
+                 class="inline-flex items-center gap-1 text-violet-600 dark:text-violet-400 hover:underline">
+                <i data-lucide="map" class="w-4 h-4"></i>
+                Ver
+              </a>
+            </td>
+            <td class="px-4 py-3 whitespace-nowrap text-center">
+              {% if s.existing_claim_id %}
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                  {% if s.existing_claim_status == 'APPROVED' %}bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400
+                  {% elif s.existing_claim_status == 'REJECTED' %}bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400
+                  {% else %}bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400{% endif %}">
+                  Claim #{{ s.existing_claim_id }} · {{ s.existing_claim_status }}
+                </span>
+              {% else %}
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+                  novo
+                </span>
+              {% endif %}
+            </td>
+            <td class="px-4 py-3 whitespace-nowrap text-right">
+              {% if s.existing_claim_id %}
+                <a href="{% url 'claim-detail' s.existing_claim_id %}"
+                   class="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
+                  Ver claim
+                </a>
+              {% elif s.driver %}
+                <form method="post" action="{% url 'pudo-fake-delivery-confirm' s.id %}" class="inline"
+                      onsubmit="return confirm('Confirmar Fake Delivery para {{ s.driver.nome_completo }}?\n\nWaybill: {{ s.waybill_number }}\nDistância: {{ s.distance_m }}m\nDesconto: €{{ penalty|floatformat:2 }}\n\nIsto criará uma DriverClaim PENDENTE.');">
+                  {% csrf_token %}
+                  <button type="submit"
+                          class="inline-flex items-center gap-1 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-medium transition-colors">
+                    <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
+                    Confirmar Fake
+                  </button>
+                </form>
+              {% else %}
+                <span class="text-xs text-gray-400">resolva o motorista</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="9" class="px-4 py-12 text-center text-gray-500 dark:text-gray-400">
+              <i data-lucide="check-circle-2" class="w-12 h-12 mx-auto text-emerald-400 mb-3"></i>
+              <p class="text-base font-medium">Nenhuma suspeita encontrada no período.</p>
+              <p class="text-sm mt-1">Todos os PUDO Delivered estão dentro da tolerância de {{ tolerance_m }}m.</p>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

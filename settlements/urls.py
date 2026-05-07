@@ -2,7 +2,7 @@
 
 from . import (
     cainiao_views, forecast_plan_views, holiday_views, plan_api,
-    views, views_cash_entries, views_shareholder,
+    views, views_cash_entries, views_pudo, views_shareholder,
     views_cainiao_billing,
 )
 
@@ -986,5 +986,17 @@ urlpatterns = [
         "reembolsos/bulk-mark-paid/",
         views_shareholder.reimbursement_bulk_mark_paid,
         name="reimbursement-bulk-mark-paid",
+    ),
+
+    # ── PUDO — Suspeitas Fake Delivery ───────────────────────────────
+    path(
+        "pudo/fake-delivery-suspects/",
+        views_pudo.fake_delivery_suspects,
+        name="pudo-fake-delivery-suspects",
+    ),
+    path(
+        "pudo/fake-delivery-suspects/<int:task_id>/confirm/",
+        views_pudo.confirm_fake_delivery,
+        name="pudo-fake-delivery-confirm",
     ),
 ]

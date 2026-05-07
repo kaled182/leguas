@@ -161,6 +161,87 @@ def split_pudo_and_door_tasks(tasks_iterable):
     return pudo, door
 
 
+def find_fake_delivery_suspects(date_from, date_to, partner):
+    """Lista CainiaoOperationTask que são suspeitas de Fake Delivery.
+
+    Critérios:
+      - delivery_type=PUDO
+      - task_status=Delivered
+      - receiver_lat/lng e actual_lat/lng preenchidos
+      - distância haversine > partner.pudo_geo_tolerance_meters
+      - sem DriverClaim já confirmado para este waybill
+        (claim_type=FAKE_DELIVERY ou waybill_number match)
+
+    Devolve queryset annotated + helper para distância calculada
+    em Python (não SQL — haversine não é trivial em SQL puro).
+
+    Cada elemento retornado é um dict com:
+      - id, waybill_number, task_date, courier_name, driver
+      - receiver_lat/lng, actual_lat/lng
+      - distance_m
+      - existing_claim_id (None se não há claim vinculado)
+    """
+    from .models import CainiaoOperationTask, DriverClaim
+
+    if not partner or not getattr(partner, "pudo_enabled", False):
+        return []
+
+    tolerance = partner.pudo_geo_tolerance_meters or 200
+
+    qs = CainiaoOperationTask.objects.filter(
+        delivery_type__iexact="PUDO",
+        task_status="Delivered",
+        task_date__range=(date_from, date_to),
+    ).exclude(receiver_latitude="").exclude(
+        receiver_longitude="",
+    ).exclude(actual_latitude="").exclude(actual_longitude="")
+
+    # Pré-buscar DriverClaims existentes para evitar mostrar
+    # suspeitas já tratadas
+    existing_claims_by_wb = {}
+    waybills = list(qs.values_list("waybill_number", flat=True))
+    if waybills:
+        for c in DriverClaim.objects.filter(
+            waybill_number__in=waybills,
+        ).values("id", "waybill_number", "claim_type", "status"):
+            wb = c["waybill_number"]
+            if wb and wb not in existing_claims_by_wb:
+                existing_claims_by_wb[wb] = c
+
+    suspects = []
+    for t in qs:
+        d = haversine_meters(
+            t.receiver_latitude, t.receiver_longitude,
+            t.actual_latitude, t.actual_longitude,
+        )
+        if d is None or d <= tolerance:
+            continue
+        existing = existing_claims_by_wb.get(t.waybill_number)
+        suspects.append({
+            "task": t,
+            "id": t.id,
+            "waybill_number": t.waybill_number,
+            "task_date": t.task_date,
+            "courier_name": t.courier_name,
+            "courier_id_cainiao": t.courier_id_cainiao,
+            "receiver_latitude": t.receiver_latitude,
+            "receiver_longitude": t.receiver_longitude,
+            "actual_latitude": t.actual_latitude,
+            "actual_longitude": t.actual_longitude,
+            "destination_city": t.destination_city,
+            "detailed_address": t.detailed_address,
+            "distance_m": int(d),
+            "existing_claim_id": (
+                existing["id"] if existing else None
+            ),
+            "existing_claim_status": (
+                existing["status"] if existing else None
+            ),
+        })
+    suspects.sort(key=lambda s: -s["distance_m"])
+    return suspects
+
+
 def compute_pudo_total_for_driver(pudo_tasks, partner):
     """Calcula o total de pagamento para uma lista de tasks PUDO de
     um driver, agrupando por PUDO e aplicando a fórmula.

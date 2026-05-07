@@ -668,6 +668,7 @@ class DriverClaim(models.Model):
         ("MISSING_POD", "Falta de Comprovante"),
         ("LATE_DELIVERY", "Entrega Atrasada"),
         ("CUSTOMER_COMPLAINT", "Reclamação de Cliente"),
+        ("FAKE_DELIVERY", "Fake Delivery (PUDO)"),
         ("OTHER", "Outro"),
     ]
 

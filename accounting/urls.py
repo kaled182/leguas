@@ -1,7 +1,7 @@
 ﻿from django.urls import path
 
 from . import (
-    views, views_payables, views_suppliers, views_taxes,
+    views, views_payables, views_suppliers, views_taxes, views_treasury,
 )
 
 app_name = "accounting"
@@ -207,5 +207,11 @@ urlpatterns = [
     path(
         "impostos/<int:pk>/anular/",
         views_taxes.imposto_anular, name="imposto_anular",
+    ),
+
+    # ── Tesouraria ────────────────────────────────────────────────────
+    path(
+        "tesouraria/",
+        views_treasury.treasury_dashboard, name="treasury_dashboard",
     ),
 ]

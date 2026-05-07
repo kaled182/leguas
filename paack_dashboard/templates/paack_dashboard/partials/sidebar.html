@@ -495,6 +495,11 @@
         
         <!-- Submenu de Financeiro (simplificado: 4 itens principais + avançado) -->
         <div id="financialSubmenu" class="ml-8 mt-1 space-y-1 hidden">
+          <a href="{% url 'accounting:treasury_dashboard' %}" class="flex items-center gap-2 p-2 text-sm rounded-lg transition-colors text-gray-600 dark:text-gray-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 dark:hover:text-indigo-400">
+            <i data-lucide="trending-up" class="w-4 h-4"></i>
+            <span>Tesouraria</span>
+          </a>
+
           <a href="{% url 'accounting:payables_inbox' %}" class="flex items-center gap-2 p-2 text-sm rounded-lg transition-colors text-gray-600 dark:text-gray-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-600 dark:hover:text-primary-400">
             <i data-lucide="inbox" class="w-4 h-4"></i>
             <span>A Pagar</span>

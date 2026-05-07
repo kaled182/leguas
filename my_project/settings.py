@@ -59,6 +59,18 @@ AUTHENTICATION_API_KEY = env("AUTHENTICATION_API_KEY", default="")
 WHATSAPP_API_URL = env("WHATSAPP_API_URL", default="")
 WHATSAPP_REPORT_GROUP = env("WHATSAPP_REPORT_GROUP", default="")
 
+# ── OCR de faturas (Bill form) ────────────────────────────────────────
+# Provider activo: 'anthropic' (Claude Vision — pago) ou 'gemini' (free tier)
+OCR_PROVIDER = env("OCR_PROVIDER", default="gemini")
+ANTHROPIC_API_KEY = env("ANTHROPIC_API_KEY", default="")
+GEMINI_API_KEY = env("GEMINI_API_KEY", default="")
+ANTHROPIC_OCR_MODEL = env(
+    "ANTHROPIC_OCR_MODEL", default="claude-sonnet-4-6",
+)
+GEMINI_OCR_MODEL = env(
+    "GEMINI_OCR_MODEL", default="gemini-2.0-flash-exp",
+)
+
 # WPPConnect Server (Leguas)
 WPPCONNECT_URL = env("WPPCONNECT_URL", default="")
 WPPCONNECT_SESSION = env("WPPCONNECT_SESSION", default="leguas_wppconnect")

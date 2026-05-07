@@ -77,10 +77,18 @@
 
     <!-- Valores -->
     <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-5">
-      <h2 class="text-sm font-bold text-gray-800 dark:text-white mb-3 flex items-center gap-2">
-        <i data-lucide="euro" class="w-4 h-4 text-amber-500"></i>
-        Valores e Datas
-      </h2>
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-sm font-bold text-gray-800 dark:text-white flex items-center gap-2">
+          <i data-lucide="euro" class="w-4 h-4 text-amber-500"></i>
+          Valores e Datas
+        </h2>
+        <div id="iva-dedutivel-badge"
+             class="hidden items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-700">
+          <i data-lucide="receipt-percent" class="w-3.5 h-3.5"></i>
+          <span>IVA dedutível: <strong id="iva-dedutivel-amount">€0,00</strong></span>
+          <span class="text-violet-500/70">— entra como crédito no apuramento</span>
+        </div>
+      </div>
       <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
         <div>
           <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Valor sem IVA *</label>
@@ -121,9 +129,47 @@
       </h2>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Factura / Recibo</label>
-          <input type="file" name="attachments_invoice" multiple class="fld" accept=".pdf,.jpg,.jpeg,.png">
-          <p class="text-[10px] text-gray-500 mt-1">Podes anexar várias facturas se necessário.</p>
+          <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1 flex items-center justify-between">
+            <span>Factura / Recibo</span>
+            <span id="ocr-status" class="text-[10px] font-normal text-gray-400 hidden"></span>
+          </label>
+          <input type="file" id="ocr-file-input" name="attachments_invoice" multiple class="fld" accept=".pdf,.jpg,.jpeg,.png">
+          <p class="text-[10px] text-gray-500 mt-1">
+            Anexa o PDF/imagem da fatura — uma extracção automática via IA tentará preencher os campos acima.
+          </p>
+          <!-- Painel preview OCR -->
+          <div id="ocr-preview" class="hidden mt-3 p-3 rounded-lg bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-700">
+            <div class="flex items-start justify-between gap-3">
+              <div class="flex items-center gap-2">
+                <i data-lucide="sparkles" class="w-4 h-4 text-violet-600"></i>
+                <span class="text-xs font-bold text-violet-700 dark:text-violet-300">
+                  IA detectou:
+                </span>
+                <span id="ocr-confidence" class="text-[10px] px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700"></span>
+              </div>
+              <div class="flex gap-1">
+                <button type="button" id="ocr-apply" class="text-xs px-2.5 py-1 bg-violet-600 hover:bg-violet-700 text-white rounded font-semibold">
+                  Aplicar
+                </button>
+                <button type="button" id="ocr-dismiss" class="text-xs px-2.5 py-1 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 rounded">
+                  Ignorar
+                </button>
+              </div>
+            </div>
+            <div class="mt-2 grid grid-cols-2 md:grid-cols-3 gap-x-3 gap-y-1 text-xs">
+              <div><span class="text-gray-500">Fornecedor:</span> <strong id="ocr-supplier">—</strong></div>
+              <div><span class="text-gray-500">NIF:</span> <strong id="ocr-nif">—</strong></div>
+              <div><span class="text-gray-500">Nº Fatura:</span> <strong id="ocr-invoice">—</strong></div>
+              <div><span class="text-gray-500">Data:</span> <strong id="ocr-date">—</strong></div>
+              <div><span class="text-gray-500">Sem IVA:</span> <strong id="ocr-net">—</strong></div>
+              <div><span class="text-gray-500">Taxa IVA:</span> <strong id="ocr-rate">—</strong></div>
+              <div><span class="text-gray-500">Total:</span> <strong id="ocr-total">—</strong></div>
+              <div id="ocr-suggested" class="md:col-span-3 mt-1 text-violet-700 dark:text-violet-300 hidden">
+                <i data-lucide="user-check" class="w-3.5 h-3.5 inline"></i>
+                Fornecedor existente: <strong id="ocr-suggested-name">—</strong>
+              </div>
+            </div>
+          </div>
         </div>
         <div>
           <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Comprovante de Pagamento</label>
@@ -178,8 +224,33 @@ document.addEventListener('DOMContentLoaded', () => {
       tot.value = (n * (1 + r/100)).toFixed(2);
     }
   }
-  net?.addEventListener('input', recompute);
-  rate?.addEventListener('input', recompute);
+  net?.addEventListener('input', () => { recompute(); updateIvaBadge(); });
+  rate?.addEventListener('input', () => { recompute(); updateIvaBadge(); });
+  tot?.addEventListener('input', updateIvaBadge);
+
+  // Estado: o fornecedor seleccionado tem iva_dedutivel?
+  let _fornecedorIvaDedutivel = false;
+  const ivaBadge = document.getElementById('iva-dedutivel-badge');
+  const ivaAmountEl = document.getElementById('iva-dedutivel-amount');
+
+  function updateIvaBadge() {
+    if (!ivaBadge || !_fornecedorIvaDedutivel) {
+      if (ivaBadge) ivaBadge.classList.add('hidden');
+      if (ivaBadge) ivaBadge.classList.remove('flex');
+      return;
+    }
+    const n = parseFloat(net?.value || '0');
+    const t = parseFloat(tot?.value || '0');
+    const iva = Math.max(0, t - n);
+    if (iva > 0) {
+      ivaAmountEl.textContent = '€' + iva.toFixed(2);
+      ivaBadge.classList.remove('hidden');
+      ivaBadge.classList.add('flex');
+    } else {
+      ivaBadge.classList.add('hidden');
+      ivaBadge.classList.remove('flex');
+    }
+  }
 
   // Auto-fill quando seleciona um Fornecedor do cadastro
   const fornSel = document.querySelector('[data-fornecedor-select]');
@@ -212,8 +283,11 @@ document.addEventListener('DOMContentLoaded', () => {
         setIfEmpty('[name=category]', f.categoria_id);
         setIfEmpty('[name=cost_center]', f.centro_custo_id);
         setIfEmpty('[name=recurrence]', mapRecorrencia(f.recorrencia));
+        // Estado IVA dedutível para mostrar o badge
+        _fornecedorIvaDedutivel = !!f.iva_dedutivel;
         // Recalcula valor com IVA caso já exista net.
         recompute();
+        updateIvaBadge();
       } catch (e) {
         console.warn('Auto-fill falhou:', e);
       }
@@ -229,6 +303,128 @@ document.addEventListener('DOMContentLoaded', () => {
       'ANUAL': 'YEARLY',
     })[r] || '';
   }
+
+  // ── OCR de fatura ───────────────────────────────────────────────────
+  const ocrInput = document.getElementById('ocr-file-input');
+  const ocrPreview = document.getElementById('ocr-preview');
+  const ocrStatus = document.getElementById('ocr-status');
+  let _ocrLastData = null;
+  let _ocrLastSuggested = null;
+
+  function setOcrStatus(text, color) {
+    if (!ocrStatus) return;
+    ocrStatus.textContent = text;
+    ocrStatus.className = `text-[10px] font-normal ${color || 'text-gray-400'}`;
+    ocrStatus.classList.remove('hidden');
+  }
+  function getCsrf() {
+    const m = document.querySelector('meta[name=csrf-token]');
+    if (m) return m.content;
+    const i = document.querySelector('input[name=csrfmiddlewaretoken]');
+    return i ? i.value : '';
+  }
+
+  async function runOCR(file) {
+    setOcrStatus('A extrair com IA...', 'text-violet-600');
+    const fd = new FormData();
+    fd.append('file', file);
+    try {
+      const resp = await fetch('/accounting/ocr/extract/', {
+        method: 'POST',
+        body: fd,
+        headers: { 'X-CSRFToken': getCsrf() },
+      });
+      const data = await resp.json();
+      if (!data.success) {
+        setOcrStatus(`OCR falhou: ${data.error}`, 'text-rose-600');
+        return;
+      }
+      _ocrLastData = data.data;
+      _ocrLastSuggested = data.suggested_fornecedor;
+      renderOcrPreview(data.data, data.suggested_fornecedor);
+      setOcrStatus('✓ Extraído — revê os campos', 'text-emerald-600');
+    } catch (e) {
+      setOcrStatus(`Erro: ${e.message}`, 'text-rose-600');
+    }
+  }
+
+  function renderOcrPreview(d, suggested) {
+    document.getElementById('ocr-supplier').textContent = d.supplier_name || '—';
+    document.getElementById('ocr-nif').textContent = d.supplier_nif || '—';
+    document.getElementById('ocr-invoice').textContent = d.invoice_number || '—';
+    document.getElementById('ocr-date').textContent = d.issue_date || '—';
+    document.getElementById('ocr-net').textContent = d.amount_net ? '€' + d.amount_net : '—';
+    document.getElementById('ocr-rate').textContent = d.iva_rate ? d.iva_rate + '%' : '—';
+    document.getElementById('ocr-total').textContent = d.amount_total ? '€' + d.amount_total : '—';
+    const conf = document.getElementById('ocr-confidence');
+    conf.textContent = (d.confidence || 'low').toUpperCase();
+    conf.className = `text-[10px] px-1.5 py-0.5 rounded-full ${
+      d.confidence === 'high' ? 'bg-emerald-100 text-emerald-700' :
+      d.confidence === 'medium' ? 'bg-amber-100 text-amber-700' :
+      'bg-rose-100 text-rose-700'
+    }`;
+    const sug = document.getElementById('ocr-suggested');
+    if (suggested) {
+      document.getElementById('ocr-suggested-name').textContent = suggested.name + ' (#' + suggested.id + ')';
+      sug.classList.remove('hidden');
+    } else {
+      sug.classList.add('hidden');
+    }
+    ocrPreview.classList.remove('hidden');
+    if (window.lucide) lucide.createIcons();
+  }
+
+  function applyOcrData() {
+    if (!_ocrLastData) return;
+    const d = _ocrLastData;
+    const setVal = (sel, val) => {
+      const el = document.querySelector(sel);
+      if (el && val) {
+        el.value = val;
+        el.dispatchEvent(new Event('change'));
+        el.dispatchEvent(new Event('input'));
+      }
+    };
+    // Se há fornecedor sugerido, selecciona-o (dispara auto-fill)
+    if (_ocrLastSuggested && fornSel) {
+      fornSel.value = _ocrLastSuggested.id;
+      fornSel.dispatchEvent(new Event('change'));
+      _fornecedorIvaDedutivel = !!_ocrLastSuggested.iva_dedutivel;
+    } else {
+      // Sem cadastro: preenche o campo livre
+      setVal('[name=supplier]', d.supplier_name);
+      setVal('[name=supplier_nif]', d.supplier_nif);
+    }
+    setVal('[name=invoice_number]', d.invoice_number);
+    setVal('[name=issue_date]', d.issue_date);
+    setVal('[name=amount_net]', d.amount_net);
+    setVal('[name=iva_rate]', d.iva_rate);
+    setVal('[name=amount_total]', d.amount_total);
+    // Vencimento default = data de emissão (operador altera se diferente)
+    const due = document.querySelector('[name=due_date]');
+    if (due && !due.value && d.issue_date) due.value = d.issue_date;
+    // Descrição default
+    const desc = document.querySelector('[name=description]');
+    if (desc && !desc.value && d.invoice_number) {
+      desc.value = `Fatura ${d.invoice_number} — ${d.supplier_name}`;
+    }
+    recompute();
+    updateIvaBadge();
+    setOcrStatus('✓ Aplicado', 'text-emerald-600');
+  }
+
+  if (ocrInput) {
+    ocrInput.addEventListener('change', () => {
+      const f = ocrInput.files && ocrInput.files[0];
+      if (f) runOCR(f);
+    });
+  }
+  document.getElementById('ocr-apply')?.addEventListener('click', applyOcrData);
+  document.getElementById('ocr-dismiss')?.addEventListener('click', () => {
+    ocrPreview.classList.add('hidden');
+    _ocrLastData = null;
+    _ocrLastSuggested = null;
+  });
 });
 </script>
 {% endblock %}

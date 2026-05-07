@@ -1,7 +1,8 @@
 ﻿from django.urls import path
 
 from . import (
-    views, views_payables, views_suppliers, views_taxes, views_treasury,
+    views, views_payables, views_suppliers, views_taxes,
+    views_treasury, views_ocr,
 )
 
 app_name = "accounting"
@@ -213,5 +214,11 @@ urlpatterns = [
     path(
         "tesouraria/",
         views_treasury.treasury_dashboard, name="treasury_dashboard",
+    ),
+
+    # ── OCR de faturas ────────────────────────────────────────────────
+    path(
+        "ocr/extract/",
+        views_ocr.ocr_extract_api, name="ocr_extract",
     ),
 ]

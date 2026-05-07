@@ -1,6 +1,8 @@
 ﻿from django.urls import path
 
-from . import views, views_payables
+from . import (
+    views, views_payables, views_suppliers, views_taxes,
+)
 
 app_name = "accounting"
 
@@ -147,5 +149,63 @@ urlpatterns = [
         "extractos/transacao/<int:pk>/desconciliar/",
         views.bank_transaction_unmatch,
         name="bank_transaction_unmatch",
+    ),
+
+    # ── Fornecedores (cadastro) ───────────────────────────────────────
+    path(
+        "fornecedores/",
+        views_suppliers.fornecedor_list, name="fornecedor_list",
+    ),
+    path(
+        "fornecedores/novo/",
+        views_suppliers.fornecedor_create, name="fornecedor_create",
+    ),
+    path(
+        "fornecedores/<int:pk>/editar/",
+        views_suppliers.fornecedor_edit, name="fornecedor_edit",
+    ),
+    path(
+        "fornecedores/<int:pk>/toggle-ativo/",
+        views_suppliers.fornecedor_toggle_active,
+        name="fornecedor_toggle_active",
+    ),
+    path(
+        "fornecedores/tags/",
+        views_suppliers.fornecedor_tag_list,
+        name="fornecedor_tag_list",
+    ),
+    path(
+        "fornecedores/tags/<int:pk>/apagar/",
+        views_suppliers.fornecedor_tag_delete,
+        name="fornecedor_tag_delete",
+    ),
+    path(
+        "fornecedores/api/search/",
+        views_suppliers.fornecedor_search_api,
+        name="fornecedor_search_api",
+    ),
+    path(
+        "fornecedores/api/<int:pk>/",
+        views_suppliers.fornecedor_detail_api,
+        name="fornecedor_detail_api",
+    ),
+
+    # ── Impostos ──────────────────────────────────────────────────────
+    path("impostos/", views_taxes.imposto_list, name="imposto_list"),
+    path(
+        "impostos/novo/",
+        views_taxes.imposto_create, name="imposto_create",
+    ),
+    path(
+        "impostos/<int:pk>/editar/",
+        views_taxes.imposto_edit, name="imposto_edit",
+    ),
+    path(
+        "impostos/<int:pk>/marcar-pago/",
+        views_taxes.imposto_mark_paid, name="imposto_mark_paid",
+    ),
+    path(
+        "impostos/<int:pk>/anular/",
+        views_taxes.imposto_anular, name="imposto_anular",
     ),
 ]

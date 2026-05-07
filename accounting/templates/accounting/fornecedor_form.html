@@ -1,0 +1,170 @@
+{% extends 'settlements/base.html' %}
+{% block title %}{% if is_create %}Novo{% else %}Editar{% endif %} Fornecedor{% endblock %}
+{% block content %}
+<style>
+  .fld { width:100%; padding:0.5rem 0.75rem; border:1px solid #d1d5db; border-radius:0.5rem; font-size:0.875rem; background:#fff; }
+  .dark .fld { background:#1f2937; border-color:#374151; color:#fff; }
+  .grp { background:#fff; border:1px solid #e5e7eb; border-radius:0.75rem; padding:1.25rem; }
+  .dark .grp { background:#1f2937; border-color:#374151; }
+  .lbl { display:block; font-size:0.75rem; font-weight:600; color:#6b7280; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.25rem; }
+  .err { color:#dc2626; font-size:0.75rem; margin-top:0.25rem; }
+</style>
+<div class="max-w-4xl mx-auto px-4 py-6 space-y-4">
+
+  <div class="flex items-center gap-2">
+    <a href="{% url 'accounting:fornecedor_list' %}" class="text-gray-500 hover:text-gray-700 dark:hover:text-white">
+      <i data-lucide="arrow-left" class="w-5 h-5"></i>
+    </a>
+    <h1 class="text-2xl font-bold flex items-center gap-2">
+      <i data-lucide="user-plus" class="w-6 h-6 text-indigo-500"></i>
+      {% if is_create %}Novo Fornecedor{% else %}Editar — {{ fornecedor.name }}{% endif %}
+    </h1>
+  </div>
+
+  {% if form.non_field_errors %}
+    <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-300 rounded-lg p-3 text-sm">
+      {{ form.non_field_errors }}
+    </div>
+  {% endif %}
+
+  <form method="post" class="space-y-4" enctype="multipart/form-data">
+    {% csrf_token %}
+
+    <!-- Identificação -->
+    <div class="grp">
+      <h2 class="text-sm font-bold mb-3 flex items-center gap-1.5"><i data-lucide="id-card" class="w-4 h-4 text-indigo-500"></i> Identificação</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div>
+          <label class="lbl">Nome / Razão Social *</label>
+          {{ form.name }}
+          {% if form.name.errors %}<div class="err">{{ form.name.errors.0 }}</div>{% endif %}
+        </div>
+        <div>
+          <label class="lbl">NIF</label>
+          {{ form.nif }}
+          {% if form.nif.errors %}<div class="err">{{ form.nif.errors.0 }}</div>{% endif %}
+        </div>
+        <div>
+          <label class="lbl">Tipo *</label>
+          {{ form.tipo }}
+        </div>
+        <div>
+          <label class="lbl">Tags (segura Ctrl/Cmd para múltiplas)</label>
+          {{ form.tags }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Categorização -->
+    <div class="grp">
+      <h2 class="text-sm font-bold mb-3 flex items-center gap-1.5"><i data-lucide="tag" class="w-4 h-4 text-violet-500"></i> Categorização (auto-fill)</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div>
+          <label class="lbl">Categoria Default</label>
+          {{ form.default_categoria }}
+        </div>
+        <div>
+          <label class="lbl">Centro de Custo Default</label>
+          {{ form.default_centro_custo }}
+        </div>
+        <div>
+          <label class="lbl">Taxa IVA Default (%)</label>
+          {{ form.default_iva_rate }}
+        </div>
+        <div class="flex items-center gap-2 mt-6">
+          {{ form.iva_dedutivel }}
+          <label class="text-sm">IVA Dedutível (entra no apuramento como crédito)</label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pagamento -->
+    <div class="grp">
+      <h2 class="text-sm font-bold mb-3 flex items-center gap-1.5"><i data-lucide="credit-card" class="w-4 h-4 text-emerald-500"></i> Pagamento</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div>
+          <label class="lbl">Forma de Pagamento Default</label>
+          {{ form.forma_pagamento }}
+        </div>
+        <div>
+          <label class="lbl">IBAN</label>
+          {{ form.iban }}
+        </div>
+        <div>
+          <label class="lbl">Entidade MB</label>
+          {{ form.mb_entidade }}
+        </div>
+        <div>
+          <label class="lbl">Referência MB</label>
+          {{ form.mb_referencia }}
+          {% if form.mb_entidade.errors %}<div class="err">{{ form.mb_entidade.errors.0 }}</div>{% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Recorrência & Contrato -->
+    <div class="grp">
+      <h2 class="text-sm font-bold mb-3 flex items-center gap-1.5"><i data-lucide="repeat" class="w-4 h-4 text-amber-500"></i> Recorrência e Contrato</h2>
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+        <div>
+          <label class="lbl">Recorrência Default</label>
+          {{ form.recorrencia_default }}
+        </div>
+        <div>
+          <label class="lbl">Dia do Vencimento</label>
+          {{ form.dia_vencimento }}
+        </div>
+        <div>
+          <label class="lbl">Início do Contrato</label>
+          {{ form.data_inicio_contrato }}
+        </div>
+        <div>
+          <label class="lbl">Fim do Contrato</label>
+          {{ form.data_fim_contrato }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Contacto -->
+    <div class="grp">
+      <h2 class="text-sm font-bold mb-3 flex items-center gap-1.5"><i data-lucide="contact" class="w-4 h-4 text-blue-500"></i> Contacto</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div>
+          <label class="lbl">Email</label>
+          {{ form.email }}
+        </div>
+        <div>
+          <label class="lbl">Telefone</label>
+          {{ form.telefone }}
+        </div>
+        <div class="md:col-span-2">
+          <label class="lbl">Morada</label>
+          {{ form.morada }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Notas -->
+    <div class="grp">
+      <h2 class="text-sm font-bold mb-3 flex items-center gap-1.5"><i data-lucide="sticky-note" class="w-4 h-4 text-gray-500"></i> Notas</h2>
+      <div>
+        {{ form.notas }}
+      </div>
+      <div class="flex items-center gap-2 mt-3">
+        {{ form.is_active }}
+        <label class="text-sm">Activo</label>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="flex justify-between items-center">
+      <a href="{% url 'accounting:fornecedor_list' %}" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg text-sm font-semibold">
+        Cancelar
+      </a>
+      <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold flex items-center gap-1.5">
+        <i data-lucide="save" class="w-4 h-4"></i> Guardar
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}

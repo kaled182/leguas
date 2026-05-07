@@ -1,0 +1,159 @@
+{% extends 'settlements/base.html' %}
+{% block title %}{% if is_create %}Novo Imposto{% else %}Editar Imposto{% endif %}{% endblock %}
+{% block content %}
+<style>
+  .fld { width:100%; padding:0.5rem 0.75rem; border:1px solid #d1d5db; border-radius:0.5rem; font-size:0.875rem; background:#fff; }
+  .dark .fld { background:#1f2937; border-color:#374151; color:#fff; }
+  .grp { background:#fff; border:1px solid #e5e7eb; border-radius:0.75rem; padding:1.25rem; }
+  .dark .grp { background:#1f2937; border-color:#374151; }
+  .lbl { display:block; font-size:0.75rem; font-weight:600; color:#6b7280; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.25rem; }
+  .err { color:#dc2626; font-size:0.75rem; margin-top:0.25rem; }
+</style>
+<div class="max-w-4xl mx-auto px-4 py-6 space-y-4">
+
+  <div class="flex items-center gap-2">
+    <a href="{% url 'accounting:imposto_list' %}" class="text-gray-500 hover:text-gray-700 dark:hover:text-white">
+      <i data-lucide="arrow-left" class="w-5 h-5"></i>
+    </a>
+    <h1 class="text-2xl font-bold flex items-center gap-2">
+      <i data-lucide="landmark" class="w-6 h-6 text-amber-500"></i>
+      {% if is_create %}Novo Imposto{% else %}Editar — {{ imposto.nome }}{% endif %}
+    </h1>
+  </div>
+
+  {% if form.non_field_errors %}
+    <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-300 rounded-lg p-3 text-sm">
+      {{ form.non_field_errors }}
+    </div>
+  {% endif %}
+
+  <form method="post" class="space-y-4" enctype="multipart/form-data">
+    {% csrf_token %}
+
+    <div class="grp">
+      <h2 class="text-sm font-bold mb-3 flex items-center gap-1.5"><i data-lucide="info" class="w-4 h-4 text-amber-500"></i> Identificação</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div class="md:col-span-2">
+          <label class="lbl">Designação *</label>
+          {{ form.nome }}
+          {% if form.nome.errors %}<div class="err">{{ form.nome.errors.0 }}</div>{% endif %}
+        </div>
+        <div>
+          <label class="lbl">Tipo *</label>
+          {{ form.tipo }}
+        </div>
+        <div>
+          <label class="lbl">Modalidade *</label>
+          {{ form.modalidade }}
+        </div>
+        <div class="md:col-span-2">
+          <label class="lbl">Entidade Credora (Fornecedor)</label>
+          {{ form.fornecedor }}
+          <p class="text-[10px] text-gray-500 mt-1">
+            Cria a Autoridade Tributária e a Segurança Social como Fornecedores do tipo "Estado" para reutilizar.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="grp">
+      <h2 class="text-sm font-bold mb-3 flex items-center gap-1.5"><i data-lucide="calendar" class="w-4 h-4 text-blue-500"></i> Período e Valor</h2>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div>
+          <label class="lbl">Ano *</label>
+          {{ form.periodo_ano }}
+        </div>
+        <div>
+          <label class="lbl">Mês (1-12)</label>
+          {{ form.periodo_mes }}
+        </div>
+        <div>
+          <label class="lbl">Valor *</label>
+          {{ form.valor }}
+          {% if form.valor.errors %}<div class="err">{{ form.valor.errors.0 }}</div>{% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Bloco condicional: só visível se modalidade=PARCELADO em criação -->
+    {% if is_create %}
+    <div class="grp" id="parcelado-block" style="display:none;">
+      <h2 class="text-sm font-bold mb-3 flex items-center gap-1.5"><i data-lucide="layers" class="w-4 h-4 text-violet-500"></i> Parcelamento</h2>
+      <p class="text-xs text-gray-500 mb-3">
+        O sistema gera <strong>N prestações filhas</strong> mensais a partir da data indicada.
+        O valor de cada prestação será <code>valor / N</code> (a última absorve o resto para somar exato).
+      </p>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div>
+          <label class="lbl">Nº de Prestações *</label>
+          {{ form.n_prestacoes }}
+          {% if form.n_prestacoes.errors %}<div class="err">{{ form.n_prestacoes.errors.0 }}</div>{% endif %}
+        </div>
+        <div>
+          <label class="lbl">Vencimento da 1ª Prestação *</label>
+          {{ form.primeira_prestacao_em }}
+          {% if form.primeira_prestacao_em.errors %}<div class="err">{{ form.primeira_prestacao_em.errors.0 }}</div>{% endif %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="grp">
+      <h2 class="text-sm font-bold mb-3 flex items-center gap-1.5"><i data-lucide="credit-card" class="w-4 h-4 text-emerald-500"></i> Pagamento</h2>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div>
+          <label class="lbl">Entidade MB</label>
+          {{ form.mb_entidade }}
+        </div>
+        <div>
+          <label class="lbl">Referência MB</label>
+          {{ form.mb_referencia }}
+        </div>
+        <div>
+          <label class="lbl">Guia (PDF/JPG/PNG)</label>
+          {{ form.guia_pagamento }}
+        </div>
+        <div>
+          <label class="lbl">Data de Vencimento *</label>
+          {{ form.data_vencimento }}
+        </div>
+        <div>
+          <label class="lbl">Data de Pagamento</label>
+          {{ form.data_pagamento }}
+          {% if form.data_pagamento.errors %}<div class="err">{{ form.data_pagamento.errors.0 }}</div>{% endif %}
+        </div>
+        <div>
+          <label class="lbl">Estado *</label>
+          {{ form.status }}
+        </div>
+      </div>
+    </div>
+
+    <div class="grp">
+      <label class="lbl">Notas</label>
+      {{ form.notas }}
+    </div>
+
+    <div class="flex justify-between items-center">
+      <a href="{% url 'accounting:imposto_list' %}" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-lg text-sm font-semibold">Cancelar</a>
+      <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold flex items-center gap-1.5">
+        <i data-lucide="save" class="w-4 h-4"></i> Guardar
+      </button>
+    </div>
+  </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  if (window.lucide) lucide.createIcons();
+  const modSel = document.querySelector('[data-imposto-modalidade]');
+  const block = document.getElementById('parcelado-block');
+  if (!modSel || !block) return;
+  function toggle() {
+    block.style.display = (modSel.value === 'PARCELADO') ? '' : 'none';
+  }
+  toggle();
+  modSel.addEventListener('change', toggle);
+});
+</script>
+{% endblock %}

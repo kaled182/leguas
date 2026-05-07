@@ -2,8 +2,40 @@ from django.contrib import admin
 
 from .models import (
     ApprovalRule, Bill, BillApproval, BillAttachment,
-    CostCenter, ExpenseCategory,
+    CostCenter, ExpenseCategory, Fornecedor, FornecedorTag, Imposto,
 )
+
+
+@admin.register(Imposto)
+class ImpostoAdmin(admin.ModelAdmin):
+    list_display = (
+        "nome", "tipo", "modalidade", "periodo_ano", "periodo_mes",
+        "valor", "data_vencimento", "status", "parcela_numero",
+        "parcela_total",
+    )
+    list_filter = ("tipo", "modalidade", "status", "periodo_ano")
+    search_fields = ("nome", "mb_referencia", "fornecedor__name")
+    autocomplete_fields = ("fornecedor", "parent", "bill_espelho")
+    readonly_fields = ("created_at", "updated_at", "created_by")
+
+
+@admin.register(FornecedorTag)
+class FornecedorTagAdmin(admin.ModelAdmin):
+    list_display = ("name", "slug", "color", "is_active")
+    list_filter = ("is_active",)
+    prepopulated_fields = {"slug": ("name",)}
+
+
+@admin.register(Fornecedor)
+class FornecedorAdmin(admin.ModelAdmin):
+    list_display = (
+        "name", "nif", "tipo", "recorrencia_default",
+        "iva_dedutivel", "is_active",
+    )
+    list_filter = ("tipo", "is_active", "iva_dedutivel", "recorrencia_default")
+    search_fields = ("name", "nif", "iban")
+    filter_horizontal = ("tags",)
+    autocomplete_fields = ("default_categoria", "default_centro_custo")
 
 
 @admin.register(ApprovalRule)

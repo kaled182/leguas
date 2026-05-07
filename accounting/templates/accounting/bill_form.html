@@ -38,8 +38,18 @@
           <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Descrição *</label>
           {{ form.description }}
         </div>
+        <div class="md:col-span-2">
+          <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1 flex items-center justify-between">
+            <span>Fornecedor (cadastro) <span class="text-gray-400 font-normal">— escolhe da lista para auto-preencher</span></span>
+            <a href="{% url 'accounting:fornecedor_create' %}" target="_blank"
+               class="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">
+              + novo fornecedor
+            </a>
+          </label>
+          {{ form.fornecedor }}
+        </div>
         <div>
-          <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Fornecedor *</label>
+          <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Fornecedor (livre — fallback)</label>
           {{ form.supplier }}
         </div>
         <div>
@@ -170,6 +180,55 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   net?.addEventListener('input', recompute);
   rate?.addEventListener('input', recompute);
+
+  // Auto-fill quando seleciona um Fornecedor do cadastro
+  const fornSel = document.querySelector('[data-fornecedor-select]');
+  if (fornSel) {
+    fornSel.addEventListener('change', async () => {
+      const id = fornSel.value;
+      if (!id) return;
+      try {
+        const resp = await fetch(`/accounting/fornecedores/api/${id}/`);
+        if (!resp.ok) return;
+        const f = await resp.json();
+        // Só preenche se o operador ainda não preencheu manualmente.
+        const setIfEmpty = (sel, val) => {
+          const el = document.querySelector(sel);
+          if (el && !el.value && val !== null && val !== undefined && val !== '') {
+            el.value = val;
+            el.dispatchEvent(new Event('change'));
+          }
+        };
+        const setAlways = (sel, val) => {
+          const el = document.querySelector(sel);
+          if (el && val !== null && val !== undefined && val !== '') {
+            el.value = val;
+            el.dispatchEvent(new Event('change'));
+          }
+        };
+        setAlways('[name=supplier]', f.name || '');
+        setAlways('[name=supplier_nif]', f.nif || '');
+        setIfEmpty('[name=iva_rate]', f.iva_rate);
+        setIfEmpty('[name=category]', f.categoria_id);
+        setIfEmpty('[name=cost_center]', f.centro_custo_id);
+        setIfEmpty('[name=recurrence]', mapRecorrencia(f.recorrencia));
+        // Recalcula valor com IVA caso já exista net.
+        recompute();
+      } catch (e) {
+        console.warn('Auto-fill falhou:', e);
+      }
+    });
+  }
+
+  // Mapeia recorrência do Fornecedor → choices do Bill (subset).
+  function mapRecorrencia(r) {
+    return ({
+      'PONTUAL': 'NONE',
+      'MENSAL': 'MONTHLY',
+      'TRIMESTRAL': 'QUARTERLY',
+      'ANUAL': 'YEARLY',
+    })[r] || '';
+  }
 });
 </script>
 {% endblock %}

@@ -451,6 +451,384 @@ class ExpenseCategory(models.Model):
         return self.name
 
 
+class FornecedorTag(models.Model):
+    """Tag livre para classificar fornecedores (combustível, peças, internet,
+    arrendamento, etc.). Substitui um sistema de choices fixas — o operador
+    cria as tags conforme as necessidades.
+    """
+    name = models.CharField("Nome", max_length=40, unique=True)
+    slug = models.SlugField("Slug", max_length=50, unique=True)
+    color = models.CharField(
+        "Cor (Tailwind)", max_length=20, blank=True,
+        help_text="ex: violet, emerald, amber, blue, red. Vazio = cinza.",
+    )
+    is_active = models.BooleanField("Activo", default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Tag de Fornecedor"
+        verbose_name_plural = "Tags de Fornecedor"
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            from django.utils.text import slugify
+            self.slug = slugify(self.name)[:50]
+        super().save(*args, **kwargs)
+
+
+class Fornecedor(models.Model):
+    """Cadastro persistente de fornecedores e prestadores de serviços.
+
+    Substitui o input string solta no formulário de Bill. Quando seleccionado
+    no lançamento, pré-preenche NIF, IBAN, MB entidade/referência, taxa IVA,
+    centro de custo, recorrência. Permite agregar histórico por fornecedor
+    (quanto pagamos ao mecânico X este ano).
+    """
+
+    TIPO_EMPRESA = "EMPRESA"
+    TIPO_PARTICULAR = "PARTICULAR"
+    TIPO_ESTADO = "ESTADO"
+    TIPO_CHOICES = [
+        (TIPO_EMPRESA, "Empresa"),
+        (TIPO_PARTICULAR, "Particular"),
+        (TIPO_ESTADO, "Estado / Entidade Pública"),
+    ]
+
+    FORMA_TRANSFERENCIA = "TRANSFERENCIA"
+    FORMA_MULTIBANCO = "MULTIBANCO"
+    FORMA_DEBITO_DIRETO = "DEBITO_DIRETO"
+    FORMA_DINHEIRO = "DINHEIRO"
+    FORMA_CHEQUE = "CHEQUE"
+    FORMA_CHOICES = [
+        (FORMA_TRANSFERENCIA, "Transferência"),
+        (FORMA_MULTIBANCO, "Multibanco (Entidade/Ref.)"),
+        (FORMA_DEBITO_DIRETO, "Débito Directo"),
+        (FORMA_DINHEIRO, "Dinheiro"),
+        (FORMA_CHEQUE, "Cheque"),
+    ]
+
+    RECORRENCIA_PONTUAL = "PONTUAL"
+    RECORRENCIA_MENSAL = "MENSAL"
+    RECORRENCIA_TRIMESTRAL = "TRIMESTRAL"
+    RECORRENCIA_SEMESTRAL = "SEMESTRAL"
+    RECORRENCIA_ANUAL = "ANUAL"
+    RECORRENCIA_CHOICES = [
+        (RECORRENCIA_PONTUAL, "Pontual"),
+        (RECORRENCIA_MENSAL, "Mensal"),
+        (RECORRENCIA_TRIMESTRAL, "Trimestral"),
+        (RECORRENCIA_SEMESTRAL, "Semestral"),
+        (RECORRENCIA_ANUAL, "Anual"),
+    ]
+
+    # Identificação
+    name = models.CharField("Nome / Razão Social", max_length=150)
+    nif = models.CharField(
+        "NIF", max_length=20, blank=True, db_index=True,
+        help_text="9 dígitos para empresas/particulares portugueses.",
+    )
+    tipo = models.CharField(
+        "Tipo", max_length=12, choices=TIPO_CHOICES,
+        default=TIPO_EMPRESA,
+    )
+    tags = models.ManyToManyField(
+        FornecedorTag, blank=True, related_name="fornecedores",
+        verbose_name="Tags",
+    )
+
+    # Categorização (auto-fill na Conta a Pagar)
+    default_categoria = models.ForeignKey(
+        ExpenseCategory, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name="fornecedores_default",
+        verbose_name="Categoria Default",
+    )
+    default_centro_custo = models.ForeignKey(
+        CostCenter, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name="fornecedores_default",
+        verbose_name="Centro de Custo Default",
+    )
+    default_iva_rate = models.DecimalField(
+        "Taxa IVA Default (%)", max_digits=5, decimal_places=2,
+        default=Decimal("23.00"),
+    )
+    iva_dedutivel = models.BooleanField(
+        "IVA Dedutível", default=False,
+        help_text=(
+            "Se marcado, o IVA das contas deste fornecedor entra no "
+            "apuramento como crédito (gasóleo, peças, serviços com NIF)."
+        ),
+    )
+
+    # Pagamento
+    forma_pagamento = models.CharField(
+        "Forma de Pagamento Default", max_length=20,
+        choices=FORMA_CHOICES, default=FORMA_TRANSFERENCIA,
+    )
+    iban = models.CharField("IBAN", max_length=34, blank=True)
+    mb_entidade = models.CharField(
+        "Entidade MB", max_length=5, blank=True,
+        help_text="5 dígitos.",
+    )
+    mb_referencia = models.CharField(
+        "Referência MB", max_length=15, blank=True,
+        help_text="9 dígitos (ou variável). Para pagamentos fixos.",
+    )
+
+    # Recorrência
+    recorrencia_default = models.CharField(
+        "Recorrência Default", max_length=15,
+        choices=RECORRENCIA_CHOICES, default=RECORRENCIA_PONTUAL,
+    )
+    dia_vencimento = models.PositiveSmallIntegerField(
+        "Dia do Vencimento", null=True, blank=True,
+        help_text=(
+            "1-31. Usado para gerar próxima conta automática "
+            "(Fase Extras). Vazio = sem agendamento."
+        ),
+    )
+
+    # Contrato (rendas, seguros — alertas de renovação no futuro)
+    data_inicio_contrato = models.DateField(
+        "Início do Contrato", null=True, blank=True,
+    )
+    data_fim_contrato = models.DateField(
+        "Fim do Contrato", null=True, blank=True,
+    )
+
+    # Contacto
+    email = models.EmailField("Email", blank=True)
+    telefone = models.CharField("Telefone", max_length=30, blank=True)
+    morada = models.TextField("Morada", blank=True)
+
+    # Auditoria
+    notas = models.TextField("Notas", blank=True)
+    is_active = models.BooleanField("Activo", default=True, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name="fornecedores_created",
+    )
+
+    class Meta:
+        verbose_name = "Fornecedor"
+        verbose_name_plural = "Fornecedores"
+        ordering = ["name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["nif"], condition=~models.Q(nif=""),
+                name="unique_fornecedor_nif_when_filled",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["is_active", "name"]),
+        ]
+
+    def __str__(self):
+        if self.nif:
+            return f"{self.name} ({self.nif})"
+        return self.name
+
+
+def upload_to_imposto_guia(instance, filename):
+    yyyy = (instance.periodo_ano or 0) or "novo"
+    return f"accounting/impostos/{yyyy}/{filename}"
+
+
+class Imposto(models.Model):
+    """Imposto — fiscalmente separado de `Bill`.
+
+    Cobre IVA, IRC, IRS, SS, IUC e outros. Permite modalidade PARCELADO
+    com N instâncias filhas (via `parent`), cada uma com a sua própria
+    guia, vencimento e estado de pagamento.
+
+    Para entrar no fluxo de caixa, o pagamento de cada parcela cria
+    uma `Bill` espelho automaticamente (ver `criar_bill_espelho`).
+    """
+
+    TIPO_IVA = "IVA"
+    TIPO_IRC = "IRC"
+    TIPO_IRS_RETENCOES = "IRS_RETENCOES"
+    TIPO_IRS_DECLARACAO = "IRS_DECLARACAO"
+    TIPO_SS = "SS"
+    TIPO_IUC = "IUC"
+    TIPO_OUTRO = "OUTRO"
+    TIPO_CHOICES = [
+        (TIPO_IVA, "IVA"),
+        (TIPO_IRC, "IRC"),
+        (TIPO_IRS_RETENCOES, "IRS — Retenções na Fonte"),
+        (TIPO_IRS_DECLARACAO, "IRS — Declaração Anual"),
+        (TIPO_SS, "Segurança Social"),
+        (TIPO_IUC, "IUC (Imposto Único de Circulação)"),
+        (TIPO_OUTRO, "Outro"),
+    ]
+
+    MODALIDADE_MENSAL = "MENSAL_VIGENTE"
+    MODALIDADE_PARCELADO = "PARCELADO"
+    MODALIDADE_PONTUAL = "PONTUAL"
+    MODALIDADE_CHOICES = [
+        (MODALIDADE_MENSAL, "Mensal — período vigente"),
+        (MODALIDADE_PARCELADO, "Parcelado (N prestações)"),
+        (MODALIDADE_PONTUAL, "Pontual"),
+    ]
+
+    STATUS_PENDENTE = "PENDENTE"
+    STATUS_PAGO = "PAGO"
+    STATUS_EM_ATRASO = "EM_ATRASO"
+    STATUS_ANULADO = "ANULADO"
+    STATUS_CHOICES = [
+        (STATUS_PENDENTE, "Pendente"),
+        (STATUS_PAGO, "Pago"),
+        (STATUS_EM_ATRASO, "Em Atraso"),
+        (STATUS_ANULADO, "Anulado"),
+    ]
+
+    # Identificação
+    nome = models.CharField(
+        "Designação", max_length=200,
+        help_text=(
+            "ex: 'IVA Janeiro 2026', 'IRC 2024 — Plano 6 prestações', "
+            "'SS Fevereiro 2026'."
+        ),
+    )
+    tipo = models.CharField(
+        "Tipo", max_length=20, choices=TIPO_CHOICES, db_index=True,
+    )
+    modalidade = models.CharField(
+        "Modalidade", max_length=20, choices=MODALIDADE_CHOICES,
+        default=MODALIDADE_MENSAL, db_index=True,
+    )
+    fornecedor = models.ForeignKey(
+        Fornecedor, on_delete=models.PROTECT,
+        related_name="impostos",
+        null=True, blank=True,
+        help_text=(
+            "Entidade credora (Autoridade Tributária, Segurança Social). "
+            "Cria como Fornecedor tipo=ESTADO."
+        ),
+    )
+
+    # Período
+    periodo_ano = models.PositiveSmallIntegerField(
+        "Ano de Referência", db_index=True,
+    )
+    periodo_mes = models.PositiveSmallIntegerField(
+        "Mês de Referência", null=True, blank=True,
+        help_text="1-12. Para impostos mensais. Vazio = anual/parcelado.",
+    )
+
+    # Valor
+    valor = models.DecimalField(
+        "Valor", max_digits=12, decimal_places=2,
+        help_text=(
+            "Para o pai PARCELADO = total da dívida. "
+            "Para uma prestação = valor da prestação."
+        ),
+    )
+
+    # Pagamento (oficial)
+    mb_entidade = models.CharField("Entidade MB", max_length=5, blank=True)
+    mb_referencia = models.CharField(
+        "Referência MB", max_length=20, blank=True,
+    )
+    guia_pagamento = models.FileField(
+        "Guia / Comprovativo", upload_to=upload_to_imposto_guia,
+        null=True, blank=True,
+    )
+
+    # Datas
+    data_vencimento = models.DateField("Data de Vencimento", db_index=True)
+    data_pagamento = models.DateField(
+        "Data de Pagamento", null=True, blank=True,
+    )
+
+    status = models.CharField(
+        "Estado", max_length=12, choices=STATUS_CHOICES,
+        default=STATUS_PENDENTE, db_index=True,
+    )
+
+    # Parcelamento (PARCELADO)
+    parent = models.ForeignKey(
+        "self", on_delete=models.CASCADE,
+        null=True, blank=True, related_name="parcelas",
+        help_text="Imposto-pai (apenas para prestações de PARCELADO).",
+    )
+    parcela_numero = models.PositiveSmallIntegerField(
+        "Nº da Prestação", null=True, blank=True,
+    )
+    parcela_total = models.PositiveSmallIntegerField(
+        "Total de Prestações", null=True, blank=True,
+    )
+
+    # Mirror em Bill (criado quando paga, para entrar no fluxo de caixa)
+    bill_espelho = models.OneToOneField(
+        "Bill", on_delete=models.SET_NULL,
+        null=True, blank=True, related_name="imposto_origem",
+        help_text=(
+            "Bill criada automaticamente quando o imposto é marcado "
+            "como PAGO, para entrar no DRE / Fluxo de Caixa."
+        ),
+    )
+
+    # Auditoria
+    notas = models.TextField("Notas", blank=True)
+    created_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name="impostos_criados",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Imposto"
+        verbose_name_plural = "Impostos"
+        ordering = ["-data_vencimento", "-id"]
+        indexes = [
+            models.Index(fields=["tipo", "periodo_ano", "periodo_mes"]),
+            models.Index(fields=["status", "data_vencimento"]),
+            models.Index(fields=["parent", "parcela_numero"]),
+        ]
+
+    def __str__(self):
+        return f"{self.get_tipo_display()} · {self.nome} · €{self.valor}"
+
+    @property
+    def is_parent(self):
+        """True se este imposto é o pai de uma série de parcelas."""
+        return (
+            self.modalidade == self.MODALIDADE_PARCELADO
+            and self.parent_id is None
+        )
+
+    @property
+    def is_parcela(self):
+        """True se é uma prestação dentro de um plano parcelado."""
+        return self.parent_id is not None
+
+    def update_status_from_parcelas(self):
+        """Para um pai PARCELADO: deriva status agregado das parcelas
+        e guarda. Sem parcelas, mantém o que já tinha."""
+        if not self.is_parent:
+            return
+        children = list(self.parcelas.all())
+        if not children:
+            return
+        all_paid = all(c.status == self.STATUS_PAGO for c in children)
+        any_overdue = any(c.status == self.STATUS_EM_ATRASO for c in children)
+        if all_paid:
+            new_status = self.STATUS_PAGO
+        elif any_overdue:
+            new_status = self.STATUS_EM_ATRASO
+        else:
+            new_status = self.STATUS_PENDENTE
+        if new_status != self.status:
+            self.status = new_status
+            self.save(update_fields=["status", "updated_at"])
+
+
 def upload_to_bills(instance, filename):
     bill_id = instance.bill_id or "novo"
     return f"accounting/bills/{bill_id}/{filename}"
@@ -493,9 +871,21 @@ class Bill(models.Model):
         "Descrição", max_length=200,
         help_text="ex: Aluguer Setembro 2026, Combustível Frota 1",
     )
+    fornecedor = models.ForeignKey(
+        "Fornecedor", on_delete=models.PROTECT,
+        null=True, blank=True, related_name="bills",
+        verbose_name="Fornecedor (cadastro)",
+        help_text=(
+            "Selecciona um fornecedor pré-cadastrado. Se vazio, usa o "
+            "campo 'supplier' livre (legado / lançamento avulso)."
+        ),
+    )
     supplier = models.CharField(
-        "Fornecedor", max_length=120,
-        help_text="Nome do fornecedor / prestador",
+        "Fornecedor (livre)", max_length=120, blank=True,
+        help_text=(
+            "Nome do fornecedor — usado quando 'fornecedor' (FK) não "
+            "está preenchido. Para novos lançamentos, prefere o cadastro."
+        ),
     )
     supplier_nif = models.CharField(
         "NIF", max_length=20, blank=True,

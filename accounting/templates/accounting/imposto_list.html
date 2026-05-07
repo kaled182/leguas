@@ -1,0 +1,182 @@
+{% extends 'settlements/base.html' %}
+{% load static %}
+{% block title %}Impostos{% endblock %}
+{% block content %}
+<style>
+  .fld { width:100%; padding:0.5rem 0.75rem; border:1px solid #d1d5db; border-radius:0.5rem; font-size:0.875rem; background:#fff; }
+  .dark .fld { background:#1f2937; border-color:#374151; color:#fff; }
+  .pill { padding:0.125rem 0.5rem; border-radius:9999px; font-size:0.7rem; font-weight:600; }
+  .pill-pendente { background:#fef3c7; color:#92400e; }
+  .pill-pago { background:#d1fae5; color:#065f46; }
+  .pill-em_atraso { background:#fee2e2; color:#991b1b; }
+  .pill-anulado { background:#e5e7eb; color:#6b7280; }
+</style>
+<div class="max-w-screen-2xl mx-auto px-4 py-6 space-y-4">
+
+  <!-- Header -->
+  <div class="flex items-center justify-between flex-wrap gap-3">
+    <div>
+      <h1 class="text-2xl font-bold flex items-center gap-2">
+        <i data-lucide="landmark" class="w-6 h-6 text-amber-500"></i>
+        Impostos
+      </h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400">
+        Gestão de IVA, IRC, IRS, SS, IUC. Mensais, parcelados e pontuais.
+      </p>
+    </div>
+    <a href="{% url 'accounting:imposto_create' %}"
+      class="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold flex items-center gap-1.5">
+      <i data-lucide="plus" class="w-4 h-4"></i> Novo Imposto
+    </a>
+  </div>
+
+  {% if messages %}
+  <div class="space-y-2">
+    {% for m in messages %}
+    <div class="px-4 py-2.5 rounded-lg text-sm
+      {% if m.tags == 'success' %}bg-emerald-50 dark:bg-emerald-900/20 text-emerald-800 dark:text-emerald-300
+      {% elif m.tags == 'error' %}bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300
+      {% else %}bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300{% endif %}">{{ m }}</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- KPIs do ano -->
+  <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+    <div class="bg-white dark:bg-gray-800 rounded-xl border-l-4 border-amber-400 border border-gray-200/50 dark:border-gray-700/50 p-4">
+      <p class="text-xs uppercase tracking-wide text-amber-600 dark:text-amber-400">Pendente ({{ filters.ano }})</p>
+      <p class="text-2xl font-bold text-amber-700 dark:text-amber-300">€{{ kpis.total_pendente|floatformat:2 }}</p>
+      <p class="text-[11px] text-amber-600/70">{{ kpis.n_pendente }} imposto(s)</p>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl border-l-4 border-red-400 border border-gray-200/50 dark:border-gray-700/50 p-4">
+      <p class="text-xs uppercase tracking-wide text-red-600 dark:text-red-400">Em Atraso</p>
+      <p class="text-2xl font-bold text-red-700 dark:text-red-300">€{{ kpis.total_atraso|floatformat:2 }}</p>
+      <p class="text-[11px] text-red-600/70">{{ kpis.n_atraso }} imposto(s)</p>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl border-l-4 border-emerald-400 border border-gray-200/50 dark:border-gray-700/50 p-4">
+      <p class="text-xs uppercase tracking-wide text-emerald-600 dark:text-emerald-400">Pago no ano</p>
+      <p class="text-2xl font-bold text-emerald-700 dark:text-emerald-300">€{{ kpis.total_pago|floatformat:2 }}</p>
+      <p class="text-[11px] text-emerald-600/70">{{ kpis.n_pago }} imposto(s)</p>
+    </div>
+  </div>
+
+  <!-- Filtros -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+    <form method="get" class="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
+      <div>
+        <label class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Modo</label>
+        <select name="modo" class="fld">
+          <option value="principais" {% if filters.modo == 'principais' %}selected{% endif %}>Pais (sem prestações)</option>
+          <option value="parcelas" {% if filters.modo == 'parcelas' %}selected{% endif %}>Só prestações</option>
+          <option value="todos" {% if filters.modo == 'todos' %}selected{% endif %}>Todos</option>
+        </select>
+      </div>
+      <div>
+        <label class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Tipo</label>
+        <select name="tipo" class="fld">
+          <option value="">Todos</option>
+          {% for v, l in tipo_choices %}
+          <option value="{{ v }}" {% if filters.tipo == v %}selected{% endif %}>{{ l }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Estado</label>
+        <select name="status" class="fld">
+          <option value="">Todos</option>
+          {% for v, l in status_choices %}
+          <option value="{{ v }}" {% if filters.status == v %}selected{% endif %}>{{ l }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Ano</label>
+        <input type="number" name="ano" value="{{ filters.ano }}" min="2020" max="2099" class="fld">
+      </div>
+      <div class="flex gap-2">
+        <button type="submit" class="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold">Filtrar</button>
+        <a href="{% url 'accounting:imposto_list' %}" class="px-3 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-lg text-sm font-semibold">Limpar</a>
+      </div>
+    </form>
+  </div>
+
+  <!-- Tabela -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <thead class="bg-gray-50 dark:bg-gray-900">
+          <tr>
+            <th class="px-3 py-2.5 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Designação</th>
+            <th class="px-3 py-2.5 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Tipo</th>
+            <th class="px-3 py-2.5 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Modalidade</th>
+            <th class="px-3 py-2.5 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Período</th>
+            <th class="px-3 py-2.5 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Valor</th>
+            <th class="px-3 py-2.5 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Vencimento</th>
+            <th class="px-3 py-2.5 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Estado</th>
+            <th class="px-3 py-2.5 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Guia</th>
+            <th class="px-3 py-2.5 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Acções</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+          {% for i in impostos %}
+          <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+            <td class="px-3 py-2.5 text-sm font-medium text-gray-900 dark:text-white">
+              {{ i.nome }}
+              {% if i.parcela_numero and i.parcela_total %}
+                <span class="text-xs text-gray-500">({{ i.parcela_numero }}/{{ i.parcela_total }})</span>
+              {% elif i.is_parent %}
+                <span class="text-xs text-violet-500" title="Plano de prestações">▣ {{ i.parcelas.count }}×</span>
+              {% endif %}
+            </td>
+            <td class="px-3 py-2.5 text-xs text-gray-700 dark:text-gray-300">{{ i.get_tipo_display }}</td>
+            <td class="px-3 py-2.5 text-xs text-gray-500 dark:text-gray-400">{{ i.get_modalidade_display }}</td>
+            <td class="px-3 py-2.5 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+              {{ i.periodo_ano }}{% if i.periodo_mes %}/{{ i.periodo_mes|stringformat:"02d" }}{% endif %}
+            </td>
+            <td class="px-3 py-2.5 text-sm text-right font-mono text-gray-900 dark:text-white">€{{ i.valor|floatformat:2 }}</td>
+            <td class="px-3 py-2.5 text-xs text-gray-700 dark:text-gray-300 whitespace-nowrap">{{ i.data_vencimento|date:"d/m/Y" }}</td>
+            <td class="px-3 py-2.5 text-center">
+              <span class="pill pill-{{ i.status|lower }}">{{ i.get_status_display }}</span>
+            </td>
+            <td class="px-3 py-2.5 text-center">
+              {% if i.guia_pagamento %}
+                <a href="{{ i.guia_pagamento.url }}" target="_blank" class="text-indigo-600 dark:text-indigo-400 hover:underline">
+                  <i data-lucide="paperclip" class="w-4 h-4 inline"></i>
+                </a>
+              {% else %}
+                <span class="text-xs text-gray-400">—</span>
+              {% endif %}
+            </td>
+            <td class="px-3 py-2.5 text-right whitespace-nowrap">
+              <a href="{% url 'accounting:imposto_edit' i.pk %}" class="text-indigo-600 dark:text-indigo-400 hover:underline text-xs">Editar</a>
+              {% if i.status != 'PAGO' and not i.is_parent %}
+              <form method="post" action="{% url 'accounting:imposto_mark_paid' i.pk %}" class="inline ml-2"
+                    onsubmit="return confirm('Marcar imposto {{ i.nome }} como pago?\n\nValor: €{{ i.valor }}\nIsto cria também uma Bill espelho no fluxo de caixa.');">
+                {% csrf_token %}
+                <button type="submit" class="text-emerald-600 hover:underline text-xs">Marcar Pago</button>
+              </form>
+              {% endif %}
+              {% if i.status not in 'PAGO,ANULADO' %}
+              <form method="post" action="{% url 'accounting:imposto_anular' i.pk %}" class="inline ml-2"
+                    onsubmit="return confirm('Anular {{ i.nome }}?');">
+                {% csrf_token %}
+                <button type="submit" class="text-rose-600 hover:underline text-xs">Anular</button>
+              </form>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="9" class="px-4 py-12 text-center">
+              <i data-lucide="landmark" class="w-10 h-10 mx-auto text-gray-300 dark:text-gray-600 mb-2"></i>
+              <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Nenhum imposto neste filtro.</p>
+              <p class="text-xs mt-1"><a href="{% url 'accounting:imposto_create' %}" class="text-indigo-600 dark:text-indigo-400 hover:underline">Criar o primeiro →</a></p>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

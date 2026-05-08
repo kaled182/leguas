@@ -146,19 +146,23 @@
 </div>
 
 {# ─── Distribuição últimos 30 dias com flags Domingo/Feriado ─── #}
-<div class="bg-white dark:bg-gray-800 rounded-2xl p-5 border border-gray-200/50 dark:border-gray-700/50 shadow-sm mb-4">
-  <div class="flex items-center gap-2 mb-4">
+{# Drawer + modais para ver/transferir/editar preço de waybills do dia. #}
+<div class="bg-white dark:bg-gray-800 rounded-2xl p-5 border border-gray-200/50 dark:border-gray-700/50 shadow-sm mb-4"
+     x-data="portalDayDrawer({{ driver.id }})">
+  <div class="flex items-center gap-2 mb-4 flex-wrap">
     <i data-lucide="trending-up" class="w-5 h-5 text-indigo-500"></i>
     <h2 class="font-bold text-gray-900 dark:text-white">Últimos 30 dias</h2>
     <span class="text-xs text-gray-500 ml-2">Domingos e feriados destacados (com bonificação)</span>
+    <span class="text-[10px] text-indigo-500 ml-auto">clica numa barra para ver/transferir entregas</span>
   </div>
 
   <div class="flex items-end justify-between gap-1 h-40 overflow-x-auto">
     {% for d in history_30d %}
       <div class="flex-1 min-w-[24px] flex flex-col items-center gap-0.5 group">
         <span class="text-[10px] font-semibold {% if d.is_holiday %}text-amber-600 dark:text-amber-400{% elif d.is_sunday %}text-rose-600 dark:text-rose-400{% else %}text-gray-700 dark:text-gray-300{% endif %} opacity-100">{{ d.total|default:"" }}</span>
-        <div class="w-full flex flex-col-reverse h-28 bg-gray-100 dark:bg-gray-900/40 rounded-t overflow-hidden relative cursor-help"
-             title="{{ d.label }}{% if d.is_holiday %} · Feriado: {{ d.holiday_name }}{% elif d.is_sunday %} · Domingo{% endif %} · {{ d.total }} pacotes ({{ d.delivered }} entregues, {{ d.failures }} falhas)">
+        <div @click="openDayDrawer('{{ d.date|date:'Y-m-d' }}', '{{ d.label }}')"
+             class="w-full flex flex-col-reverse h-28 bg-gray-100 dark:bg-gray-900/40 rounded-t overflow-hidden relative {% if d.total %}cursor-pointer hover:ring-2 hover:ring-indigo-400{% else %}cursor-help{% endif %} transition"
+             title="{{ d.label }}{% if d.is_holiday %} · Feriado: {{ d.holiday_name }}{% elif d.is_sunday %} · Domingo{% endif %} · {{ d.total }} pacotes ({{ d.delivered }} entregues, {{ d.failures }} falhas){% if d.total %} · clica para detalhes{% endif %}">
           {% if d.delivered %}
           <div class="{% if d.is_holiday %}bg-gradient-to-t from-amber-500 to-amber-400{% elif d.is_sunday %}bg-gradient-to-t from-rose-500 to-rose-400{% else %}bg-gradient-to-t from-emerald-500 to-emerald-400{% endif %}"
                style="{% if d.total %}height:{% widthratio d.delivered 100 75 %}px;{% endif %}"></div>
@@ -178,7 +182,334 @@
     <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-amber-500"></span>Feriado (com bónus)</span>
     <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-red-600"></span>Falhas</span>
   </div>
+
+  {# ──────────────── DRAWER: waybills do dia ──────────────── #}
+  <div x-show="drawer.open" x-cloak
+       class="fixed inset-0 z-[300] flex items-stretch justify-end"
+       @keydown.escape.window="drawer.open = false">
+    <div class="absolute inset-0 bg-black/60" @click="drawer.open = false"></div>
+    <div class="relative bg-white dark:bg-gray-800 w-full max-w-2xl shadow-2xl flex flex-col h-full">
+      <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between bg-indigo-50 dark:bg-indigo-900/20">
+        <div>
+          <h3 class="font-bold text-gray-900 dark:text-white text-base flex items-center gap-2">
+            <i data-lucide="package-2" class="w-5 h-5 text-indigo-500"></i>
+            Waybills · <span x-text="drawer.dateLabel"></span>
+          </h3>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+            <span x-text="drawer.rows.length"></span> total ·
+            <span x-show="drawer.nSelf > 0" class="text-gray-600 dark:text-gray-300"><span x-text="drawer.nSelf"></span> próprias</span>
+            <span x-show="drawer.nIncoming > 0" class="text-emerald-600 dark:text-emerald-400">· <span x-text="drawer.nIncoming"></span> recebidas</span>
+            <span x-show="drawer.nOutgoing > 0" class="text-amber-600 dark:text-amber-400">· <span x-text="drawer.nOutgoing"></span> transferidas</span>
+            · <span x-text="drawer.selected.length"></span> seleccionadas
+          </p>
+        </div>
+        <button @click="drawer.open = false" class="text-gray-500 hover:text-gray-700">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      {% if request.user.is_staff or request.user.is_superuser %}
+      <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2 flex-wrap bg-gray-50 dark:bg-gray-900/40">
+        <button @click="toggleAllSelected()" class="px-2 py-1 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 rounded text-xs">
+          <span x-show="drawer.selected.length < drawer.rows.length">Seleccionar todos</span>
+          <span x-show="drawer.selected.length === drawer.rows.length && drawer.rows.length > 0">Desmarcar todos</span>
+        </button>
+        <button @click="openTransferModal()" :disabled="drawer.selected.length === 0"
+                class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded text-xs font-semibold flex items-center gap-1.5">
+          <i data-lucide="users" class="w-3.5 h-3.5"></i>
+          Transferir <span x-text="drawer.selected.length || ''"></span>
+        </button>
+        <button @click="openPriceModal()" :disabled="drawer.selected.length === 0"
+                class="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded text-xs font-semibold flex items-center gap-1.5">
+          <i data-lucide="euro" class="w-3.5 h-3.5"></i>
+          Editar preço <span x-text="drawer.selected.length || ''"></span>
+        </button>
+      </div>
+      {% endif %}
+      <div class="flex-1 overflow-y-auto">
+        <div x-show="drawer.loading" class="p-8 text-center text-gray-500">
+          <i data-lucide="loader-2" class="w-8 h-8 mx-auto animate-spin"></i>
+        </div>
+        <table x-show="!drawer.loading && drawer.rows.length > 0" class="w-full text-sm">
+          <thead class="bg-gray-100 dark:bg-gray-700/50 text-xs uppercase text-gray-500 sticky top-0">
+            <tr>
+              {% if request.user.is_staff or request.user.is_superuser %}<th class="px-3 py-2 w-8"></th>{% endif %}
+              <th class="px-3 py-2 text-left">Waybill</th>
+              <th class="px-3 py-2 text-left">Destino</th>
+              <th class="px-3 py-2 text-left">Hora</th>
+              <th class="px-3 py-2 text-left">Atribuído a</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-700/50">
+            <template x-for="r in drawer.rows" :key="r.waybill">
+              <tr :class="r.direction === 'incoming' ? 'bg-emerald-50 dark:bg-emerald-900/15' : (r.direction === 'outgoing' ? 'bg-amber-50 dark:bg-amber-900/15' : 'hover:bg-gray-50 dark:hover:bg-gray-700/30')">
+                {% if request.user.is_staff or request.user.is_superuser %}
+                <td class="px-3 py-2">
+                  <input type="checkbox" :checked="drawer.selected.includes(r.waybill)" @change="toggleSelected(r.waybill)">
+                </td>
+                {% endif %}
+                <td class="px-3 py-2 font-mono text-xs">
+                  <a :href="'/settlements/cainiao/waybill/' + r.waybill + '/'" target="_blank" class="text-indigo-600 hover:underline" x-text="r.waybill"></a>
+                  <template x-if="r.price_override">
+                    <div class="mt-0.5 flex items-center gap-1">
+                      <span class="px-1.5 py-0.5 bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 rounded font-bold text-[10px]" :title="'Razão: ' + (r.price_override.reason || '—')">
+                        € <span x-text="parseFloat(r.price_override.price).toFixed(2)"></span> especial
+                      </span>
+                      {% if request.user.is_staff or request.user.is_superuser %}
+                      <button @click="undoPriceOverride(r.price_override.id)" class="text-rose-500 hover:text-rose-700" title="Remover override">
+                        <i data-lucide="undo-2" class="w-3 h-3 inline"></i>
+                      </button>
+                      {% endif %}
+                    </div>
+                  </template>
+                </td>
+                <td class="px-3 py-2 text-xs">
+                  <div class="font-mono" x-text="r.zip || '—'"></div>
+                  <div class="text-gray-500" x-text="r.city || ''"></div>
+                </td>
+                <td class="px-3 py-2 text-xs font-mono text-gray-500" x-text="r.delivery_time ? r.delivery_time.substring(11,16) : '—'"></td>
+                <td class="px-3 py-2 text-xs">
+                  <template x-if="r.direction === 'self'">
+                    <span class="text-gray-600 dark:text-gray-300" x-text="r.courier_name"></span>
+                  </template>
+                  <template x-if="r.direction === 'incoming'">
+                    <div>
+                      <span class="px-1.5 py-0.5 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 rounded font-bold text-[10px]">↓ RECEBIDA</span>
+                      <span class="ml-1 text-gray-600 dark:text-gray-300">de</span>
+                      <span class="font-semibold text-emerald-700 dark:text-emerald-400" x-text="r.transfer.original_courier_name || r.transfer.original_courier_id"></span>
+                      {% if request.user.is_staff or request.user.is_superuser %}
+                      <button @click="undoTransfer(r.transfer.override_id)" class="ml-1 text-rose-500 hover:text-rose-700" title="Desfazer">
+                        <i data-lucide="undo-2" class="w-3 h-3 inline"></i>
+                      </button>
+                      {% endif %}
+                    </div>
+                  </template>
+                  <template x-if="r.direction === 'outgoing'">
+                    <div>
+                      <span class="px-1.5 py-0.5 bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 rounded font-bold text-[10px]">↑ TRANSFERIDA</span>
+                      <span class="ml-1 text-gray-600 dark:text-gray-300">para</span>
+                      <span class="font-semibold text-amber-700 dark:text-amber-400" x-text="r.transfer.target_name"></span>
+                      {% if request.user.is_staff or request.user.is_superuser %}
+                      <button @click="undoTransfer(r.transfer.override_id)" class="ml-1 text-rose-500 hover:text-rose-700" title="Desfazer">
+                        <i data-lucide="undo-2" class="w-3 h-3 inline"></i>
+                      </button>
+                      {% endif %}
+                    </div>
+                  </template>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+        <div x-show="!drawer.loading && drawer.rows.length === 0" class="p-8 text-center text-gray-400">
+          Sem entregas neste dia.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% if request.user.is_staff or request.user.is_superuser %}
+  {# ──────────────── MODAL: transferir ──────────────── #}
+  <div x-show="transferModal.open" x-cloak class="fixed inset-0 z-[400] flex items-center justify-center p-4"
+       @keydown.escape.window="transferModal.open = false">
+    <div class="absolute inset-0 bg-black/70" @click="transferModal.open = false"></div>
+    <div class="relative bg-white dark:bg-gray-800 rounded-xl w-full max-w-md shadow-2xl">
+      <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
+        <i data-lucide="users" class="w-5 h-5 text-emerald-600"></i>
+        <h3 class="font-bold">Transferir <span x-text="drawer.selected.length"></span> entrega(s)</h3>
+      </div>
+      <div class="p-5 space-y-3">
+        <div>
+          <label class="block text-xs font-semibold mb-1">Driver destino *</label>
+          <input type="text" x-model="transferModal.driverQuery" @input.debounce.300ms="searchDrivers()"
+                 placeholder="Pesquisar por nome..." class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700">
+          <div class="mt-1 max-h-48 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded">
+            <template x-for="d in transferModal.drivers" :key="d.id">
+              <button type="button" @click="transferModal.targetId = d.id; transferModal.targetName = d.name"
+                      :class="transferModal.targetId === d.id ? 'bg-emerald-100 dark:bg-emerald-900/40' : 'hover:bg-gray-50 dark:hover:bg-gray-700/30'"
+                      class="w-full text-left px-3 py-1.5 text-sm border-b border-gray-100 dark:border-gray-700/50">
+                <span x-text="d.name"></span>
+                <span x-show="d.apelido" class="text-xs text-gray-500" x-text="' (' + d.apelido + ')'"></span>
+              </button>
+            </template>
+          </div>
+          <p x-show="transferModal.targetId" class="mt-1 text-xs text-emerald-600">Seleccionado: <strong x-text="transferModal.targetName"></strong></p>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold mb-1">Razão</label>
+          <input type="text" x-model="transferModal.reason" placeholder="ex: Socorro — carro avariado"
+                 class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700">
+        </div>
+      </div>
+      <div class="px-5 py-3 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-2">
+        <button @click="transferModal.open = false" class="px-3 py-1.5 bg-gray-200 dark:bg-gray-700 rounded text-sm">Cancelar</button>
+        <button @click="confirmTransfer()" :disabled="!transferModal.targetId || transferModal.submitting"
+                class="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white rounded text-sm font-semibold flex items-center gap-1.5">
+          <i data-lucide="check" class="w-4 h-4"></i> Confirmar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  {# ──────────────── MODAL: editar preço ──────────────── #}
+  <div x-show="priceModal.open" x-cloak class="fixed inset-0 z-[400] flex items-center justify-center p-4"
+       @keydown.escape.window="priceModal.open = false">
+    <div class="absolute inset-0 bg-black/70" @click="priceModal.open = false"></div>
+    <div class="relative bg-white dark:bg-gray-800 rounded-xl w-full max-w-md shadow-2xl">
+      <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
+        <i data-lucide="euro" class="w-5 h-5 text-amber-600"></i>
+        <h3 class="font-bold">Editar preço · <span x-text="drawer.selected.length"></span> pacote(s)</h3>
+      </div>
+      <div class="p-5 space-y-3">
+        <div class="px-3 py-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded text-xs text-amber-800 dark:text-amber-300">
+          <i data-lucide="info" class="w-3.5 h-3.5 inline"></i>
+          Substitui o preço base para os pacotes seleccionados. Aplica-se imediatamente em pré-faturas.
+        </div>
+        <div>
+          <label class="block text-xs font-semibold mb-1">Preço por pacote (€) *</label>
+          <input type="number" step="0.01" min="0.01" x-model="priceModal.price" placeholder="ex: 1.50"
+                 class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold mb-1">Razão</label>
+          <input type="text" x-model="priceModal.reason" placeholder="ex: Apoio CP4 4970"
+                 class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700">
+        </div>
+      </div>
+      <div class="px-5 py-3 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-2">
+        <button @click="priceModal.open = false" class="px-3 py-1.5 bg-gray-200 dark:bg-gray-700 rounded text-sm">Cancelar</button>
+        <button @click="confirmPriceOverride()" :disabled="!priceModal.price || priceModal.submitting"
+                class="px-4 py-1.5 bg-amber-600 hover:bg-amber-700 disabled:opacity-40 text-white rounded text-sm font-semibold flex items-center gap-1.5">
+          <i data-lucide="check" class="w-4 h-4"></i> Aplicar
+        </button>
+      </div>
+    </div>
+  </div>
+  {% endif %}
 </div>
+
+<script>
+function portalDayDrawer(driverId) {
+  const csrf = () => document.querySelector('[name=csrfmiddlewaretoken]')?.value
+                  || document.querySelector('meta[name=csrf-token]')?.content || '';
+  const POST = () => ({ method: 'POST', headers: { 'X-CSRFToken': csrf() } });
+  return {
+    drawer: { open: false, loading: false, date: '', dateLabel: '', rows: [], selected: [], nSelf: 0, nIncoming: 0, nOutgoing: 0 },
+    transferModal: { open: false, submitting: false, driverQuery: '', drivers: [], targetId: null, targetName: '', reason: '' },
+    priceModal: { open: false, submitting: false, price: '', reason: '' },
+
+    async openDayDrawer(date, label) {
+      this.drawer.date = date;
+      this.drawer.dateLabel = label || date;
+      this.drawer.rows = [];
+      this.drawer.selected = [];
+      this.drawer.loading = true;
+      this.drawer.open = true;
+      try {
+        const r = await fetch(`/settlements/drivers/${driverId}/day-waybills/?date=${date}`);
+        const d = await r.json();
+        if (d.success) {
+          this.drawer.rows = d.rows || [];
+          this.drawer.nSelf = d.n_self || 0;
+          this.drawer.nIncoming = d.n_incoming || 0;
+          this.drawer.nOutgoing = d.n_outgoing || 0;
+        }
+      } catch (e) { console.error(e); }
+      finally {
+        this.drawer.loading = false;
+        this.$nextTick(() => { if (window.lucide) lucide.createIcons(); });
+      }
+    },
+    toggleSelected(wb) {
+      const i = this.drawer.selected.indexOf(wb);
+      if (i >= 0) this.drawer.selected.splice(i, 1); else this.drawer.selected.push(wb);
+    },
+    toggleAllSelected() {
+      if (this.drawer.selected.length === this.drawer.rows.length) this.drawer.selected = [];
+      else this.drawer.selected = this.drawer.rows.map(r => r.waybill);
+    },
+    async openTransferModal() {
+      if (this.drawer.selected.length === 0) return;
+      this.transferModal = { open: true, submitting: false, driverQuery: '', drivers: [], targetId: null, targetName: '', reason: '' };
+      this.searchDrivers();
+      this.$nextTick(() => { if (window.lucide) lucide.createIcons(); });
+    },
+    async searchDrivers() {
+      try {
+        const r = await fetch(`/settlements/drivers/dropdown/?q=${encodeURIComponent(this.transferModal.driverQuery || '')}`);
+        const d = await r.json();
+        if (d.success) {
+          this.transferModal.drivers = (d.drivers || []).filter(x => x.id !== driverId);
+        }
+      } catch (e) { console.error(e); }
+    },
+    async confirmTransfer() {
+      if (!this.transferModal.targetId) return;
+      this.transferModal.submitting = true;
+      try {
+        const r = await fetch('/settlements/transfers/create/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf() },
+          body: JSON.stringify({
+            waybills: this.drawer.selected,
+            target_driver_id: this.transferModal.targetId,
+            reason: this.transferModal.reason,
+          }),
+        });
+        const d = await r.json();
+        if (d.success) {
+          this.transferModal.open = false;
+          this.drawer.selected = [];
+          this.openDayDrawer(this.drawer.date, this.drawer.dateLabel);
+        } else { alert(d.error || 'Falha'); }
+      } catch (e) { alert('Erro: ' + e); }
+      finally { this.transferModal.submitting = false; }
+    },
+    async undoTransfer(overrideId) {
+      if (!confirm('Desfazer transferência?')) return;
+      try {
+        const r = await fetch(`/settlements/transfers/${overrideId}/delete/`, POST());
+        const d = await r.json();
+        if (d.success) this.openDayDrawer(this.drawer.date, this.drawer.dateLabel);
+      } catch (e) { console.error(e); }
+    },
+    openPriceModal() {
+      if (this.drawer.selected.length === 0) return;
+      this.priceModal = { open: true, submitting: false, price: '', reason: '' };
+      this.$nextTick(() => { if (window.lucide) lucide.createIcons(); });
+    },
+    async confirmPriceOverride() {
+      if (!this.priceModal.price) return;
+      this.priceModal.submitting = true;
+      try {
+        const r = await fetch('/settlements/price-overrides/create/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf() },
+          body: JSON.stringify({
+            waybills: this.drawer.selected,
+            price: parseFloat(this.priceModal.price),
+            reason: this.priceModal.reason,
+          }),
+        });
+        const d = await r.json();
+        if (d.success) {
+          this.priceModal.open = false;
+          this.drawer.selected = [];
+          this.openDayDrawer(this.drawer.date, this.drawer.dateLabel);
+        } else { alert(d.error || 'Falha'); }
+      } catch (e) { alert('Erro: ' + e); }
+      finally { this.priceModal.submitting = false; }
+    },
+    async undoPriceOverride(overrideId) {
+      if (!confirm('Remover preço especial? Volta ao preço base.')) return;
+      try {
+        const r = await fetch(`/settlements/price-overrides/${overrideId}/delete/`, POST());
+        const d = await r.json();
+        if (d.success) this.openDayDrawer(this.drawer.date, this.drawer.dateLabel);
+      } catch (e) { console.error(e); }
+    },
+  };
+}
+</script>
 
 {# ─── Heatmap anual de actividade ─── #}
 {% if heatmap_days %}

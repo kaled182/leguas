@@ -1244,7 +1244,8 @@ def driver_pre_invoice_create(request, driver_id):
     from decimal import Decimal, InvalidOperation
     from drivers_app.models import DriverProfile
     from .models import (
-        CainiaoOperationTask, Holiday, PreInvoiceBonus, PreInvoiceLine,
+        BonusBlackoutDate, CainiaoOperationTask, Holiday, PreInvoiceBonus,
+        PreInvoiceLine,
     )
     from core.models import Partner
 
@@ -1499,6 +1500,8 @@ def driver_pre_invoice_create(request, driver_id):
                     h = Holiday.get_holiday(d)
                     if not (is_sun or h):
                         continue
+                    if BonusBlackoutDate.is_blocked(d):
+                        continue
                     if n < PreInvoiceBonus.LIMIAR_30:
                         continue
                     PreInvoiceBonus.objects.create(
@@ -1607,6 +1610,8 @@ def driver_pre_invoice_create(request, driver_id):
                         is_sun = d.weekday() == 6
                         h = Holiday.get_holiday(d)
                         if not (is_sun or h):
+                            continue
+                        if BonusBlackoutDate.is_blocked(d):
                             continue
                         if n < PreInvoiceBonus.LIMIAR_30:
                             continue
@@ -3309,7 +3314,7 @@ def driver_delivery_report(request, driver_id):
     from django.db.models.functions import Substr
     from drivers_app.models import DriverProfile
     from .models import (
-        CainiaoOperationTask, DriverPreInvoice, Holiday, DriverClaim,
+        BonusBlackoutDate, CainiaoOperationTask, DriverPreInvoice, Holiday, DriverClaim,
     )
 
     driver = get_object_or_404(
@@ -3492,11 +3497,19 @@ def driver_delivery_report(request, driver_id):
     )
     by_day = []
     bonus_days = 0
+    # Pré-fetch dos blackouts no período para evitar N queries
+    if by_day_raw:
+        _bb_dates = BonusBlackoutDate.dates_in_range(
+            by_day_raw[0]["task_date"], by_day_raw[-1]["task_date"],
+        )
+    else:
+        _bb_dates = set()
     for row in by_day_raw:
         d = row["task_date"]
         is_sun = d.weekday() == 6
         h = Holiday.get_holiday(d)
-        is_bonus = is_sun or bool(h)
+        is_blocked = d in _bb_dates
+        is_bonus = (is_sun or bool(h)) and not is_blocked
         if is_bonus:
             bonus_days += 1
         by_day.append({
@@ -3507,6 +3520,7 @@ def driver_delivery_report(request, driver_id):
             "is_holiday": bool(h),
             "holiday_name": h.name if h else "",
             "is_bonus": is_bonus,
+            "is_bonus_blocked": is_blocked,
         })
 
     # By CP4
@@ -3960,7 +3974,7 @@ def driver_yearly_heatmap(request, driver_id):
     """
     from datetime import date, timedelta
     from drivers_app.models import DriverProfile
-    from .models import CainiaoOperationTask, Holiday
+    from .models import BonusBlackoutDate, CainiaoOperationTask, Holiday
 
     driver = get_object_or_404(DriverProfile, id=driver_id)
     try:
@@ -4017,6 +4031,8 @@ def driver_yearly_heatmap(request, driver_id):
             return 3
         return 4
 
+    blocked_dates = BonusBlackoutDate.dates_in_range(year_start, year_end)
+
     days = []
     total_year = 0
     days_active = 0
@@ -4032,6 +4048,7 @@ def driver_yearly_heatmap(request, driver_id):
             "is_sunday": d.weekday() == 6,
             "is_holiday": bool(h),
             "holiday_name": h.name if h else "",
+            "is_bonus_blocked": d in blocked_dates,
         })
         total_year += n
         if n > 0:
@@ -4062,7 +4079,7 @@ def driver_pre_invoice_preview(request, driver_id):
     from decimal import Decimal
     from drivers_app.models import DriverProfile
     from .models import (
-        CainiaoOperationTask, DriverPreInvoice, Holiday,
+        BonusBlackoutDate, CainiaoOperationTask, DriverPreInvoice, Holiday,
         PreInvoiceBonus,
     )
 
@@ -4122,6 +4139,8 @@ def driver_pre_invoice_preview(request, driver_id):
             return PreInvoiceBonus.BONUS_30
         return Decimal("0")
 
+    blocked_dates = BonusBlackoutDate.dates_in_range(date_from, date_to)
+
     def _bonus_lines_for_qs(qs):
         out = []
         total = Decimal("0")
@@ -4133,6 +4152,8 @@ def driver_pre_invoice_preview(request, driver_id):
             is_sun = d.weekday() == 6
             h = Holiday.get_holiday(d)
             if not (is_sun or h):
+                continue
+            if d in blocked_dates:
                 continue
             b = _bonus_for(n)
             out.append({
@@ -4387,9 +4408,11 @@ def _empresa_lote_compute(empresa, date_from, date_to):
     from core.models import Partner
     from core.finance import resolve_driver_price
     from .models import (
-        CainiaoOperationTask, DriverPreInvoice, Holiday,
+        BonusBlackoutDate, CainiaoOperationTask, DriverPreInvoice, Holiday,
         PreInvoiceBonus,
     )
+
+    blocked_dates = BonusBlackoutDate.dates_in_range(date_from, date_to)
 
     cainiao_partner = Partner.objects.filter(
         name__iexact="CAINIAO"
@@ -4502,6 +4525,8 @@ def _empresa_lote_compute(empresa, date_from, date_to):
                 is_sun = day.weekday() == 6
                 h = Holiday.get_holiday(day)
                 if not (is_sun or h):
+                    continue
+                if day in blocked_dates:
                     continue
                 if n >= PreInvoiceBonus.LIMIAR_60:
                     login_bonus += PreInvoiceBonus.BONUS_50
@@ -4620,9 +4645,9 @@ def empresa_lote_emit(request, empresa_id):
     from django.db.models import Q
     from drivers_app.models import EmpresaParceira, DriverProfile
     from .models import (
-        CainiaoOperationTask, FleetInvoice, FleetInvoiceDriverLine,
-        FleetInvoiceBonusDay, FleetInvoiceClaim, Holiday,
-        PreInvoiceBonus, DriverClaim,
+        BonusBlackoutDate, CainiaoOperationTask, FleetInvoice,
+        FleetInvoiceDriverLine, FleetInvoiceBonusDay, FleetInvoiceClaim,
+        Holiday, PreInvoiceBonus, DriverClaim,
     )
     from core.models import Partner
     from core.finance import resolve_driver_price, resolve_partner_price
@@ -4691,6 +4716,8 @@ def empresa_lote_emit(request, empresa_id):
     )
     if driver_ids_filter:
         drivers_qs = drivers_qs.filter(id__in=driver_ids_filter)
+
+    blocked_dates = BonusBlackoutDate.dates_in_range(date_from, date_to)
 
     partner_price = resolve_partner_price(cainiao_partner)
     skipped = []
@@ -4772,6 +4799,8 @@ def empresa_lote_emit(request, empresa_id):
                 is_sun = day.weekday() == 6
                 h = Holiday.get_holiday(day)
                 if not (is_sun or h):
+                    continue
+                if day in blocked_dates:
                     continue
                 if n >= PreInvoiceBonus.LIMIAR_60:
                     b = PreInvoiceBonus.BONUS_50

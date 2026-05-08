@@ -2865,6 +2865,49 @@ class Holiday(models.Model):
         return qs.first()
 
 
+class BonusBlackoutDate(models.Model):
+    """Datas em que NÃO há bonificação, mesmo sendo domingo/feriado.
+
+    Cada entrada bloqueia uma data específica (ano-mês-dia). Se a data
+    cair num feriado anual recorrente (ex: 25/12) o bloqueio aplica-se
+    apenas àquele ano. Para bloquear permanentemente, criar uma entrada
+    por ano.
+    """
+    date = models.DateField("Data", unique=True, db_index=True)
+    reason = models.CharField(
+        "Motivo", max_length=255, blank=True,
+        help_text="Razão do bloqueio (ex: 'feriado mas operação reduzida').",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey(
+        "auth.User",
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="bonus_blackouts_created",
+    )
+
+    class Meta:
+        verbose_name = "Bloqueio de Bonificação"
+        verbose_name_plural = "Bloqueios de Bonificação"
+        ordering = ["-date"]
+
+    def __str__(self):
+        return f"{self.date.strftime('%d/%m/%Y')} — {self.reason or 'sem bonus'}"
+
+    @classmethod
+    def is_blocked(cls, target_date):
+        """True se a data está marcada como sem bonificação."""
+        return cls.objects.filter(date=target_date).exists()
+
+    @classmethod
+    def dates_in_range(cls, start_date, end_date):
+        """Set de datas bloqueadas no intervalo (inclusive). Usar para evitar N queries."""
+        return set(cls.objects.filter(
+            date__gte=start_date, date__lte=end_date,
+        ).values_list("date", flat=True))
+
+
 # ════════════════════════════════════════════════════════════════════════
 # FASE 6.2 (REFACTOR) — Pré-fatura GLOBAL da frota
 # ════════════════════════════════════════════════════════════════════════

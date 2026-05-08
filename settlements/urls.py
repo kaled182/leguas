@@ -31,6 +31,9 @@ urlpatterns = [
     path("calendar/<int:holiday_id>/delete/", holiday_views.holiday_delete, name="holiday-delete"),
     path("calendar/import-preset/", holiday_views.holiday_import_preset, name="holiday-import-preset"),
     path("calendar/check/", holiday_views.holiday_check, name="holiday-check"),
+    # Bloqueios de Bonificação (datas onde, mesmo sendo domingo/feriado, não há bónus)
+    path("calendar/blackout/create/", holiday_views.blackout_create, name="bonus-blackout-create"),
+    path("calendar/blackout/<int:blackout_id>/delete/", holiday_views.blackout_delete, name="bonus-blackout-delete"),
     # Invoices
     path("invoices/", views.invoice_list, name="invoice-list"),
     path(

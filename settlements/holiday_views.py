@@ -16,7 +16,7 @@ from django.views.decorators.http import require_http_methods
 from django.utils.dateparse import parse_date
 from django.utils import timezone
 
-from .models import Holiday
+from .models import BonusBlackoutDate, Holiday
 
 
 def _easter_sunday(year):
@@ -97,6 +97,23 @@ def holiday_list(request):
     # Lista todas as entradas (para tabela admin)
     all_holidays = list(Holiday.objects.all())
 
+    # Bloqueios de bonificação (datas onde, mesmo sendo domingo/feriado,
+    # não há bónus). Filtramos pelo ano selecionado + entradas futuras.
+    blackouts = list(
+        BonusBlackoutDate.objects.filter(
+            date__year=year,
+        ).order_by("date")
+    )
+    blackouts_serialized = [
+        {
+            "id": b.id,
+            "date": b.date.strftime("%Y-%m-%d"),
+            "date_display": b.date.strftime("%d/%m/%Y"),
+            "reason": b.reason,
+        }
+        for b in blackouts
+    ]
+
     return render(
         request,
         "settlements/holiday_calendar.html",
@@ -106,6 +123,8 @@ def holiday_list(request):
             "year_next": year + 1,
             "holidays_in_year": holidays_in_year,
             "all_holidays": all_holidays,
+            "blackouts": blackouts,
+            "blackouts_serialized": blackouts_serialized,
             "available_years": list(range(year - 3, year + 4)),
         },
     )
@@ -270,3 +289,57 @@ def holiday_check(request):
         "name": h.name if h else "",
         "scope": h.scope if h else "",
     })
+
+
+# ════════════════════════════════════════════════════════════════════════
+# Bloqueios de Bonificação (BonusBlackoutDate)
+# ════════════════════════════════════════════════════════════════════════
+@login_required
+@require_http_methods(["POST"])
+def blackout_create(request):
+    """Cria um bloqueio de bonificação para uma data específica."""
+    body = (json.loads(request.body or b"{}")
+            if request.content_type == "application/json"
+            else request.POST)
+    date_str = (body.get("date") or "").strip()
+    reason = (body.get("reason") or "").strip()
+    parsed = parse_date(date_str)
+    if not parsed:
+        return JsonResponse(
+            {"success": False, "error": "Data inválida."}, status=400,
+        )
+    obj, created = BonusBlackoutDate.objects.get_or_create(
+        date=parsed,
+        defaults={
+            "reason": reason,
+            "created_by": request.user if request.user.is_authenticated else None,
+        },
+    )
+    if not created and reason and obj.reason != reason:
+        obj.reason = reason
+        obj.save(update_fields=["reason", "updated_at"])
+    return JsonResponse({
+        "success": True,
+        "blackout": {
+            "id": obj.id,
+            "date": obj.date.strftime("%Y-%m-%d"),
+            "date_display": obj.date.strftime("%d/%m/%Y"),
+            "reason": obj.reason,
+        },
+        "created": created,
+    })
+
+
+@login_required
+@require_http_methods(["POST"])
+def blackout_delete(request, blackout_id):
+    """Remove um bloqueio de bonificação."""
+    try:
+        b = BonusBlackoutDate.objects.get(id=blackout_id)
+    except BonusBlackoutDate.DoesNotExist:
+        return JsonResponse(
+            {"success": False, "error": "Bloqueio não encontrado."},
+            status=404,
+        )
+    b.delete()
+    return JsonResponse({"success": True})

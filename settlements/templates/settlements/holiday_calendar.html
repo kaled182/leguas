@@ -46,8 +46,13 @@
       <i data-lucide="download-cloud" class="w-4 h-4"></i>
       Importar móveis PT {{ year }}
     </button>
+    <button @click="openBlackoutCreate()"
+            class="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-800 text-white text-sm font-semibold flex items-center gap-2">
+      <i data-lucide="ban" class="w-4 h-4"></i> Marcar dia sem bonificação
+    </button>
     <span class="ml-auto px-3 py-2 text-sm text-gray-600 dark:text-gray-400">
-      <strong>{{ holidays_in_year|length }}</strong> feriados em {{ year }}
+      <strong>{{ holidays_in_year|length }}</strong> feriados ·
+      <strong>{{ blackouts|length }}</strong> bloqueios em {{ year }}
     </span>
   </div>
 
@@ -85,6 +90,12 @@
     </span>
     <span class="flex items-center gap-1.5">
       <span class="w-3 h-3 rounded bg-purple-500"></span> Feriado regional
+    </span>
+    <span class="flex items-center gap-1.5">
+      <span class="w-3 h-3 rounded bg-slate-700 border border-slate-900 relative">
+        <span class="absolute inset-0 flex items-center justify-center text-white text-[8px] font-bold">⊘</span>
+      </span>
+      Sem bonificação (bloqueado)
     </span>
   </div>
 
@@ -160,6 +171,95 @@
     </div>
   </div>
 
+  <!-- Bloqueios de Bonificação -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 mt-6">
+    <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+      <div>
+        <h3 class="text-sm font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+          <i data-lucide="ban" class="w-4 h-4 text-slate-700 dark:text-slate-300"></i>
+          Bloqueios de Bonificação em {{ year }} ({{ blackouts|length }})
+        </h3>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+          Datas onde, mesmo sendo domingo ou feriado, não será paga bonificação aos motoristas.
+        </p>
+      </div>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-gray-50 dark:bg-gray-900/50">
+          <tr class="text-left text-xs uppercase text-gray-500 dark:text-gray-400">
+            <th class="px-4 py-2">Data</th>
+            <th class="px-4 py-2">Motivo</th>
+            <th class="px-4 py-2 text-right">Acções</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+          {% for b in blackouts %}
+          <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+            <td class="px-4 py-2 font-mono">{{ b.date|date:"d/m/Y" }}</td>
+            <td class="px-4 py-2 text-gray-700 dark:text-gray-300">{{ b.reason|default:"—" }}</td>
+            <td class="px-4 py-2 text-right">
+              <button @click="delBlackout({{ b.id }}, '{{ b.date|date:"d/m/Y" }}')"
+                      class="px-2 py-1 text-xs text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded">
+                Remover
+              </button>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="3" class="px-4 py-8 text-center text-gray-400">
+              Nenhum dia bloqueado em {{ year }}.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Modal Bloqueio -->
+  <div x-show="blackoutModalOpen" x-cloak
+       class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
+       @click.self="blackoutModalOpen = false">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+          <i data-lucide="ban" class="w-5 h-5 text-slate-600"></i>
+          Marcar dia sem bonificação
+        </h3>
+        <button @click="blackoutModalOpen = false" class="text-gray-400 hover:text-gray-600">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">
+        Bloqueia o pagamento de bonificação numa data específica, mesmo que seja domingo ou feriado.
+      </p>
+      <form @submit.prevent="saveBlackout()">
+        <div class="space-y-3">
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Data</label>
+            <input type="date" x-model="blackoutForm.date" required
+                   class="w-full px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Motivo (opcional)</label>
+            <input type="text" x-model="blackoutForm.reason" maxlength="255"
+                   placeholder="Ex: Feriado mas operação reduzida"
+                   class="w-full px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700">
+          </div>
+        </div>
+        <div class="flex justify-end gap-2 mt-6">
+          <button type="button" @click="blackoutModalOpen = false"
+                  class="px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-sm">Cancelar</button>
+          <button type="submit"
+                  class="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-800 text-white text-sm font-semibold">
+            Bloquear bonificação
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- Modal Add/Edit -->
   <div x-show="modalOpen" x-cloak
        class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
@@ -228,15 +328,19 @@
 </div>
 
 {{ holidays_in_year|json_script:"holidays-data" }}
+{{ blackouts_serialized|json_script:"blackouts-data" }}
 
 <script>
 function holidayCalendar() {
   return {
     year: {{ year }},
     holidays: [],
+    blackouts: [],
     modalOpen: false,
     editing: null,
     form: { name: '', date: '', is_recurring_yearly: false, scope: 'national', region: '', notes: '' },
+    blackoutModalOpen: false,
+    blackoutForm: { date: '', reason: '' },
 
     init() {
       const raw = JSON.parse(document.getElementById('holidays-data').textContent || '[]');
@@ -244,6 +348,10 @@ function holidayCalendar() {
       this.holidays = raw.map(h => ({
         id: h.id, date: h.date, name: h.name, is_recurring: h.is_recurring,
         scope: h.scope, region: h.region, notes: h.notes,
+      }));
+      const rawBb = JSON.parse(document.getElementById('blackouts-data').textContent || '[]');
+      this.blackouts = rawBb.map(b => ({
+        id: b.id, date: b.date, date_display: b.date_display, reason: b.reason,
       }));
       this.$nextTick(() => { if (window.lucide) window.lucide.createIcons(); });
     },
@@ -268,10 +376,20 @@ function holidayCalendar() {
         const dateStr = yearStr + '-' + String(m).padStart(2,'0') + '-' + String(d).padStart(2,'0');
         const isSunday = new Date(this.year, monthIdx, d).getDay() === 0;
         const h = this.holidays.find(x => x.date === dateStr);
+        const bb = this.blackouts.find(x => x.date === dateStr);
+        let title = '';
+        if (bb) {
+          title = 'Sem bonificação' + (bb.reason ? ` — ${bb.reason}` : '');
+          if (h) title = `${h.name} · ${title}`;
+        } else if (h) {
+          title = `${h.name} (${h.scope})`;
+        } else if (isSunday) {
+          title = 'Domingo';
+        }
         cells.push({
           key: d, day: d, dateStr,
-          isSunday, holiday: h || null,
-          title: h ? `${h.name} (${h.scope})` : (isSunday ? 'Domingo' : ''),
+          isSunday, holiday: h || null, blackout: bb || null,
+          title,
         });
       }
       return cells;
@@ -279,6 +397,10 @@ function holidayCalendar() {
 
     dayClass(d) {
       if (!d.day) return '';
+      if (d.blackout) {
+        // Bloqueio sobrepõe-se ao feriado/domingo: dia escuro com aro
+        return 'bg-slate-700 text-white font-bold ring-1 ring-slate-900';
+      }
       if (d.holiday) {
         if (d.holiday.scope === 'regional') return 'bg-purple-500 text-white font-bold';
         return 'bg-rose-500 text-white font-bold';
@@ -337,6 +459,36 @@ function holidayCalendar() {
       const j = await r.json();
       if (!j.success) { alert(j.error || 'Erro'); return; }
       alert(`Criados: ${j.created}, ignorados: ${j.skipped}`);
+      window.location.reload();
+    },
+
+    // ─── Bloqueios de bonificação ─────────────────────────────────
+    openBlackoutCreate() {
+      this.blackoutForm = { date: this.year + '-01-01', reason: '' };
+      this.blackoutModalOpen = true;
+      this.$nextTick(() => { if (window.lucide) window.lucide.createIcons(); });
+    },
+
+    async saveBlackout() {
+      const csrf = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+      const r = await fetch(`/settlements/calendar/blackout/create/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+        body: JSON.stringify(this.blackoutForm),
+      });
+      const j = await r.json();
+      if (!j.success) { alert(j.error || 'Erro'); return; }
+      window.location.reload();
+    },
+
+    async delBlackout(id, dateDisplay) {
+      if (!confirm(`Remover bloqueio de bonificação de ${dateDisplay}?`)) return;
+      const csrf = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+      const r = await fetch(`/settlements/calendar/blackout/${id}/delete/`, {
+        method: 'POST', headers: { 'X-CSRFToken': csrf },
+      });
+      const j = await r.json();
+      if (!j.success) { alert(j.error || 'Erro'); return; }
       window.location.reload();
     },
   };

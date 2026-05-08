@@ -1615,15 +1615,27 @@ class PDFGenerator:
                 if cls:
                     if bds:
                         driver_block.append(Spacer(1, 0.1 * cm))
+                    claim_desc_style = ParagraphStyle(
+                        "ClaimDesc", parent=self.styles["Normal"],
+                        fontSize=7.5, leading=9, alignment=TA_LEFT,
+                    )
+                    claim_wb_style = ParagraphStyle(
+                        "ClaimWB", parent=self.styles["Normal"],
+                        fontSize=7.5, leading=9, alignment=TA_LEFT,
+                        fontName="Helvetica",
+                    )
                     r = [["Waybill", "Descrição", "Valor"]]
                     for cd in cls:
                         r.append([
-                            cd.waybill_number or "—",
-                            (cd.descricao or "")[:55],
+                            Paragraph(cd.waybill_number or "—", claim_wb_style),
+                            Paragraph(
+                                (cd.descricao or "").replace("&", "&amp;")[:200],
+                                claim_desc_style,
+                            ),
                             f"-€{cd.valor}",
                         ])
                     tc = Table(r, colWidths=[
-                        4.5 * cm, 6 * cm, 2.5 * cm,
+                        3.8 * cm, 7.5 * cm, 1.7 * cm,
                     ])
                     tc.setStyle(TableStyle([
                         ("BACKGROUND", (0, 0), (-1, 0),
@@ -1631,12 +1643,16 @@ class PDFGenerator:
                         ("FONTNAME", (0, 0), (-1, 0),
                          "Helvetica-Bold"),
                         ("FONTSIZE", (0, 0), (-1, -1), 8),
+                        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                        ("ALIGN", (2, 0), (2, -1), "RIGHT"),
                         ("BOX", (0, 0), (-1, -1), 0.4,
                          rlcolors.grey),
                         ("INNERGRID", (0, 0), (-1, -1), 0.2,
                          rlcolors.lightgrey),
                         ("TOPPADDING", (0, 0), (-1, -1), 3),
                         ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                        ("LEFTPADDING", (0, 0), (-1, -1), 4),
+                        ("RIGHTPADDING", (0, 0), (-1, -1), 4),
                     ]))
                     driver_block.append(tc)
 

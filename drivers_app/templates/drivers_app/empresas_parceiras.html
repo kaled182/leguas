@@ -1128,7 +1128,11 @@
             <div class="text-xs text-gray-500">Bónus (∑)</div>
             <div class="text-2xl font-bold text-amber-600" x-text="'€' + parseFloat(lotePreview?.totals?.bonus || 0).toFixed(2)"></div>
           </div>
-          <div class="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-3 col-span-2">
+          <div class="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-3">
+            <div class="text-xs text-gray-500">Claims (∑)</div>
+            <div class="text-2xl font-bold text-rose-600" x-text="'-€' + parseFloat(lotePreview?.totals?.claims || 0).toFixed(2)"></div>
+          </div>
+          <div class="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-3">
             <div class="text-xs text-gray-500">Total a pagar à frota</div>
             <div class="text-2xl font-bold text-purple-600 dark:text-purple-400" x-text="'€' + parseFloat(lotePreview?.totals?.amount || 0).toFixed(2)"></div>
           </div>
@@ -1157,6 +1161,7 @@
                 <th class="px-2 py-1.5 text-right">Base</th>
                 <th class="px-2 py-1.5 text-right">Bónus dias</th>
                 <th class="px-2 py-1.5 text-right">Bónus €</th>
+                <th class="px-2 py-1.5 text-right">Claims €</th>
                 <th class="px-2 py-1.5 text-right">Total</th>
                 <th class="px-2 py-1.5">Status</th>
               </tr>
@@ -1204,6 +1209,11 @@
                   <td class="px-2 py-1.5 text-right font-mono" x-text="'€' + parseFloat(r.base).toFixed(2)"></td>
                   <td class="px-2 py-1.5 text-right" x-text="r.bonus_days"></td>
                   <td class="px-2 py-1.5 text-right font-mono text-amber-600" x-text="'€' + parseFloat(r.bonus_amount).toFixed(2)"></td>
+                  <td class="px-2 py-1.5 text-right font-mono"
+                      :class="parseFloat(r.claims_amount || 0) > 0 ? 'text-rose-600' : 'text-gray-400'">
+                    <span x-text="(parseFloat(r.claims_amount || 0) > 0 ? '-€' : '€') + parseFloat(r.claims_amount || 0).toFixed(2)"></span>
+                    <span x-show="(r.claims_count || 0) > 0" class="text-[9px] text-gray-400" x-text="'(' + r.claims_count + ')'"></span>
+                  </td>
                   <td class="px-2 py-1.5 text-right font-mono font-bold text-purple-600" x-text="'€' + parseFloat(r.subtotal).toFixed(2)"></td>
                   <td class="px-2 py-1.5">
                     <span x-show="r.has_overlap" class="px-1.5 py-0.5 text-[9px] bg-amber-100 text-amber-700 rounded">overlap</span>

@@ -18,6 +18,7 @@ class BillForm(forms.ModelForm):
             "issue_date", "due_date", "paid_date",
             "status", "recurrence",
             "paid_by_source", "paid_by_lender",
+            "payment_method", "card_last4",
             "driver", "driver_advance_tipo",
             "notes",
         ]
@@ -68,6 +69,17 @@ class BillForm(forms.ModelForm):
                 "data-bill-driver": "1",
             }),
             "driver_advance_tipo": forms.Select(attrs={"class": "fld"}),
+            "payment_method": forms.Select(attrs={
+                "class": "fld",
+                "data-payment-method": "1",
+            }),
+            "card_last4": forms.TextInput(attrs={
+                "class": "fld",
+                "maxlength": "4",
+                "pattern": r"\d{0,4}",
+                "inputmode": "numeric",
+                "placeholder": "ex: 9113",
+            }),
             "notes": forms.Textarea(attrs={"class": "fld", "rows": 2}),
         }
 
@@ -120,6 +132,22 @@ class BillForm(forms.ModelForm):
                 "paid_by_lender",
                 "Selecciona qual sócio adiantou o pagamento desta conta.",
             )
+        # card_last4 só aceita dígitos. Se método != CARD, ignora qualquer
+        # valor (limpa silenciosamente).
+        last4 = (cleaned.get("card_last4") or "").strip()
+        if cleaned.get("payment_method") != Bill.PAYMENT_METHOD_CARD:
+            cleaned["card_last4"] = ""
+        elif last4:
+            import re
+            digits = re.sub(r"\D", "", last4)
+            if len(digits) > 4:
+                digits = digits[-4:]
+            if len(digits) != 4:
+                self.add_error(
+                    "card_last4",
+                    "Os últimos 4 dígitos do cartão devem ter exactamente 4 dígitos.",
+                )
+            cleaned["card_last4"] = digits
         return cleaned
 
 

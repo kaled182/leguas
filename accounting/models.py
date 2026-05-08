@@ -926,6 +926,45 @@ class Bill(models.Model):
         "Referência Pagamento", max_length=200, blank=True,
         help_text="MB WAY, IBAN, transferência, etc.",
     )
+
+    # Método de pagamento (no momento da liquidação ao fornecedor).
+    # Útil para combustíveis e pequenas despesas pagas em loja: distinguir
+    # cartão (com últimos 4 dígitos para reconciliação bancária) de
+    # numerário, multibanco, transferência, etc.
+    PAYMENT_METHOD_CASH = "CASH"
+    PAYMENT_METHOD_CARD = "CARD"
+    PAYMENT_METHOD_MULTIBANCO = "MULTIBANCO"
+    PAYMENT_METHOD_TRANSFER = "TRANSFER"
+    PAYMENT_METHOD_DEBITO_DIRETO = "DEBITO_DIRETO"
+    PAYMENT_METHOD_CHEQUE = "CHEQUE"
+    PAYMENT_METHOD_OTHER = "OTHER"
+    PAYMENT_METHOD_CHOICES = [
+        ("", "—"),
+        (PAYMENT_METHOD_CASH, "Numerário (dinheiro)"),
+        (PAYMENT_METHOD_CARD, "Cartão (Visa/Mastercard)"),
+        (PAYMENT_METHOD_MULTIBANCO, "Multibanco (entidade/ref.)"),
+        (PAYMENT_METHOD_TRANSFER, "Transferência"),
+        (PAYMENT_METHOD_DEBITO_DIRETO, "Débito Directo"),
+        (PAYMENT_METHOD_CHEQUE, "Cheque"),
+        (PAYMENT_METHOD_OTHER, "Outro"),
+    ]
+    payment_method = models.CharField(
+        "Método de pagamento",
+        max_length=20,
+        choices=PAYMENT_METHOD_CHOICES,
+        blank=True,
+        default="",
+        help_text=(
+            "Como foi pago. Se for cartão, preenche os últimos 4 dígitos."
+        ),
+    )
+    card_last4 = models.CharField(
+        "Últimos 4 dígitos do cartão",
+        max_length=4,
+        blank=True,
+        default="",
+        help_text="Apenas dígitos. Só relevante quando método = Cartão.",
+    )
     payment_proof = models.FileField(
         "Comprovativo de Pagamento",
         upload_to="bills/comprovativos/%Y/%m/",

@@ -130,6 +130,21 @@
           {% if form.paid_by_lender.errors %}<div class="text-xs text-red-600 mt-1">{{ form.paid_by_lender.errors.0 }}</div>{% endif %}
         </div>
 
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">
+            Método de pagamento
+          </label>
+          {{ form.payment_method }}
+        </div>
+        <div id="card-last4-wrap" class="md:col-span-2">
+          <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">
+            Últimos 4 dígitos do cartão
+            <span class="text-gray-400 font-normal">— para reconciliação bancária</span>
+          </label>
+          {{ form.card_last4 }}
+          {% if form.card_last4.errors %}<div class="text-xs text-red-600 mt-1">{{ form.card_last4.errors.0 }}</div>{% endif %}
+        </div>
+
         <!-- Lançamento para Motorista (combustível pago em nome da empresa) -->
         <div class="md:col-span-3 mt-1 p-3 rounded-lg bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-700/50">
           <p class="text-xs font-semibold text-violet-700 dark:text-violet-300 mb-2 flex items-center gap-1.5">
@@ -385,6 +400,22 @@ document.addEventListener('DOMContentLoaded', () => {
   togglePaidByLender();
   paidBySrc?.addEventListener('change', togglePaidByLender);
 
+  // Método de pagamento: mostra/esconde campo "últimos 4 dígitos" só quando CARD
+  const paymentMethodEl = document.querySelector('[data-payment-method]');
+  const cardLast4Wrap = document.getElementById('card-last4-wrap');
+  function toggleCardLast4() {
+    if (!paymentMethodEl || !cardLast4Wrap) return;
+    const isCard = paymentMethodEl.value === 'CARD';
+    cardLast4Wrap.style.opacity = isCard ? '1' : '0.4';
+    cardLast4Wrap.style.pointerEvents = isCard ? '' : 'none';
+    if (!isCard) {
+      const last4El = cardLast4Wrap.querySelector('input');
+      if (last4El) last4El.value = '';
+    }
+  }
+  toggleCardLast4();
+  paymentMethodEl?.addEventListener('change', toggleCardLast4);
+
   // Driver lançamento: mostra/esconde campo Tipo só quando driver está seleccionado
   const billDriverEl = document.querySelector('[data-bill-driver]');
   const driverTipoWrap = document.getElementById('driver-advance-tipo-wrap');
@@ -606,6 +637,20 @@ document.addEventListener('DOMContentLoaded', () => {
     // Vencimento default = data de emissão (operador altera se diferente)
     const due = document.querySelector('[name=due_date]');
     if (due && !due.value && d.issue_date) due.value = d.issue_date;
+    // Data de Pagamento: para recibos / pagamento imediato (combustível,
+    // pequenas compras), assumir paid_date = issue_date. Operador altera
+    // se a fatura ainda não tiver sido paga.
+    const paid = document.querySelector('[name=paid_date]');
+    if (paid && !paid.value && d.issue_date) paid.value = d.issue_date;
+    // Método de pagamento + últimos 4 dígitos do cartão
+    if (d.payment_method) {
+      setIfEmpty('[name=payment_method]', d.payment_method);
+      // Dispara o toggle do campo card_last4
+      paymentMethodEl?.dispatchEvent(new Event('change'));
+    }
+    if (d.payment_method === 'CARD' && d.card_last4) {
+      setIfEmpty('[name=card_last4]', d.card_last4);
+    }
     // Descrição default
     const desc = document.querySelector('[name=description]');
     if (desc && !desc.value && d.invoice_number) {

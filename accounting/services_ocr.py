@@ -88,6 +88,8 @@ seguinte estrutura:
   "amount_total": "valor com IVA com ponto decimal (ex: 151.84)",
   "category_hint": "categoria curta em PT, ex: 'Combustível', 'Peças e Manutenção', 'Renda', 'Internet/Telecom', 'Eletricidade', 'Água', 'Honorários', 'Material de Escritório', 'Limpeza', 'Seguros', 'Imposto'",
   "category_keywords": "1-3 palavras-chave dos produtos/serviços facturados, ex: 'gasóleo abastecimento', 'pneus alinhamento', 'fibra 1Gbps'",
+  "payment_method": "um de: CASH | CARD | MULTIBANCO | TRANSFER | OTHER (ver guia abaixo)",
+  "card_last4": "4 dígitos finais do cartão se aparecerem (ex: '9113'); '' se não",
   "confidence": "low | medium | high"
 }
 
@@ -101,6 +103,16 @@ Regras estritas:
   Analisa as descrições das linhas/produtos. Ex: factura da BP com gasóleo
   → "Combustível"; factura da MEO com fibra → "Internet/Telecom"; factura
   do mecânico com peças e mão de obra → "Peças e Manutenção".
+- payment_method (string vazia se ilegível):
+    * CARD       → "Visa", "Mastercard", "Maestro", "Cartão", "Tarjeta"
+    * MULTIBANCO → "MB", "Multibanco", referência multibanco/entidade
+    * CASH       → "Numerário", "Dinheiro", "Efectivo", "Cash"
+    * TRANSFER   → "Transferência bancária", "TRF", "IBAN"
+    * OTHER      → cheque ou método não identificável
+- card_last4: SÓ DÍGITOS, exactamente 4. Procura padrões como
+  "************9113", "VISA ...9113", "Confirmación 9113", "AUTH XXXX",
+  ou similar. Se ambíguo (códigos de transacção que não sejam do cartão),
+  deixa "".
 - confidence: 'high' se conseguiste ler tudo claramente; 'medium' se
   alguns campos foram inferidos; 'low' se documento ilegível ou parcial.
 - Não inventes dados — se um campo não está no documento, usa "".
@@ -135,6 +147,12 @@ def _normalize_response(raw_json: str) -> dict:
         except (InvalidOperation, TypeError, ValueError):
             return None
 
+    pm = (data.get("payment_method") or "").strip().upper()
+    if pm not in ("CASH", "CARD", "MULTIBANCO", "TRANSFER", "OTHER"):
+        pm = ""
+    last4_raw = re.sub(r"\D", "", data.get("card_last4") or "")
+    last4 = last4_raw[-4:] if len(last4_raw) >= 4 else ""
+
     return {
         "supplier_name": (data.get("supplier_name") or "").strip(),
         "supplier_nif": re.sub(r"\D", "", data.get("supplier_nif") or "")[:9],
@@ -145,6 +163,8 @@ def _normalize_response(raw_json: str) -> dict:
         "amount_total": _dec(data.get("amount_total")),
         "category_hint": (data.get("category_hint") or "").strip(),
         "category_keywords": (data.get("category_keywords") or "").strip(),
+        "payment_method": pm,
+        "card_last4": last4,
         "confidence": (data.get("confidence") or "low").lower(),
         "raw_text": "",
     }

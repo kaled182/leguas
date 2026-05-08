@@ -82,12 +82,17 @@
           <i data-lucide="receipt" class="w-4 h-4 inline -mt-0.5"></i>
           <span class="hidden sm:inline ml-1">Faturas</span>
         </a>
+        {# "Perfil" é o fluxo de auto-edição com aprovação, exclusivo do
+           próprio motorista. Admins têm a tab "Editar" mais abaixo, que
+           permite alterar os dados directamente sem aprovação. #}
+        {% if not request.user.is_staff and not request.user.is_superuser %}
         <a href="{% url 'drivers_app:driver_portal_profile' driver.id %}"
            class="px-3 py-1.5 rounded-lg text-sm font-medium transition
              {% if request.resolver_match.url_name == 'driver_portal_profile' %}bg-white text-indigo-700 shadow{% else %}text-white/90 hover:bg-white/10{% endif %}">
           <i data-lucide="user-cog" class="w-4 h-4 inline -mt-0.5"></i>
           <span class="hidden sm:inline ml-1">Perfil</span>
         </a>
+        {% endif %}
         <a href="{% url 'contracts:driver_contracts' driver.id %}"
            class="px-3 py-1.5 rounded-lg text-sm font-medium transition
              {% if request.resolver_match.url_name == 'driver_contracts' or request.resolver_match.url_name == 'driver_contract_sign' or request.resolver_match.url_name == 'driver_contract_view' %}bg-white text-indigo-700 shadow{% else %}text-white/90 hover:bg-white/10{% endif %}">

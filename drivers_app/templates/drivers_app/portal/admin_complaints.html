@@ -45,8 +45,18 @@
       {% csrf_token %}
       <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div>
-          <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Nº Pacote / Tracking *</label>
+          <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1 flex items-center justify-between">
+            <span>Nº Pacote / Tracking *</span>
+            <span x-show="lookupStatus" :class="{
+                'text-blue-600 dark:text-blue-400': lookupStatus === 'loading',
+                'text-emerald-600 dark:text-emerald-400': lookupStatus === 'found',
+                'text-amber-600 dark:text-amber-400': lookupStatus === 'notfound',
+                'text-rose-600 dark:text-rose-400': lookupStatus === 'error',
+              }" class="text-[10px] font-normal" x-text="lookupMessage"></span>
+          </label>
           <input type="text" name="numero_pacote" required placeholder="Ex: CNPRT38855577123..."
+                 @blur="lookupWaybill($event.target.value)"
+                 @keyup.enter.prevent="lookupWaybill($event.target.value)"
                  class="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
         </div>
         <div>
@@ -333,6 +343,9 @@ function complaintsManager() {
   return {
     showCreate: false,
     attachmentFiles: [],
+    lookupStatus: '',     // '' | 'loading' | 'found' | 'notfound' | 'error'
+    lookupMessage: '',
+    _lastLookup: '',      // cache para não disparar duplicado no blur+enter
 
     init() {
       window.addEventListener('alpine:init', () => this.$nextTick(() => lucide.createIcons()));
@@ -343,6 +356,56 @@ function complaintsManager() {
       e.target.value = '';
     },
     removeFile(i) { this.attachmentFiles.splice(i, 1); },
+
+    async lookupWaybill(waybill) {
+      const wb = (waybill || '').trim();
+      if (!wb || wb === this._lastLookup) return;
+      this._lastLookup = wb;
+      this.lookupStatus = 'loading';
+      this.lookupMessage = '🔍 a procurar...';
+      try {
+        const resp = await fetch(
+          `/driversapp/api/waybill-lookup/?waybill=${encodeURIComponent(wb)}`,
+          { credentials: 'same-origin' },
+        );
+        const d = await resp.json();
+        if (!d.success) {
+          this.lookupStatus = 'error';
+          this.lookupMessage = '❌ ' + (d.error || 'erro');
+          return;
+        }
+        if (!d.found) {
+          this.lookupStatus = 'notfound';
+          this.lookupMessage = '⚠ waybill não encontrada';
+          return;
+        }
+        // Auto-fill: só preenche campos vazios para não sobrepor edições do operador
+        const setIfEmpty = (name, val) => {
+          if (!val) return;
+          const el = document.querySelector(`[name=${name}]`);
+          if (el && !el.value) el.value = val;
+        };
+        setIfEmpty('nome_cliente', d.nome_cliente);
+        setIfEmpty('telefone_cliente', d.telefone_cliente);
+        setIfEmpty('email_cliente', d.email_cliente);
+        setIfEmpty('morada', d.morada);
+        setIfEmpty('codigo_postal', d.codigo_postal);
+        setIfEmpty('cidade', d.cidade);
+        setIfEmpty('data_entrega', d.data_entrega);
+        // Resumo dos campos preenchidos
+        const filled = [
+          d.nome_cliente && 'nome', d.telefone_cliente && 'tel',
+          d.email_cliente && 'email', d.morada && 'morada',
+          d.codigo_postal && 'CP', d.cidade && 'cidade',
+          d.data_entrega && 'data',
+        ].filter(Boolean);
+        this.lookupStatus = 'found';
+        this.lookupMessage = `✓ ${filled.length} campos preenchidos: ${filled.join(', ')}`;
+      } catch (err) {
+        this.lookupStatus = 'error';
+        this.lookupMessage = '❌ erro de rede';
+      }
+    },
 
     _csrf() {
       return document.querySelector('[name=csrfmiddlewaretoken]').value;

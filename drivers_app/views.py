@@ -2653,6 +2653,107 @@ def driver_complaints_api(request, driver_id):
 
 
 @login_required
+def waybill_lookup_for_complaint(request):
+    """API JSON: dados consolidados de uma waybill para auto-preencher
+    o formulário de Nova Reclamação.
+
+    Cruza 3 fontes:
+      - CainiaoOperationTask (waybill_number)  — endereço, cidade, CP,
+        delivery_time, courier
+      - CainiaoDelivery (tracking_number)     — receiver_name/phone/email
+      - CainiaoPlanningPackage (waybill)      — receiver_city/zip/address
+    """
+    from settlements.models import (
+        CainiaoOperationTask,
+    )
+    waybill = (request.GET.get("waybill") or "").strip()
+    if not waybill:
+        return JsonResponse({"success": False, "error": "Parâmetro 'waybill' obrigatório."}, status=400)
+
+    result = {
+        "waybill": waybill,
+        "found": False,
+        "nome_cliente": "",
+        "telefone_cliente": "",
+        "email_cliente": "",
+        "morada": "",
+        "codigo_postal": "",
+        "cidade": "",
+        "data_entrega": None,           # ISO datetime para datetime-local
+        "courier_name": "",
+        "task_status": "",
+        "delivery_type": "",
+    }
+
+    # 1) Operation Task (mais recente do waybill)
+    task = (
+        CainiaoOperationTask.objects.filter(waybill_number=waybill)
+        .order_by("-task_date", "-id")
+        .first()
+    )
+    if task:
+        result["found"] = True
+        result["morada"] = task.detailed_address or ""
+        result["codigo_postal"] = task.zip_code or ""
+        result["cidade"] = task.destination_city or ""
+        if task.delivery_time:
+            result["data_entrega"] = task.delivery_time.strftime(
+                "%Y-%m-%dT%H:%M",
+            )
+        result["courier_name"] = task.courier_name or ""
+        result["task_status"] = task.task_status or ""
+        result["delivery_type"] = task.delivery_type or ""
+
+    # 2) Delivery (PARCEL_LIST com receiver_name etc.)
+    try:
+        from settlements.models import CainiaoDelivery
+        delivery = (
+            CainiaoDelivery.objects.filter(tracking_number=waybill)
+            .order_by("-id").first()
+        )
+        if delivery:
+            result["found"] = True
+            if not result["nome_cliente"]:
+                result["nome_cliente"] = delivery.receiver_name or ""
+            if not result["telefone_cliente"]:
+                result["telefone_cliente"] = (
+                    delivery.receiver_phone
+                    or delivery.receiver_contact_number
+                    or ""
+                )
+            if not result["email_cliente"]:
+                result["email_cliente"] = delivery.receiver_email or ""
+            if not result["morada"]:
+                result["morada"] = delivery.receiver_address or ""
+            if not result["codigo_postal"]:
+                result["codigo_postal"] = delivery.receiver_zip or ""
+            if not result["cidade"]:
+                result["cidade"] = delivery.receiver_city or ""
+    except Exception:
+        pass
+
+    # 3) Planning Package (fallback adicional para CP/cidade/morada)
+    try:
+        from settlements.models import CainiaoPlanningPackage
+        planning = (
+            CainiaoPlanningPackage.objects.filter(waybill_number=waybill)
+            .order_by("-id").first()
+        )
+        if planning:
+            result["found"] = True
+            if not result["codigo_postal"]:
+                result["codigo_postal"] = planning.receiver_zip or ""
+            if not result["cidade"]:
+                result["cidade"] = planning.receiver_city or ""
+            if not result["morada"]:
+                result["morada"] = planning.receiver_address or ""
+    except Exception:
+        pass
+
+    return JsonResponse({"success": True, **result})
+
+
+@login_required
 @require_http_methods(["POST"])
 def driver_complaint_create(request, driver_id):
     """Cria uma nova reclamação de cliente para um motorista."""

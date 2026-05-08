@@ -266,6 +266,11 @@ urlpatterns = [
         name="driver-complaint-create",
     ),
     path(
+        "api/waybill-lookup/",
+        views.waybill_lookup_for_complaint,
+        name="waybill-lookup-for-complaint",
+    ),
+    path(
         "api/complaints/item/<int:complaint_id>/update/",
         views.driver_complaint_update,
         name="driver-complaint-update",

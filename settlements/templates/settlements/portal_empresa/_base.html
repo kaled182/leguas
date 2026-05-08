@@ -1,10 +1,10 @@
-{% extends "paack_dashboard/base.html" %}
+{% extends "settlements/portal_empresa/_layout.html" %}
 {% load static %}
 
 {% block title %}{{ empresa.nome }} — Portal da Frota{% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto">
+<div>
 
   {# ─── Header da Frota ─── #}
   <div class="bg-gradient-to-r from-purple-600 via-fuchsia-600 to-pink-600 rounded-2xl p-6 mb-6 shadow-lg">
@@ -33,90 +33,72 @@
         </div>
       </div>
 
+      {# Botão admin: gerir credenciais (Voltar já está no topbar) #}
       {% if request.user.is_staff or request.user.is_superuser %}
       <div class="flex items-center gap-2">
-        <a href="{% url 'drivers_app:empresas-parceiras' %}"
-           title="Voltar ao painel de Empresas Parceiras"
-           class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/15 hover:bg-white/25 backdrop-blur-sm rounded-lg text-white text-sm font-medium transition">
-          <i data-lucide="arrow-left" class="w-4 h-4"></i>
-          <span class="hidden md:inline">Voltar</span>
-        </a>
         <a href="{% url 'customauth:admin_empresa_credentials' empresa.id %}"
            title="Gerir credenciais da frota"
-           class="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/15 hover:bg-white/25 backdrop-blur-sm rounded-lg text-white text-sm font-medium transition">
-          <i data-lucide="key" class="w-4 h-4"></i>
-          Credenciais
-        </a>
-      </div>
-      {% else %}
-      <div class="flex items-center gap-2">
-        <a href="{% url 'customauth:empresa_logout' %}"
            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/15 hover:bg-white/25 backdrop-blur-sm rounded-lg text-white text-sm font-medium transition">
-          <i data-lucide="log-out" class="w-4 h-4"></i>
-          <span class="hidden md:inline">Sair</span>
+          <i data-lucide="key" class="w-4 h-4"></i>
+          <span class="hidden md:inline">Credenciais</span>
         </a>
       </div>
       {% endif %}
-
-      {# Tabs de navegação #}
-      <nav class="flex flex-wrap items-center gap-1 bg-white/10 backdrop-blur-sm rounded-xl p-1">
-        <a href="{% url 'empresa-portal-dashboard' empresa.id %}"
-           class="px-3 py-1.5 rounded-lg text-sm font-medium transition
-             {% if active_tab == 'dashboard' %}bg-white text-purple-700 shadow{% else %}text-white/90 hover:bg-white/10{% endif %}">
-          <i data-lucide="layout-dashboard" class="w-4 h-4 inline -mt-0.5"></i>
-          <span class="hidden sm:inline ml-1">Visão Geral</span>
-        </a>
-        <a href="{% url 'empresa-portal-invoices' empresa.id %}"
-           class="px-3 py-1.5 rounded-lg text-sm font-medium transition
-             {% if active_tab == 'invoices' %}bg-white text-purple-700 shadow{% else %}text-white/90 hover:bg-white/10{% endif %}">
-          <i data-lucide="receipt" class="w-4 h-4 inline -mt-0.5"></i>
-          <span class="hidden sm:inline ml-1">Faturas</span>
-        </a>
-        <a href="{% url 'empresa-portal-reports' empresa.id %}"
-           class="px-3 py-1.5 rounded-lg text-sm font-medium transition
-             {% if active_tab == 'reports' %}bg-white text-purple-700 shadow{% else %}text-white/90 hover:bg-white/10{% endif %}">
-          <i data-lucide="bar-chart-3" class="w-4 h-4 inline -mt-0.5"></i>
-          <span class="hidden sm:inline ml-1">Relatórios</span>
-        </a>
-        <a href="{% url 'empresa-portal-drivers' empresa.id %}"
-           class="px-3 py-1.5 rounded-lg text-sm font-medium transition
-             {% if active_tab == 'drivers' %}bg-white text-purple-700 shadow{% else %}text-white/90 hover:bg-white/10{% endif %}">
-          <i data-lucide="users" class="w-4 h-4 inline -mt-0.5"></i>
-          <span class="hidden sm:inline ml-1">Motoristas</span>
-        </a>
-        <a href="{% url 'empresa-portal-claims' empresa.id %}"
-           class="px-3 py-1.5 rounded-lg text-sm font-medium transition
-             {% if active_tab == 'claims' %}bg-white text-purple-700 shadow{% else %}text-white/90 hover:bg-white/10{% endif %}">
-          <i data-lucide="alert-octagon" class="w-4 h-4 inline -mt-0.5"></i>
-          <span class="hidden sm:inline ml-1">Claims</span>
-        </a>
-        <a href="{% url 'empresa-portal-documents' empresa.id %}"
-           class="px-3 py-1.5 rounded-lg text-sm font-medium transition
-             {% if active_tab == 'documents' %}bg-white text-purple-700 shadow{% else %}text-white/90 hover:bg-white/10{% endif %}">
-          <i data-lucide="file-text" class="w-4 h-4 inline -mt-0.5"></i>
-          <span class="hidden sm:inline ml-1">Documentos</span>
-        </a>
-        <a href="{% url 'empresa-portal-contracts' empresa.id %}"
-           class="px-3 py-1.5 rounded-lg text-sm font-medium transition
-             {% if active_tab == 'contracts' %}bg-white text-purple-700 shadow{% else %}text-white/90 hover:bg-white/10{% endif %}">
-          <i data-lucide="file-signature" class="w-4 h-4 inline -mt-0.5"></i>
-          <span class="hidden sm:inline ml-1">Contratos</span>
-        </a>
-        <a href="{% url 'empresa-portal-profile' empresa.id %}"
-           class="px-3 py-1.5 rounded-lg text-sm font-medium transition
-             {% if active_tab == 'profile' %}bg-white text-purple-700 shadow{% else %}text-white/90 hover:bg-white/10{% endif %}">
-          <i data-lucide="settings" class="w-4 h-4 inline -mt-0.5"></i>
-          <span class="hidden sm:inline ml-1">Perfil</span>
-        </a>
-      </nav>
     </div>
+
+    {# Tabs de navegação #}
+    <nav class="flex flex-wrap items-center gap-1 bg-white/10 backdrop-blur-sm rounded-xl p-1 mt-4">
+      <a href="{% url 'empresa-portal-dashboard' empresa.id %}"
+         class="px-3 py-1.5 rounded-lg text-sm font-medium transition
+           {% if active_tab == 'dashboard' %}bg-white text-purple-700 shadow{% else %}text-white/90 hover:bg-white/10{% endif %}">
+        <i data-lucide="layout-dashboard" class="w-4 h-4 inline -mt-0.5"></i>
+        <span class="hidden sm:inline ml-1">Visão Geral</span>
+      </a>
+      <a href="{% url 'empresa-portal-invoices' empresa.id %}"
+         class="px-3 py-1.5 rounded-lg text-sm font-medium transition
+           {% if active_tab == 'invoices' %}bg-white text-purple-700 shadow{% else %}text-white/90 hover:bg-white/10{% endif %}">
+        <i data-lucide="receipt" class="w-4 h-4 inline -mt-0.5"></i>
+        <span class="hidden sm:inline ml-1">Faturas</span>
+      </a>
+      <a href="{% url 'empresa-portal-reports' empresa.id %}"
+         class="px-3 py-1.5 rounded-lg text-sm font-medium transition
+           {% if active_tab == 'reports' %}bg-white text-purple-700 shadow{% else %}text-white/90 hover:bg-white/10{% endif %}">
+        <i data-lucide="bar-chart-3" class="w-4 h-4 inline -mt-0.5"></i>
+        <span class="hidden sm:inline ml-1">Relatórios</span>
+      </a>
+      <a href="{% url 'empresa-portal-drivers' empresa.id %}"
+         class="px-3 py-1.5 rounded-lg text-sm font-medium transition
+           {% if active_tab == 'drivers' %}bg-white text-purple-700 shadow{% else %}text-white/90 hover:bg-white/10{% endif %}">
+        <i data-lucide="users" class="w-4 h-4 inline -mt-0.5"></i>
+        <span class="hidden sm:inline ml-1">Motoristas</span>
+      </a>
+      <a href="{% url 'empresa-portal-claims' empresa.id %}"
+         class="px-3 py-1.5 rounded-lg text-sm font-medium transition
+           {% if active_tab == 'claims' %}bg-white text-purple-700 shadow{% else %}text-white/90 hover:bg-white/10{% endif %}">
+        <i data-lucide="alert-octagon" class="w-4 h-4 inline -mt-0.5"></i>
+        <span class="hidden sm:inline ml-1">Claims</span>
+      </a>
+      <a href="{% url 'empresa-portal-documents' empresa.id %}"
+         class="px-3 py-1.5 rounded-lg text-sm font-medium transition
+           {% if active_tab == 'documents' %}bg-white text-purple-700 shadow{% else %}text-white/90 hover:bg-white/10{% endif %}">
+        <i data-lucide="file-text" class="w-4 h-4 inline -mt-0.5"></i>
+        <span class="hidden sm:inline ml-1">Documentos</span>
+      </a>
+      <a href="{% url 'empresa-portal-contracts' empresa.id %}"
+         class="px-3 py-1.5 rounded-lg text-sm font-medium transition
+           {% if active_tab == 'contracts' %}bg-white text-purple-700 shadow{% else %}text-white/90 hover:bg-white/10{% endif %}">
+        <i data-lucide="file-signature" class="w-4 h-4 inline -mt-0.5"></i>
+        <span class="hidden sm:inline ml-1">Contratos</span>
+      </a>
+      <a href="{% url 'empresa-portal-profile' empresa.id %}"
+         class="px-3 py-1.5 rounded-lg text-sm font-medium transition
+           {% if active_tab == 'profile' %}bg-white text-purple-700 shadow{% else %}text-white/90 hover:bg-white/10{% endif %}">
+        <i data-lucide="settings" class="w-4 h-4 inline -mt-0.5"></i>
+        <span class="hidden sm:inline ml-1">Perfil</span>
+      </a>
+    </nav>
   </div>
 
   {% block portal_content %}{% endblock %}
 </div>
-{% endblock %}
-
-{% block extra_js %}
-{{ block.super }}
-<script>if (typeof lucide !== 'undefined') lucide.createIcons();</script>
 {% endblock %}

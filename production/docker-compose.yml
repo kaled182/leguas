@@ -25,6 +25,7 @@ services:
       MYSQL_USER: ${DB_USER}
       MYSQL_PASSWORD: ${DB_PASSWORD}
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+    command: --bind-address=0.0.0.0
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
@@ -35,10 +36,11 @@ services:
       start_period: 30s
     networks:
       - leguas_net
-    # Não exposto ao host por defeito (segurança).
-    # Para aceder externamente, descomentar:
-    # ports:
-    #   - "127.0.0.1:3306:3306"
+    # Exposição externa: porta 3307 do host → 3306 do container.
+    # ATENÇÃO: BD acessível externamente. Garante firewall + senhas
+    # fortes em DB_PASSWORD/DB_ROOT_PASSWORD no .env.
+    ports:
+      - "3307:3306"
 
   # ───────────────────────── CACHE / BROKER ────────────────────────
   redis:
@@ -180,8 +182,8 @@ services:
     container_name: leguas_caddy
     restart: unless-stopped
     ports:
-      - "80:80"
-      - "443:443"
+      - "8090:80"
+      - "8453:443"
       - "443:443/udp"
     environment:
       DOMAIN: ${DOMAIN:-:80}

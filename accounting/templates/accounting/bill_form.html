@@ -217,6 +217,8 @@
               <div><span class="text-gray-500">Sem IVA:</span> <strong id="ocr-net">—</strong></div>
               <div><span class="text-gray-500">Taxa IVA:</span> <strong id="ocr-rate">—</strong></div>
               <div><span class="text-gray-500">Total:</span> <strong id="ocr-total">—</strong></div>
+              <div><span class="text-gray-500">Método pgto:</span> <strong id="ocr-payment-method">—</strong></div>
+              <div><span class="text-gray-500">Cartão *:</span> <strong id="ocr-card-last4">—</strong></div>
               <div id="ocr-suggested" class="md:col-span-3 mt-1 text-violet-700 dark:text-violet-300 hidden">
                 <i data-lucide="user-check" class="w-3.5 h-3.5 inline"></i>
                 Fornecedor existente: <strong id="ocr-suggested-name">—</strong>
@@ -542,6 +544,7 @@ document.addEventListener('DOMContentLoaded', () => {
       _ocrLastData = data.data;
       _ocrLastSuggested = data.suggested_fornecedor;
       _ocrLastSuggestedCategory = data.suggested_category;
+      console.log('[OCR] resposta IA:', data.data);
       renderOcrPreview(data.data, data.suggested_fornecedor, data.suggested_category);
       setOcrStatus('✓ Extraído — revê os campos', 'text-emerald-600');
     } catch (e) {
@@ -557,6 +560,13 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('ocr-net').textContent = d.amount_net ? '€' + d.amount_net : '—';
     document.getElementById('ocr-rate').textContent = d.iva_rate ? d.iva_rate + '%' : '—';
     document.getElementById('ocr-total').textContent = d.amount_total ? '€' + d.amount_total : '—';
+    document.getElementById('ocr-payment-method').textContent =
+      d.payment_method ? ({
+        CASH: 'Numerário', CARD: 'Cartão', MULTIBANCO: 'Multibanco',
+        TRANSFER: 'Transferência', OTHER: 'Outro',
+      }[d.payment_method] || d.payment_method) : '—';
+    document.getElementById('ocr-card-last4').textContent =
+      d.card_last4 ? '****' + d.card_last4 : '—';
     const conf = document.getElementById('ocr-confidence');
     conf.textContent = (d.confidence || 'low').toUpperCase();
     conf.className = `text-[10px] px-1.5 py-0.5 rounded-full ${

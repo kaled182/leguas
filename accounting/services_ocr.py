@@ -103,16 +103,34 @@ Regras estritas:
   Analisa as descrições das linhas/produtos. Ex: factura da BP com gasóleo
   → "Combustível"; factura da MEO com fibra → "Internet/Telecom"; factura
   do mecânico com peças e mão de obra → "Peças e Manutenção".
-- payment_method (string vazia se ilegível):
-    * CARD       → "Visa", "Mastercard", "Maestro", "Cartão", "Tarjeta"
-    * MULTIBANCO → "MB", "Multibanco", referência multibanco/entidade
-    * CASH       → "Numerário", "Dinheiro", "Efectivo", "Cash"
-    * TRANSFER   → "Transferência bancária", "TRF", "IBAN"
+- payment_method é OBRIGATÓRIO sempre que houver QUALQUER pista no
+  documento. NUNCA deixes "" se o recibo mencionar uma das palavras
+  abaixo. Mapeamento (não distingue maiúsculas/minúsculas/acentos):
+    * CARD       → presença de QUALQUER palavra: "Visa", "Mastercard",
+                   "Maestro", "AmEx", "American Express", "Cartão",
+                   "Tarjeta", "REDSYS" (operador de cartão PT/ES),
+                   "TPA" (terminal pagamento automático), "POS",
+                   "Comprovante de pagamento POS"
+    * MULTIBANCO → "MB", "Multibanco", "Entidade", "Referência" (com
+                   números entidade/ref típicos PT)
+    * CASH       → "Numerário", "Dinheiro", "Efectivo", "Cash",
+                   "PAGO EM DINHEIRO"
+    * TRANSFER   → "Transferência bancária", "TRF", "IBAN PT...",
+                   "Bank wire"
     * OTHER      → cheque ou método não identificável
-- card_last4: SÓ DÍGITOS, exactamente 4. Procura padrões como
-  "************9113", "VISA ...9113", "Confirmación 9113", "AUTH XXXX",
-  ou similar. Se ambíguo (códigos de transacção que não sejam do cartão),
-  deixa "".
+  Se o recibo é de um POS (REDSYS, MULTIBANCO, etc.) e mostra "Mastercard"
+  ou "Visa", é CARD com TOTAL CERTEZA — não deixes vazio.
+
+- card_last4: SÓ DÍGITOS, exactamente 4. Padrões frequentes:
+    * "************9113" (asteriscos seguidos de 4 dígitos)
+    * "XXXXXXXXXXXX9113"
+    * "Mastercard 9113" / "VISA ...9113"
+    * "Cartão ************9113"
+    * "Confirmación NNNN" / "AUTH NNNN" — também válido se for o único
+      código de cartão visível no recibo
+  Se ambíguo (NIF, número de fatura, código de operação que não é do
+  cartão), deixa "". Quando há "************XXXX" no recibo, é
+  inequivocamente o cartão.
 - confidence: 'high' se conseguiste ler tudo claramente; 'medium' se
   alguns campos foram inferidos; 'low' se documento ilegível ou parcial.
 - Não inventes dados — se um campo não está no documento, usa "".

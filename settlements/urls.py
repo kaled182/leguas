@@ -983,6 +983,16 @@ urlpatterns = [
         name="reimbursement-cancel",
     ),
     path(
+        "reembolsos/<int:reimbursement_id>/update/",
+        views_shareholder.reimbursement_update,
+        name="reimbursement-update",
+    ),
+    path(
+        "reembolsos/<int:reimbursement_id>/delete/",
+        views_shareholder.reimbursement_delete,
+        name="reimbursement-delete",
+    ),
+    path(
         "reembolsos/bulk-mark-paid/",
         views_shareholder.reimbursement_bulk_mark_paid,
         name="reimbursement-bulk-mark-paid",

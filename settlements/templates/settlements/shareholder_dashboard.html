@@ -157,9 +157,11 @@
                                 </td>
                                 <td class="px-3 py-2 text-gray-600 dark:text-gray-400" x-text="r.data_pagamento || '—'"></td>
                                 <td class="px-3 py-2 text-gray-600 dark:text-gray-400 max-w-[10rem] truncate" :title="r.referencia_pagamento" x-text="r.referencia_pagamento || '—'"></td>
-                                <td class="px-3 py-2 text-right space-x-1">
+                                <td class="px-3 py-2 text-right space-x-1 whitespace-nowrap">
                                     <button x-show="r.status === 'PENDENTE'" @click="openMarkPaidModal(r)" class="px-2 py-1 bg-green-500 text-white rounded text-xs hover:bg-green-600">Marcar pago</button>
+                                    <button x-show="r.status !== 'PAGO'" @click="openEditModal(r)" class="px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600">Editar</button>
                                     <button x-show="r.status === 'PENDENTE'" @click="cancelReimb(r.id)" class="px-2 py-1 bg-gray-400 text-white rounded text-xs hover:bg-gray-500">Cancelar</button>
+                                    <button x-show="r.status !== 'PAGO'" @click="deleteReimb(r)" class="px-2 py-1 bg-rose-600 text-white rounded text-xs hover:bg-rose-700">Apagar</button>
                                 </td>
                             </tr>
                         </template>
@@ -322,6 +324,40 @@
             </div>
         </div>
     </div>
+
+    <!-- Modal: Editar reembolso -->
+    <div x-show="editModal.open" x-cloak @click.self="editModal.open = false" class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-5 space-y-3">
+            <div class="flex justify-between items-center">
+                <h3 class="text-lg font-bold dark:text-white">Editar Reembolso #<span x-text="editModal.id"></span></h3>
+                <button @click="editModal.open = false" class="text-gray-400">✕</button>
+            </div>
+            <div>
+                <label class="text-xs text-gray-500">Sócio *</label>
+                <select x-model="editModal.lender_id" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 dark:text-white">
+                    <template x-for="s in shareholders" :key="s.id">
+                        <option :value="s.id" x-text="s.nome"></option>
+                    </template>
+                </select>
+            </div>
+            <div>
+                <label class="text-xs text-gray-500">Valor (€) *</label>
+                <input type="number" step="0.01" x-model="editModal.valor" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 dark:text-white">
+            </div>
+            <div>
+                <label class="text-xs text-gray-500">Data do empréstimo</label>
+                <input type="date" x-model="editModal.data_emprestimo" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 dark:text-white">
+            </div>
+            <div>
+                <label class="text-xs text-gray-500">Descrição</label>
+                <input type="text" x-model="editModal.descricao" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 dark:text-white">
+            </div>
+            <div class="flex justify-end gap-2 pt-2">
+                <button @click="editModal.open = false" class="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded">Cancelar</button>
+                <button @click="confirmEdit()" :disabled="editModal.submitting" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50">Guardar</button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -366,6 +402,10 @@ function shareholderDashboard() {
         createModal: {
             open: false, submitting: false,
             lender_id: '', valor: 0, data_emprestimo: todayStr(), descricao: '',
+        },
+        editModal: {
+            open: false, submitting: false,
+            id: null, lender_id: '', valor: 0, data_emprestimo: '', descricao: '',
         },
 
         async init() {
@@ -481,6 +521,55 @@ function shareholderDashboard() {
             await fetch(`/settlements/reembolsos/${id}/cancel/`, POST_JSON({}));
             await this.load();
             await this.loadShareholders();
+        },
+        openEditModal(r) {
+            this.editModal = {
+                open: true, submitting: false,
+                id: r.id, lender_id: r.lender_id,
+                valor: r.valor, data_emprestimo: r.data_emprestimo,
+                descricao: r.descricao || '',
+            };
+        },
+        async confirmEdit() {
+            if (!this.editModal.valor || parseFloat(this.editModal.valor) <= 0) {
+                showToast('Valor inválido.', false); return;
+            }
+            this.editModal.submitting = true;
+            const r = await fetch(
+                `/settlements/reembolsos/${this.editModal.id}/update/`,
+                POST_JSON({
+                    lender_id: this.editModal.lender_id,
+                    valor: this.editModal.valor,
+                    data_emprestimo: this.editModal.data_emprestimo,
+                    descricao: this.editModal.descricao,
+                }),
+            );
+            const d = await r.json();
+            this.editModal.submitting = false;
+            if (d.success) {
+                this.editModal.open = false;
+                await this.load();
+                await this.loadShareholders();
+                showToast('Reembolso atualizado.');
+            } else {
+                showToast(d.error || 'Erro', false);
+            }
+        },
+        async deleteReimb(r) {
+            const label = r.descricao || `#${r.id}`;
+            if (!confirm(`Apagar reembolso ${label} (€${parseFloat(r.valor).toFixed(2)})?\n\nEsta acção não pode ser desfeita.`)) return;
+            const resp = await fetch(
+                `/settlements/reembolsos/${r.id}/delete/`,
+                POST_JSON({}),
+            );
+            const d = await resp.json();
+            if (d.success) {
+                await this.load();
+                await this.loadShareholders();
+                showToast('Reembolso apagado.');
+            } else {
+                showToast(d.error || 'Erro', false);
+            }
         },
         openCreateModal() {
             this.createModal = { open: true, submitting: false, lender_id: '', valor: 0, data_emprestimo: todayStr(), descricao: '' };

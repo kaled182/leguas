@@ -1154,6 +1154,37 @@ class Bill(models.Model):
                 "[bill] sync_driver_advance falhou para Bill #%s", self.pk,
             )
 
+    def delete(self, *args, **kwargs):
+        """Antes de eliminar, cancela reembolso a sócio e advance ao
+        motorista que estejam PENDENTE (ainda não pagos / incluídos em PF).
+
+        - ThirdPartyReimbursement PENDENTE → CANCELADO + origem_bill=None
+          (preserva histórico para auditoria; SET_NULL faria o mesmo, mas
+          também precisamos do status correcto).
+        - ThirdPartyReimbursement PAGO/CANCELADO → mantém-se (já foi
+          processado). origem_bill fica NULL via SET_NULL.
+        - PreInvoiceAdvance PENDENTE → CANCELADO (mesma lógica).
+        - PreInvoiceAdvance INCLUIDO_PF → NÃO toca (a PF já incluiu o
+          desconto; operador resolve manualmente removendo da PF antes).
+        """
+        try:
+            from settlements.models import (
+                PreInvoiceAdvance, ThirdPartyReimbursement,
+            )
+            ThirdPartyReimbursement.objects.filter(
+                origem_bill=self, status="PENDENTE",
+            ).update(status="CANCELADO")
+            PreInvoiceAdvance.objects.filter(
+                origem_bill=self, status="PENDENTE",
+            ).update(status="CANCELADO")
+        except Exception:
+            import logging
+            logging.getLogger(__name__).exception(
+                "[bill] cancelar links pendentes falhou ao apagar #%s",
+                self.pk,
+            )
+        super().delete(*args, **kwargs)
+
     def _sync_reimbursement_for_bill(self):
         """Cria/atualiza ThirdPartyReimbursement quando esta Bill foi
         paga por um sócio. Espelha a lógica de PreInvoiceAdvance.

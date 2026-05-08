@@ -327,6 +327,68 @@ def reimbursement_cancel(request, reimbursement_id):
 
 @login_required
 @require_http_methods(["POST"])
+def reimbursement_update(request, reimbursement_id):
+    """Edita campos de um reembolso. Bloqueia se já PAGO."""
+    r = get_object_or_404(ThirdPartyReimbursement, id=reimbursement_id)
+    if r.status == "PAGO":
+        return JsonResponse({
+            "success": False,
+            "error": "Reembolso já pago não pode ser editado.",
+        }, status=400)
+
+    try:
+        body = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        body = request.POST.dict()
+
+    from decimal import Decimal, InvalidOperation
+    if "valor" in body:
+        try:
+            new_valor = Decimal(str(body["valor"]).replace(",", "."))
+            if new_valor < 0:
+                raise ValueError
+            r.valor = new_valor
+        except (InvalidOperation, ValueError, TypeError):
+            return JsonResponse(
+                {"success": False, "error": "Valor inválido."}, status=400,
+            )
+    if "data_emprestimo" in body:
+        d = parse_date(body["data_emprestimo"] or "")
+        if d:
+            r.data_emprestimo = d
+    if "descricao" in body:
+        r.descricao = (body["descricao"] or "")[:300]
+    if "lender_id" in body and body["lender_id"]:
+        try:
+            sh = Shareholder.objects.get(id=int(body["lender_id"]))
+            r.lender = sh
+        except (Shareholder.DoesNotExist, ValueError, TypeError):
+            return JsonResponse(
+                {"success": False, "error": "Sócio inválido."}, status=400,
+            )
+    r.save()
+    return JsonResponse({"success": True})
+
+
+@login_required
+@require_http_methods(["POST"])
+def reimbursement_delete(request, reimbursement_id):
+    """Apaga reembolso. Bloqueia se PAGO (preserva histórico contabilístico)."""
+    r = get_object_or_404(ThirdPartyReimbursement, id=reimbursement_id)
+    if r.status == "PAGO":
+        return JsonResponse({
+            "success": False,
+            "error": (
+                "Reembolso já pago não pode ser apagado — preserva "
+                "histórico. Para anular o pagamento, contacta o sócio."
+            ),
+        }, status=400)
+    r.delete()
+    return JsonResponse({"success": True})
+
+
+@login_required
+@require_http_methods(["POST"])
 def reimbursement_bulk_mark_paid(request):
     """Marca várias linhas como pagas (via lista de IDs)."""
     try:

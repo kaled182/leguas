@@ -4408,8 +4408,8 @@ def _empresa_lote_compute(empresa, date_from, date_to):
     from core.models import Partner
     from core.finance import resolve_driver_price
     from .models import (
-        BonusBlackoutDate, CainiaoOperationTask, DriverPreInvoice, Holiday,
-        PreInvoiceBonus,
+        BonusBlackoutDate, CainiaoOperationTask, DriverClaim, DriverPreInvoice,
+        Holiday, PreInvoiceBonus,
     )
 
     blocked_dates = BonusBlackoutDate.dates_in_range(date_from, date_to)
@@ -4549,6 +4549,25 @@ def _empresa_lote_compute(empresa, date_from, date_to):
 
         base = price * n_delivered
 
+        # Claims do driver no período (mesma regra que empresa_lote_emit:
+        # APPROVED + PENDING; exclui REJECTED/APPEALED).
+        claims_count = 0
+        claims_amount = Decimal("0")
+        for c in DriverClaim.objects.filter(driver=d).exclude(
+            status__in=("REJECTED", "APPEALED")
+        ).exclude(waybill_number=""):
+            if c.operation_task_date is not None:
+                in_period = date_from <= c.operation_task_date <= date_to
+            else:
+                in_period = CainiaoOperationTask.objects.filter(
+                    waybill_number=c.waybill_number,
+                    task_date__range=(date_from, date_to),
+                ).exists()
+            if not in_period:
+                continue
+            claims_amount += Decimal(str(c.amount or 0))
+            claims_count += 1
+
         # Overlap
         overlap = DriverPreInvoice.objects.filter(
             driver=d,
@@ -4558,7 +4577,7 @@ def _empresa_lote_compute(empresa, date_from, date_to):
         if overlap:
             has_any_overlap = True
 
-        subtotal = base + bonus_amount
+        subtotal = base + bonus_amount - claims_amount
         total_deliveries += n_delivered
         total_bonus += bonus_amount
         total_amount += subtotal
@@ -4570,6 +4589,8 @@ def _empresa_lote_compute(empresa, date_from, date_to):
             "deliveries": n_delivered,
             "bonus_days": bonus_days,
             "bonus_amount": str(bonus_amount),
+            "claims_count": claims_count,
+            "claims_amount": str(claims_amount),
             "price_per_package": str(price),
             "price_source": price_source,
             "base": f"{base:.2f}",
@@ -4580,6 +4601,9 @@ def _empresa_lote_compute(empresa, date_from, date_to):
             "n_logins": len(login_breakdown),
         })
 
+    total_claims = sum(
+        Decimal(r.get("claims_amount", "0")) for r in rows
+    )
     return {
         "rows": rows,
         "totals": {
@@ -4589,6 +4613,7 @@ def _empresa_lote_compute(empresa, date_from, date_to):
             ),
             "deliveries": total_deliveries,
             "bonus": str(total_bonus),
+            "claims": str(total_claims),
             "amount": f"{total_amount:.2f}",
         },
         "has_any_overlap": has_any_overlap,
@@ -4830,28 +4855,35 @@ def empresa_lote_emit(request, empresa_id):
         ids = all_ids
         names = all_names
 
-        # Claims do driver no período (com waybill no período)
+        # Claims do driver no período. Inclui APPROVED + PENDING
+        # (exclui REJECTED/APPEALED — ainda em discussão).
         claims = list(
-            DriverClaim.objects.filter(driver=d).exclude(waybill_number="")
+            DriverClaim.objects.filter(driver=d)
+            .exclude(status__in=("REJECTED", "APPEALED"))
+            .exclude(waybill_number="")
         )
-        # Filtra só os relevantes ao período (best effort)
         claims_detail = []
         claims_amount = Decimal("0")
         for c in claims:
-            valor = getattr(c, "valor_a_descontar", None) or Decimal("0")
-            # Inclui se waybill foi entregue/atribuído ao driver no período
-            wb_in_period = CainiaoOperationTask.objects.filter(
-                waybill_number=c.waybill_number,
-                task_date__range=(date_from, date_to),
-            ).exists()
-            if not wb_in_period:
+            valor = c.amount or Decimal("0")
+            # Período: prefere operation_task_date (mais fiável); cai para
+            # presença da waybill no CainiaoOperationTask se vazio.
+            in_period = False
+            if c.operation_task_date is not None:
+                in_period = date_from <= c.operation_task_date <= date_to
+            else:
+                in_period = CainiaoOperationTask.objects.filter(
+                    waybill_number=c.waybill_number,
+                    task_date__range=(date_from, date_to),
+                ).exists()
+            if not in_period:
                 continue
             claims_amount += Decimal(str(valor))
             claims_detail.append({
                 "claim_id": c.id,
                 "waybill_number": c.waybill_number,
                 "valor": Decimal(str(valor)),
-                "descricao": (c.descricao or "")[:300],
+                "descricao": (c.description or "")[:300],
             })
 
         first_id = (

@@ -199,8 +199,13 @@ def driver_portal(request, driver_id):
     driver = get_object_or_404(DriverProfile, pk=driver_id)
 
     today = timezone.now().date()
-    week_start = today - timedelta(days=today.weekday())
-    month_start = today.replace(day=1)
+    # Janelas rolantes (mais úteis para drivers com cadência irregular):
+    #   - Semana = últimos 7 dias (hoje incluído)
+    #   - Mês    = últimos 30 dias (hoje incluído)
+    # Mês civil (day=1) deixava motoristas que paravam no fim do mês com
+    # 0 mostrado no início do mês seguinte, escondendo a actividade real.
+    week_start = today - timedelta(days=6)
+    month_start = today - timedelta(days=29)
     year_start = today.replace(month=1, day=1)
 
     kpis_today = _kpi_for_period(driver, today, today)

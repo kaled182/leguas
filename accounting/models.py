@@ -971,6 +971,42 @@ class Bill(models.Model):
         verbose_name="Sócio que adiantou",
     )
 
+    # Bill associada a um motorista (ex: combustível pago em nome da
+    # empresa para um motorista específico). Quando preenchido, cria
+    # automaticamente um PreInvoiceAdvance PENDENTE para esse driver,
+    # que entra no próximo PF como desconto. Independente de
+    # paid_by_source: a Bill pode ser paga pela empresa ou por um sócio,
+    # e o driver continua a dever o valor à empresa.
+    DRIVER_ADV_ADIANTAMENTO = "ADIANTAMENTO"
+    DRIVER_ADV_COMBUSTIVEL = "COMBUSTIVEL"
+    DRIVER_ADV_ABASTECIMENTO = "ABASTECIMENTO"
+    DRIVER_ADV_OUTRO = "OUTRO"
+    DRIVER_ADV_TIPO_CHOICES = [
+        (DRIVER_ADV_COMBUSTIVEL, "Combustível"),
+        (DRIVER_ADV_ABASTECIMENTO, "Abastecimento"),
+        (DRIVER_ADV_ADIANTAMENTO, "Adiantamento"),
+        (DRIVER_ADV_OUTRO, "Outro"),
+    ]
+    driver = models.ForeignKey(
+        "drivers_app.DriverProfile",
+        on_delete=models.PROTECT,
+        null=True, blank=True,
+        related_name="bills",
+        verbose_name="Motorista (lançamento na PF)",
+        help_text=(
+            "Se preenchido, cria um lançamento PENDENTE na conta-corrente "
+            "deste motorista, descontado na próxima PF."
+        ),
+    )
+    driver_advance_tipo = models.CharField(
+        "Tipo de lançamento (motorista)",
+        max_length=20,
+        choices=DRIVER_ADV_TIPO_CHOICES,
+        default=DRIVER_ADV_COMBUSTIVEL,
+        blank=True,
+        help_text="Só relevante quando 'Motorista' está preenchido.",
+    )
+
     created_by = models.ForeignKey(
         User, on_delete=models.SET_NULL,
         null=True, blank=True, related_name="bills_created",
@@ -1040,6 +1076,14 @@ class Bill(models.Model):
             logging.getLogger(__name__).exception(
                 "[bill] sync_reimbursement falhou para Bill #%s", self.pk,
             )
+        # Sincroniza PreInvoiceAdvance se a Bill tem um driver vinculado.
+        try:
+            self._sync_driver_advance_for_bill()
+        except Exception:
+            import logging
+            logging.getLogger(__name__).exception(
+                "[bill] sync_driver_advance falhou para Bill #%s", self.pk,
+            )
 
     def _sync_reimbursement_for_bill(self):
         """Cria/atualiza ThirdPartyReimbursement quando esta Bill foi
@@ -1081,6 +1125,63 @@ class Bill(models.Model):
                 )
         else:
             if existing:
+                existing.status = "CANCELADO"
+                existing.save()
+
+    def _sync_driver_advance_for_bill(self):
+        """Cria/atualiza PreInvoiceAdvance quando a Bill tem driver
+        vinculado. A advance representa a dívida do motorista para com
+        a empresa (ex: combustível pago em nome da Léguas mas usado
+        pelo motorista X).
+
+        Regra:
+          - Bill em estado válido (PENDING/AWAITING/OVERDUE/PAID) +
+            driver != None → cria/atualiza advance PENDENTE.
+          - Bill REJECTED/CANCELLED → cancela advance PENDENTE.
+          - advance já INCLUIDO_PF: NÃO toca (preserva PF fechada,
+            mesmo se a Bill mudar — operador resolve manualmente
+            removendo o lançamento da PF antes de alterar a Bill).
+        """
+        from settlements.models import PreInvoiceAdvance
+        existing = PreInvoiceAdvance.objects.filter(origem_bill=self).first()
+        bill_active = self.status not in (
+            self.STATUS_CANCELLED, self.STATUS_REJECTED,
+        )
+        should_have = self.driver_id is not None and bill_active
+
+        if existing and existing.status == "INCLUIDO_PF":
+            # Não mexer em PFs fechadas
+            return
+
+        if should_have:
+            tipo = (self.driver_advance_tipo
+                    or self.DRIVER_ADV_COMBUSTIVEL)
+            data = self.issue_date or self.due_date
+            desc = f"Bill #{self.pk}: {self.description}"[:300]
+            payload = dict(
+                driver=self.driver,
+                tipo=tipo,
+                valor=self.amount_total,
+                data=data,
+                descricao=desc,
+                documento_referencia=(
+                    f"Fatura {self.invoice_number}" if self.invoice_number
+                    else ""
+                )[:300],
+                paid_by_source=self.paid_by_source,
+                paid_by_lender=self.paid_by_lender,
+                status="PENDENTE",
+            )
+            if existing:
+                for k, v in payload.items():
+                    setattr(existing, k, v)
+                existing.save()
+            else:
+                PreInvoiceAdvance.objects.create(
+                    origem_bill=self, **payload,
+                )
+        else:
+            if existing and existing.status == "PENDENTE":
                 existing.status = "CANCELADO"
                 existing.save()
 

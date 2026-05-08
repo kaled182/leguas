@@ -129,6 +129,29 @@
           {{ form.paid_by_lender }}
           {% if form.paid_by_lender.errors %}<div class="text-xs text-red-600 mt-1">{{ form.paid_by_lender.errors.0 }}</div>{% endif %}
         </div>
+
+        <!-- Lançamento para Motorista (combustível pago em nome da empresa) -->
+        <div class="md:col-span-3 mt-1 p-3 rounded-lg bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-700/50">
+          <p class="text-xs font-semibold text-violet-700 dark:text-violet-300 mb-2 flex items-center gap-1.5">
+            <i data-lucide="user-cog" class="w-4 h-4"></i>
+            Lançamento para Motorista (descontado na próxima PF)
+          </p>
+          <p class="text-[11px] text-violet-600/80 dark:text-violet-400/80 mb-3">
+            Para combustível, peças ou adiantamentos pagos em nome da empresa
+            mas usados por um motorista específico. Cria automaticamente um
+            lançamento PENDENTE na conta-corrente desse motorista.
+          </p>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Motorista</label>
+              {{ form.driver }}
+            </div>
+            <div id="driver-advance-tipo-wrap">
+              <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Tipo de lançamento</label>
+              {{ form.driver_advance_tipo }}
+            </div>
+          </div>
+        </div>
         <div class="md:col-span-3">
           <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Estado</label>
           {{ form.status }}
@@ -361,6 +384,17 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   togglePaidByLender();
   paidBySrc?.addEventListener('change', togglePaidByLender);
+
+  // Driver lançamento: mostra/esconde campo Tipo só quando driver está seleccionado
+  const billDriverEl = document.querySelector('[data-bill-driver]');
+  const driverTipoWrap = document.getElementById('driver-advance-tipo-wrap');
+  function toggleDriverTipo() {
+    if (!billDriverEl || !driverTipoWrap) return;
+    driverTipoWrap.style.opacity = billDriverEl.value ? '1' : '0.4';
+    driverTipoWrap.style.pointerEvents = billDriverEl.value ? '' : 'none';
+  }
+  toggleDriverTipo();
+  billDriverEl?.addEventListener('change', toggleDriverTipo);
 
   // Estado: o fornecedor seleccionado tem iva_dedutivel?
   let _fornecedorIvaDedutivel = false;

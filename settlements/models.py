@@ -1508,6 +1508,18 @@ class PreInvoiceAdvance(models.Model):
         verbose_name="Sócio que adiantou",
     )
 
+    # Bill que originou este lançamento (combustível pago em nome da
+    # empresa para um motorista específico). Quando preenchido, a Bill
+    # é a fonte de verdade — alterar a Bill propaga aqui via
+    # Bill._sync_driver_advance_for_bill.
+    origem_bill = models.ForeignKey(
+        "accounting.Bill",
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="driver_advances",
+        verbose_name="Bill de origem",
+    )
+
     # Campo preparado para API
     api_source = models.CharField(max_length=50, blank=True)
 

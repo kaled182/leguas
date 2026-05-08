@@ -18,6 +18,7 @@ class BillForm(forms.ModelForm):
             "issue_date", "due_date", "paid_date",
             "status", "recurrence",
             "paid_by_source", "paid_by_lender",
+            "driver", "driver_advance_tipo",
             "notes",
         ]
         widgets = {
@@ -62,8 +63,26 @@ class BillForm(forms.ModelForm):
                 "data-paid-by-source": "1",
             }),
             "paid_by_lender": forms.Select(attrs={"class": "fld"}),
+            "driver": forms.Select(attrs={
+                "class": "fld",
+                "data-bill-driver": "1",
+            }),
+            "driver_advance_tipo": forms.Select(attrs={"class": "fld"}),
             "notes": forms.Textarea(attrs={"class": "fld", "rows": 2}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Limita driver dropdown a motoristas activos
+        try:
+            from drivers_app.models import DriverProfile
+            self.fields["driver"].queryset = (
+                DriverProfile.objects.filter(status="ATIVO")
+                .order_by("nome_completo")
+            )
+            self.fields["driver"].empty_label = "— sem motorista —"
+        except Exception:
+            pass
 
     def clean(self):
         cleaned = super().clean()

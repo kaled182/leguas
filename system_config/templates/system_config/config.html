@@ -134,7 +134,7 @@
         <!-- ── Área de conteúdo ─────────────────────────────────── -->
         <div class="flex-1 min-w-0">
         <form method="post" action="{% url 'system_config:save' %}" enctype="multipart/form-data"
-              id="config-form">
+              id="config-form" novalidate>
             {% csrf_token %}
 
             <!-- ═══════════════════════════════════════════════════
@@ -784,13 +784,13 @@
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label class="block text-sm font-medium mb-1.5">Builder URL</label>
-                                    <input type="url" name="typebot_builder_url" value="{{ config.typebot_builder_url|default:'http://localhost:8081' }}"
+                                    <input type="text" name="typebot_builder_url" value="{{ config.typebot_builder_url|default:'http://localhost:8081' }}"
                                            class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border rounded-lg dark:text-white font-mono text-sm">
                                     <p class="text-xs text-gray-500 mt-1">Interface de criação de bots</p>
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium mb-1.5">Viewer URL</label>
-                                    <input type="url" name="typebot_viewer_url" value="{{ config.typebot_viewer_url|default:'http://localhost:8082' }}"
+                                    <input type="text" name="typebot_viewer_url" value="{{ config.typebot_viewer_url|default:'http://localhost:8082' }}"
                                            class="w-full px-3 py-2 bg-gray-50 dark:bg-gray-700 border rounded-lg dark:text-white font-mono text-sm">
                                     <p class="text-xs text-gray-500 mt-1">URL pública para utilizadores</p>
                                 </div>

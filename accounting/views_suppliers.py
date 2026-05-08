@@ -181,6 +181,87 @@ def fornecedor_search_api(request):
 
 
 @login_required
+@require_http_methods(["POST"])
+def fornecedor_quick_create_api(request):
+    """Endpoint AJAX para criar Fornecedor a partir do modal no Bill form.
+
+    Recebe JSON com os campos essenciais e devolve o registo criado
+    (mesmo formato que `fornecedor_detail_api` para que o JS faça
+    o auto-fill com a mesma lógica).
+    """
+    import json
+    try:
+        body = json.loads(request.body.decode("utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JsonResponse(
+            {"success": False, "error": "JSON inválido."}, status=400,
+        )
+
+    name = (body.get("name") or "").strip()
+    if not name:
+        return JsonResponse({
+            "success": False,
+            "error": "Nome é obrigatório.",
+        }, status=400)
+
+    nif = (body.get("nif") or "").strip()
+    if nif:
+        existing = Fornecedor.objects.filter(nif=nif).first()
+        if existing:
+            return JsonResponse({
+                "success": False,
+                "error": (
+                    f"Já existe fornecedor com NIF {nif}: "
+                    f"{existing.name} (#{existing.id})."
+                ),
+                "existing_id": existing.id,
+            }, status=409)
+
+    from decimal import Decimal, InvalidOperation
+    try:
+        default_iva_rate = Decimal(str(body.get("default_iva_rate") or "23"))
+    except (InvalidOperation, ValueError):
+        default_iva_rate = Decimal("23.00")
+
+    iva_dedutivel = bool(body.get("iva_dedutivel"))
+    tipo = (body.get("tipo") or "EMPRESA").strip().upper()
+    if tipo not in dict(Fornecedor.TIPO_CHOICES):
+        tipo = Fornecedor.TIPO_EMPRESA
+
+    forn = Fornecedor.objects.create(
+        name=name,
+        nif=nif,
+        tipo=tipo,
+        default_iva_rate=default_iva_rate,
+        iva_dedutivel=iva_dedutivel,
+        created_by=request.user,
+    )
+
+    return JsonResponse({
+        "success": True,
+        "fornecedor": {
+            "id": forn.id,
+            "name": forn.name,
+            "nif": forn.nif,
+            "label": (
+                f"{forn.name} (NIF {forn.nif})" if forn.nif else forn.name
+            ),
+            # Mesmo shape de fornecedor_detail_api para o JS reutilizar
+            "iva_rate": str(forn.default_iva_rate),
+            "iva_dedutivel": forn.iva_dedutivel,
+            "categoria_id": forn.default_categoria_id,
+            "centro_custo_id": forn.default_centro_custo_id,
+            "recorrencia": forn.recorrencia_default,
+            "forma_pagamento": forn.forma_pagamento,
+            "iban": forn.iban,
+            "mb_entidade": forn.mb_entidade,
+            "mb_referencia": forn.mb_referencia,
+            "dia_vencimento": forn.dia_vencimento,
+        },
+    })
+
+
+@login_required
 def fornecedor_detail_api(request, pk):
     """Detalhes para auto-fill do Bill form. Só campos que pré-preenchem."""
     f = get_object_or_404(

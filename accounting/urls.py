@@ -186,6 +186,11 @@ urlpatterns = [
         name="fornecedor_search_api",
     ),
     path(
+        "fornecedores/api/quick-create/",
+        views_suppliers.fornecedor_quick_create_api,
+        name="fornecedor_quick_create_api",
+    ),
+    path(
         "fornecedores/api/<int:pk>/",
         views_suppliers.fornecedor_detail_api,
         name="fornecedor_detail_api",

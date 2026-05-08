@@ -260,6 +260,75 @@
   </form>
 </div>
 
+<!-- Modal: Quick-create Fornecedor (a partir do OCR) -->
+<div id="quickFornecedorModal"
+     class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+  <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
+    <div class="px-5 py-4 flex items-center justify-between bg-gradient-to-r from-amber-500 to-orange-500 text-white">
+      <div class="flex items-center gap-2">
+        <i data-lucide="user-plus" class="w-5 h-5"></i>
+        <h2 class="text-base font-bold">Cadastrar Fornecedor</h2>
+      </div>
+      <button type="button" onclick="closeQuickFornecedorModal()" class="hover:bg-white/20 rounded-lg p-1">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+    <div class="p-5 overflow-y-auto space-y-3">
+      <p class="text-xs text-gray-500 dark:text-gray-400">
+        Cadastro rápido a partir dos dados detectados pelo OCR. Podes editar mais tarde em
+        <a href="/accounting/fornecedores/" target="_blank" class="text-indigo-600 hover:underline">Fornecedores</a>.
+      </p>
+      <div id="qfm-error" class="hidden text-xs text-red-600 bg-red-50 dark:bg-red-900/20 px-3 py-2 rounded-lg"></div>
+      <div>
+        <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Nome *</label>
+        <input id="qfm-name" type="text" class="fld w-full" placeholder="Razão social">
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">NIF</label>
+          <input id="qfm-nif" type="text" maxlength="20" class="fld w-full" placeholder="9 dígitos">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Tipo</label>
+          <select id="qfm-tipo" class="fld w-full">
+            <option value="EMPRESA" selected>Empresa</option>
+            <option value="PARTICULAR">Particular</option>
+            <option value="ESTADO">Estado</option>
+          </select>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">Taxa IVA Default (%)</label>
+          <input id="qfm-iva-rate" type="number" step="0.01" min="0" max="30" class="fld w-full">
+        </div>
+        <div class="flex items-end gap-2 pb-2">
+          <input id="qfm-iva-dedutivel" type="checkbox" class="w-4 h-4">
+          <label for="qfm-iva-dedutivel" class="text-sm">IVA Dedutível</label>
+        </div>
+      </div>
+    </div>
+    <div class="px-5 py-3 bg-gray-50 dark:bg-gray-900/30 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-2">
+      <button type="button" onclick="closeQuickFornecedorModal()"
+        class="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-lg text-sm font-semibold">
+        Cancelar
+      </button>
+      <button type="button" id="qfm-submit"
+        class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold flex items-center gap-1.5">
+        <i data-lucide="save" class="w-4 h-4"></i>
+        Guardar e selecionar
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+// Helpers do modal de quick-create — disponíveis globalmente para o onclick
+function closeQuickFornecedorModal() {
+  document.getElementById('quickFornecedorModal').classList.add('hidden');
+}
+</script>
+
 <script>
 // Auto-calcular IVA: total = net * (1 + iva/100)
 document.addEventListener('DOMContentLoaded', () => {
@@ -534,22 +603,119 @@ document.addEventListener('DOMContentLoaded', () => {
     _ocrLastSuggested = null;
   });
 
-  // Abrir form de criação de Fornecedor com dados OCR pré-preenchidos
+  // Abrir MODAL in-page de criação de Fornecedor com dados OCR pré-preenchidos
   document.getElementById('ocr-create-supplier')?.addEventListener('click', () => {
     if (!_ocrLastData) return;
     const d = _ocrLastData;
-    const params = new URLSearchParams({
-      from: 'ocr',
-      name: d.supplier_name || '',
-      nif: d.supplier_nif || '',
-      default_iva_rate: d.iva_rate || '23.00',
-    });
-    // Combustíveis/peças tipicamente têm IVA dedutível — sugerimos por defeito
-    // se a taxa for ≥ 23 (IVA normal). Operador pode desmarcar.
-    if (d.iva_rate && parseFloat(d.iva_rate) >= 23) {
-      params.set('iva_dedutivel', '1');
+    document.getElementById('qfm-name').value = d.supplier_name || '';
+    document.getElementById('qfm-nif').value = d.supplier_nif || '';
+    document.getElementById('qfm-iva-rate').value = d.iva_rate || '23.00';
+    document.getElementById('qfm-tipo').value = 'EMPRESA';
+    // Heurística: IVA dedutível default quando taxa é IVA normal (≥23%)
+    document.getElementById('qfm-iva-dedutivel').checked =
+      !!(d.iva_rate && parseFloat(d.iva_rate) >= 23);
+    document.getElementById('qfm-error').classList.add('hidden');
+    document.getElementById('quickFornecedorModal').classList.remove('hidden');
+    if (window.lucide) lucide.createIcons();
+    document.getElementById('qfm-name').focus();
+  });
+
+  // Submeter o quick-create do modal
+  async function submitQuickFornecedor() {
+    const errBox = document.getElementById('qfm-error');
+    errBox.classList.add('hidden');
+    const btn = document.getElementById('qfm-submit');
+    btn.disabled = true;
+    const originalLabel = btn.innerHTML;
+    btn.innerHTML = '<i data-lucide="loader" class="w-4 h-4 animate-spin"></i> A guardar...';
+    if (window.lucide) lucide.createIcons();
+
+    const payload = {
+      name: document.getElementById('qfm-name').value.trim(),
+      nif: document.getElementById('qfm-nif').value.trim(),
+      tipo: document.getElementById('qfm-tipo').value,
+      default_iva_rate: document.getElementById('qfm-iva-rate').value,
+      iva_dedutivel: document.getElementById('qfm-iva-dedutivel').checked,
+    };
+    if (!payload.name) {
+      errBox.textContent = 'Nome é obrigatório.';
+      errBox.classList.remove('hidden');
+      btn.disabled = false; btn.innerHTML = originalLabel;
+      if (window.lucide) lucide.createIcons();
+      return;
     }
-    window.open(`/accounting/fornecedores/novo/?${params.toString()}`, '_blank');
+    try {
+      const resp = await fetch('/accounting/fornecedores/api/quick-create/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCsrf(),
+        },
+        body: JSON.stringify(payload),
+      });
+      const data = await resp.json();
+      if (!data.success) {
+        errBox.textContent = data.error || 'Erro ao guardar.';
+        errBox.classList.remove('hidden');
+        btn.disabled = false; btn.innerHTML = originalLabel;
+        if (window.lucide) lucide.createIcons();
+        return;
+      }
+      // Acrescentar ao dropdown e selecionar
+      const f = data.fornecedor;
+      const sel = document.querySelector('[data-fornecedor-select]');
+      if (sel) {
+        const opt = document.createElement('option');
+        opt.value = f.id;
+        opt.textContent = f.label;
+        sel.appendChild(opt);
+        sel.value = f.id;
+        // Atualiza estado IVA dedutível para mostrar o badge
+        _fornecedorIvaDedutivel = !!f.iva_dedutivel;
+        // Replica o que o detail_api faria (auto-fill cascata)
+        const setIfEmpty = (s, v) => {
+          const el = document.querySelector(s);
+          if (el && !el.value && v) {
+            el.value = v;
+            el.dispatchEvent(new Event('change'));
+          }
+        };
+        const setAlways = (s, v) => {
+          const el = document.querySelector(s);
+          if (el && v) {
+            el.value = v;
+            el.dispatchEvent(new Event('change'));
+          }
+        };
+        setAlways('[name=supplier]', f.name || '');
+        setAlways('[name=supplier_nif]', f.nif || '');
+        setIfEmpty('[name=iva_rate]', f.iva_rate);
+        recompute();
+        updateIvaBadge();
+      }
+      // Fecha modal e marca a sugestão de OCR como resolvida
+      closeQuickFornecedorModal();
+      document.getElementById('ocr-create-suggestion')?.classList.add('hidden');
+      // Mostra mensagem de sucesso no painel OCR
+      const sug = document.getElementById('ocr-suggested');
+      if (sug) {
+        document.getElementById('ocr-suggested-name').textContent =
+          f.name + ' (#' + f.id + ', criado agora)';
+        sug.classList.remove('hidden');
+      }
+      btn.disabled = false; btn.innerHTML = originalLabel;
+      if (window.lucide) lucide.createIcons();
+    } catch (e) {
+      errBox.textContent = 'Erro de rede: ' + e.message;
+      errBox.classList.remove('hidden');
+      btn.disabled = false; btn.innerHTML = originalLabel;
+      if (window.lucide) lucide.createIcons();
+    }
+  }
+  document.getElementById('qfm-submit')?.addEventListener('click', submitQuickFornecedor);
+  // ESC fecha modal
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeQuickFornecedorModal();
   });
 
   // Abrir form de criação de ExpenseCategory com category_hint pré-preenchido

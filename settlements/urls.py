@@ -2,8 +2,8 @@
 
 from . import (
     cainiao_views, forecast_plan_views, holiday_views, plan_api,
-    views, views_cash_entries, views_pudo, views_shareholder,
-    views_cainiao_billing,
+    views, views_cash_entries, views_fleet_portal, views_pudo,
+    views_shareholder, views_cainiao_billing,
 )
 
 urlpatterns = [
@@ -451,6 +451,32 @@ urlpatterns = [
         "empresas/<int:empresa_id>/whatsapp-lote/",
         views.empresa_whatsapp_lote,
         name="empresa-whatsapp-lote",
+    ),
+    # ── Portal da Frota (Fase 1) ─────────────────────────────────────
+    path(
+        "empresas/<int:empresa_id>/portal/",
+        views_fleet_portal.empresa_portal_dashboard,
+        name="empresa-portal-dashboard",
+    ),
+    path(
+        "empresas/<int:empresa_id>/portal/faturas/",
+        views_fleet_portal.empresa_portal_invoices,
+        name="empresa-portal-invoices",
+    ),
+    path(
+        "empresas/<int:empresa_id>/portal/relatorios/",
+        views_fleet_portal.empresa_portal_reports,
+        name="empresa-portal-reports",
+    ),
+    path(
+        "empresas/<int:empresa_id>/portal/faturas/<int:fleet_invoice_id>/anexos/upload/",
+        views_fleet_portal.empresa_portal_attachment_upload,
+        name="empresa-portal-attachment-upload",
+    ),
+    path(
+        "empresas/<int:empresa_id>/portal/anexos/<int:attachment_id>/delete/",
+        views_fleet_portal.empresa_portal_attachment_delete,
+        name="empresa-portal-attachment-delete",
     ),
     path(
         "empresas/<int:empresa_id>/dashboard-stats/",

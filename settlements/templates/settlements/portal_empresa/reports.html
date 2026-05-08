@@ -1,0 +1,126 @@
+{% extends "settlements/portal_empresa/_base.html" %}
+{% load static %}
+
+{% block portal_content %}
+<div class="space-y-6">
+
+  {# ─── Selector de ano ─── #}
+  <div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm flex items-center justify-between">
+    <h3 class="text-sm font-bold text-gray-700 dark:text-gray-300 uppercase flex items-center gap-2">
+      <i data-lucide="bar-chart-3" class="w-4 h-4 text-purple-500"></i>
+      Relatórios — {{ year }}
+    </h3>
+    <div class="flex items-center gap-2">
+      <a href="?year={{ year_prev }}"
+         class="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-sm">
+        <i data-lucide="chevron-left" class="w-4 h-4 inline"></i> {{ year_prev }}
+      </a>
+      <select onchange="window.location.href='?year='+this.value"
+              class="px-3 py-1.5 rounded-lg bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-sm font-bold">
+        {% for y in available_years %}
+        <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
+        {% endfor %}
+      </select>
+      <a href="?year={{ year_next }}"
+         class="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-sm">
+        {{ year_next }} <i data-lucide="chevron-right" class="w-4 h-4 inline"></i>
+      </a>
+    </div>
+  </div>
+
+  {# ─── Stats do ano ─── #}
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
+      <div class="text-xs uppercase text-gray-500">Total entregas {{ year }}</div>
+      <div class="text-3xl font-extrabold text-blue-600">{{ total_year }}</div>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
+      <div class="text-xs uppercase text-gray-500">Dias com entregas</div>
+      <div class="text-3xl font-extrabold text-emerald-600">{{ days_active }}</div>
+      <div class="text-xs text-gray-400">de 365</div>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
+      <div class="text-xs uppercase text-gray-500">Pico diário</div>
+      <div class="text-3xl font-extrabold text-purple-600">{{ max_n }}</div>
+      <div class="text-xs text-gray-400">entregas</div>
+    </div>
+  </div>
+
+  {# ─── Heatmap (estilo GitHub) ─── #}
+  <div class="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-200 dark:border-gray-700 shadow-sm">
+    <h3 class="text-sm font-bold text-gray-700 dark:text-gray-300 uppercase mb-4">Heatmap de Entregas</h3>
+    <div class="overflow-x-auto">
+      <div class="grid gap-0.5" style="grid-template-columns: repeat(53, minmax(0, 1fr)); grid-auto-flow: column dense; grid-template-rows: repeat(7, minmax(0, 1fr));">
+        {% for d in heatmap_days %}
+          <div class="aspect-square rounded-sm
+            {% if d.level == 0 %}bg-gray-100 dark:bg-gray-700{% endif %}
+            {% if d.level == 1 %}bg-emerald-200 dark:bg-emerald-900{% endif %}
+            {% if d.level == 2 %}bg-emerald-400 dark:bg-emerald-700{% endif %}
+            {% if d.level == 3 %}bg-emerald-600 dark:bg-emerald-500{% endif %}
+            {% if d.level == 4 %}bg-emerald-800 dark:bg-emerald-300{% endif %}"
+            title="{{ d.date }} — {{ d.n }} entregas{% if d.holiday_name %} ({{ d.holiday_name }}){% elif d.is_sunday %} (domingo){% endif %}">
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="flex items-center justify-end gap-1 text-[10px] text-gray-500 mt-3">
+      <span>Menos</span>
+      <span class="w-3 h-3 rounded-sm bg-gray-100 dark:bg-gray-700"></span>
+      <span class="w-3 h-3 rounded-sm bg-emerald-200 dark:bg-emerald-900"></span>
+      <span class="w-3 h-3 rounded-sm bg-emerald-400 dark:bg-emerald-700"></span>
+      <span class="w-3 h-3 rounded-sm bg-emerald-600 dark:bg-emerald-500"></span>
+      <span class="w-3 h-3 rounded-sm bg-emerald-800 dark:bg-emerald-300"></span>
+      <span>Mais</span>
+    </div>
+  </div>
+
+  {# ─── Breakdown mensal ─── #}
+  <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+    <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-700">
+      <h3 class="text-sm font-bold text-gray-700 dark:text-gray-300 uppercase flex items-center gap-2">
+        <i data-lucide="calendar" class="w-4 h-4 text-indigo-500"></i>
+        Breakdown mensal — {{ year }}
+      </h3>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-gray-50 dark:bg-gray-900/50 text-xs uppercase text-gray-500">
+          <tr class="text-left">
+            <th class="px-4 py-2">Mês</th>
+            <th class="px-4 py-2 text-right">Entregas</th>
+            <th class="px-4 py-2 text-right">Faturas</th>
+            <th class="px-4 py-2 text-right">Total faturado</th>
+            <th class="px-4 py-2">Volume relativo</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+          {% for m in monthly %}
+          <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+            <td class="px-4 py-2 font-semibold">{{ m.month_name }}</td>
+            <td class="px-4 py-2 text-right font-mono">{{ m.deliveries }}</td>
+            <td class="px-4 py-2 text-right font-mono text-gray-500">{{ m.invoice_count }}</td>
+            <td class="px-4 py-2 text-right font-mono font-bold text-purple-600">€{{ m.invoice_total|floatformat:2 }}</td>
+            <td class="px-4 py-2">
+              <div class="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
+                <div class="bg-blue-500 h-2 rounded-full"
+                     style="width: {% if total_year %}{% widthratio m.deliveries total_year 100 %}{% else %}0{% endif %}%"></div>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot class="bg-gray-50 dark:bg-gray-900/50 font-bold">
+          <tr>
+            <td class="px-4 py-2">Total</td>
+            <td class="px-4 py-2 text-right font-mono">{{ total_year }}</td>
+            <td class="px-4 py-2"></td>
+            <td class="px-4 py-2"></td>
+            <td class="px-4 py-2"></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

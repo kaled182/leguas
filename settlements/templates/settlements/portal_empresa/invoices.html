@@ -1,0 +1,288 @@
+{% extends "settlements/portal_empresa/_base.html" %}
+{% load static %}
+
+{% block portal_content %}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6"
+     x-data="invoicePortal()"
+     x-init="init()">
+
+  {# ─── Coluna esquerda: lista de faturas ─── #}
+  <div class="lg:col-span-1">
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm sticky top-4">
+      <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+        <h3 class="text-sm font-bold text-gray-700 dark:text-gray-300 uppercase">
+          Faturas ({{ invoices|length }})
+        </h3>
+      </div>
+      <div class="divide-y divide-gray-100 dark:divide-gray-700 max-h-[70vh] overflow-y-auto">
+        {% for fi in invoices %}
+        <a href="?id={{ fi.id }}"
+           class="block px-4 py-3 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition
+             {% if detail and fi.id == detail.id %}bg-purple-100 dark:bg-purple-900/30 border-l-4 border-purple-500{% endif %}">
+          <div class="flex items-center justify-between mb-1">
+            <span class="font-mono font-bold text-purple-600">{{ fi.numero }}</span>
+            <span class="px-1.5 py-0.5 text-[10px] rounded-full font-semibold
+              {% if fi.status == 'PAGO' %}bg-emerald-100 text-emerald-700{% elif fi.status == 'EMITIDO' %}bg-blue-100 text-blue-700{% elif fi.status == 'CALCULADO' %}bg-amber-100 text-amber-700{% elif fi.status == 'CANCELADO' %}bg-gray-200 text-gray-500{% else %}bg-gray-100 text-gray-700{% endif %}">
+              {{ fi.get_status_display }}
+            </span>
+          </div>
+          <div class="text-xs text-gray-500">{{ fi.periodo_inicio|date:"d/m" }}–{{ fi.periodo_fim|date:"d/m/Y" }}</div>
+          <div class="text-sm font-bold text-gray-900 dark:text-white mt-0.5">€{{ fi.total_a_receber|floatformat:2 }}</div>
+        </a>
+        {% empty %}
+        <div class="px-4 py-8 text-center text-gray-400 text-sm">Sem pré-faturas emitidas.</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  {# ─── Coluna direita: detalhe ─── #}
+  <div class="lg:col-span-2">
+    {% if detail %}
+      {# ── Card cabeçalho ── #}
+      <div class="bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 rounded-xl p-5 border border-purple-200 dark:border-purple-800 shadow-sm mb-4">
+        <div class="flex items-start justify-between mb-3">
+          <div>
+            <div class="text-xs uppercase font-semibold text-purple-600 dark:text-purple-400">Pré-fatura</div>
+            <div class="text-2xl font-extrabold text-purple-700 dark:text-purple-300 font-mono">{{ detail.numero }}</div>
+            <div class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+              {{ detail.periodo_inicio|date:"d/m/Y" }} → {{ detail.periodo_fim|date:"d/m/Y" }}
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <a href="{% url 'fleet-invoice-pdf' detail.id %}" target="_blank"
+               class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-sm font-semibold transition">
+              <i data-lucide="file-down" class="w-4 h-4"></i>
+              PDF
+            </a>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div class="bg-white/60 dark:bg-gray-800/60 rounded-lg p-3">
+            <div class="text-xs text-gray-500">Entregas</div>
+            <div class="text-xl font-bold">{{ detail.total_deliveries }}</div>
+          </div>
+          <div class="bg-white/60 dark:bg-gray-800/60 rounded-lg p-3">
+            <div class="text-xs text-gray-500">Bónus</div>
+            <div class="text-xl font-bold text-amber-600">€{{ detail.total_bonus|floatformat:2 }}</div>
+          </div>
+          <div class="bg-white/60 dark:bg-gray-800/60 rounded-lg p-3">
+            <div class="text-xs text-gray-500">Claims</div>
+            <div class="text-xl font-bold text-rose-600">-€{{ detail.total_claims|floatformat:2 }}</div>
+          </div>
+          <div class="bg-white/60 dark:bg-gray-800/60 rounded-lg p-3">
+            <div class="text-xs text-gray-500">Total c/ IVA</div>
+            <div class="text-xl font-bold text-purple-700 dark:text-purple-300">€{{ detail.total_com_iva|floatformat:2 }}</div>
+          </div>
+        </div>
+      </div>
+
+      {# ── Anexos ── #}
+      <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm mb-4">
+        <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+          <h3 class="text-sm font-bold text-gray-700 dark:text-gray-300 uppercase flex items-center gap-2">
+            <i data-lucide="paperclip" class="w-4 h-4 text-blue-500"></i>
+            Anexos ({{ detail.attachments.count }})
+          </h3>
+          <button @click="openUpload()"
+                  class="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold transition">
+            <i data-lucide="upload" class="w-3.5 h-3.5"></i> Novo Anexo
+          </button>
+        </div>
+        <div class="divide-y divide-gray-100 dark:divide-gray-700">
+          {% for att in detail.attachments.all %}
+          <div class="px-5 py-3 flex items-center justify-between gap-3 hover:bg-gray-50 dark:hover:bg-gray-700/30">
+            <div class="flex items-center gap-3 min-w-0">
+              <div class="w-9 h-9 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
+                <i data-lucide="file" class="w-4 h-4 text-blue-600"></i>
+              </div>
+              <div class="min-w-0">
+                <div class="font-semibold text-sm truncate">{{ att.filename }}</div>
+                <div class="text-xs text-gray-500 flex items-center gap-2">
+                  <span class="px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-[10px] font-semibold">{{ att.get_kind_display }}</span>
+                  {% if att.description %}<span class="truncate">{{ att.description }}</span>{% endif %}
+                  <span>· {{ att.uploaded_at|date:"d/m/Y H:i" }}</span>
+                </div>
+              </div>
+            </div>
+            <div class="flex items-center gap-1 flex-shrink-0">
+              <a href="{{ att.file.url }}" target="_blank"
+                 class="px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded">
+                <i data-lucide="download" class="w-3.5 h-3.5"></i>
+              </a>
+              <button @click="deleteAttachment({{ att.id }}, '{{ att.filename|escapejs }}')"
+                      class="px-2 py-1 text-xs text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded">
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+          </div>
+          {% empty %}
+          <div class="px-5 py-6 text-center text-gray-400 text-sm">
+            Nenhum anexo. Faz upload da fatura emitida pela frota, recibo de pagamento, etc.
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      {# ── Detalhe por motorista ── #}
+      <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+        <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-700">
+          <h3 class="text-sm font-bold text-gray-700 dark:text-gray-300 uppercase flex items-center gap-2">
+            <i data-lucide="users" class="w-4 h-4 text-indigo-500"></i>
+            Detalhe por motorista ({{ detail.lines.count }})
+          </h3>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-gray-50 dark:bg-gray-900/50 text-xs uppercase text-gray-500">
+              <tr class="text-left">
+                <th class="px-4 py-2">Motorista</th>
+                <th class="px-4 py-2 text-right">Entregas</th>
+                <th class="px-4 py-2 text-right">€/pacote</th>
+                <th class="px-4 py-2 text-right">Base</th>
+                <th class="px-4 py-2 text-right">Bónus</th>
+                <th class="px-4 py-2 text-right">Claims</th>
+                <th class="px-4 py-2 text-right">Subtotal</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+              {% for ln in detail.lines.all %}
+              <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                <td class="px-4 py-2">
+                  <div class="font-semibold">{{ ln.driver_name_snapshot }}</div>
+                  {% if ln.courier_name_snapshot %}
+                    <div class="text-[10px] text-gray-400">{{ ln.courier_name_snapshot }}</div>
+                  {% endif %}
+                </td>
+                <td class="px-4 py-2 text-right font-mono">{{ ln.deliveries }}</td>
+                <td class="px-4 py-2 text-right font-mono text-gray-500">€{{ ln.price_per_package|floatformat:4 }}</td>
+                <td class="px-4 py-2 text-right font-mono">€{{ ln.base_amount|floatformat:2 }}</td>
+                <td class="px-4 py-2 text-right font-mono text-amber-600">
+                  €{{ ln.bonus_amount|floatformat:2 }}
+                  <span class="text-[9px] text-gray-400">({{ ln.bonus_days_count }}d)</span>
+                </td>
+                <td class="px-4 py-2 text-right font-mono {% if ln.claims_amount %}text-rose-600{% else %}text-gray-400{% endif %}">
+                  -€{{ ln.claims_amount|floatformat:2 }}
+                  {% if ln.claims_count %}<span class="text-[9px] text-gray-400">({{ ln.claims_count }})</span>{% endif %}
+                </td>
+                <td class="px-4 py-2 text-right font-mono font-bold text-purple-600">€{{ ln.subtotal|floatformat:2 }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {# ── Modal Upload ── #}
+      <div x-show="uploadOpen" x-cloak
+           class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
+           @click.self="uploadOpen = false">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-bold flex items-center gap-2">
+              <i data-lucide="upload" class="w-5 h-5 text-blue-600"></i>
+              Novo anexo
+            </h3>
+            <button @click="uploadOpen = false" class="text-gray-400 hover:text-gray-600">
+              <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+          </div>
+          <form @submit.prevent="submitUpload()">
+            <div class="space-y-3">
+              <div>
+                <label class="block text-xs font-semibold mb-1">Tipo</label>
+                <select x-model="form.kind"
+                        class="w-full px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700">
+                  <option value="FATURA">Fatura emitida pela frota</option>
+                  <option value="RECIBO">Recibo de pagamento</option>
+                  <option value="NOTA_CREDITO">Nota de crédito</option>
+                  <option value="OUTRO">Outro</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold mb-1">Ficheiro</label>
+                <input type="file" x-ref="fileInput" required
+                       class="w-full text-sm">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold mb-1">Descrição (opcional)</label>
+                <input type="text" x-model="form.description" maxlength="255"
+                       placeholder="Ex: Fatura A/2026/001"
+                       class="w-full px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700">
+              </div>
+            </div>
+            <div class="flex justify-end gap-2 mt-6">
+              <button type="button" @click="uploadOpen = false"
+                      class="px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-sm">Cancelar</button>
+              <button type="submit" :disabled="uploading"
+                      class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold disabled:opacity-50">
+                <span x-show="!uploading">Enviar</span>
+                <span x-show="uploading">A enviar...</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+    {% else %}
+      <div class="bg-white dark:bg-gray-800 rounded-xl p-10 border border-dashed border-gray-300 dark:border-gray-600 text-center">
+        <i data-lucide="receipt" class="w-12 h-12 text-gray-300 mx-auto mb-3"></i>
+        <p class="text-gray-500">Selecciona uma pré-fatura à esquerda para ver o detalhe.</p>
+      </div>
+    {% endif %}
+  </div>
+
+</div>
+
+<script>
+function invoicePortal() {
+  return {
+    uploadOpen: false,
+    uploading: false,
+    form: { kind: 'FATURA', description: '' },
+
+    init() { this.$nextTick(() => { if (window.lucide) window.lucide.createIcons(); }); },
+
+    openUpload() {
+      this.form = { kind: 'FATURA', description: '' };
+      if (this.$refs.fileInput) this.$refs.fileInput.value = '';
+      this.uploadOpen = true;
+      this.$nextTick(() => { if (window.lucide) window.lucide.createIcons(); });
+    },
+
+    async submitUpload() {
+      const f = this.$refs.fileInput?.files?.[0];
+      if (!f) { alert('Escolhe um ficheiro.'); return; }
+      this.uploading = true;
+      try {
+        const csrf = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        const fd = new FormData();
+        fd.append('file', f);
+        fd.append('kind', this.form.kind);
+        fd.append('description', this.form.description);
+        const r = await fetch(`/settlements/empresas/{{ empresa.id }}/portal/faturas/{{ detail.id|default:0 }}/anexos/upload/`, {
+          method: 'POST', headers: { 'X-CSRFToken': csrf }, body: fd,
+        });
+        const j = await r.json();
+        if (!j.success) { alert(j.error || 'Erro'); return; }
+        window.location.reload();
+      } finally {
+        this.uploading = false;
+      }
+    },
+
+    async deleteAttachment(id, name) {
+      if (!confirm(`Remover anexo "${name}"?`)) return;
+      const csrf = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+      const r = await fetch(`/settlements/empresas/{{ empresa.id }}/portal/anexos/${id}/delete/`, {
+        method: 'POST', headers: { 'X-CSRFToken': csrf },
+      });
+      const j = await r.json();
+      if (!j.success) { alert(j.error || 'Erro'); return; }
+      window.location.reload();
+    },
+  };
+}
+</script>
+{% endblock %}

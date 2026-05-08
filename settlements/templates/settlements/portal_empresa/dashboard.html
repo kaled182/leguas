@@ -1,0 +1,153 @@
+{% extends "settlements/portal_empresa/_base.html" %}
+{% load static %}
+
+{% block portal_content %}
+<div class="space-y-6">
+
+  {# ─── KPIs principais ─── #}
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Hoje</span>
+        <i data-lucide="package" class="w-4 h-4 text-emerald-500"></i>
+      </div>
+      <div class="text-3xl font-extrabold text-gray-900 dark:text-white">{{ kpis.today }}</div>
+      <div class="text-xs text-gray-400 mt-1">entregas</div>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Últimos 7 dias</span>
+        <i data-lucide="trending-up" class="w-4 h-4 text-blue-500"></i>
+      </div>
+      <div class="text-3xl font-extrabold text-blue-600 dark:text-blue-400">{{ kpis.week }}</div>
+      <div class="text-xs text-gray-400 mt-1">entregas</div>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Últimos 30 dias</span>
+        <i data-lucide="calendar" class="w-4 h-4 text-purple-500"></i>
+      </div>
+      <div class="text-3xl font-extrabold text-purple-600 dark:text-purple-400">{{ kpis.month }}</div>
+      <div class="text-xs text-gray-400 mt-1">entregas</div>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Ano</span>
+        <i data-lucide="calendar-days" class="w-4 h-4 text-rose-500"></i>
+      </div>
+      <div class="text-3xl font-extrabold text-rose-600 dark:text-rose-400">{{ kpis.year }}</div>
+      <div class="text-xs text-gray-400 mt-1">entregas</div>
+    </div>
+  </div>
+
+  {# ─── Resumo financeiro YTD ─── #}
+  <div class="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-200 dark:border-gray-700 shadow-sm">
+    <h3 class="text-sm font-bold text-gray-700 dark:text-gray-300 uppercase mb-4 flex items-center gap-2">
+      <i data-lucide="wallet" class="w-4 h-4 text-emerald-500"></i>
+      Resumo financeiro do ano
+    </h3>
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+      <div>
+        <div class="text-xs text-gray-500">Pré-faturas emitidas</div>
+        <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ ytd.total_invoices|default:0 }}</div>
+      </div>
+      <div>
+        <div class="text-xs text-gray-500">Total entregas</div>
+        <div class="text-2xl font-bold text-blue-600">{{ ytd.total_deliveries|default:0 }}</div>
+      </div>
+      <div>
+        <div class="text-xs text-gray-500">Bónus (∑)</div>
+        <div class="text-2xl font-bold text-amber-600">€{{ ytd.total_bonus|default:0|floatformat:2 }}</div>
+      </div>
+      <div>
+        <div class="text-xs text-gray-500">Claims (∑)</div>
+        <div class="text-2xl font-bold text-rose-600">-€{{ ytd.total_claims|default:0|floatformat:2 }}</div>
+      </div>
+      <div>
+        <div class="text-xs text-gray-500">Total a receber (s/ IVA)</div>
+        <div class="text-2xl font-bold text-purple-600 dark:text-purple-400">€{{ ytd.total_a_receber|default:0|floatformat:2 }}</div>
+      </div>
+    </div>
+  </div>
+
+  {# ─── Histograma 30 dias ─── #}
+  <div class="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-200 dark:border-gray-700 shadow-sm">
+    <h3 class="text-sm font-bold text-gray-700 dark:text-gray-300 uppercase mb-4 flex items-center gap-2">
+      <i data-lucide="bar-chart-2" class="w-4 h-4 text-blue-500"></i>
+      Entregas — últimos 30 dias
+    </h3>
+    {% if days_data %}
+    <div class="flex items-end gap-1 h-40">
+      {% for d in days_data %}
+        <div class="flex-1 flex flex-col items-center justify-end h-full group relative" title="{{ d.label }} — {{ d.n }} entregas{% if d.is_holiday %} ({{ d.holiday_name }}){% elif d.is_sunday %} (domingo){% endif %}">
+          <div class="w-full rounded-t
+            {% if d.is_holiday %}bg-rose-400{% elif d.is_sunday %}bg-amber-300{% else %}bg-blue-400{% endif %}
+            hover:bg-blue-600 transition-all"
+            style="height: {% if max_n %}{% widthratio d.n max_n 100 %}{% else %}0{% endif %}%; min-height: {% if d.n %}3px{% else %}0{% endif %};">
+          </div>
+          <div class="text-[9px] text-gray-400 mt-1 hidden lg:block">{{ d.label }}</div>
+        </div>
+      {% endfor %}
+    </div>
+    <div class="flex flex-wrap gap-3 mt-3 text-[10px] text-gray-500">
+      <span class="flex items-center gap-1"><span class="w-2 h-2 bg-blue-400 rounded"></span> Dia útil</span>
+      <span class="flex items-center gap-1"><span class="w-2 h-2 bg-amber-300 rounded"></span> Domingo</span>
+      <span class="flex items-center gap-1"><span class="w-2 h-2 bg-rose-400 rounded"></span> Feriado</span>
+    </div>
+    {% else %}
+    <div class="text-center py-8 text-gray-400 text-sm">Sem entregas no período.</div>
+    {% endif %}
+  </div>
+
+  {# ─── Pré-faturas recentes ─── #}
+  <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+    <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+      <h3 class="text-sm font-bold text-gray-700 dark:text-gray-300 uppercase flex items-center gap-2">
+        <i data-lucide="receipt" class="w-4 h-4 text-emerald-500"></i>
+        Pré-faturas recentes
+      </h3>
+      <a href="{% url 'empresa-portal-invoices' empresa.id %}"
+         class="text-xs font-semibold text-purple-600 hover:underline">Ver todas →</a>
+    </div>
+    {% if recent_invoices %}
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-gray-50 dark:bg-gray-900/50 text-xs uppercase text-gray-500">
+          <tr class="text-left">
+            <th class="px-4 py-2">Número</th>
+            <th class="px-4 py-2">Período</th>
+            <th class="px-4 py-2 text-right">Entregas</th>
+            <th class="px-4 py-2 text-right">Total</th>
+            <th class="px-4 py-2">Status</th>
+            <th class="px-4 py-2"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+          {% for fi in recent_invoices %}
+          <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+            <td class="px-4 py-2 font-mono font-bold text-purple-600">{{ fi.numero }}</td>
+            <td class="px-4 py-2 text-gray-600">{{ fi.periodo_inicio|date:"d/m" }}–{{ fi.periodo_fim|date:"d/m/Y" }}</td>
+            <td class="px-4 py-2 text-right font-mono">{{ fi.total_deliveries }}</td>
+            <td class="px-4 py-2 text-right font-mono font-bold">€{{ fi.total_a_receber|floatformat:2 }}</td>
+            <td class="px-4 py-2">
+              <span class="px-2 py-0.5 text-xs rounded-full
+                {% if fi.status == 'PAGO' %}bg-emerald-100 text-emerald-700{% elif fi.status == 'EMITIDO' %}bg-blue-100 text-blue-700{% elif fi.status == 'CALCULADO' %}bg-amber-100 text-amber-700{% elif fi.status == 'CANCELADO' %}bg-gray-200 text-gray-500{% else %}bg-gray-100 text-gray-700{% endif %}">
+                {{ fi.get_status_display }}
+              </span>
+            </td>
+            <td class="px-4 py-2 text-right">
+              <a href="{% url 'empresa-portal-invoices' empresa.id %}?id={{ fi.id }}"
+                 class="text-xs text-purple-600 hover:underline">Detalhes →</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="px-5 py-8 text-center text-gray-400 text-sm">Sem pré-faturas nos últimos 6 meses.</div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

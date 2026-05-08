@@ -3312,6 +3312,52 @@ class FleetInvoiceClaim(models.Model):
     )
 
 
+class FleetInvoiceAttachment(models.Model):
+    """Anexos genéricos a uma FleetInvoice (fatura emitida pela frota,
+    recibo de pagamento, notas, etc.)."""
+
+    KIND_CHOICES = [
+        ("FATURA", "Fatura emitida pela frota"),
+        ("RECIBO", "Recibo de pagamento"),
+        ("NOTA_CREDITO", "Nota de crédito"),
+        ("OUTRO", "Outro"),
+    ]
+
+    fleet_invoice = models.ForeignKey(
+        FleetInvoice,
+        on_delete=models.CASCADE,
+        related_name="attachments",
+    )
+    kind = models.CharField(
+        "Tipo", max_length=20, choices=KIND_CHOICES, default="OUTRO",
+        db_index=True,
+    )
+    file = models.FileField(
+        "Ficheiro", upload_to="fleet_invoices/%Y/%m/",
+    )
+    description = models.CharField("Descrição", max_length=255, blank=True)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    uploaded_by = models.ForeignKey(
+        "auth.User",
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="+",
+    )
+
+    class Meta:
+        verbose_name = "Anexo de FleetInvoice"
+        verbose_name_plural = "Anexos de FleetInvoice"
+        ordering = ["-uploaded_at"]
+
+    def __str__(self):
+        return f"{self.get_kind_display()} — {self.fleet_invoice.numero}"
+
+    @property
+    def filename(self):
+        import os
+        return os.path.basename(self.file.name) if self.file else ""
+
+
 # ============================================================================
 # Resolução manual de pacotes Not Arrived
 # ============================================================================

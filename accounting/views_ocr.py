@@ -5,7 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 
-from .models import ExpenseCategory, Fornecedor
+from .models import Bill, ExpenseCategory, Fornecedor
 from .services_ocr import extract_invoice_data
 
 logger = logging.getLogger(__name__)
@@ -82,9 +82,34 @@ def ocr_extract_api(request):
                 "matched_via": hint,
             }
 
+    # Detectar Bill duplicada por (fornecedor existente, invoice_number).
+    # Se já existe uma Bill para o mesmo fornecedor com o mesmo nº de
+    # factura, retornar info para a UI avisar antes do operador gravar.
+    duplicate = None
+    inv_num = (data.get("invoice_number") or "").strip()
+    if suggested and inv_num:
+        existing = Bill.objects.filter(
+            fornecedor_id=suggested["id"],
+            invoice_number=inv_num,
+        ).order_by("-id").first()
+        if existing:
+            duplicate = {
+                "id": existing.id,
+                "description": existing.description,
+                "amount_total": str(existing.amount_total),
+                "issue_date": (
+                    existing.issue_date.isoformat()
+                    if existing.issue_date else None
+                ),
+                "status": existing.status,
+                "status_display": existing.get_status_display(),
+                "edit_url": f"/accounting/contas-a-pagar/{existing.id}/editar/",
+            }
+
     return JsonResponse({
         "success": True,
         "data": data,
         "suggested_fornecedor": suggested,
         "suggested_category": suggested_category,
+        "duplicate": duplicate,
     })

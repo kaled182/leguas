@@ -148,6 +148,27 @@ class BillForm(forms.ModelForm):
                     "Os últimos 4 dígitos do cartão devem ter exactamente 4 dígitos.",
                 )
             cleaned["card_last4"] = digits
+
+        # Duplicado: (fornecedor, invoice_number) já existe?
+        # Ignora se algum dos dois está vazio (factura sem nº é raro mas
+        # legítimo, ex: recibo de café). Exclui o próprio em edição.
+        f = cleaned.get("fornecedor")
+        inv = (cleaned.get("invoice_number") or "").strip()
+        if f and inv:
+            qs = Bill.objects.filter(fornecedor=f, invoice_number=inv)
+            if self.instance.pk:
+                qs = qs.exclude(pk=self.instance.pk)
+            existing = qs.first()
+            if existing:
+                self.add_error(
+                    "invoice_number",
+                    (
+                        f"Já existe a Bill #{existing.id} para "
+                        f"{f.name} com o nº de fatura '{inv}' "
+                        f"(estado: {existing.get_status_display()}). "
+                        f"Edita esse registo em vez de criar duplicado."
+                    ),
+                )
         return cleaned
 
 

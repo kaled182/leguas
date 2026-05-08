@@ -653,13 +653,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const paid = document.querySelector('[name=paid_date]');
     if (paid && !paid.value && d.issue_date) paid.value = d.issue_date;
     // Método de pagamento + últimos 4 dígitos do cartão
+    // (setVal — sempre sobrepõe; setIfEmpty não está em escopo aqui)
     if (d.payment_method) {
-      setIfEmpty('[name=payment_method]', d.payment_method);
-      // Dispara o toggle do campo card_last4
+      setVal('[name=payment_method]', d.payment_method);
+      // Dispara o toggle do campo card_last4 (mostra/esconde input)
       paymentMethodEl?.dispatchEvent(new Event('change'));
     }
     if (d.payment_method === 'CARD' && d.card_last4) {
-      setIfEmpty('[name=card_last4]', d.card_last4);
+      setVal('[name=card_last4]', d.card_last4);
     }
     // Descrição default
     const desc = document.querySelector('[name=description]');

@@ -39,9 +39,14 @@
       </div>
       <p class="text-3xl font-bold text-rose-700 dark:text-rose-300">€{{ snap.a_pagar_total|floatformat:2 }}</p>
       <div class="text-xs text-gray-500 dark:text-gray-400 mt-2 space-y-0.5">
-        <div class="flex justify-between"><span>Bills/Contas</span><span class="font-mono">€{{ snap.a_pagar_breakdown.bills|floatformat:2 }} ({{ snap.a_pagar_breakdown.bills_count }})</span></div>
+        <div class="flex justify-between"><span>Bills empresa</span><span class="font-mono">€{{ snap.a_pagar_breakdown.bills|floatformat:2 }}</span></div>
+        {% if snap.a_pagar_breakdown.bills_passthrough %}
+        <div class="flex justify-between text-violet-600 dark:text-violet-400" title="Adiantamentos a motoristas (passthrough): empresa paga ao fornecedor mas o motorista paga à empresa via desconto na PF.">
+          <span>↻ Adiantam. motorista</span><span class="font-mono">€{{ snap.a_pagar_breakdown.bills_passthrough|floatformat:2 }}</span>
+        </div>
+        {% endif %}
         <div class="flex justify-between"><span>Impostos</span><span class="font-mono">€{{ snap.a_pagar_breakdown.impostos|floatformat:2 }} ({{ snap.a_pagar_breakdown.impostos_count }})</span></div>
-        <div class="flex justify-between"><span>Motoristas</span><span class="font-mono">€{{ snap.a_pagar_breakdown.drivers|floatformat:2 }} ({{ snap.a_pagar_breakdown.drivers_count }})</span></div>
+        <div class="flex justify-between"><span>Motoristas (PFs)</span><span class="font-mono">€{{ snap.a_pagar_breakdown.drivers|floatformat:2 }} ({{ snap.a_pagar_breakdown.drivers_count }})</span></div>
       </div>
     </a>
 
@@ -56,6 +61,11 @@
       <div class="text-xs text-gray-500 dark:text-gray-400 mt-2 space-y-0.5">
         <div class="flex justify-between"><span>Faturas Parceiros</span><span class="font-mono">€{{ snap.a_receber_breakdown.partner_invoices|floatformat:2 }} ({{ snap.a_receber_breakdown.partner_count }})</span></div>
         <div class="flex justify-between"><span>IVA Dedutível</span><span class="font-mono">€{{ snap.a_receber_breakdown.iva_dedutivel|floatformat:2 }}</span></div>
+        {% if snap.a_receber_breakdown.driver_debt %}
+        <div class="flex justify-between text-violet-600 dark:text-violet-400" title="Adiantamentos a motoristas pendentes — virão descontados na próxima PF como redução do valor a pagar ao motorista.">
+          <span>↻ Devido p/ motoristas</span><span class="font-mono">€{{ snap.a_receber_breakdown.driver_debt|floatformat:2 }} ({{ snap.a_receber_breakdown.driver_debt_count }})</span>
+        </div>
+        {% endif %}
       </div>
     </a>
 

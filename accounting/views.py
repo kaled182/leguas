@@ -696,7 +696,11 @@ def _compute_dre_metrics(date_from, date_to):
         return_date__range=(date_from, date_to),
     ).aggregate(s=Sum("return_cost_eur"))["s"] or Decimal("0")
 
-    bills_qs = Bill.objects.filter(
+    # Excluir Bills passthrough (com driver) — são adiantamentos a
+    # motoristas que serão descontados na PF, não despesa real da empresa.
+    # O IVA dedutível dessas Bills mantém-se como benefício separado
+    # (não entra no DRE como receita; reduz o IVA a entregar no apuramento).
+    bills_qs = Bill.objects.company_only().filter(
         issue_date__range=(date_from, date_to),
     ).exclude(status=Bill.STATUS_CANCELLED).select_related(
         "category", "cost_center",
@@ -980,7 +984,7 @@ def _compute_break_even(date_from, date_to, include_awaiting=True):
     cd_returns = WaybillReturn.objects.filter(
         return_date__range=(date_from, date_to),
     ).aggregate(s=Sum("return_cost_eur"))["s"] or Decimal("0")
-    cd_extra = Bill.objects.filter(
+    cd_extra = Bill.objects.company_only().filter(
         issue_date__range=(date_from, date_to),
         category__nature=ExpenseCategory.NATURE_DIRETO,
     ).exclude(status=Bill.STATUS_CANCELLED).aggregate(
@@ -989,10 +993,12 @@ def _compute_break_even(date_from, date_to, include_awaiting=True):
     cost_direct = cd_drivers + cd_returns + cd_extra
 
     # ── Custos fixos (Bills FIXO + FINANCEIRO + VARIAVEL) ──────────────
+    # company_only(): exclui Bills passthrough (com driver), que são
+    # adiantamentos compensados na PF do motorista.
     cf_statuses = [Bill.STATUS_PENDING, Bill.STATUS_OVERDUE, Bill.STATUS_PAID]
     if include_awaiting:
         cf_statuses.append(Bill.STATUS_AWAITING)
-    cf_qs = Bill.objects.filter(
+    cf_qs = Bill.objects.company_only().filter(
         due_date__range=(date_from, date_to),
         status__in=cf_statuses,
         category__nature__in=[

@@ -834,12 +834,33 @@ def upload_to_bills(instance, filename):
     return f"accounting/bills/{bill_id}/{filename}"
 
 
+class BillManager(models.Manager):
+    """Manager com helpers para distinguir despesa própria vs passthrough.
+
+    Bill com `driver` preenchido representa um passthrough financeiro
+    (combustível/peças/adiantamento usado pelo motorista) — a empresa
+    desembolsa, mas é o motorista que efectivamente deve, sendo descontado
+    na próxima PF. Para o DRE / análise de margem, esses Bills NÃO são
+    despesa própria. Para cash flow / "A Pagar", continuam a ser saídas.
+    """
+
+    def company_only(self):
+        """Bills que SÃO despesa real da empresa (sem motorista)."""
+        return self.filter(driver__isnull=True)
+
+    def passthrough(self):
+        """Bills que são adiantamentos a motoristas (com driver)."""
+        return self.filter(driver__isnull=False)
+
+
 class Bill(models.Model):
     """Conta a Pagar — registo individual de despesa com fornecedor.
 
     Diferente de `Expenses` (legacy): suporta categoria por FK,
     centro de custo, recorrência, status mais rico, múltiplos anexos.
     """
+
+    objects = BillManager()
 
     STATUS_AWAITING = "AWAITING"
     STATUS_PENDING = "PENDING"
@@ -1079,6 +1100,15 @@ class Bill(models.Model):
     @property
     def iva_amount(self):
         return self.amount_total - self.amount_net
+
+    @property
+    def is_driver_passthrough(self):
+        """True quando esta Bill é um adiantamento a motorista — não conta
+        como despesa própria da empresa no DRE (o motorista vai pagar via
+        desconto na próxima PF). O IVA dedutível, esse, mantém-se como
+        benefício real da empresa.
+        """
+        return self.driver_id is not None
 
     def needs_approval(self):
         """True se a bill cai sob uma regra de aprovação activa."""

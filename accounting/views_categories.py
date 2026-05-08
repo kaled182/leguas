@@ -15,11 +15,14 @@ def category_list(request):
     today = date.today()
     year_start = date(today.year, 1, 1)
 
+    # total_ytd só conta Bills "company_only" (sem driver) — passthrough
+    # com motorista é adiantamento, descontado na PF, não despesa real.
     qs = ExpenseCategory.objects.annotate(
-        n_bills=Count("bills"),
+        n_bills=Count("bills", filter=Q(bills__driver__isnull=True)),
         total_ytd=Sum(
             "bills__amount_total",
             filter=Q(
+                bills__driver__isnull=True,
                 bills__issue_date__gte=year_start,
                 bills__status__in=[Bill.STATUS_PAID, Bill.STATUS_PENDING],
             ),

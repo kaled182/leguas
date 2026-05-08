@@ -51,11 +51,18 @@ def treasury_snapshot(today: date | None = None) -> dict:
     horizon = today + timedelta(days=30)
 
     # ── A PAGAR (próximos 30 dias) ──────────────────────────────────────
+    # Cash flow: tudo conta (passthrough também sai do caixa quando empresa paga)
     bills_a_pagar = Bill.objects.filter(
         status__in=[Bill.STATUS_PENDING, Bill.STATUS_AWAITING, Bill.STATUS_OVERDUE],
         due_date__lte=horizon,
     )
     bills_a_pagar_total = bills_a_pagar.aggregate(t=Sum("amount_total"))["t"] or _zero()
+    # Bills passthrough (com motorista) — separado para visualização
+    bills_passthrough_total = (
+        bills_a_pagar.filter(driver__isnull=False)
+        .aggregate(t=Sum("amount_total"))["t"] or _zero()
+    )
+    bills_company_total = bills_a_pagar_total - bills_passthrough_total
 
     impostos_a_pagar = Imposto.objects.filter(
         Q(status=Imposto.STATUS_PENDENTE) | Q(status=Imposto.STATUS_EM_ATRASO),
@@ -106,7 +113,24 @@ def treasury_snapshot(today: date | None = None) -> dict:
     # IVA dedutível pendente (sobre Bills pagas no trimestre atual)
     iva_dedutivel = iva_dedutivel_pendente(today)
 
-    a_receber_total = partner_total + iva_dedutivel
+    # Adiantamentos a motoristas PENDENTES (motorista deve à empresa) —
+    # virá descontado na próxima PF, é dinheiro que a empresa "vai
+    # receber" via redução de pagamento ao motorista.
+    try:
+        from settlements.models import PreInvoiceAdvance
+        driver_advances_pendentes = PreInvoiceAdvance.objects.filter(
+            status="PENDENTE",
+        )
+        driver_debt_total = (
+            driver_advances_pendentes.aggregate(t=Sum("valor"))["t"]
+            or _zero()
+        )
+        driver_debt_n = driver_advances_pendentes.count()
+    except Exception:
+        driver_debt_total = _zero()
+        driver_debt_n = 0
+
+    a_receber_total = partner_total + iva_dedutivel + driver_debt_total
 
     # ── SALDO BANCÁRIO ─────────────────────────────────────────────────
     saldo, saldo_data = _saldo_bancario_atual()
@@ -134,7 +158,8 @@ def treasury_snapshot(today: date | None = None) -> dict:
         "horizon": horizon,
         "a_pagar_total": a_pagar_total,
         "a_pagar_breakdown": {
-            "bills": bills_a_pagar_total,
+            "bills": bills_company_total,
+            "bills_passthrough": bills_passthrough_total,
             "bills_count": bills_a_pagar.count(),
             "impostos": impostos_total,
             "impostos_count": impostos_a_pagar.count() + impostos_a_pagar_outros.count(),
@@ -146,6 +171,8 @@ def treasury_snapshot(today: date | None = None) -> dict:
             "partner_invoices": partner_total,
             "partner_count": partner_n,
             "iva_dedutivel": iva_dedutivel,
+            "driver_debt": driver_debt_total,
+            "driver_debt_count": driver_debt_n,
         },
         "saldo_bancario": saldo,
         "saldo_data": saldo_data,

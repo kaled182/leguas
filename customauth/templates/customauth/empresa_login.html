@@ -1,0 +1,70 @@
+{% load static %}<!DOCTYPE html>
+<html lang="pt-PT" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login Frota · Léguas Franzinas</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>body { font-family: 'Inter', sans-serif; }</style>
+</head>
+<body class="h-full bg-gradient-to-br from-purple-600 via-fuchsia-600 to-pink-600 flex items-center justify-center p-4">
+
+  <div class="w-full max-w-md">
+    <div class="text-center mb-8">
+      <div class="inline-flex items-center justify-center w-16 h-16 bg-white/20 backdrop-blur-md rounded-2xl mb-4 shadow-lg">
+        <i data-lucide="building-2" class="w-8 h-8 text-white"></i>
+      </div>
+      <h1 class="text-3xl font-extrabold text-white">Portal da Frota</h1>
+      <p class="text-white/80 text-sm mt-1">Léguas Franzinas</p>
+    </div>
+
+    {% if messages %}
+      {% for m in messages %}
+        <div class="mb-3 px-4 py-3 rounded-xl text-sm
+          {% if 'error' in m.tags %}bg-red-50 text-red-700 border border-red-200
+          {% else %}bg-emerald-50 text-emerald-700 border border-emerald-200{% endif %}">
+          {{ m }}
+        </div>
+      {% endfor %}
+    {% endif %}
+
+    <form method="post" class="bg-white rounded-3xl shadow-2xl p-8 space-y-5">
+      {% csrf_token %}
+
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1.5">Username ou Email</label>
+        <div class="relative">
+          <i data-lucide="user" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"></i>
+          <input type="text" name="username" required autofocus
+                 class="w-full pl-9 pr-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:bg-white focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition">
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1.5">Password</label>
+        <div class="relative">
+          <i data-lucide="lock" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"></i>
+          <input type="password" name="password" required
+                 class="w-full pl-9 pr-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:bg-white focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition">
+        </div>
+      </div>
+
+      <button type="submit"
+              class="w-full py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-xl font-bold shadow-md transition">
+        Entrar
+      </button>
+
+      <p class="text-center text-xs text-gray-400 pt-2">
+        Es admin? <a href="{% url 'customauth:login' %}" class="text-purple-600 hover:underline">Login admin</a>
+        · Es motorista? <a href="{% url 'customauth:driver_login' %}" class="text-purple-600 hover:underline">Login motorista</a>
+      </p>
+    </form>
+  </div>
+
+  <script>lucide.createIcons();</script>
+</body>
+</html>

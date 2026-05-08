@@ -127,6 +127,50 @@ class DriverAccess(models.Model):
         return DriverRoute(self.driver) if self.driver else None
 
 
+class EmpresaAccess(models.Model):
+    """Acesso ao portal de uma EmpresaParceira (frota).
+
+    Permite que cada frota tenha credenciais próprias para aceder ao
+    seu portal sem precisar de ser admin Django. Espelha DriverAccess.
+    """
+    empresa = models.OneToOneField(
+        "drivers_app.EmpresaParceira",
+        on_delete=models.CASCADE,
+        related_name="access",
+    )
+    username = models.CharField(
+        "Username", max_length=100, unique=True,
+        help_text="Username único de login.",
+    )
+    email = models.EmailField("Email", blank=True)
+    password = models.CharField("Password (hash)", max_length=255)
+    is_active = models.BooleanField(
+        "Activo", default=True,
+        help_text="Desactivar bloqueia o login sem apagar a conta.",
+    )
+    last_login = models.DateTimeField("Último login", null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name="created_empresa_accesses",
+    )
+
+    class Meta:
+        verbose_name = "Acesso de Frota"
+        verbose_name_plural = "Acessos de Frota"
+        ordering = ["empresa__nome"]
+
+    def __str__(self):
+        return f"{self.username} ({self.empresa.nome})"
+
+    def set_password(self, raw_password):
+        self.password = make_password(raw_password)
+
+    def check_password(self, raw_password):
+        return check_password(raw_password, self.password)
+
+
 class DriverRoute:
     """
     Classe utilitária para montar e gerenciar a rota de um motorista.

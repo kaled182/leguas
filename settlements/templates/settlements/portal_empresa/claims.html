@@ -1,0 +1,113 @@
+{% extends "settlements/portal_empresa/_base.html" %}
+{% load static %}
+
+{% block portal_content %}
+<div class="space-y-6">
+
+  {# ─── Cards agregados ─── #}
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+    {% for status_key, label, color in 'PENDING:Pendentes:amber|APPROVED:Aprovados:rose|REJECTED:Rejeitados:gray|APPEALED:Em recurso:blue'|cut:" "|slice:":0" %}{% endfor %}
+    <div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
+      <div class="text-xs uppercase text-gray-500 flex items-center gap-1">
+        <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+        Pendentes
+      </div>
+      <div class="text-2xl font-bold text-amber-600">{{ by_status.PENDING.n|default:0 }}</div>
+      <div class="text-xs text-gray-400">€{{ by_status.PENDING.total|default:0|floatformat:2 }}</div>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
+      <div class="text-xs uppercase text-gray-500 flex items-center gap-1">
+        <span class="w-2 h-2 rounded-full bg-rose-500"></span>
+        Aprovados
+      </div>
+      <div class="text-2xl font-bold text-rose-600">{{ by_status.APPROVED.n|default:0 }}</div>
+      <div class="text-xs text-gray-400">€{{ by_status.APPROVED.total|default:0|floatformat:2 }}</div>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
+      <div class="text-xs uppercase text-gray-500 flex items-center gap-1">
+        <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+        Em recurso
+      </div>
+      <div class="text-2xl font-bold text-blue-600">{{ by_status.APPEALED.n|default:0 }}</div>
+      <div class="text-xs text-gray-400">€{{ by_status.APPEALED.total|default:0|floatformat:2 }}</div>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
+      <div class="text-xs uppercase text-gray-500 flex items-center gap-1">
+        <span class="w-2 h-2 rounded-full bg-gray-400"></span>
+        Rejeitados
+      </div>
+      <div class="text-2xl font-bold text-gray-500">{{ by_status.REJECTED.n|default:0 }}</div>
+      <div class="text-xs text-gray-400">€{{ by_status.REJECTED.total|default:0|floatformat:2 }}</div>
+    </div>
+  </div>
+
+  {# ─── Filtros ─── #}
+  <div class="flex flex-wrap items-center gap-2">
+    <span class="text-xs text-gray-500 uppercase font-semibold">Filtrar:</span>
+    <a href="?" class="px-3 py-1 rounded-full text-xs font-semibold {% if not status_filter %}bg-purple-600 text-white{% else %}bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200{% endif %}">Todos</a>
+    <a href="?status=PENDING" class="px-3 py-1 rounded-full text-xs font-semibold {% if status_filter == 'PENDING' %}bg-amber-500 text-white{% else %}bg-gray-100 dark:bg-gray-700 text-gray-700 hover:bg-amber-100 dark:hover:bg-amber-900/30{% endif %}">Pendentes</a>
+    <a href="?status=APPROVED" class="px-3 py-1 rounded-full text-xs font-semibold {% if status_filter == 'APPROVED' %}bg-rose-500 text-white{% else %}bg-gray-100 dark:bg-gray-700 text-gray-700 hover:bg-rose-100 dark:hover:bg-rose-900/30{% endif %}">Aprovados</a>
+    <a href="?status=APPEALED" class="px-3 py-1 rounded-full text-xs font-semibold {% if status_filter == 'APPEALED' %}bg-blue-500 text-white{% else %}bg-gray-100 dark:bg-gray-700 text-gray-700 hover:bg-blue-100 dark:hover:bg-blue-900/30{% endif %}">Em recurso</a>
+    <a href="?status=REJECTED" class="px-3 py-1 rounded-full text-xs font-semibold {% if status_filter == 'REJECTED' %}bg-gray-600 text-white{% else %}bg-gray-100 dark:bg-gray-700 text-gray-700 hover:bg-gray-200{% endif %}">Rejeitados</a>
+  </div>
+
+  {# ─── Tabela claims ─── #}
+  <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+    <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-700">
+      <h3 class="text-sm font-bold text-gray-700 dark:text-gray-300 uppercase flex items-center gap-2">
+        <i data-lucide="alert-octagon" class="w-4 h-4 text-rose-500"></i>
+        Claims ({{ claims|length }}{% if claims|length == 200 %} — primeiros 200{% endif %})
+      </h3>
+    </div>
+    {% if claims %}
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-gray-50 dark:bg-gray-900/50 text-xs uppercase text-gray-500">
+          <tr class="text-left">
+            <th class="px-4 py-2">Data</th>
+            <th class="px-4 py-2">Motorista</th>
+            <th class="px-4 py-2">Tipo</th>
+            <th class="px-4 py-2">Waybill</th>
+            <th class="px-4 py-2">Descrição</th>
+            <th class="px-4 py-2 text-right">Valor</th>
+            <th class="px-4 py-2 text-center">Status</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+          {% for c in claims %}
+          <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+            <td class="px-4 py-2 text-xs text-gray-500 font-mono">{{ c.occurred_at|date:"d/m/Y" }}</td>
+            <td class="px-4 py-2">
+              <a href="{% url 'drivers_app:driver_claims' c.driver.id %}" class="text-purple-600 hover:underline font-semibold">
+                {{ c.driver.nome_completo|default:c.driver.apelido|truncatechars:25 }}
+              </a>
+            </td>
+            <td class="px-4 py-2 text-xs">{{ c.get_claim_type_display }}</td>
+            <td class="px-4 py-2 font-mono text-xs">{{ c.waybill_number|default:"—" }}</td>
+            <td class="px-4 py-2 text-xs text-gray-600 dark:text-gray-400 max-w-md truncate">{{ c.description|truncatechars:60 }}</td>
+            <td class="px-4 py-2 text-right font-mono font-bold {% if c.status == 'APPROVED' or c.status == 'PENDING' %}text-rose-600{% else %}text-gray-400{% endif %}">
+              -€{{ c.amount|floatformat:2 }}
+            </td>
+            <td class="px-4 py-2 text-center">
+              <span class="px-2 py-0.5 text-[11px] rounded-full font-semibold
+                {% if c.status == 'PENDING' %}bg-amber-100 text-amber-700{% endif %}
+                {% if c.status == 'APPROVED' %}bg-rose-100 text-rose-700{% endif %}
+                {% if c.status == 'REJECTED' %}bg-gray-200 text-gray-500{% endif %}
+                {% if c.status == 'APPEALED' %}bg-blue-100 text-blue-700{% endif %}">
+                {{ c.get_status_display }}
+              </span>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="px-5 py-10 text-center text-gray-400 text-sm">
+      {% if status_filter %}Nenhum claim com este status.{% else %}Esta frota não tem claims registados.{% endif %}
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

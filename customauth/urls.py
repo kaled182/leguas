@@ -8,7 +8,7 @@ from .views import (
     authenticate_view,
     logout_view,
 )
-from . import driver_auth_views
+from . import driver_auth_views, empresa_auth_views
 
 app_name = "customauth"
 
@@ -27,5 +27,15 @@ urlpatterns = [
         "driver/credentials/<int:driver_id>/",
         driver_auth_views.admin_driver_credentials,
         name="admin_driver_credentials",
+    ),
+
+    # ─── Login dedicado da empresa parceira (Fase 2C) ───
+    path("empresa/", empresa_auth_views.empresa_login, name="empresa_login"),
+    path("empresa/login/", empresa_auth_views.empresa_login, name="empresa_login_alias"),
+    path("empresa/logout/", empresa_auth_views.empresa_logout, name="empresa_logout"),
+    path(
+        "empresa/credentials/<int:empresa_id>/",
+        empresa_auth_views.admin_empresa_credentials,
+        name="admin_empresa_credentials",
     ),
 ]

@@ -479,6 +479,56 @@ urlpatterns = [
         name="empresa-portal-attachment-delete",
     ),
     path(
+        "empresas/<int:empresa_id>/portal/motoristas/",
+        views_fleet_portal.empresa_portal_drivers,
+        name="empresa-portal-drivers",
+    ),
+    path(
+        "empresas/<int:empresa_id>/portal/claims/",
+        views_fleet_portal.empresa_portal_claims,
+        name="empresa-portal-claims",
+    ),
+    path(
+        "empresas/<int:empresa_id>/portal/perfil/",
+        views_fleet_portal.empresa_portal_profile,
+        name="empresa-portal-profile",
+    ),
+    path(
+        "empresas/<int:empresa_id>/portal/documentos/",
+        views_fleet_portal.empresa_portal_documents,
+        name="empresa-portal-documents",
+    ),
+    path(
+        "empresas/<int:empresa_id>/portal/documentos/upload/",
+        views_fleet_portal.empresa_portal_document_upload,
+        name="empresa-portal-document-upload",
+    ),
+    path(
+        "empresas/<int:empresa_id>/portal/documentos/<int:document_id>/delete/",
+        views_fleet_portal.empresa_portal_document_delete,
+        name="empresa-portal-document-delete",
+    ),
+    path(
+        "empresas/<int:empresa_id>/portal/contratos/",
+        views_fleet_portal.empresa_portal_contracts,
+        name="empresa-portal-contracts",
+    ),
+    path(
+        "empresas/<int:empresa_id>/portal/contratos/create/",
+        views_fleet_portal.empresa_portal_contract_create,
+        name="empresa-portal-contract-create",
+    ),
+    path(
+        "empresas/<int:empresa_id>/portal/contratos/<int:contract_id>/update/",
+        views_fleet_portal.empresa_portal_contract_update,
+        name="empresa-portal-contract-update",
+    ),
+    path(
+        "empresas/<int:empresa_id>/portal/contratos/<int:contract_id>/delete/",
+        views_fleet_portal.empresa_portal_contract_delete,
+        name="empresa-portal-contract-delete",
+    ),
+    path(
         "empresas/<int:empresa_id>/dashboard-stats/",
         views.empresa_dashboard_stats,
         name="empresa-dashboard-stats",

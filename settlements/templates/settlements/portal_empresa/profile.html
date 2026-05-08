@@ -1,0 +1,148 @@
+{% extends "settlements/portal_empresa/_base.html" %}
+{% load static %}
+
+{% block portal_content %}
+<div class="max-w-4xl mx-auto">
+
+  {% if messages %}
+    {% for message in messages %}
+    <div class="mb-4 p-3 rounded-lg
+      {% if message.tags == 'success' %}bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800{% else %}bg-rose-50 text-rose-700{% endif %}
+      flex items-center gap-2 text-sm">
+      <i data-lucide="check-circle" class="w-4 h-4"></i>
+      {{ message }}
+    </div>
+    {% endfor %}
+  {% endif %}
+
+  <form method="post" class="space-y-6">
+    {% csrf_token %}
+
+    {# ─── Dados gerais ─── #}
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+      <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-700">
+        <h3 class="text-sm font-bold text-gray-700 dark:text-gray-300 uppercase flex items-center gap-2">
+          <i data-lucide="building-2" class="w-4 h-4 text-purple-500"></i>
+          Dados da empresa
+        </h3>
+      </div>
+      <div class="p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="md:col-span-2">
+          <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Nome *</label>
+          <input type="text" name="nome" value="{{ empresa.nome }}" required maxlength="200"
+                 class="w-full px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">NIF</label>
+          <input type="text" name="nif" value="{{ empresa.nif }}" maxlength="20" placeholder="PT123456789"
+                 class="w-full px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Taxa IVA (%)</label>
+          <input type="number" step="0.01" name="taxa_iva" value="{{ empresa.taxa_iva }}"
+                 class="w-full px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700">
+        </div>
+        <div class="md:col-span-2">
+          <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Morada</label>
+          <textarea name="morada" rows="2"
+                    class="w-full px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700">{{ empresa.morada }}</textarea>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Código Postal</label>
+          <input type="text" name="codigo_postal" value="{{ empresa.codigo_postal }}" maxlength="8"
+                 class="w-full px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Cidade</label>
+          <input type="text" name="cidade" value="{{ empresa.cidade }}" maxlength="100"
+                 class="w-full px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700">
+        </div>
+      </div>
+    </div>
+
+    {# ─── Contacto ─── #}
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+      <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-700">
+        <h3 class="text-sm font-bold text-gray-700 dark:text-gray-300 uppercase flex items-center gap-2">
+          <i data-lucide="user" class="w-4 h-4 text-blue-500"></i>
+          Contacto
+        </h3>
+      </div>
+      <div class="p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="md:col-span-2">
+          <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Pessoa de contacto</label>
+          <input type="text" name="contacto_nome" value="{{ empresa.contacto_nome }}" maxlength="150"
+                 class="w-full px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Email</label>
+          <input type="email" name="email" value="{{ empresa.email }}"
+                 class="w-full px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Telefone</label>
+          <input type="text" name="telefone" value="{{ empresa.telefone }}" maxlength="20"
+                 class="w-full px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700">
+        </div>
+      </div>
+    </div>
+
+    {# ─── Financeiro ─── #}
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+      <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-700">
+        <h3 class="text-sm font-bold text-gray-700 dark:text-gray-300 uppercase flex items-center gap-2">
+          <i data-lucide="banknote" class="w-4 h-4 text-emerald-500"></i>
+          Financeiro
+        </h3>
+      </div>
+      <div class="p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="md:col-span-2">
+          <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">IBAN</label>
+          <input type="text" name="iban" value="{{ empresa.iban }}" maxlength="34" placeholder="PT50 0000 0000 0000 0000 0000 0"
+                 class="w-full px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 font-mono text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Valor por pacote ao motorista (default da frota) — €</label>
+          <input type="number" step="0.0001" name="driver_default_price_per_package" value="{{ empresa.driver_default_price_per_package|default_if_none:'' }}"
+                 placeholder="ex: 1.3000"
+                 class="w-full px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700">
+          <p class="text-[10px] text-gray-500 mt-1">Default pago aos motoristas desta frota. Vazio = usa default do parceiro.</p>
+        </div>
+      </div>
+    </div>
+
+    {# ─── Notas + Status ─── #}
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+      <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-700">
+        <h3 class="text-sm font-bold text-gray-700 dark:text-gray-300 uppercase flex items-center gap-2">
+          <i data-lucide="clipboard" class="w-4 h-4 text-gray-500"></i>
+          Outros
+        </h3>
+      </div>
+      <div class="p-5 space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Notas internas</label>
+          <textarea name="notas" rows="3"
+                    class="w-full px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700">{{ empresa.notas }}</textarea>
+        </div>
+        <label class="flex items-center gap-2 text-sm">
+          <input type="checkbox" name="ativo" {% if empresa.ativo %}checked{% endif %}
+                 class="rounded">
+          <span class="text-gray-700 dark:text-gray-300">Empresa <strong>activa</strong> (aparece em lotes e listagens)</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="flex items-center justify-end gap-2">
+      <a href="{% url 'empresa-portal-dashboard' empresa.id %}"
+         class="px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-sm">Cancelar</a>
+      <button type="submit"
+              class="px-5 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold inline-flex items-center gap-2">
+        <i data-lucide="save" class="w-4 h-4"></i>
+        Guardar alterações
+      </button>
+    </div>
+  </form>
+
+</div>
+{% endblock %}

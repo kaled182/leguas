@@ -3312,6 +3312,136 @@ class FleetInvoiceClaim(models.Model):
     )
 
 
+class FleetDocument(models.Model):
+    """Documentos administrativos de uma EmpresaParceira (frota).
+
+    Ex: certidão permanente, alvará, IES, declaração não-dívida, NIB.
+    Independente de FleetInvoice.
+    """
+    KIND_CHOICES = [
+        ("CERTIDAO", "Certidão Permanente"),
+        ("ALVARA", "Alvará / Licença"),
+        ("IES", "IES / IES-DA"),
+        ("DECLARACAO_FINANCAS", "Declaração Não-Dívida (Finanças)"),
+        ("DECLARACAO_SS", "Declaração Não-Dívida (Seg. Social)"),
+        ("NIB", "Comprovativo IBAN/NIB"),
+        ("CARTAO_CIDADAO_REPR", "CC Representante Legal"),
+        ("OUTRO", "Outro"),
+    ]
+
+    empresa = models.ForeignKey(
+        "drivers_app.EmpresaParceira",
+        on_delete=models.CASCADE,
+        related_name="fleet_documents",
+    )
+    kind = models.CharField(
+        "Tipo", max_length=30, choices=KIND_CHOICES, default="OUTRO",
+        db_index=True,
+    )
+    file = models.FileField(
+        "Ficheiro", upload_to="fleet_documents/%Y/%m/",
+    )
+    description = models.CharField("Descrição", max_length=255, blank=True)
+    valid_until = models.DateField(
+        "Válido até", null=True, blank=True,
+        help_text="Data de validade (deixar vazio se permanente).",
+    )
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    uploaded_by = models.ForeignKey(
+        "auth.User",
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="+",
+    )
+
+    class Meta:
+        verbose_name = "Documento da Frota"
+        verbose_name_plural = "Documentos da Frota"
+        ordering = ["-uploaded_at"]
+
+    def __str__(self):
+        return f"{self.get_kind_display()} — {self.empresa.nome}"
+
+    @property
+    def filename(self):
+        import os
+        return os.path.basename(self.file.name) if self.file else ""
+
+    @property
+    def is_expired(self):
+        from django.utils import timezone
+        if not self.valid_until:
+            return False
+        return self.valid_until < timezone.now().date()
+
+    @property
+    def expires_soon(self):
+        """True se expira nos próximos 30 dias."""
+        from django.utils import timezone
+        if not self.valid_until:
+            return False
+        delta = (self.valid_until - timezone.now().date()).days
+        return 0 <= delta <= 30
+
+
+class FleetContract(models.Model):
+    """Contrato entre Léguas Franzinas e EmpresaParceira (frota).
+
+    Diferente de DriverContract (que é por motorista). Aqui guarda-se
+    o contrato de prestação de serviços com a frota.
+    """
+    STATUS_CHOICES = [
+        ("RASCUNHO", "Rascunho"),
+        ("ATIVO", "Ativo"),
+        ("DENUNCIADO", "Denunciado"),
+        ("EXPIRADO", "Expirado"),
+    ]
+
+    empresa = models.ForeignKey(
+        "drivers_app.EmpresaParceira",
+        on_delete=models.CASCADE,
+        related_name="fleet_contracts",
+    )
+    titulo = models.CharField("Título", max_length=200)
+    file = models.FileField(
+        "Ficheiro do contrato",
+        upload_to="fleet_contracts/%Y/%m/",
+        blank=True, null=True,
+    )
+    status = models.CharField(
+        "Status", max_length=20, choices=STATUS_CHOICES,
+        default="RASCUNHO", db_index=True,
+    )
+    inicio = models.DateField("Início", null=True, blank=True)
+    fim = models.DateField(
+        "Fim",
+        null=True, blank=True,
+        help_text="Vazio = sem termo (renovação automática).",
+    )
+    notas = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey(
+        "auth.User",
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="+",
+    )
+
+    class Meta:
+        verbose_name = "Contrato da Frota"
+        verbose_name_plural = "Contratos da Frota"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.titulo} — {self.empresa.nome}"
+
+    @property
+    def filename(self):
+        import os
+        return os.path.basename(self.file.name) if self.file else ""
+
+
 class FleetInvoiceAttachment(models.Model):
     """Anexos genéricos a uma FleetInvoice (fatura emitida pela frota,
     recibo de pagamento, notas, etc.)."""

@@ -449,6 +449,31 @@ def driver_pre_invoice_detail(request, driver_id, pre_invoice_id):
     advances = pf.adiantamentos.all().order_by("-data") if hasattr(pf, "adiantamentos") else []
     lost_packages = pf.pacotes_perdidos.all().order_by("-data") if hasattr(pf, "pacotes_perdidos") else []
 
+    # ─── Comissões de Indicação (mesma lógica do recalcular()/PDF) ───
+    from decimal import Decimal as _D
+    from drivers_app.models import DriverReferral
+    indicacoes_detail = []
+    indicacoes_total = _D("0.00")
+    for ref in driver.referrals_given.filter(ativo=True).select_related("referred"):
+        referred_pfs = DriverPreInvoice.objects.filter(
+            driver=ref.referred,
+            periodo_inicio=pf.periodo_inicio,
+            periodo_fim=pf.periodo_fim,
+        )
+        ref_pacotes = 0
+        for rpf in referred_pfs:
+            ref_pacotes += sum(l.total_pacotes for l in rpf.linhas.all())
+        ref_valor = _D(ref_pacotes) * ref.comissao_por_pacote
+        indicacoes_total += ref_valor
+        indicacoes_detail.append({
+            "nome": ref.referred.nome_completo or ref.referred.apelido or "—",
+            "referred_id": ref.referred.id,
+            "pacotes": ref_pacotes,
+            "comissao_por_pacote": ref.comissao_por_pacote,
+            "valor": ref_valor,
+            "tem_pf": referred_pfs.exists(),
+        })
+
     partners = Partner.objects.all().order_by("name")
 
     return render(request, "drivers_app/portal/admin_pf_detail.html", {
@@ -458,6 +483,8 @@ def driver_pre_invoice_detail(request, driver_id, pre_invoice_id):
         "bonus": bonus,
         "advances": advances,
         "lost_packages": lost_packages,
+        "indicacoes_detail": indicacoes_detail,
+        "indicacoes_total": indicacoes_total,
         "partners": partners,
     })
 

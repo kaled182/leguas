@@ -185,6 +185,15 @@ def _kpi_for_period(driver, start_date, end_date):
     }
 
 
+def referred_delivered_count(referred_driver, date_from, date_to):
+    """Conta entregas confirmadas (Delivered) de um motorista indicado
+    no período. Fonte canónica usada em recalcular(), PDF e UI.
+    """
+    return _driver_base_queryset(
+        referred_driver, date_from, date_to,
+    ).filter(task_status="Delivered").count()
+
+
 def _referrals_summary(driver, date_from, date_to):
     """Resumo de indicações de um motorista no período.
 
@@ -202,9 +211,7 @@ def _referrals_summary(driver, date_from, date_to):
     total_value = Decimal("0")
     total_delivered = 0
     for r in refs:
-        delivered = _driver_base_queryset(
-            r.referred, date_from, date_to,
-        ).filter(task_status="Delivered").count()
+        delivered = referred_delivered_count(r.referred, date_from, date_to)
         value = Decimal(delivered) * r.comissao_por_pacote
         items.append({
             "referral_id": r.id,

@@ -1137,18 +1137,17 @@ class DriverPreInvoice(models.Model):
             )
         )
 
-        # Comissões de indicação — soma automática por cada motorista indicado
-        from drivers_app.models import DriverReferral
+        # Comissões de indicação — baseado nas entregas Delivered do
+        # indicado no período (não depende de PF do indicado existir).
+        from drivers_app.portal_views import referred_delivered_count
         comissoes = Decimal("0.00")
-        for ref in self.driver.referrals_given.filter(ativo=True):
-            referred_pfs = DriverPreInvoice.objects.filter(
-                driver=ref.referred,
-                periodo_inicio=self.periodo_inicio,
-                periodo_fim=self.periodo_fim,
+        for ref in self.driver.referrals_given.filter(
+            ativo=True
+        ).select_related("referred"):
+            delivered = referred_delivered_count(
+                ref.referred, self.periodo_inicio, self.periodo_fim,
             )
-            for rpf in referred_pfs:
-                total_pcts = sum(l.total_pacotes for l in rpf.linhas.all())
-                comissoes += Decimal(total_pcts) * ref.comissao_por_pacote
+            comissoes += Decimal(delivered) * ref.comissao_por_pacote
         self.total_comissoes_indicacao = comissoes
 
         self.subtotal_bruto = (

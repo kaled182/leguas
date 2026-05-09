@@ -320,9 +320,6 @@
             <a href="{% url 'drivers_app:driver_portal' i.referred_id %}" class="font-medium text-teal-600 hover:underline">
               {{ i.nome }}
             </a>
-            {% if not i.tem_pf %}
-              <span class="ml-1 text-[10px] text-amber-600 italic" title="O indicado ainda não tem PF emitida neste período">aguarda PF do indicado</span>
-            {% endif %}
           </td>
           <td class="px-4 py-2 text-right font-mono">{{ i.pacotes }}</td>
           <td class="px-4 py-2 text-right font-mono text-gray-500">€{{ i.comissao_por_pacote|floatformat:4 }}</td>

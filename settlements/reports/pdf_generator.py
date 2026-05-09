@@ -1075,28 +1075,35 @@ class PDFGenerator:
             elements.append(Spacer(1, 0.7 * cm))
 
         # ── Comissões de Indicação ─────────────────────────────────────────
+        # Conta entregas Delivered confirmadas do indicado no período
+        # (mesma fonte que recalcular() e o tab Indicações).
         from decimal import Decimal
-        from drivers_app.models import DriverReferral
-        from settlements.models import DriverPreInvoice as DPI
+        from drivers_app.portal_views import referred_delivered_count
 
         comissoes_detail = []
         total_comissoes = Decimal("0.00")
-        for ref in pre_invoice.driver.referrals_given.filter(ativo=True):
-            referred_pfs = DPI.objects.filter(
-                driver=ref.referred,
-                periodo_inicio=pre_invoice.periodo_inicio,
-                periodo_fim=pre_invoice.periodo_fim,
+        for ref in pre_invoice.driver.referrals_given.filter(
+            ativo=True
+        ).select_related("referred"):
+            delivered = referred_delivered_count(
+                ref.referred,
+                pre_invoice.periodo_inicio,
+                pre_invoice.periodo_fim,
             )
-            for rpf in referred_pfs:
-                total_pcts = sum(l.total_pacotes for l in rpf.linhas.all())
-                valor = Decimal(total_pcts) * ref.comissao_por_pacote
-                total_comissoes += valor
-                comissoes_detail.append({
-                    "nome": ref.referred.nome_completo,
-                    "pacotes": total_pcts,
-                    "comissao": ref.comissao_por_pacote,
-                    "valor": valor,
-                })
+            if delivered <= 0:
+                continue
+            valor = Decimal(delivered) * ref.comissao_por_pacote
+            total_comissoes += valor
+            comissoes_detail.append({
+                "nome": (
+                    ref.referred.nome_completo
+                    or ref.referred.apelido
+                    or "—"
+                ),
+                "pacotes": delivered,
+                "comissao": ref.comissao_por_pacote,
+                "valor": valor,
+            })
 
         if comissoes_detail:
             teal_color = colors.HexColor("#0D9488")

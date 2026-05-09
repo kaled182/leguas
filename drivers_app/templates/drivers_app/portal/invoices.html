@@ -58,6 +58,32 @@
   {% endif %}
 </div>
 
+{# ─── KPI Indicações (só se houver indicados activos) ─── #}
+{% if referrals_summary.count > 0 %}
+<a href="{% url 'drivers_app:driver_portal_referrals' driver.id %}?period={{ period }}{% if period == 'custom' %}&date_from={{ date_from|date:'Y-m-d' }}&date_to={{ date_to|date:'Y-m-d' }}{% endif %}"
+   class="block mb-4 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 rounded-xl p-4 text-white shadow-md transition group">
+  <div class="flex items-center justify-between gap-4">
+    <div class="flex items-center gap-3">
+      <div class="w-11 h-11 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+        <i data-lucide="user-plus" class="w-5 h-5"></i>
+      </div>
+      <div>
+        <p class="text-xs uppercase font-bold text-white/80">Indicados activos</p>
+        <p class="text-lg font-bold leading-tight">
+          {{ referrals_summary.count }} motorista{{ referrals_summary.count|pluralize:"s" }}
+          · {{ referrals_summary.total_delivered }} entregas no período
+        </p>
+      </div>
+    </div>
+    <div class="text-right">
+      <p class="text-[11px] uppercase font-bold text-white/80">Comissão estimada</p>
+      <p class="text-2xl font-extrabold">€ {{ referrals_summary.total_value|floatformat:2 }}</p>
+    </div>
+    <i data-lucide="chevron-right" class="w-5 h-5 opacity-60 group-hover:opacity-100 group-hover:translate-x-0.5 transition flex-shrink-0"></i>
+  </div>
+</a>
+{% endif %}
+
 {# ─── Sobreposição de PFs (admin) ─── #}
 {% if is_admin_view and overlap_pfs %}
 <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50 rounded-xl p-4 mb-4">

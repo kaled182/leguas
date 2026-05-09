@@ -34,6 +34,11 @@ urlpatterns = [
         views.driver_portal_profile,
         name="driver_portal_profile",
     ),
+    path(
+        "portal/<int:driver_id>/indicacoes/",
+        views.driver_portal_referrals,
+        name="driver_portal_referrals",
+    ),
     # ─── Portal Admin (substitui modais antigos) ───
     path("portal/<int:driver_id>/editar/", views.driver_admin_edit, name="driver_admin_edit"),
     path(

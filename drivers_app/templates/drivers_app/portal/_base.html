@@ -97,6 +97,12 @@
           <i data-lucide="file-signature" class="w-4 h-4 inline -mt-0.5"></i>
           <span class="hidden sm:inline ml-1">Contratos</span>
         </a>
+        <a href="{% url 'drivers_app:driver_portal_referrals' driver.id %}"
+           class="px-3 py-1.5 rounded-lg text-sm font-medium transition
+             {% if request.resolver_match.url_name == 'driver_portal_referrals' %}bg-white text-indigo-700 shadow{% else %}text-white/90 hover:bg-white/10{% endif %}">
+          <i data-lucide="user-plus" class="w-4 h-4 inline -mt-0.5"></i>
+          <span class="hidden sm:inline ml-1">Indicações</span>
+        </a>
 
         {# Tabs ADMIN ONLY #}
         {% if request.user.is_staff or request.user.is_superuser %}

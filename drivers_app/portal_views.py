@@ -185,6 +185,47 @@ def _kpi_for_period(driver, start_date, end_date):
     }
 
 
+def _referrals_summary(driver, date_from, date_to):
+    """Resumo de indicações de um motorista no período.
+
+    Para cada indicado activo, conta as entregas (Delivered) no
+    período × comissão_por_pacote e devolve totais agregados.
+    """
+    from decimal import Decimal
+    from .models import DriverReferral
+
+    refs = list(
+        DriverReferral.objects.filter(referrer=driver, ativo=True)
+        .select_related("referred")
+    )
+    items = []
+    total_value = Decimal("0")
+    total_delivered = 0
+    for r in refs:
+        delivered = _driver_base_queryset(
+            r.referred, date_from, date_to,
+        ).filter(task_status="Delivered").count()
+        value = Decimal(delivered) * r.comissao_por_pacote
+        items.append({
+            "referral_id": r.id,
+            "referred_id": r.referred.id,
+            "referred_nome": (
+                r.referred.nome_completo or r.referred.apelido or "—"
+            ),
+            "comissao_por_pacote": r.comissao_por_pacote,
+            "delivered": delivered,
+            "value": value,
+        })
+        total_value += value
+        total_delivered += delivered
+    return {
+        "count": len(refs),
+        "total_delivered": total_delivered,
+        "total_value": total_value,
+        "items": items,
+    }
+
+
 @portal_access_required
 def driver_portal(request, driver_id):
     """Portal principal do driver — KPIs + visão geral."""
@@ -486,6 +527,9 @@ def driver_portal_invoices(request, driver_id):
     # ─── KPIs operação no período ───
     kpis_period = _kpi_for_period(driver, date_from, date_to)
 
+    # ─── Sumário de indicações (DriverReferral) no período ───
+    referrals_summary = _referrals_summary(driver, date_from, date_to)
+
     # ─── Cálculos financeiros — cascata canónica (mesma do relatório legacy) ───
     # core.finance.resolve_driver_price aplica:
     #   1. driver.price_per_package (override)
@@ -553,6 +597,8 @@ def driver_portal_invoices(request, driver_id):
         "totals_by_status": totals_by_status,
         "total_count": pfs.count(),
         "total_value": pfs.aggregate(s=Sum("total_a_receber"))["s"] or Decimal("0"),
+        # Indicações (DriverReferral)
+        "referrals_summary": referrals_summary,
     })
 
 
@@ -681,4 +727,73 @@ def driver_pre_invoice_upload_recibo(request, driver_id, pre_invoice_id):
         "success": True,
         "fatura_url": pf.fatura_ficheiro.url,
         "fatura_name": ficheiro.name,
+    })
+
+
+@portal_access_required
+def driver_portal_referrals(request, driver_id):
+    """Página dedicada às indicações de um motorista.
+
+    Mostra:
+    - Indicações que este motorista deu (lista de referred + entregas
+      no período + valor estimado)
+    - Indicação que este motorista recebeu (se aplicável)
+    """
+    from datetime import datetime, timedelta
+    from .models import DriverReferral
+
+    driver = get_object_or_404(DriverProfile, pk=driver_id)
+    is_admin_view = (
+        request.user.is_authenticated
+        and (request.user.is_staff or request.user.is_superuser)
+    )
+
+    today = timezone.now().date()
+
+    # Mesmo padrão de filtro do tab Faturas
+    period = request.GET.get("period", "30d")
+    custom_from = request.GET.get("date_from", "")
+    custom_to = request.GET.get("date_to", "")
+    if custom_from and custom_to:
+        try:
+            date_from = datetime.strptime(custom_from, "%Y-%m-%d").date()
+            date_to = datetime.strptime(custom_to, "%Y-%m-%d").date()
+            period = "custom"
+        except ValueError:
+            date_from, date_to = today - timedelta(days=29), today
+    elif period == "7d":
+        date_from, date_to = today - timedelta(days=6), today
+    elif period == "90d":
+        date_from, date_to = today - timedelta(days=89), today
+    else:
+        date_from, date_to = today - timedelta(days=29), today
+
+    summary = _referrals_summary(driver, date_from, date_to)
+
+    # Indicação recebida (se driver foi indicado por alguém)
+    received = None
+    try:
+        received_obj = driver.referral_received
+        received = {
+            "id": received_obj.id,
+            "referrer_id": received_obj.referrer.id,
+            "referrer_nome": (
+                received_obj.referrer.nome_completo
+                or received_obj.referrer.apelido
+                or "—"
+            ),
+            "comissao_por_pacote": received_obj.comissao_por_pacote,
+            "ativo": received_obj.ativo,
+        }
+    except DriverReferral.DoesNotExist:
+        received = None
+
+    return render(request, "drivers_app/portal/referrals.html", {
+        "driver": driver,
+        "is_admin_view": is_admin_view,
+        "period": period,
+        "date_from": date_from,
+        "date_to": date_to,
+        "summary": summary,
+        "received": received,
     })

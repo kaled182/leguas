@@ -1,0 +1,281 @@
+{% extends "drivers_app/portal/_base.html" %}
+{% load static %}
+
+{% block portal_content %}
+<div class="space-y-4" x-data="referralsPage()" x-init="init()">
+
+  {# ─── Header com filtro de período ─── #}
+  <form method="get" class="flex flex-wrap items-center gap-2">
+    <span class="text-xs text-gray-500 uppercase font-semibold mr-1">Período:</span>
+    <a href="?period=7d" class="px-3 py-1 rounded-full text-xs font-semibold {% if period == '7d' %}bg-indigo-600 text-white{% else %}bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300{% endif %}">7 dias</a>
+    <a href="?period=30d" class="px-3 py-1 rounded-full text-xs font-semibold {% if period == '30d' %}bg-indigo-600 text-white{% else %}bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300{% endif %}">30 dias</a>
+    <a href="?period=90d" class="px-3 py-1 rounded-full text-xs font-semibold {% if period == '90d' %}bg-indigo-600 text-white{% else %}bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300{% endif %}">90 dias</a>
+    <span class="text-xs text-gray-500 mx-2">Personalizado:</span>
+    <input type="date" name="date_from" value="{{ date_from|date:'Y-m-d' }}"
+           class="px-3 py-1.5 text-xs bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
+    <span class="text-gray-400">→</span>
+    <input type="date" name="date_to" value="{{ date_to|date:'Y-m-d' }}"
+           class="px-3 py-1.5 text-xs bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
+    <button type="submit" class="px-3 py-1.5 text-xs bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold">Actualizar</button>
+  </form>
+
+  {# ─── KPIs do período ─── #}
+  <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+    <div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200/50 dark:border-gray-700/50">
+      <p class="text-xs uppercase font-bold text-gray-500">Indicados activos</p>
+      <p class="text-2xl font-extrabold text-gray-900 dark:text-white mt-1">{{ summary.count }}</p>
+      <p class="text-[11px] text-gray-500 mt-0.5">motoristas</p>
+    </div>
+    <div class="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-4 border border-emerald-200/50 dark:border-emerald-700/30">
+      <p class="text-xs uppercase font-bold text-emerald-700 dark:text-emerald-300">Entregas dos indicados</p>
+      <p class="text-2xl font-extrabold text-emerald-700 dark:text-emerald-300 mt-1">{{ summary.total_delivered }}</p>
+      <p class="text-[11px] text-emerald-700 mt-0.5">no período</p>
+    </div>
+    <div class="bg-gradient-to-br from-violet-500 to-purple-600 rounded-xl p-4 text-white shadow">
+      <p class="text-xs uppercase font-bold text-violet-100">Comissão estimada</p>
+      <p class="text-2xl font-extrabold mt-1">€ {{ summary.total_value|floatformat:2 }}</p>
+      <p class="text-[11px] text-violet-100 mt-0.5">{{ date_from|date:"d/m" }} → {{ date_to|date:"d/m/Y" }}</p>
+    </div>
+  </div>
+
+  {# ─── Indicação recebida (se aplicável) ─── #}
+  {% if received %}
+  <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700/50 rounded-xl p-4">
+    <div class="flex items-center gap-2">
+      <i data-lucide="user-check" class="w-4 h-4 text-blue-600 dark:text-blue-300"></i>
+      <p class="text-sm font-semibold text-blue-800 dark:text-blue-300">
+        Foste indicado por <strong>{{ received.referrer_nome }}</strong>
+        ({% if received.ativo %}activa{% else %}inactiva{% endif %})
+        — comissão de €{{ received.comissao_por_pacote|floatformat:4 }}/pacote
+      </p>
+    </div>
+  </div>
+  {% endif %}
+
+  {# ─── Lista de indicados ─── #}
+  <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/50 dark:border-gray-700/50 shadow-sm">
+    <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+      <h3 class="text-sm font-bold text-gray-700 dark:text-gray-300 uppercase flex items-center gap-2">
+        <i data-lucide="user-plus" class="w-4 h-4 text-indigo-500"></i>
+        Motoristas indicados ({{ summary.count }})
+      </h3>
+      {% if is_admin_view %}
+      <button @click="openAdd()"
+              class="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold transition">
+        <i data-lucide="plus" class="w-3.5 h-3.5"></i> Adicionar Indicado
+      </button>
+      {% endif %}
+    </div>
+    {% if summary.items %}
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-gray-50 dark:bg-gray-900/50 text-xs uppercase text-gray-500">
+          <tr class="text-left">
+            <th class="px-4 py-2">Indicado</th>
+            <th class="px-4 py-2 text-right">€ / pacote</th>
+            <th class="px-4 py-2 text-right">Entregas no período</th>
+            <th class="px-4 py-2 text-right">Comissão estimada</th>
+            {% if is_admin_view %}
+            <th class="px-4 py-2 text-right">Acções</th>
+            {% endif %}
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+          {% for item in summary.items %}
+          <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+            <td class="px-4 py-2">
+              <a href="{% url 'drivers_app:driver_portal' item.referred_id %}"
+                 class="font-semibold text-indigo-600 hover:underline">
+                {{ item.referred_nome }}
+              </a>
+            </td>
+            <td class="px-4 py-2 text-right font-mono text-gray-600">€{{ item.comissao_por_pacote|floatformat:4 }}</td>
+            <td class="px-4 py-2 text-right font-mono">{{ item.delivered }}</td>
+            <td class="px-4 py-2 text-right font-mono font-bold text-purple-600">€{{ item.value|floatformat:2 }}</td>
+            {% if is_admin_view %}
+            <td class="px-4 py-2 text-right">
+              <button @click="openEdit({{ item.referral_id }}, {{ item.comissao_por_pacote }})"
+                      class="px-2 py-1 text-xs text-indigo-600 hover:bg-indigo-50 rounded">
+                Editar
+              </button>
+              <button @click="del({{ item.referral_id }}, '{{ item.referred_nome|escapejs }}')"
+                      class="px-2 py-1 text-xs text-rose-600 hover:bg-rose-50 rounded">
+                Remover
+              </button>
+            </td>
+            {% endif %}
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot class="bg-gray-50 dark:bg-gray-900/50 font-bold">
+          <tr>
+            <td class="px-4 py-2">Total</td>
+            <td class="px-4 py-2"></td>
+            <td class="px-4 py-2 text-right font-mono">{{ summary.total_delivered }}</td>
+            <td class="px-4 py-2 text-right font-mono text-purple-600">€{{ summary.total_value|floatformat:2 }}</td>
+            {% if is_admin_view %}<td></td>{% endif %}
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+    {% else %}
+    <div class="px-5 py-10 text-center text-gray-400 text-sm">
+      Sem motoristas indicados.
+      {% if is_admin_view %}
+      <p class="text-[11px] mt-1">Click em "Adicionar Indicado" para criar a primeira indicação.</p>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+
+  {% if is_admin_view %}
+  <!-- Modal Add/Edit Indicado -->
+  <div x-show="modalOpen" x-cloak
+       class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
+       @click.self="modalOpen = false">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-bold flex items-center gap-2">
+          <i data-lucide="user-plus" class="w-5 h-5 text-emerald-600"></i>
+          <span x-text="editing ? 'Editar indicação' : 'Adicionar indicado'"></span>
+        </h3>
+        <button @click="modalOpen = false" class="text-gray-400 hover:text-gray-600">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <form @submit.prevent="submit()">
+        <div class="space-y-3">
+          <div x-show="!editing">
+            <label class="block text-xs font-semibold mb-1">Motorista a indicar</label>
+            <input type="text" x-model="search" @input.debounce.300ms="searchDrivers()"
+                   placeholder="Pesquisar por nome..."
+                   class="w-full px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700">
+            <div x-show="searchResults.length > 0" class="max-h-48 overflow-y-auto mt-1 border border-gray-200 dark:border-gray-700 rounded-lg">
+              <template x-for="d in searchResults" :key="d.id">
+                <button type="button" @click="selectDriver(d)"
+                        :disabled="d.ja_indicado"
+                        :class="d.ja_indicado ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50 dark:hover:bg-gray-700'"
+                        class="w-full px-3 py-2 text-left text-sm border-b border-gray-100 dark:border-gray-700 last:border-b-0">
+                  <div class="font-semibold" x-text="d.nome"></div>
+                  <div class="text-xs text-gray-500">
+                    <span x-show="d.nif" x-text="'NIF ' + d.nif"></span>
+                    <span x-show="d.ja_indicado" class="text-rose-600" x-text="' · já indicado por ' + d.indicado_por"></span>
+                  </div>
+                </button>
+              </template>
+            </div>
+            <div x-show="form.referred_id" class="mt-2 px-3 py-2 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg text-sm">
+              <strong>Selecionado:</strong> <span x-text="form.referred_nome"></span>
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold mb-1">Comissão por pacote (€)</label>
+            <input type="number" step="0.0001" min="0" x-model="form.comissao_por_pacote" required
+                   class="w-full px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700">
+          </div>
+          <div x-show="!editing">
+            <label class="block text-xs font-semibold mb-1">Notas (opcional)</label>
+            <textarea x-model="form.notas" rows="2"
+                      class="w-full px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700"></textarea>
+          </div>
+        </div>
+        <div class="flex justify-end gap-2 mt-6">
+          <button type="button" @click="modalOpen = false"
+                  class="px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-sm">Cancelar</button>
+          <button type="submit" :disabled="busy || (!editing && !form.referred_id)"
+                  class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold disabled:opacity-50">
+            <span x-text="editing ? 'Guardar' : 'Adicionar'"></span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+
+<script>
+function referralsPage() {
+  return {
+    modalOpen: false, busy: false, editing: null,
+    form: { referred_id: null, referred_nome: '', comissao_por_pacote: '0.0500', notas: '' },
+    search: '',
+    searchResults: [],
+
+    init() { this.$nextTick(() => { if (window.lucide) window.lucide.createIcons(); }); },
+
+    openAdd() {
+      this.editing = null;
+      this.form = { referred_id: null, referred_nome: '', comissao_por_pacote: '0.0500', notas: '' };
+      this.search = '';
+      this.searchResults = [];
+      this.modalOpen = true;
+      this.$nextTick(() => { if (window.lucide) window.lucide.createIcons(); });
+    },
+
+    openEdit(referralId, comissao) {
+      this.editing = referralId;
+      this.form = { referred_id: null, referred_nome: '', comissao_por_pacote: comissao, notas: '' };
+      this.modalOpen = true;
+      this.$nextTick(() => { if (window.lucide) window.lucide.createIcons(); });
+    },
+
+    async searchDrivers() {
+      const q = (this.search || '').toLowerCase().trim();
+      if (q.length < 2) { this.searchResults = []; return; }
+      const r = await fetch(`/driversapp/api/referrals/search/?exclude={{ driver.id }}`);
+      const j = await r.json();
+      this.searchResults = (j.results || []).filter(d =>
+        d.nome.toLowerCase().includes(q)
+      ).slice(0, 20);
+    },
+
+    selectDriver(d) {
+      if (d.ja_indicado) return;
+      this.form.referred_id = d.id;
+      this.form.referred_nome = d.nome;
+      this.searchResults = [];
+      this.search = d.nome;
+    },
+
+    async submit() {
+      this.busy = true;
+      try {
+        const csrf = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        let url, body;
+        if (this.editing) {
+          url = `/driversapp/api/referrals/item/${this.editing}/update/`;
+          body = JSON.stringify({ comissao_por_pacote: this.form.comissao_por_pacote });
+        } else {
+          url = `/driversapp/api/referrals/{{ driver.id }}/add/`;
+          body = JSON.stringify({
+            referred_id: this.form.referred_id,
+            comissao_por_pacote: this.form.comissao_por_pacote,
+            notas: this.form.notas,
+          });
+        }
+        const r = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+          body,
+        });
+        const j = await r.json();
+        if (!j.success) { alert(j.error || 'Erro'); return; }
+        window.location.reload();
+      } finally { this.busy = false; }
+    },
+
+    async del(referralId, name) {
+      if (!confirm(`Remover indicação de ${name}?`)) return;
+      const csrf = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+      const r = await fetch(`/driversapp/api/referrals/item/${referralId}/delete/`, {
+        method: 'POST', headers: { 'X-CSRFToken': csrf },
+      });
+      const j = await r.json();
+      if (!j.success) { alert(j.error || 'Erro'); return; }
+      window.location.reload();
+    },
+  };
+}
+</script>
+{% endblock %}

@@ -19,7 +19,9 @@
         Projecção de Fluxo de Caixa
       </h1>
       <p class="text-sm text-gray-500 dark:text-gray-400">
-        Saldo projectado · saídas previstas (Bills futuras) + entradas previstas (Forecast Cainiao).
+        Híbrido: passado <span class="text-emerald-600 font-semibold">realizado</span> (Bills pagas + entregas Cainiao) ·
+        hoje/futuro <span class="text-amber-600 font-semibold">previsto</span> (Bills pendentes + Forecast).
+        Espelha o DRE Realizado para datas passadas.
       </p>
     </div>
     <div class="flex gap-2">
@@ -59,12 +61,12 @@
     <div class="bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-700 p-3">
       <div class="text-[10px] uppercase text-emerald-700 dark:text-emerald-300">Entradas previstas</div>
       <div class="text-2xl font-bold text-emerald-700 pos">€{{ total_in|floatformat:2 }}</div>
-      <div class="text-[10px] text-emerald-600 dark:text-emerald-400">Receita Cainiao @€{{ partner_price|floatformat:2 }}/pacote</div>
+      <div class="text-[10px] text-emerald-600 dark:text-emerald-400">Entregas realizadas + forecast @€{{ partner_price|floatformat:2 }}/pacote</div>
     </div>
     <div class="bg-rose-50 dark:bg-rose-900/20 rounded-lg border border-rose-200 dark:border-rose-700 p-3">
       <div class="text-[10px] uppercase text-rose-700 dark:text-rose-300">Saídas previstas</div>
       <div class="text-2xl font-bold text-rose-700 neg">€{{ total_out|floatformat:2 }}</div>
-      <div class="text-[10px] text-rose-600 dark:text-rose-400">Bills com vencimento no horizonte</div>
+      <div class="text-[10px] text-rose-600 dark:text-rose-400">Bills pagas (passado) + pendentes (futuro)</div>
     </div>
     <div class="bg-{% if net_change < 0 %}rose{% else %}emerald{% endif %}-50 dark:bg-{% if net_change < 0 %}rose{% else %}emerald{% endif %}-900/20 rounded-lg border border-{% if net_change < 0 %}rose{% else %}emerald{% endif %}-300 p-3">
       <div class="text-[10px] uppercase">Variação líquida</div>
@@ -111,8 +113,13 @@
         </thead>
         <tbody class="divide-y divide-gray-100 dark:divide-gray-700/50">
           {% for d in timeline %}
-          <tr class="{% if d.negative %}neg-row{% endif %}">
-            <td class="px-3 py-1.5 num text-xs">{{ d.date|date:"d/m/Y" }}</td>
+          <tr class="{% if d.negative %}neg-row{% endif %} {% if d.is_past %}opacity-90{% endif %} {% if d.is_today %}bg-amber-50 dark:bg-amber-900/10{% endif %}">
+            <td class="px-3 py-1.5 num text-xs">
+              {{ d.date|date:"d/m/Y" }}
+              {% if d.is_past %}<span class="ml-1 px-1.5 py-0.5 text-[9px] rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">Realiz.</span>
+              {% elif d.is_today %}<span class="ml-1 px-1.5 py-0.5 text-[9px] rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">Hoje</span>
+              {% else %}<span class="ml-1 px-1.5 py-0.5 text-[9px] rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">Prev.</span>{% endif %}
+            </td>
             <td class="px-3 py-1.5 text-xs {% if d.weekday == 'Sáb' or d.weekday == 'Dom' %}weekend{% endif %}">{{ d.weekday }}</td>
             <td class="px-3 py-1.5 num text-right pos">{% if d.inflow %}€{{ d.inflow|floatformat:2 }}{% else %}—{% endif %}</td>
             <td class="px-3 py-1.5 num text-right neg">{% if d.outflow %}€{{ d.outflow|floatformat:2 }}{% else %}—{% endif %}</td>

@@ -1275,18 +1275,25 @@ def break_even_data(request):
 
 @login_required
 def cash_flow_projection(request):
-    """Projecção de fluxo de caixa — N dias à frente.
+    """Projecção de fluxo de caixa — N dias a partir de `start`.
 
-    Saídas previstas: Bills com due_date >= hoje e status em
-    (AWAITING, PENDING, OVERDUE).
-    Entradas previstas: receita Cainiao baseada no Planning forecast
-    (CainiaoPlanningPackage para cada operation_date no horizonte).
+    Híbrido realizado + previsto, sincronizado com o DRE Realizado:
+
+      Datas passadas (< hoje) — REALIZADO
+        Saídas: Bills da empresa com paid_date no dia (status=PAID).
+        Entradas: pacotes Cainiao com task_status=Delivered nesse dia
+                  × preço-parceiro (mesmo cálculo do DRE).
+
+      Datas futuras (>= hoje) — PREVISTO
+        Saídas: Bills com due_date no dia em status pendente
+                (AWAITING/PENDING/OVERDUE), mais Bills já pagas hoje.
+        Entradas: forecast via CainiaoPlanningPackage.operation_date.
     """
     from datetime import timedelta
     from django.db.models import Count
     from django.utils.dateparse import parse_date
     from settlements.models import (
-        CainiaoHub, CainiaoPlanningPackage,
+        CainiaoHub, CainiaoOperationTask, CainiaoPlanningPackage,
     )
     from core.models import Partner
     from core.finance import resolve_partner_price
@@ -1294,12 +1301,17 @@ def cash_flow_projection(request):
     today = date.today()
     horizon_days = int(request.GET.get("days") or 30)
     horizon_days = max(7, min(horizon_days, 180))
-    end = today + timedelta(days=horizon_days)
     start = parse_date(request.GET.get("start") or "") or today
-    if start > end:
-        start = today
+    # `end` agora é relativo a `start` (não a hoje) — janela = horizon_days
+    end = start + timedelta(days=horizon_days - 1)
 
-    # Saldo inicial (opcional, default 0 — pode-se cadastrar via input)
+    # Limites realizado / previsto
+    realized_end = min(end, today - timedelta(days=1))  # < hoje
+    forecast_start = max(start, today)                  # >= hoje
+    has_realized = start <= realized_end
+    has_forecast = forecast_start <= end
+
+    # Saldo inicial (opcional, default 0)
     try:
         opening_balance = Decimal(
             str(request.GET.get("opening") or "0"),
@@ -1307,38 +1319,105 @@ def cash_flow_projection(request):
     except Exception:
         opening_balance = Decimal("0")
 
-    # ── SAÍDAS: Bills futuras ───────────────────────────────────────────
-    bills_qs = Bill.objects.filter(
-        due_date__gte=start, due_date__lte=end,
-        status__in=[
-            Bill.STATUS_AWAITING, Bill.STATUS_PENDING,
-            Bill.STATUS_OVERDUE,
-        ],
-    ).select_related("category", "cost_center").order_by("due_date")
+    # ── SAÍDAS ──────────────────────────────────────────────────────────
+    by_day_out = {}      # date -> Decimal
+    bills_detail = []    # para tabela inferior (mistura realizado + previsto)
 
-    by_day_out = {}  # date -> Decimal
-    for b in bills_qs:
-        by_day_out.setdefault(b.due_date, Decimal("0"))
-        by_day_out[b.due_date] += b.amount_total
+    # Passado — bills pagas (cash basis): paid_date no intervalo passado
+    if has_realized:
+        paid_past = (
+            Bill.objects.company_only()
+            .filter(
+                paid_date__gte=start, paid_date__lte=realized_end,
+                status=Bill.STATUS_PAID,
+            )
+            .select_related("category", "cost_center")
+            .order_by("paid_date")
+        )
+        for b in paid_past:
+            val = b.paid_amount or b.amount_total
+            by_day_out.setdefault(b.paid_date, Decimal("0"))
+            by_day_out[b.paid_date] += val
+            bills_detail.append(b)
 
-    # ── ENTRADAS: receita prevista a partir do Planning ─────────────────
+    # Hoje em diante — bills pendentes pelo due_date
+    if has_forecast:
+        pending_future = (
+            Bill.objects.company_only()
+            .filter(
+                due_date__gte=forecast_start, due_date__lte=end,
+                status__in=[
+                    Bill.STATUS_AWAITING, Bill.STATUS_PENDING,
+                    Bill.STATUS_OVERDUE,
+                ],
+            )
+            .select_related("category", "cost_center")
+            .order_by("due_date")
+        )
+        for b in pending_future:
+            by_day_out.setdefault(b.due_date, Decimal("0"))
+            by_day_out[b.due_date] += b.amount_total
+            bills_detail.append(b)
+
+        # Bills já pagas HOJE (saída real do caixa de hoje)
+        if start <= today <= end:
+            paid_today = (
+                Bill.objects.company_only()
+                .filter(paid_date=today, status=Bill.STATUS_PAID)
+                .select_related("category", "cost_center")
+            )
+            for b in paid_today:
+                val = b.paid_amount or b.amount_total
+                by_day_out.setdefault(today, Decimal("0"))
+                by_day_out[today] += val
+                bills_detail.append(b)
+
+    # ── ENTRADAS ────────────────────────────────────────────────────────
     cainiao_partner = Partner.objects.filter(
         name__iexact="CAINIAO",
     ).first()
     partner_price = resolve_partner_price(cainiao_partner) \
         if cainiao_partner else Decimal("0")
 
+    # Constrói filtro hub (mesmo do DRE)
+    hub_q = Q()
+    has_hubs = False
+    for hub in CainiaoHub.objects.prefetch_related("cp4_codes"):
+        for c in hub.cp4_codes.values_list("cp4", flat=True):
+            hub_q |= Q(zip_code__startswith=c)
+            has_hubs = True
+
     by_day_in = {}
-    plan_qs = (
-        CainiaoPlanningPackage.objects
-        .filter(operation_date__gte=start, operation_date__lte=end)
-        .values("operation_date")
-        .annotate(n=Count("id"))
-        .order_by("operation_date")
-    )
-    for r in plan_qs:
-        d = r["operation_date"]
-        by_day_in[d] = partner_price * r["n"]
+
+    # Passado — entregas realizadas (idêntico ao DRE)
+    if has_realized and has_hubs:
+        delivered_agg = (
+            CainiaoOperationTask.objects
+            .filter(
+                task_date__gte=start, task_date__lte=realized_end,
+                task_status="Delivered",
+            )
+            .filter(hub_q)
+            .values("task_date")
+            .annotate(n=Count("id"))
+        )
+        for r in delivered_agg:
+            by_day_in[r["task_date"]] = partner_price * r["n"]
+
+    # Hoje + futuro — forecast pelo Planning
+    if has_forecast:
+        plan_qs = (
+            CainiaoPlanningPackage.objects
+            .filter(
+                operation_date__gte=forecast_start,
+                operation_date__lte=end,
+            )
+            .values("operation_date")
+            .annotate(n=Count("id"))
+            .order_by("operation_date")
+        )
+        for r in plan_qs:
+            by_day_in[r["operation_date"]] = partner_price * r["n"]
 
     # ── Linha do tempo dia-a-dia ────────────────────────────────────────
     timeline = []
@@ -1361,10 +1440,17 @@ def cash_flow_projection(request):
             "net": inn - out,
             "balance": balance,
             "negative": balance < 0,
+            "is_past": d < today,
+            "is_today": d == today,
         })
 
-    # ── Bills detalhadas para tabela inferior ───────────────────────────
-    bills_detail = list(bills_qs[:200])
+    # Ordena bills_detail por data relevante (paid_date para passado,
+    # due_date para futuro) e limita a 200
+    bills_detail.sort(
+        key=lambda b: b.paid_date if b.status == Bill.STATUS_PAID
+        else b.due_date,
+    )
+    bills_detail = bills_detail[:200]
 
     # Dias críticos (saldo negativo)
     critical_days = [t for t in timeline if t["negative"]]

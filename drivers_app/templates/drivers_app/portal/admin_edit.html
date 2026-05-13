@@ -1,4 +1,5 @@
 {% extends 'drivers_app/portal/_base.html' %}
+{% load l10n %}
 
 {% block portal_content %}
 
@@ -145,13 +146,13 @@
       <div>
         <label class="block text-xs uppercase font-bold text-gray-500 mb-1">€ por pacote</label>
         <input type="number" step="0.001" min="0" name="price_per_package"
-               value="{{ driver.price_per_package|default:'' }}"
+               value="{{ driver.price_per_package|default_if_none:''|unlocalize }}"
                class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
       </div>
       <div>
         <label class="block text-xs uppercase font-bold text-gray-500 mb-1">Limite mensal de adiantamentos (€)</label>
         <input type="number" step="0.01" min="0" name="advance_monthly_limit"
-               value="{{ driver.advance_monthly_limit|default:'' }}"
+               value="{{ driver.advance_monthly_limit|default_if_none:''|unlocalize }}"
                class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
       </div>
       <div class="flex items-end">
@@ -193,7 +194,7 @@
       <div>
         <label class="block text-xs uppercase font-bold text-gray-500 mb-1">Retenção IRS (%)</label>
         <input type="number" step="0.01" min="0" max="100" name="irs_retention_pct"
-               value="{{ driver.irs_retention_pct|default:'0' }}"
+               value="{{ driver.irs_retention_pct|default_if_none:0|unlocalize }}"
                class="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
         <p class="text-[11px] text-gray-400 mt-1">
           0 = sem retenção. Comum: 11.5% ou 25%.

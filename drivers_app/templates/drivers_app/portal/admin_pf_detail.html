@@ -39,17 +39,39 @@
     <p class="text-2xl font-extrabold text-rose-700 dark:text-rose-300 mt-1">€ {{ pf.total_bonus|default:"0.00"|floatformat:2 }}</p>
   </div>
   <div class="bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl p-4 text-white shadow">
-    {% if pf.vat_amount and pf.vat_amount > 0 %}
+    {% if pf.driver.vat_regime == 'normal' %}
       <p class="text-xs uppercase font-bold text-emerald-100">Total c/ IVA</p>
       <p class="text-3xl font-extrabold mt-1">€ {{ pf.total_com_iva|floatformat:2 }}</p>
-      <p class="text-[11px] text-emerald-100 mt-1">
-        Base €{{ pf.total_a_receber|floatformat:2 }} + IVA 23% €{{ pf.vat_amount|floatformat:2 }}
-      </p>
+      <div class="text-[11px] text-emerald-50 mt-1 space-y-0.5 border-t border-white/20 pt-1">
+        <div class="flex items-center justify-between gap-2">
+          <span>Sem IVA:</span>
+          <span class="font-mono font-bold">€ {{ pf.total_a_receber|floatformat:2 }}</span>
+        </div>
+        <div class="flex items-center justify-between gap-2">
+          <span>IVA (23%):</span>
+          <span class="font-mono font-bold">+€ {{ pf.vat_amount|floatformat:2 }}</span>
+        </div>
+        {% if pf.irs_retention_amount and pf.irs_retention_amount > 0 %}
+        <div class="flex items-center justify-between gap-2 text-amber-200">
+          <span>Retenção IRS:</span>
+          <span class="font-mono font-bold">-€ {{ pf.irs_retention_amount|floatformat:2 }}</span>
+        </div>
+        <div class="flex items-center justify-between gap-2 pt-0.5 border-t border-white/20">
+          <span>Líquido:</span>
+          <span class="font-mono font-bold">€ {{ pf.total_liquido|floatformat:2 }}</span>
+        </div>
+        {% endif %}
+      </div>
     {% else %}
       <p class="text-xs uppercase font-bold text-emerald-100">Total a Receber</p>
       <p class="text-3xl font-extrabold mt-1">€ {{ pf.total_a_receber|floatformat:2 }}</p>
       {% if pf.driver.vat_regime == 'isento' %}
         <p class="text-[11px] text-emerald-100 mt-1">Isento de IVA (art. 53º)</p>
+      {% elif pf.driver.vat_regime == 'simplificado' %}
+        <p class="text-[11px] text-emerald-100 mt-1">Regime Simplificado (sem IVA)</p>
+      {% endif %}
+      {% if pf.driver.vat_regime == 'normal' and pf.vat_amount == 0 %}
+        <p class="text-[11px] text-amber-200 mt-1 italic">Regime Normal — precisa recalcular para aplicar IVA</p>
       {% endif %}
     {% endif %}
   </div>
@@ -413,15 +435,34 @@ const PARTNERS = [
 ];
 
 function _csrf() {
-  return document.cookie.split('csrftoken=')[1]?.split(';')[0] || '';
+  // Preferido: meta tag (sempre no DOM). Fallback: input hidden; depois cookie.
+  return (
+    document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
+    document.querySelector('input[name=csrfmiddlewaretoken]')?.value ||
+    (document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/) || [])[1] ||
+    ''
+  );
 }
 
 async function _post(url, data) {
   const r = await fetch(url, {
     method: 'POST',
     headers: { 'X-CSRFToken': _csrf(), 'Content-Type': 'application/json' },
+    credentials: 'same-origin',
     body: data ? JSON.stringify(data) : '{}',
   });
+  // Resposta HTML (403/500) → não rebenta, devolve erro estruturado.
+  const ct = r.headers.get('Content-Type') || '';
+  if (!ct.includes('application/json')) {
+    const text = await r.text();
+    console.error('POST', url, r.status, text.slice(0, 200));
+    return {
+      success: false,
+      error: r.status === 403
+        ? 'Sessão expirada ou CSRF inválido — recarrega a página (Ctrl+F5).'
+        : `Erro HTTP ${r.status}`,
+    };
+  }
   return r.json();
 }
 

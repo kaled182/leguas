@@ -976,29 +976,24 @@ class PDFGenerator:
             elements.append(section_header("PACOTES PERDIDOS", colors.HexColor("#B91C1C")))
             elements.append(Spacer(1, 0.1 * cm))
 
-            # Estilos com wrap para waybills longos (LP...) e descrições.
+            # Estilo de waybill (mantém wrap mesmo sem descrição,
+            # para acomodar números muito longos).
             pp_wb_style = ParagraphStyle(
                 "PPwb", parent=self.styles["Normal"],
-                fontSize=7, leading=8.5, alignment=TA_LEFT,
+                fontSize=8, leading=10, alignment=TA_LEFT,
                 fontName="Helvetica",
             )
-            pp_desc_style = ParagraphStyle(
-                "PPdesc", parent=self.styles["Normal"],
-                fontSize=7.5, leading=9, alignment=TA_LEFT,
-            )
 
-            # Larguras ajustadas (total ≈ 18.5 cm dentro da margem A4):
-            # Data 2.0 · Nº Pacote 4.0 · Descrição 5.8 · Valor 1.8 · IVA 1.9 · Total 2.0
+            # 5 colunas (sem Descrição). Total ≈ 18.0 cm dentro da margem:
+            # Data 2.5 · Nº Pacote 6.5 · Valor 2.5 · IVA 3.0 · Total 3.5
             pp_col_widths = [
-                2.0 * cm, 4.0 * cm, 5.8 * cm,
-                1.8 * cm, 1.9 * cm, 2.0 * cm,
+                2.5 * cm, 6.5 * cm, 2.5 * cm, 3.0 * cm, 3.5 * cm,
             ]
 
             pp_header = Table(
                 [[
                     Paragraph("Data", section_style),
                     Paragraph("Nº Pacote", section_style),
-                    Paragraph("Descrição", section_style),
                     Paragraph("Valor Base", section_style),
                     Paragraph("IVA", section_style),
                     Paragraph("Total (€)", section_style),
@@ -1019,21 +1014,15 @@ class PDFGenerator:
                 valor_iva = float(p.valor_iva)
                 valor_total = float(p.valor_com_iva)
                 iva_str = f"{iva_pct:.0f}% (€{valor_iva:.2f})" if iva_pct > 0 else "—"
-                # Sanitize para Paragraph (escapa & e < que partem o XML)
                 wb = (p.numero_pacote or "—").replace("&", "&amp;").replace("<", "&lt;")
-                desc = (
-                    (p.descricao or "—")[:500]
-                    .replace("&", "&amp;").replace("<", "&lt;")
-                )
                 pp_rows.append([
                     p.data.strftime("%d/%m/%Y") if p.data else "—",
                     Paragraph(wb, pp_wb_style),
-                    Paragraph(desc, pp_desc_style),
                     f"€{valor_base:.2f}",
                     iva_str,
                     f"-€{valor_total:.2f}",
                 ])
-            pp_rows.append(["", "", "", "", "Total",
+            pp_rows.append(["", "", "", "Total",
                              f"-€{float(pre_invoice.total_pacotes_perdidos):.2f}"])
             pp_table = Table(pp_rows, colWidths=pp_col_widths)
             pp_table.setStyle(TableStyle([
@@ -1045,9 +1034,9 @@ class PDFGenerator:
                 ("FONTSIZE", (0, 0), (-1, -1), 8),
                 ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
                 ("ALIGN", (0, 0), (0, -1), "CENTER"),  # Data
-                ("ALIGN", (3, 0), (-1, -1), "RIGHT"),  # Valor / IVA / Total
-                ("LEFTPADDING", (0, 0), (-1, -1), 4),
-                ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+                ("ALIGN", (2, 0), (-1, -1), "RIGHT"),  # Valor / IVA / Total
+                ("LEFTPADDING", (0, 0), (-1, -1), 5),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 5),
                 ("TOPPADDING", (0, 0), (-1, -1), 5),
                 ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
             ]))

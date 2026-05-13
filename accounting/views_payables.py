@@ -90,6 +90,10 @@ class PayableRow:
     block_reason: str = ""
     has_recibo: Optional[bool] = None  # só para PFs
     alerts: list = field(default_factory=list)  # anomalias detectadas
+    # Decomposição fiscal (quando aplicável): amount = amount_base + vat_amount
+    amount_base: Decimal = Decimal("0.00")
+    vat_amount: Decimal = Decimal("0.00")
+    vat_label: str = ""  # ex: "IVA 23%" — vazio se isento/sem IVA
 
     @property
     def days_to_due(self) -> Optional[int]:
@@ -123,6 +127,17 @@ def _row_pre_invoice(pf):
 
     alerts = alerts_for_pre_invoice(pf)
 
+    # Valor a pagar inclui IVA quando driver é Regime Normal — Léguas
+    # paga ao motorista o total c/IVA (sai da Tesouraria com IVA).
+    vat_amt = pf.vat_amount or Decimal("0.00")
+    base_amt = pf.total_a_receber or Decimal("0.00")
+    if vat_amt > 0:
+        amount_total = pf.total_com_iva
+        vat_label = "Inclui IVA 23%"
+    else:
+        amount_total = base_amt
+        vat_label = ""
+
     return PayableRow(
         entity_type="pre_invoice",
         entity_id=pf.id,
@@ -140,7 +155,10 @@ def _row_pre_invoice(pf):
             f"{pf.periodo_inicio.strftime('%d/%m')} → "
             f"{pf.periodo_fim.strftime('%d/%m')}"
         ),
-        amount=pf.total_a_receber,
+        amount=amount_total,
+        amount_base=base_amt,
+        vat_amount=vat_amt,
+        vat_label=vat_label,
         status=pf.status,
         status_display=pf.get_status_display(),
         payable=payable,
@@ -193,6 +211,16 @@ def _row_fleet_invoice(fi):
         block = "Falta calcular a pré-fatura"
     elif not payable:
         block = f"Estado {fi.get_status_display()} não permite pagamento"
+    fi_vat = fi.vat_amount or Decimal("0.00")
+    fi_base = fi.total_a_receber or Decimal("0.00")
+    fi_vat_label = ""
+    if fi_vat > 0:
+        rate = getattr(fi, "vat_rate", None) or Decimal("23.00")
+        try:
+            fi_vat_label = f"Inclui IVA {float(rate):.0f}%"
+        except (TypeError, ValueError):
+            fi_vat_label = "Inclui IVA"
+
     return PayableRow(
         entity_type="fleet_invoice",
         entity_id=fi.id,
@@ -210,6 +238,9 @@ def _row_fleet_invoice(fi):
             f"{fi.periodo_fim.strftime('%d/%m')}"
         ),
         amount=fi.total_com_iva,
+        amount_base=fi_base,
+        vat_amount=fi_vat,
+        vat_label=fi_vat_label,
         status=fi.status,
         status_display=fi.get_status_display(),
         payable=payable,

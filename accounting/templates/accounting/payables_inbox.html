@@ -189,6 +189,16 @@
             </td>
             <td class="px-3 py-3 text-right">
               <span class="font-extrabold text-gray-900 dark:text-white">€ {{ r.amount|floatformat:2 }}</span>
+              {% if r.vat_amount and r.vat_amount > 0 %}
+              <div class="mt-0.5 text-[10px] text-violet-600 dark:text-violet-400 font-semibold leading-tight"
+                   title="Valor a pagar inclui IVA — repassa-se ao motorista para entrega ao Estado">
+                <i data-lucide="receipt" class="w-2.5 h-2.5 inline -mt-0.5"></i>
+                {{ r.vat_label }}: +€{{ r.vat_amount|floatformat:2 }}
+              </div>
+              <div class="text-[10px] text-gray-400 leading-tight">
+                Base €{{ r.amount_base|floatformat:2 }}
+              </div>
+              {% endif %}
             </td>
             <td class="px-3 py-3 text-center">
               {% if r.has_recibo == False %}

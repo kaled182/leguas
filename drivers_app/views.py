@@ -2756,26 +2756,58 @@ def waybill_lookup_for_complaint(request):
 @login_required
 @require_http_methods(["POST"])
 def complaint_ocr_extract(request):
-    """OCR de print/PDF de ticket de exception Cainiao.
+    """OCR de prints/PDFs de tickets de exception Cainiao.
 
-    Recebe ficheiro em request.FILES['file']. Devolve JSON normalizado
-    + sugestão de match de motorista (por delivery_driver name).
+    Aceita 1+ ficheiros em request.FILES.getlist('file'). Quando há
+    múltiplos, corre OCR em cada um e devolve o resultado CONSOLIDADO
+    (merge inteligente — campos vazios preenchidos pelo seguinte,
+    histórico de processamento agregado e ordenado, confidence mínima).
+
+    Resposta:
+      {
+        success: bool,
+        data: dict (merged),
+        suggested_driver: {...} | null,
+        per_file: [{filename, confidence}, ...]  # debug/UI feedback
+      }
     """
-    from .services_ocr_complaint import extract_complaint_data
+    from .services_ocr_complaint import (
+        extract_complaint_data, merge_complaint_results,
+    )
 
-    f = request.FILES.get("file")
-    if not f:
+    files = request.FILES.getlist("file") or []
+    if not files:
         return JsonResponse(
-            {"success": False, "error": "Sem ficheiro."}, status=400,
-        )
-    try:
-        data = extract_complaint_data(f)
-    except Exception as e:
-        return JsonResponse(
-            {"success": False, "error": str(e)}, status=500,
+            {"success": False, "error": "Sem ficheiro(s)."}, status=400,
         )
 
-    # Sugestão de driver: match por apelido (delivery_driver)
+    results = []
+    per_file = []
+    errors = []
+    for f in files:
+        try:
+            r = extract_complaint_data(f)
+            results.append(r)
+            per_file.append({
+                "filename": getattr(f, "name", "?"),
+                "confidence": r.get("confidence", "low"),
+            })
+        except Exception as e:
+            errors.append({"filename": getattr(f, "name", "?"), "error": str(e)})
+
+    if not results:
+        return JsonResponse(
+            {
+                "success": False,
+                "error": "Nenhum ficheiro pôde ser processado.",
+                "details": errors,
+            },
+            status=500,
+        )
+
+    data = merge_complaint_results(results)
+
+    # Sugestão de driver: match por apelido (delivery_driver) do merged
     suggested_driver = None
     drv_name = (data.get("delivery_driver") or "").strip()
     if drv_name and drv_name.upper() != "SYSTEM":
@@ -2795,6 +2827,8 @@ def complaint_ocr_extract(request):
         "success": True,
         "data": data,
         "suggested_driver": suggested_driver,
+        "per_file": per_file,
+        "errors": errors,
     })
 
 

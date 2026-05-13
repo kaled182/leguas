@@ -325,28 +325,58 @@
 
       <div class="overflow-y-auto flex-1 px-6 py-5 space-y-4">
 
-        {# ─── OCR: extrair ticket Cainiao (PNG/JPG/PDF) ─── #}
+        {# ─── OCR: extrair ticket Cainiao (PNG/JPG/PDF) — múltiplos ficheiros ─── #}
         <div class="rounded-xl border-2 border-dashed border-violet-300 dark:border-violet-700/50 bg-violet-50/50 dark:bg-violet-900/10 p-3">
           <div class="flex items-center justify-between gap-2 mb-2">
             <div class="flex items-center gap-2 text-sm font-semibold text-violet-700 dark:text-violet-300">
               <i data-lucide="sparkles" class="w-4 h-4"></i>
-              Importar de print/PDF do ticket Cainiao
+              Importar 1 ou + prints/PDFs do ticket Cainiao
             </div>
             <span x-show="ocrStatus" class="text-xs text-violet-600 dark:text-violet-400" x-text="ocrStatus"></span>
           </div>
+          <p class="text-[10px] text-violet-600/80 dark:text-violet-400/70 mb-2">
+            Podes carregar vários prints (ex: um com Description, outro com Processing History).
+            O OCR vai correr em todos e consolidar os dados num só formulário.
+          </p>
           <div class="flex items-center gap-2">
             <input type="file" x-ref="ocrFileInput"
                    accept="image/png,image/jpeg,image/webp,application/pdf"
+                   multiple
                    @change="runComplaintOCR($event)"
                    class="text-xs flex-1 file:mr-2 file:px-3 file:py-1.5 file:rounded-lg file:border-0 file:bg-violet-600 file:text-white file:font-semibold file:cursor-pointer hover:file:bg-violet-700">
             <button type="button" x-show="ocrLastData"
                     @click="applyComplaintOCR()"
-                    class="px-3 py-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold inline-flex items-center gap-1.5">
+                    class="px-3 py-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold inline-flex items-center gap-1.5 whitespace-nowrap">
               <i data-lucide="check" class="w-3.5 h-3.5"></i> Aplicar
             </button>
           </div>
+
+          {# Lista de ficheiros processados (per-file confidence) #}
+          <template x-if="ocrPerFile && ocrPerFile.length > 0">
+            <div class="mt-2 space-y-1">
+              <template x-for="pf in ocrPerFile" :key="pf.filename">
+                <div class="flex items-center gap-2 text-[10px] bg-white dark:bg-gray-800 rounded px-2 py-1 border border-violet-200/50">
+                  <i data-lucide="file" class="w-3 h-3 text-violet-500"></i>
+                  <span class="font-mono truncate flex-1" x-text="pf.filename"></span>
+                  <span class="px-1.5 py-0.5 rounded text-[9px] font-bold"
+                        :class="{
+                          'bg-emerald-100 text-emerald-700': pf.confidence === 'high',
+                          'bg-amber-100 text-amber-700': pf.confidence === 'medium',
+                          'bg-rose-100 text-rose-700': pf.confidence === 'low'
+                        }"
+                        x-text="pf.confidence"></span>
+                </div>
+              </template>
+            </div>
+          </template>
+
           <template x-if="ocrLastData">
             <div class="mt-2 text-[11px] bg-white dark:bg-gray-800 rounded p-2 border border-violet-200 dark:border-violet-700/40 space-y-0.5">
+              <div class="flex items-center justify-between mb-1 pb-1 border-b border-violet-100 dark:border-violet-700/30">
+                <strong class="text-violet-700 dark:text-violet-300">Dados consolidados</strong>
+                <span x-show="ocrPerFile && ocrPerFile.length > 1" class="text-[10px] text-violet-500"
+                      x-text="'de ' + ocrPerFile.length + ' ficheiros'"></span>
+              </div>
               <div><strong>Tracking:</strong> <span x-text="ocrLastData.tracking_number || '—'" class="font-mono"></span></div>
               <div><strong>Tipo:</strong> <span x-text="ocrLastData.exception_name || '—'"></span></div>
               <div><strong>Driver:</strong> <span x-text="ocrLastData.delivery_driver || '—'"></span>
@@ -355,6 +385,11 @@
               <div><strong>Deadline:</strong> <span x-text="ocrLastData.deadline || '—'" class="font-mono"></span></div>
               <div x-show="ocrLastData.processing_history && ocrLastData.processing_history.length > 0">
                 <strong>Histórico:</strong> <span x-text="(ocrLastData.processing_history || []).length + ' linha(s)'"></span>
+              </div>
+              <div x-show="ocrLastData.receiver_name || ocrLastData.receiver_phone">
+                <strong>Receiver:</strong>
+                <span x-text="ocrLastData.receiver_name || '—'"></span>
+                <span x-show="ocrLastData.receiver_phone" x-text="' · ' + ocrLastData.receiver_phone"></span>
               </div>
             </div>
           </template>
@@ -767,7 +802,8 @@ function complaintsPanel() {
     ocrStatus: '',
     ocrLastData: null,
     ocrSuggestedDriver: null,
-    ocrLastFile: null,
+    ocrLastFiles: [],   // todos os ficheiros enviados ao OCR
+    ocrPerFile: [],     // [{filename, confidence}, ...]
 
     // Lookup de waybill (auto-fill por tracking)
     lookupNewStatus: '',
@@ -867,7 +903,8 @@ function complaintsPanel() {
       this.ocrStatus = '';
       this.ocrLastData = null;
       this.ocrSuggestedDriver = null;
-      this.ocrLastFile = null;
+      this.ocrLastFiles = [];
+      this.ocrPerFile = [];
       this.lookupNewStatus = '';
       this.lookupNewMessage = '';
       this._lastWaybillLookup = '';
@@ -898,15 +935,18 @@ function complaintsPanel() {
     },
 
     async runComplaintOCR(ev) {
-      const f = ev?.target?.files?.[0];
-      if (!f) return;
-      this.ocrLastFile = f;
-      this.ocrStatus = 'A processar…';
+      const files = Array.from(ev?.target?.files || []);
+      if (files.length === 0) return;
+      this.ocrLastFiles = files;
+      this.ocrStatus = files.length > 1
+        ? `A processar ${files.length} ficheiros…`
+        : 'A processar…';
       this.ocrLastData = null;
       this.ocrSuggestedDriver = null;
+      this.ocrPerFile = [];
       try {
         const fd = new FormData();
-        fd.append('file', f);
+        files.forEach(f => fd.append('file', f));
         const r = await fetch('/driversapp/api/complaints/ocr-extract/', {
           method: 'POST',
           headers: { 'X-CSRFToken': this._getCsrf() },
@@ -927,7 +967,15 @@ function complaintsPanel() {
         }
         this.ocrLastData = j.data;
         this.ocrSuggestedDriver = j.suggested_driver;
-        this.ocrStatus = `✓ Extraído (${j.data.confidence})`;
+        this.ocrPerFile = j.per_file || [];
+        const errs = (j.errors || []).length;
+        if (errs > 0) {
+          this.ocrStatus = `⚠ ${this.ocrPerFile.length} OK · ${errs} erro(s)`;
+        } else if (this.ocrPerFile.length > 1) {
+          this.ocrStatus = `✓ Consolidado ${this.ocrPerFile.length} ficheiros (${j.data.confidence})`;
+        } else {
+          this.ocrStatus = `✓ Extraído (${j.data.confidence})`;
+        }
         this.$nextTick(() => lucide.createIcons());
       } catch (e) {
         this.ocrStatus = 'Erro: ' + e.message;
@@ -1053,18 +1101,29 @@ function complaintsPanel() {
           '— Histórico Cainiao —\n' + histText;
       }
 
-      // Anexar o ficheiro do print como anexo da reclamação
-      if (this.ocrLastFile) {
+      // Anexar TODOS os ficheiros processados como anexos da reclamação
+      // (evita duplicar se já está na lista pelo nome)
+      const existing = new Set(
+        this.newAttachmentsList.map(a => a.name)
+      );
+      let added = 0;
+      (this.ocrLastFiles || []).forEach((file, idx) => {
+        if (existing.has(file.name)) return;
         this.newAttachmentsList.push({
           uid: ++this._uidCounter,
-          file: this.ocrLastFile,
-          name: this.ocrLastFile.name,
+          file: file,
+          name: file.name,
           tipo: 'RECLAMACAO',
-          descricao: 'Print do ticket Cainiao (OCR)',
+          descricao: this.ocrLastFiles.length > 1
+            ? `Print ticket Cainiao ${idx + 1}/${this.ocrLastFiles.length} (OCR)`
+            : 'Print do ticket Cainiao (OCR)',
         });
-      }
+        added++;
+      });
 
-      this.ocrStatus = '✓ Aplicado ao formulário';
+      this.ocrStatus = added > 0
+        ? `✓ Aplicado · ${added} anexo(s) adicionado(s)`
+        : '✓ Aplicado ao formulário';
       this.$nextTick(() => lucide.createIcons());
     },
 

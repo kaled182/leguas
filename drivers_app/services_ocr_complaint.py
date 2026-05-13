@@ -215,3 +215,85 @@ def extract_complaint_data(file_obj, provider: str | None = None) -> dict:
     if chosen == "gemini":
         return _extract_gemini(file_obj, cfg)
     raise ValueError(f"OCR provider desconhecido: {chosen}")
+
+
+# Confidence ordering — mais alto é melhor, usado no merge
+_CONFIDENCE_ORDER = {"low": 0, "medium": 1, "high": 2}
+
+
+def merge_complaint_results(results: list[dict]) -> dict:
+    """Consolida resultados OCR de múltiplos prints do mesmo ticket.
+
+    Estratégia:
+      - Campos string: primeiro valor não-vazio (mantém ordem do upload)
+      - description / remark: concatena se diferem (mais info combinada)
+      - processing_history: agrega de todos, deduplica por (time, action)
+      - confidence: o MÍNIMO dos vários (conservador — se um foi 'low',
+        sinaliza falta de qualidade)
+
+    Args:
+      results: lista de dicts já normalizados por _normalize_ticket_response
+    """
+    if not results:
+        return {}
+    if len(results) == 1:
+        return dict(results[0])
+
+    # Inicia com o primeiro como base
+    merged = {
+        "tracking_number": "", "exception_id": "",
+        "exception_name": "", "description": "",
+        "delivery_driver": "", "partner_status": "",
+        "deadline": "", "submission_role": "",
+        "submission_source": "", "submitter": "", "dsp": "",
+        "status": "", "receiver_name": "", "receiver_phone": "",
+        "receiver_email": "", "remark": "",
+        "processing_history": [],
+    }
+    descs = []
+    remarks = []
+    history_seen = set()
+    history = []
+    min_confidence = "high"
+
+    for r in results:
+        if not isinstance(r, dict):
+            continue
+        # Primeiro não-vazio para campos simples
+        for k in (
+            "tracking_number", "exception_id", "exception_name",
+            "delivery_driver", "partner_status", "deadline",
+            "submission_role", "submission_source", "submitter", "dsp",
+            "status", "receiver_name", "receiver_phone", "receiver_email",
+        ):
+            if not merged[k] and r.get(k):
+                merged[k] = r[k]
+        # Descrição e remark: agregar únicas
+        d = (r.get("description") or "").strip()
+        if d and d not in descs:
+            descs.append(d)
+        rm = (r.get("remark") or "").strip()
+        if rm and rm not in remarks:
+            remarks.append(rm)
+        # Histórico: dedupe por (time, action, content)
+        for h in (r.get("processing_history") or []):
+            key = (h.get("time", ""), h.get("action", ""), h.get("content", "")[:80])
+            if key not in history_seen:
+                history_seen.add(key)
+                history.append(h)
+        # Confidence — manter o mínimo
+        c = (r.get("confidence") or "low").lower()
+        if _CONFIDENCE_ORDER.get(c, 0) < _CONFIDENCE_ORDER.get(min_confidence, 2):
+            min_confidence = c
+
+    # Ordena histórico cronologicamente quando os tempos têm formato comparável
+    try:
+        history.sort(key=lambda h: h.get("time") or "")
+    except Exception:
+        pass
+
+    merged["description"] = "\n\n".join(descs)
+    merged["remark"] = " | ".join(remarks)
+    merged["processing_history"] = history
+    merged["confidence"] = min_confidence
+    return merged

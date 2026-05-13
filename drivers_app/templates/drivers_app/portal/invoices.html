@@ -123,9 +123,23 @@
   </button>
 </div>
 <script>
+function _getCsrfToken() {
+  // Preferido: meta tag (sempre presente em templates que estendam o base).
+  // Fallback: input hidden de form Django. Último: cookie csrftoken.
+  return (
+    document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
+    document.querySelector('input[name=csrfmiddlewaretoken]')?.value ||
+    (document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/) || [])[1] ||
+    ''
+  );
+}
+
 async function emitirPF() {
-  const csrf = document.cookie.split('csrftoken=')[1]?.split(';')[0] ||
-               document.querySelector('input[name=csrfmiddlewaretoken]')?.value;
+  const csrf = _getCsrfToken();
+  if (!csrf) {
+    window.toast({ type: 'error', message: 'Sessão expirada — recarrega a página.' });
+    return;
+  }
   const ok = await window.confirmModal({
     type: 'success',
     title: 'Criar Pré-Fatura?',
@@ -137,12 +151,26 @@ async function emitirPF() {
     const r = await fetch('/settlements/pre-invoices/driver/{{ driver.id }}/create/', {
       method: 'POST',
       headers: { 'X-CSRFToken': csrf, 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
       body: JSON.stringify({
         periodo_inicio: '{{ date_from|date:"Y-m-d" }}',
         periodo_fim: '{{ date_to|date:"Y-m-d" }}',
       }),
     });
-    const d = await r.json();
+    // Resposta pode ser HTML (403/500) em vez de JSON — tratar.
+    let d;
+    const ct = r.headers.get('Content-Type') || '';
+    if (ct.includes('application/json')) {
+      d = await r.json();
+    } else {
+      const text = await r.text();
+      const msg = r.status === 403
+        ? 'Sessão expirada ou CSRF inválido — recarrega a página (Ctrl+F5).'
+        : `Erro HTTP ${r.status}`;
+      window.toast({ type: 'error', title: 'Não foi possível criar', message: msg });
+      console.error('POST emitirPF:', r.status, text.slice(0, 200));
+      return;
+    }
     if (d.success) {
       const pfId = d.id || d.pre_invoice_id;
       window.toast({ type: 'success', message: 'Pré-fatura criada!' });

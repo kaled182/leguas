@@ -7,7 +7,8 @@
   .pill-APROVADO { background:#dbeafe; color:#1e40af; }
   .pill-PAGO { background:#d1fae5; color:#065f46; }
   .pill-CANCELADO { background:#e5e7eb; color:#6b7280; }
-  .fld { width:100%; padding:0.4rem 0.6rem; border:1px solid #d1d5db; border-radius:0.4rem; font-size:0.85rem; }
+  .fld { width:100%; padding:0.4rem 0.6rem; border:1px solid #d1d5db; border-radius:0.4rem; font-size:0.85rem; background:#fff; color:#111827; }
+  .dark .fld { background:#1f2937; border-color:#374151; color:#f9fafb; }
 </style>
 <div class="max-w-5xl mx-auto px-4 py-6 space-y-4">
 
@@ -185,8 +186,10 @@
 </div>
 <style>
 input[type=text],input[type=number],input[type=date],select,textarea {
-  width:100%; padding:0.5rem 0.75rem; border:1px solid #d1d5db; border-radius:0.5rem; font-size:0.875rem; background:#fff;
+  width:100%; padding:0.5rem 0.75rem; border:1px solid #d1d5db; border-radius:0.5rem; font-size:0.875rem; background:#fff; color:#111827;
 }
-.dark input,.dark select { background:#1f2937; border-color:#374151; color:#fff; }
+.dark input,.dark select,.dark textarea { background:#1f2937; border-color:#374151; color:#f9fafb; }
+.dark select option { background:#1f2937; color:#f9fafb; }
+.dark input[type=date]::-webkit-calendar-picker-indicator { filter:invert(1); }
 </style>
 {% endblock %}

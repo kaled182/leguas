@@ -50,8 +50,9 @@
 </div>
 <style>
 input[type=text],input[type=number],input[type=date] {
-  width:100%; padding:0.5rem 0.75rem; border:1px solid #d1d5db; border-radius:0.5rem; font-size:0.875rem; background:#fff;
+  width:100%; padding:0.5rem 0.75rem; border:1px solid #d1d5db; border-radius:0.5rem; font-size:0.875rem; background:#fff; color:#111827;
 }
-.dark input { background:#1f2937; border-color:#374151; color:#fff; }
+.dark input { background:#1f2937; border-color:#374151; color:#f9fafb; }
+.dark input[type=date]::-webkit-calendar-picker-indicator { filter:invert(1); }
 </style>
 {% endblock %}

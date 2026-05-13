@@ -1672,10 +1672,20 @@ def driver_pre_invoice_create(request, driver_id):
     if claims_result["included"]:
         pf.recalcular()  # recalcular para somar os novos pacotes perdidos
 
+    # Auto-inclui TODOS os PreInvoiceAdvance PENDENTE do motorista —
+    # limpa a conta-corrente para esta PF. Se a PF for cancelada/apagada
+    # antes de ser paga, são automaticamente libertados (ver
+    # DriverPreInvoice.save/delete).
+    from .cash_entry_services import auto_attach_all_pending
+    attached_count = auto_attach_all_pending(pf)
+    if attached_count:
+        pf.recalcular()
+
     return JsonResponse({
         "success": True, "numero": pf.numero, "id": pf.id,
         "total_a_receber": str(pf.total_a_receber),
         "claims_auto_included": claims_result["included"],
+        "advances_auto_attached": attached_count,
     })
 
 

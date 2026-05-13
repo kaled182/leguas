@@ -1109,16 +1109,34 @@ class DriverPreInvoice(models.Model):
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
-        # Quando a PF é reprovada (cancelada), libertar lançamentos
-        # incluídos para que voltem a PENDENTE — não perdemos nenhum
-        # lançamento por causa de uma PF cancelada.
+        # Quando a PF transita para REPROVADO/CANCELADO, libertar os
+        # PreInvoiceAdvance incluídos para que voltem a PENDENTE — não
+        # perdemos lançamentos por causa de uma PF cancelada.
+        TERMINAL_NEGATIVE = ("REPROVADO", "CANCELADO")
         if (
-            self._original_status != "REPROVADO"
-            and self.status == "REPROVADO"
+            self._original_status not in TERMINAL_NEGATIVE
+            and self.status in TERMINAL_NEGATIVE
         ):
             from .cash_entry_services import detach_entries_from_pf
             detach_entries_from_pf(self)
         self._original_status = self.status
+
+    def delete(self, *args, **kwargs):
+        """Override delete: liberta os PreInvoiceAdvance incluídos antes
+        de remover a PF, para que voltem a PENDENTE e possam entrar
+        numa PF futura. Sem isto, o on_delete=SET_NULL deixaria os
+        lançamentos com status='INCLUIDO_PF' mas pre_invoice=NULL —
+        ficariam órfãos e nunca seriam cobrados.
+        """
+        # Bloqueia delete de PF já paga (regra fiscal: histórico fechado)
+        if self.status == "PAGO":
+            raise ValueError(
+                f"PF {self.numero} está PAGA — não pode ser apagada. "
+                "Cancela primeiro (transita para CANCELADO).",
+            )
+        from .cash_entry_services import detach_entries_from_pf
+        detach_entries_from_pf(self)
+        return super().delete(*args, **kwargs)
 
     def recalcular(self):
         """Recalcula todos os totais com base nas linhas de trabalho e sub-linhas."""

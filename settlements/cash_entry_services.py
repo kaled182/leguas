@@ -81,12 +81,41 @@ def detach_entries_from_pf(pf: DriverPreInvoice) -> int:
 @transaction.atomic
 def cancel_entry(entry: PreInvoiceAdvance) -> None:
     """Cancela um lançamento. Se estava INCLUIDO_PF, recalcula a PF para
-    remover o seu valor do total. Se já estava CANCELADO, no-op."""
+    remover o seu valor do total. Se já estava CANCELADO, no-op.
+
+    Levanta ValueError se o lançamento está INCLUIDO_PF numa PF já
+    PAGA — não se pode cancelar lançamentos de PFs encerradas (afetaria
+    o histórico financeiro).
+    """
     if entry.status == "CANCELADO":
         return
     pf = entry.pre_invoice
+    if pf and pf.status == "PAGO":
+        raise ValueError(
+            f"Lançamento já incluído na PF {pf.numero} (PAGA). "
+            "Não pode ser cancelado — o histórico financeiro está fechado.",
+        )
     entry.status = "CANCELADO"
     entry.pre_invoice = None
     entry.save(update_fields=["status", "pre_invoice"])
-    if pf and pf.status not in ("PAGO",):
+    if pf:
         pf.recalcular()
+
+
+@transaction.atomic
+def auto_attach_all_pending(pf: DriverPreInvoice) -> int:
+    """Anexa AUTOMATICAMENTE todos os lançamentos PENDENTES do motorista
+    a esta PF. Chamado na criação da PF para garantir que a conta-corrente
+    do motorista entra na pré-fatura sem o operador precisar de seleccionar.
+
+    Regras:
+      - Pega TODOS os PENDENTE do motorista (sem filtro de período/data).
+      - Marca-os como INCLUIDO_PF + define pre_invoice=pf.
+      - NÃO chama recalcular() — quem chama é responsável.
+
+    Devolve a contagem de lançamentos anexados (para logging/UI).
+    """
+    qs = PreInvoiceAdvance.objects.filter(
+        driver=pf.driver, status="PENDENTE",
+    )
+    return qs.update(status="INCLUIDO_PF", pre_invoice=pf)

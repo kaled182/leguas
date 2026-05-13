@@ -110,6 +110,7 @@ INSTALLED_APPS = [
     "converter",
     "settlements",
     "accounting",
+    "payroll",
     "system_config",
     # New Multi-Partner Architecture (Fase 1)
     "core",  # Gestão de Parceiros

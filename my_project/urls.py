@@ -88,6 +88,7 @@ urlpatterns = [
     ),  # APP para correção manual de encomendas Paack
     path("settlements/", include("settlements.urls")),  # APP para gestão de settlements
     path("accounting/", include("accounting.urls")),
+    path("payroll/", include("payroll.urls")),
     path("core/", include("core.urls")),  # APP para gestão de parceiros e integrações
     path(
         "pricing/", include("pricing.urls")

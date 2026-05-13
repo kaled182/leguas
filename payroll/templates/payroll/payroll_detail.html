@@ -1,0 +1,192 @@
+{% extends 'settlements/base.html' %}
+{% block title %}Folha — {{ pf.employee.nome }} {{ pf.periodo_label }}{% endblock %}
+{% block content %}
+<style>
+  .pill { padding:0.25rem 0.75rem; border-radius:9999px; font-size:0.75rem; font-weight:600; }
+  .pill-RASCUNHO { background:#fef3c7; color:#92400e; }
+  .pill-APROVADO { background:#dbeafe; color:#1e40af; }
+  .pill-PAGO { background:#d1fae5; color:#065f46; }
+  .pill-CANCELADO { background:#e5e7eb; color:#6b7280; }
+  .fld { width:100%; padding:0.4rem 0.6rem; border:1px solid #d1d5db; border-radius:0.4rem; font-size:0.85rem; }
+</style>
+<div class="max-w-5xl mx-auto px-4 py-6 space-y-4">
+
+  <div class="flex items-center justify-between flex-wrap gap-3">
+    <div>
+      <h1 class="text-2xl font-bold flex items-center gap-2">
+        <i data-lucide="file-text" class="w-6 h-6 text-emerald-500"></i>
+        {{ pf.employee.nome }} — {{ pf.periodo_label }}
+      </h1>
+      <p class="text-sm text-gray-500">
+        <span class="pill pill-{{ pf.status }}">{{ pf.get_status_display }}</span>
+        · NIF {{ pf.employee.nif|default:'—' }}
+        · NISS {{ pf.employee.niss|default:'—' }}
+        · {{ pf.employee.get_contrato_tipo_display }}
+      </p>
+    </div>
+    <div class="flex gap-2">
+      <a href="{% url 'payroll:payroll_pdf' pf.pk %}" target="_blank"
+        class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+        <i data-lucide="printer" class="w-4 h-4 inline"></i> Recibo PDF
+      </a>
+      <a href="{% url 'payroll:payroll_list' %}" class="px-3 py-2 text-sm text-gray-500">← Voltar</a>
+    </div>
+  </div>
+
+  <!-- Totais -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+    <div class="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-sm">
+      <div class="text-xs text-gray-500">Bruto</div>
+      <div class="text-xl font-bold">€ {{ pf.total_bruto|floatformat:2 }}</div>
+    </div>
+    <div class="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-sm">
+      <div class="text-xs text-gray-500">Descontos</div>
+      <div class="text-xl font-bold text-red-600">€ {{ pf.total_descontos|floatformat:2 }}</div>
+    </div>
+    <div class="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-sm">
+      <div class="text-xs text-gray-500">Líquido</div>
+      <div class="text-xl font-bold text-emerald-600">€ {{ pf.total_liquido|floatformat:2 }}</div>
+    </div>
+    <div class="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-sm">
+      <div class="text-xs text-gray-500">TSU empregador</div>
+      <div class="text-xl font-bold text-amber-600">€ {{ pf.tsu_empregador|floatformat:2 }}</div>
+    </div>
+  </div>
+
+  <!-- Brutos / Descontos -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+      <h3 class="font-semibold text-sm mb-2 flex items-center gap-1">
+        <i data-lucide="plus-circle" class="w-4 h-4 text-green-600"></i>
+        Vencimentos / Brutos
+      </h3>
+      <table class="w-full text-sm">
+        <tbody>
+          {% for c in brutos %}
+          <tr class="border-t">
+            <td class="py-1.5">
+              <div class="font-medium">{{ c.get_tipo_display }}</div>
+              {% if c.descricao %}<div class="text-xs text-gray-500">{{ c.descricao }}</div>{% endif %}
+            </td>
+            <td class="py-1.5 text-right font-mono">€ {{ c.valor|floatformat:2 }}</td>
+            {% if editavel %}
+            <td class="py-1.5 text-right w-10">
+              <form method="post" action="{% url 'payroll:component_delete' pf.pk c.pk %}" class="inline">
+                {% csrf_token %}
+                <button class="text-red-500 hover:text-red-700" onclick="return confirm('Remover?')">
+                  <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                </button>
+              </form>
+            </td>
+            {% endif %}
+          </tr>
+          {% empty %}
+          <tr><td class="py-3 text-center text-xs text-gray-500" colspan="3">—</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+      <h3 class="font-semibold text-sm mb-2 flex items-center gap-1">
+        <i data-lucide="minus-circle" class="w-4 h-4 text-red-600"></i>
+        Descontos
+      </h3>
+      <table class="w-full text-sm">
+        <tbody>
+          {% for c in descontos %}
+          <tr class="border-t">
+            <td class="py-1.5">
+              <div class="font-medium">{{ c.get_tipo_display }}</div>
+              {% if c.descricao %}<div class="text-xs text-gray-500">{{ c.descricao }}</div>{% endif %}
+            </td>
+            <td class="py-1.5 text-right font-mono">€ {{ c.valor|floatformat:2 }}</td>
+            {% if editavel %}
+            <td class="py-1.5 text-right w-10">
+              <form method="post" action="{% url 'payroll:component_delete' pf.pk c.pk %}" class="inline">
+                {% csrf_token %}
+                <button class="text-red-500 hover:text-red-700" onclick="return confirm('Remover?')">
+                  <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                </button>
+              </form>
+            </td>
+            {% endif %}
+          </tr>
+          {% empty %}
+          <tr><td class="py-3 text-center text-xs text-gray-500" colspan="3">—</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Adicionar componente manual (só rascunho) -->
+  {% if editavel %}
+  <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+    <h3 class="font-semibold text-sm mb-2">Adicionar componente manual</h3>
+    <form method="post" action="{% url 'payroll:component_add' pf.pk %}" class="grid grid-cols-1 md:grid-cols-5 gap-2">
+      {% csrf_token %}
+      <div class="md:col-span-1">{{ form.tipo }}</div>
+      <div class="md:col-span-2">{{ form.descricao }}</div>
+      <div>{{ form.valor }}</div>
+      <button class="px-3 py-2 bg-indigo-600 text-white rounded-lg text-sm">Adicionar</button>
+    </form>
+  </div>
+  {% endif %}
+
+  <!-- Acções -->
+  <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 flex flex-wrap gap-2 justify-end">
+    {% if pf.status == 'RASCUNHO' %}
+      <form method="post" action="{% url 'payroll:payroll_recalc' pf.pk %}" class="inline">
+        {% csrf_token %}
+        <button class="px-3 py-2 border rounded-lg text-sm" onclick="return confirm('Regenerar componentes a partir do cadastro?')">
+          <i data-lucide="refresh-cw" class="w-4 h-4 inline"></i> Recalcular
+        </button>
+      </form>
+      <form method="post" action="{% url 'payroll:payroll_approve' pf.pk %}" class="inline">
+        {% csrf_token %}
+        <button class="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold"
+          onclick="return confirm('Aprovar folha? Vai criar Imposto SS (TSU) e IRS.')">
+          <i data-lucide="check" class="w-4 h-4 inline"></i> Aprovar
+        </button>
+      </form>
+    {% endif %}
+
+    {% if pf.status == 'APROVADO' or pf.status == 'RASCUNHO' %}
+      <form method="post" action="{% url 'payroll:payroll_pay' pf.pk %}" class="inline flex items-center gap-2">
+        {% csrf_token %}
+        <input type="date" name="paid_date" value="{{ today|date:'Y-m-d' }}" class="fld" style="width:auto">
+        <button class="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold"
+          onclick="return confirm('Marcar como paga? Vai criar Bill no DRE.')">
+          <i data-lucide="credit-card" class="w-4 h-4 inline"></i> Marcar Paga
+        </button>
+      </form>
+    {% endif %}
+
+    {% if pf.status != 'CANCELADO' %}
+      <form method="post" action="{% url 'payroll:payroll_cancel' pf.pk %}" class="inline">
+        {% csrf_token %}
+        <button class="px-3 py-2 border border-red-300 text-red-600 hover:bg-red-50 rounded-lg text-sm"
+          onclick="return confirm('Cancelar folha? Vai anular Impostos e Bill em cascata.')">
+          <i data-lucide="x-circle" class="w-4 h-4 inline"></i> Cancelar
+        </button>
+      </form>
+    {% endif %}
+  </div>
+
+  <!-- Vínculos -->
+  {% if pf.tsu_imposto or pf.irs_imposto or pf.bill_espelho %}
+  <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-3 text-xs space-y-1">
+    {% if pf.tsu_imposto %}<div>TSU Imposto: <a class="text-indigo-600" href="/financeiro/impostos/{{ pf.tsu_imposto_id }}/">#{{ pf.tsu_imposto_id }}</a> — €{{ pf.tsu_imposto.valor }}</div>{% endif %}
+    {% if pf.irs_imposto %}<div>IRS Imposto: <a class="text-indigo-600" href="/financeiro/impostos/{{ pf.irs_imposto_id }}/">#{{ pf.irs_imposto_id }}</a> — €{{ pf.irs_imposto.valor }}</div>{% endif %}
+    {% if pf.bill_espelho %}<div>Bill (DRE): <a class="text-indigo-600" href="/financeiro/a-pagar/{{ pf.bill_espelho_id }}/">#{{ pf.bill_espelho_id }}</a> — €{{ pf.bill_espelho.amount_total }}</div>{% endif %}
+  </div>
+  {% endif %}
+</div>
+<style>
+input[type=text],input[type=number],input[type=date],select,textarea {
+  width:100%; padding:0.5rem 0.75rem; border:1px solid #d1d5db; border-radius:0.5rem; font-size:0.875rem; background:#fff;
+}
+.dark input,.dark select { background:#1f2937; border-color:#374151; color:#fff; }
+</style>
+{% endblock %}

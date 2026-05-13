@@ -27,8 +27,43 @@
     </div>
   {% endif %}
 
-  <form method="post" class="space-y-4" enctype="multipart/form-data">
+  <form method="post" class="space-y-4" enctype="multipart/form-data" id="imposto-form">
     {% csrf_token %}
+
+    {% if is_create %}
+    {# ─── OCR: extrair dados de guia AT/SS/IUC ─── #}
+    <div class="grp" id="ocr-area">
+      <div class="flex items-center justify-between mb-2">
+        <h2 class="text-sm font-bold flex items-center gap-1.5">
+          <i data-lucide="sparkles" class="w-4 h-4 text-violet-500"></i>
+          Importar de guia de pagamento (AT, SS, IUC, IUC, IRC…)
+        </h2>
+        <span id="ocr-status" class="text-xs text-violet-600 dark:text-violet-400"></span>
+      </div>
+      <p class="text-[11px] text-gray-500 dark:text-gray-400 mb-2">
+        Carrega o PDF/print da guia de pagamento. O OCR extrai tipo,
+        valor, entidade/referência MB, vencimento e período. Aplicado,
+        ainda podes editar antes de guardar.
+      </p>
+      <div class="flex items-center gap-2">
+        <input type="file" id="ocr-file-input"
+               accept="image/png,image/jpeg,image/webp,application/pdf"
+               class="text-xs flex-1 file:mr-2 file:px-3 file:py-1.5 file:rounded-lg file:border-0 file:bg-violet-600 file:text-white file:font-semibold file:cursor-pointer hover:file:bg-violet-700">
+        <button type="button" id="ocr-apply-btn" disabled
+                class="px-3 py-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold inline-flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
+          <i data-lucide="check" class="w-3.5 h-3.5"></i> Aplicar
+        </button>
+      </div>
+      <div id="ocr-preview" class="hidden mt-2 text-[11px] bg-violet-50 dark:bg-violet-900/20 rounded p-2 border border-violet-200 dark:border-violet-700/40 space-y-0.5">
+        <div><strong>Tipo:</strong> <span id="ocr-tipo">—</span> · <strong>Designação:</strong> <span id="ocr-desig">—</span></div>
+        <div><strong>Período:</strong> <span id="ocr-periodo">—</span> · <strong>Valor:</strong> <span id="ocr-valor" class="font-mono">—</span></div>
+        <div><strong>MB:</strong> <span id="ocr-mb" class="font-mono">—</span> · <strong>Vencimento:</strong> <span id="ocr-venc">—</span></div>
+        <div><strong>Entidade:</strong> <span id="ocr-entidade">—</span>
+          <span id="ocr-forn-match" class="text-emerald-600 ml-1"></span>
+        </div>
+      </div>
+    </div>
+    {% endif %}
 
     <div class="grp">
       <h2 class="text-sm font-bold mb-3 flex items-center gap-1.5"><i data-lucide="info" class="w-4 h-4 text-amber-500"></i> Identificação</h2>
@@ -148,12 +183,117 @@ document.addEventListener('DOMContentLoaded', () => {
   if (window.lucide) lucide.createIcons();
   const modSel = document.querySelector('[data-imposto-modalidade]');
   const block = document.getElementById('parcelado-block');
-  if (!modSel || !block) return;
-  function toggle() {
-    block.style.display = (modSel.value === 'PARCELADO') ? '' : 'none';
+  if (modSel && block) {
+    function toggle() {
+      block.style.display = (modSel.value === 'PARCELADO') ? '' : 'none';
+    }
+    toggle();
+    modSel.addEventListener('change', toggle);
   }
-  toggle();
-  modSel.addEventListener('change', toggle);
+
+  // ─── OCR: extrair guia de pagamento ─────────────────────────────
+  const ocrInput = document.getElementById('ocr-file-input');
+  const ocrBtn = document.getElementById('ocr-apply-btn');
+  const ocrStatus = document.getElementById('ocr-status');
+  const ocrPreview = document.getElementById('ocr-preview');
+  if (!ocrInput || !ocrBtn) return;
+
+  let ocrData = null;
+  let ocrForn = null;
+
+  function getCsrf() {
+    return (
+      document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
+      document.querySelector('input[name=csrfmiddlewaretoken]')?.value ||
+      (document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/) || [])[1] || ''
+    );
+  }
+
+  ocrInput.addEventListener('change', async () => {
+    const f = ocrInput.files?.[0];
+    if (!f) return;
+    ocrStatus.textContent = 'A processar…';
+    ocrBtn.disabled = true;
+    ocrPreview.classList.add('hidden');
+    ocrData = null;
+    try {
+      const fd = new FormData();
+      fd.append('file', f);
+      const r = await fetch('/accounting/impostos/ocr-extract/', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCsrf() },
+        credentials: 'same-origin',
+        body: fd,
+      });
+      const ct = r.headers.get('Content-Type') || '';
+      if (!ct.includes('application/json')) {
+        ocrStatus.textContent = 'Erro HTTP ' + r.status;
+        console.error(await r.text());
+        return;
+      }
+      const j = await r.json();
+      if (!j.success) {
+        ocrStatus.textContent = j.error || 'Erro';
+        return;
+      }
+      ocrData = j.data;
+      ocrForn = j.suggested_fornecedor;
+      // Preview
+      const monthName = ocrData.periodo_mes
+        ? new Date(2000, ocrData.periodo_mes - 1, 1).toLocaleDateString('pt-PT', { month: 'long' })
+        : '';
+      document.getElementById('ocr-tipo').textContent = ocrData.tipo || '—';
+      document.getElementById('ocr-desig').textContent = ocrData.designacao || '—';
+      document.getElementById('ocr-periodo').textContent = ocrData.periodo_ano
+        ? (ocrData.periodo_mes ? `${monthName} ${ocrData.periodo_ano}` : String(ocrData.periodo_ano))
+        : '—';
+      document.getElementById('ocr-valor').textContent = ocrData.valor ? `€ ${ocrData.valor}` : '—';
+      const ent = ocrData.mb_entidade || '—';
+      const ref = ocrData.mb_referencia || '—';
+      document.getElementById('ocr-mb').textContent = `${ent} / ${ref}`;
+      document.getElementById('ocr-venc').textContent = ocrData.data_vencimento || '—';
+      document.getElementById('ocr-entidade').textContent = ocrData.entidade_credora || '—';
+      document.getElementById('ocr-forn-match').textContent = ocrForn ? `→ ${ocrForn.name}` : '';
+      ocrPreview.classList.remove('hidden');
+      ocrBtn.disabled = false;
+      ocrStatus.textContent = `✓ Extraído (${ocrData.confidence})`;
+      if (window.lucide) lucide.createIcons();
+    } catch (e) {
+      ocrStatus.textContent = 'Erro: ' + e.message;
+    }
+  });
+
+  ocrBtn.addEventListener('click', () => {
+    if (!ocrData) return;
+    const setVal = (name, val) => {
+      if (!val) return;
+      const el = document.querySelector(`[name=${name}]`);
+      if (el && !el.value) el.value = val;
+    };
+    setVal('nome', ocrData.designacao);
+    if (ocrData.tipo) {
+      const tipoSel = document.querySelector('[name=tipo]');
+      if (tipoSel && !tipoSel.value) tipoSel.value = ocrData.tipo;
+    }
+    if (ocrForn) {
+      const fSel = document.querySelector('[name=fornecedor]');
+      if (fSel) fSel.value = ocrForn.id;
+    }
+    setVal('periodo_ano', ocrData.periodo_ano);
+    setVal('periodo_mes', ocrData.periodo_mes);
+    setVal('valor', ocrData.valor);
+    setVal('mb_entidade', ocrData.mb_entidade);
+    setVal('mb_referencia', ocrData.mb_referencia);
+    setVal('data_vencimento', ocrData.data_vencimento);
+    // Anexar o próprio ficheiro como guia_pagamento se ainda vazio
+    const guiaInput = document.querySelector('[name=guia_pagamento]');
+    if (guiaInput && !guiaInput.value && ocrInput.files?.[0]) {
+      const dt = new DataTransfer();
+      dt.items.add(ocrInput.files[0]);
+      guiaInput.files = dt.files;
+    }
+    ocrStatus.textContent = '✓ Aplicado ao formulário';
+  });
 });
 </script>
 {% endblock %}

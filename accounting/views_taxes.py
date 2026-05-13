@@ -15,6 +15,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.db.models import Count, Q, Sum
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
@@ -287,3 +288,61 @@ def imposto_anular(request, pk):
     imposto.save(update_fields=["status", "updated_at"])
     messages.success(request, f"Imposto '{imposto.nome}' anulado.")
     return redirect("accounting:imposto_list")
+
+
+@login_required
+@require_http_methods(["POST"])
+def imposto_ocr_extract(request):
+    """OCR de guia de pagamento de imposto (AT, SS, IUC, etc.).
+
+    Recebe 1+ ficheiros em request.FILES.getlist('file').
+    Devolve dados extraídos + sugestão de fornecedor (Estado) já
+    cadastrado, se houver.
+    """
+    from .services_ocr_imposto import extract_imposto_data
+
+    files = request.FILES.getlist("file") or []
+    if not files:
+        return JsonResponse(
+            {"success": False, "error": "Sem ficheiro(s)."}, status=400,
+        )
+
+    # Para guias usamos apenas o primeiro (cada guia = 1 imposto).
+    # Se houver mais, ignoramos os restantes mas dizemos.
+    main_file = files[0]
+    try:
+        data = extract_imposto_data(main_file)
+    except Exception as e:
+        return JsonResponse(
+            {"success": False, "error": str(e)}, status=500,
+        )
+
+    # Sugestão de fornecedor (entidade credora — AT, SS, etc.)
+    suggested_fornecedor = None
+    entidade = (data.get("entidade_credora") or "").strip().upper()
+    if entidade:
+        match = None
+        if entidade in ("AT", "AUTORIDADE TRIBUTÁRIA", "AUTORIDADE TRIBUTARIA"):
+            match = Fornecedor.objects.filter(
+                Q(name__icontains="Autoridade Tributária") |
+                Q(name__icontains="Autoridade Tributaria"),
+                tipo="ESTADO",
+            ).first()
+        elif entidade in ("SS", "SEGURANCA SOCIAL", "SEGURANÇA SOCIAL"):
+            match = Fornecedor.objects.filter(
+                name__icontains="Segurança Social",
+                tipo="ESTADO",
+            ).first()
+        if not match:
+            match = Fornecedor.objects.filter(
+                tipo="ESTADO", name__icontains=entidade,
+            ).first()
+        if match:
+            suggested_fornecedor = {"id": match.id, "name": match.name}
+
+    return JsonResponse({
+        "success": True,
+        "data": data,
+        "suggested_fornecedor": suggested_fornecedor,
+        "skipped_files": [f.name for f in files[1:]] if len(files) > 1 else [],
+    })

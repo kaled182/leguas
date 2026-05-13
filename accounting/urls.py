@@ -203,6 +203,10 @@ urlpatterns = [
         views_taxes.imposto_create, name="imposto_create",
     ),
     path(
+        "impostos/ocr-extract/",
+        views_taxes.imposto_ocr_extract, name="imposto_ocr_extract",
+    ),
+    path(
         "impostos/<int:pk>/editar/",
         views_taxes.imposto_edit, name="imposto_edit",
     ),

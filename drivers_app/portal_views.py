@@ -557,6 +557,14 @@ def driver_portal_invoices(request, driver_id):
     advances_qs = PreInvoiceAdvance.objects.filter(driver=driver).order_by("-data", "-id")
     pending_advances = advances_qs.filter(status="PENDENTE")
     advances_total_pending = pending_advances.aggregate(s=Sum("valor"))["s"] or Decimal("0")
+    # Lista visível: ordena por status (PENDENTE/INCLUIDO primeiro, CANCELADO no fim)
+    # e cap a 50. Cancelados ficam ocultos via x-show; toggle revela.
+    advances_visible = list(
+        advances_qs.exclude(status="CANCELADO")[:50]
+    ) + list(
+        advances_qs.filter(status="CANCELADO")[:50]
+    )
+    advances_cancelled_count = advances_qs.filter(status="CANCELADO").count()
 
     # ─── Pré-faturas que sobrepõem o período (admin) ───
     overlap_pfs = []
@@ -596,6 +604,8 @@ def driver_portal_invoices(request, driver_id):
         "margem": margem,
         # Conta-corrente
         "advances": advances_qs[:50],
+        "advances_visible": advances_visible,
+        "advances_cancelled_count": advances_cancelled_count,
         "pending_advances": pending_advances,
         "advances_total_pending": advances_total_pending,
         "overlap_pfs": overlap_pfs,

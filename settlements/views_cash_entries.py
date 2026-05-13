@@ -232,6 +232,31 @@ def cash_entry_cancel(request, entry_id):
     })
 
 
+@login_required
+@require_http_methods(["POST", "DELETE"])
+def cash_entry_delete(request, entry_id):
+    """Apaga DEFINITIVAMENTE um lançamento — só permitido para
+    lançamentos em estado CANCELADO. Para PENDENTE ou INCLUIDO_PF
+    o utilizador deve primeiro cancelar.
+    """
+    e = get_object_or_404(PreInvoiceAdvance, id=entry_id)
+    if e.status != "CANCELADO":
+        return JsonResponse(
+            {
+                "success": False,
+                "error": (
+                    "Só é possível apagar lançamentos CANCELADO. "
+                    f"Este está em {e.get_status_display()} — "
+                    "cancela primeiro."
+                ),
+            },
+            status=400,
+        )
+    eid = e.id
+    e.delete()
+    return JsonResponse({"success": True, "entry_id": eid, "deleted": True})
+
+
 # ── Listagem ───────────────────────────────────────────────────────────
 
 @login_required
@@ -248,36 +273,41 @@ def cash_entry_list(request):
       to=YYYY-MM-DD    (data <=)
       page=N&page_size=M  (default page_size=50, max 200)
     """
-    qs = PreInvoiceAdvance.objects.select_related(
+    # Queryset base — todos os filtros EXCEPTO status. Usado para os
+    # cards de KPI (Pendente/Incluído/Cancelado) para que mostrem
+    # totais globais mesmo quando o user filtra a tabela por um status.
+    base_qs = PreInvoiceAdvance.objects.select_related(
         "driver", "pre_invoice", "paid_by_lender",
     )
 
     driver_id = request.GET.get("driver_id")
     if driver_id:
-        qs = qs.filter(driver_id=driver_id)
-
-    statuses = request.GET.getlist("status")
-    if statuses:
-        qs = qs.filter(status__in=statuses)
+        base_qs = base_qs.filter(driver_id=driver_id)
 
     tipos = request.GET.getlist("tipo")
     if tipos:
-        qs = qs.filter(tipo__in=tipos)
+        base_qs = base_qs.filter(tipo__in=tipos)
 
     paid_by = request.GET.get("paid_by_source")
     if paid_by:
-        qs = qs.filter(paid_by_source=paid_by)
+        base_qs = base_qs.filter(paid_by_source=paid_by)
 
     lender_id = request.GET.get("lender_id")
     if lender_id:
-        qs = qs.filter(paid_by_lender_id=lender_id)
+        base_qs = base_qs.filter(paid_by_lender_id=lender_id)
 
     date_from = parse_date(request.GET.get("from") or "")
     date_to = parse_date(request.GET.get("to") or "")
     if date_from:
-        qs = qs.filter(data__gte=date_from)
+        base_qs = base_qs.filter(data__gte=date_from)
     if date_to:
-        qs = qs.filter(data__lte=date_to)
+        base_qs = base_qs.filter(data__lte=date_to)
+
+    # qs = view da tabela (com filtro de status aplicado)
+    qs = base_qs
+    statuses = request.GET.getlist("status")
+    if statuses:
+        qs = qs.filter(status__in=statuses)
 
     qs = qs.order_by("-data", "-id")
 
@@ -293,8 +323,9 @@ def cash_entry_list(request):
     start = (page - 1) * page_size
     rows = [_serialize_entry(e) for e in qs[start:start + page_size]]
 
-    # KPIs sobre o queryset filtrado
-    aggs = qs.aggregate(
+    # KPIs sobre base_qs (ignora filtro de status — mostra sempre todos
+    # os agregados para o user ter visão global)
+    aggs = base_qs.aggregate(
         total_pendente=Sum(
             "valor", filter=Q(status="PENDENTE"),
         ),
@@ -306,9 +337,9 @@ def cash_entry_list(request):
         ),
     )
     kpis = {
-        "n_pendente": qs.filter(status="PENDENTE").count(),
-        "n_incluido": qs.filter(status="INCLUIDO_PF").count(),
-        "n_cancelado": qs.filter(status="CANCELADO").count(),
+        "n_pendente": base_qs.filter(status="PENDENTE").count(),
+        "n_incluido": base_qs.filter(status="INCLUIDO_PF").count(),
+        "n_cancelado": base_qs.filter(status="CANCELADO").count(),
         "total_pendente": str(aggs["total_pendente"] or Decimal("0.00")),
         "total_incluido": str(aggs["total_incluido"] or Decimal("0.00")),
         "total_cancelado": str(aggs["total_cancelado"] or Decimal("0.00")),

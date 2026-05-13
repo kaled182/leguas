@@ -165,6 +165,11 @@
                             <td class="px-3 py-2 text-right space-x-1">
                                 <button x-show="e.status === 'PENDENTE'" @click="openEditModal(e)" class="px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600">Editar</button>
                                 <button x-show="e.status !== 'CANCELADO'" @click="cancelEntry(e)" class="px-2 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-600">Cancelar</button>
+                                <button x-show="e.status === 'CANCELADO'" @click="deleteEntry(e)"
+                                        title="Apagar definitivamente (não recuperável)"
+                                        class="px-2 py-1 bg-gray-700 hover:bg-gray-900 text-white rounded text-xs inline-flex items-center gap-1">
+                                    <i data-lucide="trash-2" class="w-3 h-3"></i> Apagar
+                                </button>
                             </td>
                         </tr>
                     </template>
@@ -485,6 +490,19 @@ function cashEntriesDashboard() {
             if (d.success) {
                 await this.load();
                 showToast('Lançamento cancelado.');
+            } else {
+                showToast(d.error || 'Erro', false);
+            }
+        },
+
+        async deleteEntry(e) {
+            const msg = `Apagar DEFINITIVAMENTE este lançamento de €${e.valor}?\n\nEsta acção é IRREVERSÍVEL — usa só para limpar lançamentos cancelados antigos.`;
+            if (!confirm(msg)) return;
+            const r = await fetch(`/settlements/cash-entries/${e.id}/delete/`, POST_JSON({}));
+            const d = await r.json();
+            if (d.success) {
+                await this.load();
+                showToast('Lançamento apagado definitivamente.');
             } else {
                 showToast(d.error || 'Erro', false);
             }

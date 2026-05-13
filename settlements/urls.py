@@ -1005,6 +1005,11 @@ urlpatterns = [
         name="cash-entry-cancel",
     ),
     path(
+        "cash-entries/<int:entry_id>/delete/",
+        views_cash_entries.cash_entry_delete,
+        name="cash-entry-delete",
+    ),
+    path(
         "pre-invoices/<int:pre_invoice_id>/pending-entries/",
         views_cash_entries.pre_invoice_pending_entries,
         name="pre-invoice-pending-entries",

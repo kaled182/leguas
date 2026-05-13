@@ -61,6 +61,13 @@ def driver_admin_edit(request, driver_id):
 
     if request.method == "POST":
         from decimal import Decimal, InvalidOperation
+        # Snapshot do vat_regime antes para detectar mudança e recalcular PFs
+        old_vat_regime = driver.vat_regime
+
+        # Helper: aceita vírgula PT como separador decimal
+        def _to_decimal(raw):
+            return Decimal(str(raw).replace(",", ".").strip())
+
         for field in EDITABLE_BY_ADMIN:
             if field in request.POST:
                 value = request.POST.get(field, "").strip()
@@ -84,7 +91,7 @@ def driver_admin_edit(request, driver_id):
                         if field == "daily_capacity":
                             value = int(value)
                         else:
-                            value = Decimal(value)
+                            value = _to_decimal(value)
                     except (InvalidOperation, ValueError):
                         messages.error(
                             request, f"Valor inválido em {field}: '{value}'",
@@ -99,7 +106,7 @@ def driver_admin_edit(request, driver_id):
                         setattr(driver, field, Decimal("0"))
                         continue
                     try:
-                        setattr(driver, field, Decimal(value))
+                        setattr(driver, field, _to_decimal(value))
                     except (InvalidOperation, ValueError):
                         messages.error(
                             request, f"Valor inválido em {field}: '{value}'",
@@ -128,7 +135,30 @@ def driver_admin_edit(request, driver_id):
         try:
             driver.save()
             messages.success(request, "Perfil actualizado com sucesso.")
-            return redirect("drivers_app:driver_admin_edit", driver_id=driver.id)
+
+            # Auto-recalc PFs em CALCULADO quando vat_regime muda — para
+            # propagar a nova taxa IVA. PFs APROVADAS/PAGAS ficam intactas.
+            if old_vat_regime != driver.vat_regime:
+                from settlements.models import DriverPreInvoice
+                pfs = DriverPreInvoice.objects.filter(
+                    driver=driver, status="CALCULADO",
+                )
+                n = 0
+                for pf in pfs:
+                    pf.recalcular()
+                    pf.save()
+                    n += 1
+                if n > 0:
+                    messages.info(
+                        request,
+                        f"Recalculadas {n} pré-fatura(s) em estado "
+                        f"CALCULADO com o novo regime de IVA "
+                        f"({driver.get_vat_regime_display()}).",
+                    )
+
+            return redirect(
+                "drivers_app:driver_admin_edit", driver_id=driver.id,
+            )
         except Exception as e:
             messages.error(request, f"Erro ao guardar: {e}")
 

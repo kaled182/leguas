@@ -325,6 +325,41 @@
 
       <div class="overflow-y-auto flex-1 px-6 py-5 space-y-4">
 
+        {# ─── OCR: extrair ticket Cainiao (PNG/JPG/PDF) ─── #}
+        <div class="rounded-xl border-2 border-dashed border-violet-300 dark:border-violet-700/50 bg-violet-50/50 dark:bg-violet-900/10 p-3">
+          <div class="flex items-center justify-between gap-2 mb-2">
+            <div class="flex items-center gap-2 text-sm font-semibold text-violet-700 dark:text-violet-300">
+              <i data-lucide="sparkles" class="w-4 h-4"></i>
+              Importar de print/PDF do ticket Cainiao
+            </div>
+            <span x-show="ocrStatus" class="text-xs text-violet-600 dark:text-violet-400" x-text="ocrStatus"></span>
+          </div>
+          <div class="flex items-center gap-2">
+            <input type="file" x-ref="ocrFileInput"
+                   accept="image/png,image/jpeg,image/webp,application/pdf"
+                   @change="runComplaintOCR($event)"
+                   class="text-xs flex-1 file:mr-2 file:px-3 file:py-1.5 file:rounded-lg file:border-0 file:bg-violet-600 file:text-white file:font-semibold file:cursor-pointer hover:file:bg-violet-700">
+            <button type="button" x-show="ocrLastData"
+                    @click="applyComplaintOCR()"
+                    class="px-3 py-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold inline-flex items-center gap-1.5">
+              <i data-lucide="check" class="w-3.5 h-3.5"></i> Aplicar
+            </button>
+          </div>
+          <template x-if="ocrLastData">
+            <div class="mt-2 text-[11px] bg-white dark:bg-gray-800 rounded p-2 border border-violet-200 dark:border-violet-700/40 space-y-0.5">
+              <div><strong>Tracking:</strong> <span x-text="ocrLastData.tracking_number || '—'" class="font-mono"></span></div>
+              <div><strong>Tipo:</strong> <span x-text="ocrLastData.exception_name || '—'"></span></div>
+              <div><strong>Driver:</strong> <span x-text="ocrLastData.delivery_driver || '—'"></span>
+                <span x-show="ocrSuggestedDriver" class="text-emerald-600 ml-1" x-text="'→ ' + (ocrSuggestedDriver?.nome_completo || '')"></span>
+              </div>
+              <div><strong>Deadline:</strong> <span x-text="ocrLastData.deadline || '—'" class="font-mono"></span></div>
+              <div x-show="ocrLastData.processing_history && ocrLastData.processing_history.length > 0">
+                <strong>Histórico:</strong> <span x-text="(ocrLastData.processing_history || []).length + ' linha(s)'"></span>
+              </div>
+            </div>
+          </template>
+        </div>
+
         <!-- Step 1: seleccionar motorista -->
         <div>
           <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">
@@ -362,8 +397,13 @@
             <!-- Pacote + Tipo -->
             <div class="grid grid-cols-2 gap-3">
               <div>
-                <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Nº Pacote / Tracking *</label>
+                <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1 flex items-center justify-between gap-1">
+                  <span>Nº Pacote / Tracking *</span>
+                  <span x-show="lookupNewStatus" class="text-[10px] font-normal" x-text="lookupNewMessage"></span>
+                </label>
                 <input type="text" x-model="newForm.numero_pacote"
+                       @input.debounce.600ms="lookupNewWaybill(newForm.numero_pacote)"
+                       @paste="$nextTick(() => lookupNewWaybill(newForm.numero_pacote))"
                        class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500">
               </div>
               <div>
@@ -723,6 +763,17 @@ function complaintsPanel() {
     newAttachmentsList: [],
     _uidCounter: 0,
 
+    // OCR ticket Cainiao
+    ocrStatus: '',
+    ocrLastData: null,
+    ocrSuggestedDriver: null,
+    ocrLastFile: null,
+
+    // Lookup de waybill (auto-fill por tracking)
+    lookupNewStatus: '',
+    lookupNewMessage: '',
+    _lastWaybillLookup: '',
+
     // Edit modal
     showEditModal: false,
     editComplaint: null,
@@ -813,6 +864,13 @@ function complaintsPanel() {
       };
       this.newDriverSuggestions = [];
       this.newAttachmentsList = [];
+      this.ocrStatus = '';
+      this.ocrLastData = null;
+      this.ocrSuggestedDriver = null;
+      this.ocrLastFile = null;
+      this.lookupNewStatus = '';
+      this.lookupNewMessage = '';
+      this._lastWaybillLookup = '';
       this.showNewModal = true;
       this.$nextTick(() => lucide.createIcons());
     },
@@ -828,6 +886,185 @@ function complaintsPanel() {
       this.newForm.driver_id = d.id;
       this.newForm.driverSearch = d.nome;
       this.newDriverSuggestions = [];
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    _getCsrf() {
+      return (
+        document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
+        (document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/) || [])[1] ||
+        ''
+      );
+    },
+
+    async runComplaintOCR(ev) {
+      const f = ev?.target?.files?.[0];
+      if (!f) return;
+      this.ocrLastFile = f;
+      this.ocrStatus = 'A processar…';
+      this.ocrLastData = null;
+      this.ocrSuggestedDriver = null;
+      try {
+        const fd = new FormData();
+        fd.append('file', f);
+        const r = await fetch('/driversapp/api/complaints/ocr-extract/', {
+          method: 'POST',
+          headers: { 'X-CSRFToken': this._getCsrf() },
+          credentials: 'same-origin',
+          body: fd,
+        });
+        const ct = r.headers.get('Content-Type') || '';
+        if (!ct.includes('application/json')) {
+          const txt = await r.text();
+          console.error('OCR HTTP', r.status, txt.slice(0, 200));
+          this.ocrStatus = `Erro HTTP ${r.status}`;
+          return;
+        }
+        const j = await r.json();
+        if (!j.success) {
+          this.ocrStatus = j.error || 'Erro';
+          return;
+        }
+        this.ocrLastData = j.data;
+        this.ocrSuggestedDriver = j.suggested_driver;
+        this.ocrStatus = `✓ Extraído (${j.data.confidence})`;
+        this.$nextTick(() => lucide.createIcons());
+      } catch (e) {
+        this.ocrStatus = 'Erro: ' + e.message;
+      }
+    },
+
+    async lookupNewWaybill(waybill) {
+      const wb = (waybill || '').trim();
+      if (!wb || wb.length < 8 || wb === this._lastWaybillLookup) return;
+      this._lastWaybillLookup = wb;
+      this.lookupNewStatus = 'loading';
+      this.lookupNewMessage = '🔍 a procurar...';
+      try {
+        const r = await fetch(
+          `/driversapp/api/waybill-lookup/?waybill=${encodeURIComponent(wb)}`,
+          { credentials: 'same-origin' },
+        );
+        const ct = r.headers.get('Content-Type') || '';
+        if (!ct.includes('application/json')) {
+          this.lookupNewStatus = 'error';
+          this.lookupNewMessage = `Erro HTTP ${r.status}`;
+          return;
+        }
+        const d = await r.json();
+        if (!d.success || !d.found) {
+          this.lookupNewStatus = 'notfound';
+          this.lookupNewMessage = '⚠ waybill não encontrada';
+          return;
+        }
+        // Preencher só campos vazios
+        const fill = (k, v) => {
+          if (v && !(this.newForm[k] || '').trim()) this.newForm[k] = v;
+        };
+        fill('nome_cliente', d.nome_cliente);
+        fill('telefone_cliente', d.telefone_cliente);
+        fill('email_cliente', d.email_cliente);
+        fill('morada', d.morada);
+        fill('codigo_postal', d.codigo_postal);
+        fill('cidade', d.cidade);
+        fill('data_entrega', d.data_entrega);
+        // Driver: se já não selecionado e a waybill tem courier_name match
+        if (!this.newForm.driver_id && d.courier_name) {
+          try {
+            const r2 = await fetch(
+              '/driversapp/api/admin/reclamacoes/driver-search/?q=' +
+              encodeURIComponent(d.courier_name),
+            );
+            const j2 = await r2.json();
+            if ((j2.drivers || []).length > 0) {
+              const match = j2.drivers[0];
+              this.newForm.driver_id = match.id;
+              this.newForm.driverSearch = match.nome;
+            }
+          } catch (e) { /* ignore */ }
+        }
+        const filled = [
+          d.nome_cliente && 'nome', d.telefone_cliente && 'tel',
+          d.email_cliente && 'email', d.morada && 'morada',
+          d.codigo_postal && 'CP', d.cidade && 'cidade',
+          d.data_entrega && 'data',
+        ].filter(Boolean);
+        this.lookupNewStatus = 'found';
+        this.lookupNewMessage = `✓ ${filled.join(', ')}`;
+        this.$nextTick(() => lucide.createIcons());
+      } catch (e) {
+        this.lookupNewStatus = 'error';
+        this.lookupNewMessage = 'Erro: ' + e.message;
+      }
+    },
+
+    applyComplaintOCR() {
+      if (!this.ocrLastData) return;
+      const d = this.ocrLastData;
+
+      // Driver
+      if (this.ocrSuggestedDriver) {
+        this.newForm.driver_id = this.ocrSuggestedDriver.id;
+        this.newForm.driverSearch = this.ocrSuggestedDriver.nome_completo;
+      }
+
+      // Tracking + tipo + relato
+      this.newForm.numero_pacote = d.tracking_number || this.newForm.numero_pacote || '';
+      // Mapear exception_name → tipo
+      const en = (d.exception_name || '').toLowerCase();
+      if (en.includes('fake') || en.includes('falsa')) this.newForm.tipo = 'ENTREGA_FALSA';
+      else if (en.includes('lost') || en.includes('perda')) this.newForm.tipo = 'ITEM_FALTANDO';
+      else if (en.includes('damag') || en.includes('dano')) this.newForm.tipo = 'PACOTE_DANIFICADO';
+      else if (en.includes('late') || en.includes('atrasad')) this.newForm.tipo = 'ENTREGA_ATRASADA';
+      else if (!this.newForm.tipo) this.newForm.tipo = 'OUTRO';
+
+      // Relato: combina description + remark
+      const parts = [];
+      if (d.description) parts.push(d.description);
+      if (d.remark) parts.push('Remark: ' + d.remark);
+      if (d.exception_id) parts.push('Exception ID: ' + d.exception_id);
+      this.newForm.descricao = (this.newForm.descricao || parts.join('\n')) || '';
+
+      // Cliente (campos mascarados — preencher se vazio)
+      if (!this.newForm.nome_cliente && d.receiver_name) {
+        this.newForm.nome_cliente = d.receiver_name;
+      }
+      if (!this.newForm.telefone_cliente && d.receiver_phone) {
+        this.newForm.telefone_cliente = d.receiver_phone;
+      }
+      if (!this.newForm.email_cliente && d.receiver_email) {
+        this.newForm.email_cliente = d.receiver_email;
+      }
+
+      // Deadline: 'YYYY-MM-DD HH:MM:SS' → input datetime-local 'YYYY-MM-DDTHH:MM'
+      if (d.deadline) {
+        const dt = d.deadline.replace(' ', 'T').substring(0, 16);
+        this.newForm.deadline = dt;
+      }
+
+      // Notas internas: histórico de processamento
+      const hist = d.processing_history || [];
+      if (hist.length > 0) {
+        const histText = hist.map(h =>
+          `[${h.time || ''}] ${h.action || ''}: ${h.content || ''}`
+        ).join('\n');
+        this.newForm.notas_internas = (this.newForm.notas_internas || '') +
+          (this.newForm.notas_internas ? '\n\n' : '') +
+          '— Histórico Cainiao —\n' + histText;
+      }
+
+      // Anexar o ficheiro do print como anexo da reclamação
+      if (this.ocrLastFile) {
+        this.newAttachmentsList.push({
+          uid: ++this._uidCounter,
+          file: this.ocrLastFile,
+          name: this.ocrLastFile.name,
+          tipo: 'RECLAMACAO',
+          descricao: 'Print do ticket Cainiao (OCR)',
+        });
+      }
+
+      this.ocrStatus = '✓ Aplicado ao formulário';
       this.$nextTick(() => lucide.createIcons());
     },
 

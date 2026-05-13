@@ -149,6 +149,15 @@ app.conf.beat_schedule = {
         'options': {'expires': 3600},
     },
 
+    # Auto-fecho de reclamações com prazo expirado (cenário 3):
+    # cria DriverClaim automático e fecha a reclamação.
+    # Corre 1x/dia às 8:00 para apanhar reclamações expiradas no dia anterior.
+    'drivers-auto-close-expired-complaints': {
+        'task': 'drivers_app.auto_close_expired_complaints',
+        'schedule': crontab(hour=8, minute=0),
+        'options': {'expires': 3600},
+    },
+
     # Tarefa de teste a cada 5 minutos (pode remover em produção)
     # 'test-celery-every-5min': {
     #     'task': 'core.test_task',

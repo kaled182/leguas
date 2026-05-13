@@ -2755,6 +2755,51 @@ def waybill_lookup_for_complaint(request):
 
 @login_required
 @require_http_methods(["POST"])
+def complaint_ocr_extract(request):
+    """OCR de print/PDF de ticket de exception Cainiao.
+
+    Recebe ficheiro em request.FILES['file']. Devolve JSON normalizado
+    + sugestão de match de motorista (por delivery_driver name).
+    """
+    from .services_ocr_complaint import extract_complaint_data
+
+    f = request.FILES.get("file")
+    if not f:
+        return JsonResponse(
+            {"success": False, "error": "Sem ficheiro."}, status=400,
+        )
+    try:
+        data = extract_complaint_data(f)
+    except Exception as e:
+        return JsonResponse(
+            {"success": False, "error": str(e)}, status=500,
+        )
+
+    # Sugestão de driver: match por apelido (delivery_driver)
+    suggested_driver = None
+    drv_name = (data.get("delivery_driver") or "").strip()
+    if drv_name and drv_name.upper() != "SYSTEM":
+        match = DriverProfile.objects.filter(apelido__iexact=drv_name).first()
+        if not match:
+            match = DriverProfile.objects.filter(
+                apelido__icontains=drv_name,
+            ).first()
+        if match:
+            suggested_driver = {
+                "id": match.id,
+                "nome_completo": match.nome_completo,
+                "apelido": match.apelido,
+            }
+
+    return JsonResponse({
+        "success": True,
+        "data": data,
+        "suggested_driver": suggested_driver,
+    })
+
+
+@login_required
+@require_http_methods(["POST"])
 def driver_complaint_create(request, driver_id):
     """Cria uma nova reclamação de cliente para um motorista."""
     from .models import CustomerComplaint

@@ -1191,6 +1191,44 @@ class PDFGenerator:
         subtotal_idx = 3  # índice da linha "Subtotal Bruto"
         comissoes_idx = len(resumo_rows) - 1 if total_comissoes > 0 else None
 
+        # ── IVA (Regime Normal) e Retenção IRS ──────────────────────────────
+        vat_amount = pre_invoice.vat_amount or Decimal("0.00")
+        irs_amount = pre_invoice.irs_retention_amount or Decimal("0.00")
+        regime = getattr(
+            pre_invoice.driver, "vat_regime", "isento"
+        ) or "isento"
+
+        subtotal_sem_iva_idx = None
+        iva_idx = None
+        irs_idx = None
+
+        if vat_amount > 0 or irs_amount > 0:
+            # Subtotal sem IVA antes do bloco fiscal
+            subtotal_sem_iva_idx = len(resumo_rows)
+            resumo_rows.append([
+                "Subtotal s/ IVA",
+                f"€{float(pre_invoice.total_a_receber):.2f}",
+                "Base de cálculo do IVA",
+            ])
+        if vat_amount > 0:
+            iva_idx = len(resumo_rows)
+            resumo_rows.append([
+                "IVA (23%)",
+                f"+€{float(vat_amount):.2f}",
+                f"Regime Normal — 23% sobre subtotal",
+            ])
+        if irs_amount > 0:
+            irs_idx = len(resumo_rows)
+            irs_pct = (
+                getattr(pre_invoice.driver, "irs_retention_pct", Decimal("0"))
+                or Decimal("0")
+            )
+            resumo_rows.append([
+                "Retenção IRS",
+                f"-€{float(irs_amount):.2f}",
+                f"{float(irs_pct):.2f}% sobre subtotal",
+            ])
+
         res_table = Table(resumo_rows, colWidths=[7 * cm, 4 * cm, 6 * cm])
         ts = [
             ("ROWBACKGROUNDS", (0, 0), (-1, -1), [colors.white, light_gray]),
@@ -1208,19 +1246,41 @@ class PDFGenerator:
                         colors.HexColor("#0D9488")))
             ts.append(("FONTNAME", (0, comissoes_idx), (-1, comissoes_idx),
                         "Helvetica-Bold"))
+        # Realce do bloco fiscal (subtotal sem IVA + IVA + IRS)
+        if subtotal_sem_iva_idx is not None:
+            ts.append(("FONTNAME", (0, subtotal_sem_iva_idx),
+                       (-1, subtotal_sem_iva_idx), "Helvetica-Bold"))
+            ts.append(("BACKGROUND", (0, subtotal_sem_iva_idx),
+                       (-1, subtotal_sem_iva_idx), light_purple))
+        if iva_idx is not None:
+            ts.append(("TEXTCOLOR", (1, iva_idx), (1, iva_idx),
+                        colors.HexColor("#7C3AED")))
+            ts.append(("FONTNAME", (0, iva_idx), (-1, iva_idx),
+                        "Helvetica-Bold"))
+        if irs_idx is not None:
+            ts.append(("TEXTCOLOR", (1, irs_idx), (1, irs_idx), red))
+            ts.append(("FONTNAME", (0, irs_idx), (-1, irs_idx),
+                        "Helvetica-Bold"))
         res_table.setStyle(TableStyle(ts))
         elements.append(res_table)
         elements.append(Spacer(1, 0.2 * cm))
 
-        # Total a receber — destaque
+        # Total final — c/ IVA (e líquido se IRS aplicável) ou s/ IVA
+        if vat_amount > 0:
+            total_final = pre_invoice.total_com_iva
+            total_label_text = "TOTAL c/ IVA"
+        else:
+            total_final = pre_invoice.total_a_receber
+            total_label_text = "TOTAL A RECEBER"
+
         total_table = Table(
             [[
-                Paragraph("TOTAL A RECEBER", ParagraphStyle(
+                Paragraph(total_label_text, ParagraphStyle(
                     "TotalLabel", parent=self.styles["Normal"],
                     fontSize=13, textColor=colors.whitesmoke,
                     fontName="Helvetica-Bold",
                 )),
-                Paragraph(f"€{float(pre_invoice.total_a_receber):.2f}", ParagraphStyle(
+                Paragraph(f"€{float(total_final):.2f}", ParagraphStyle(
                     "TotalVal", parent=self.styles["Normal"],
                     fontSize=16, textColor=colors.whitesmoke,
                     fontName="Helvetica-Bold", alignment=TA_CENTER,
@@ -1235,6 +1295,36 @@ class PDFGenerator:
             ("LEFTPADDING", (0, 0), (0, -1), 10),
         ]))
         elements.append(total_table)
+
+        # Total líquido (após retenção IRS) — só se IRS aplicável
+        if irs_amount > 0:
+            elements.append(Spacer(1, 0.15 * cm))
+            liquido_table = Table(
+                [[
+                    Paragraph("TOTAL LÍQUIDO (após IRS)", ParagraphStyle(
+                        "LiqLabel", parent=self.styles["Normal"],
+                        fontSize=11, textColor=colors.whitesmoke,
+                        fontName="Helvetica-Bold",
+                    )),
+                    Paragraph(
+                        f"€{float(pre_invoice.total_liquido):.2f}",
+                        ParagraphStyle(
+                            "LiqVal", parent=self.styles["Normal"],
+                            fontSize=14, textColor=colors.whitesmoke,
+                            fontName="Helvetica-Bold", alignment=TA_CENTER,
+                        ),
+                    ),
+                ]],
+                colWidths=[11 * cm, 6 * cm],
+            )
+            liquido_table.setStyle(TableStyle([
+                ("BACKGROUND", (0, 0), (-1, -1),
+                 colors.HexColor("#0E7490")),
+                ("TOPPADDING", (0, 0), (-1, -1), 8),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+                ("LEFTPADDING", (0, 0), (0, -1), 10),
+            ]))
+            elements.append(liquido_table)
 
         # ── Rodapé ────────────────────────────────────────────────────────
         elements.append(Spacer(1, 1.5 * cm))

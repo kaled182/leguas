@@ -31,45 +31,61 @@ logger = logging.getLogger(__name__)
 
 _PROMPT_IMPOSTO = """És um assistente especializado em extracção de dados
 de guias de pagamento de impostos portuguesas (Autoridade Tributária,
-Segurança Social, IUC). Analisa o documento anexado e devolve
-EXCLUSIVAMENTE um objecto JSON (sem markdown, sem texto extra) com:
+Segurança Social, IUC, planos de pagamento em prestações). Analisa o
+documento anexado e devolve EXCLUSIVAMENTE um objecto JSON (sem
+markdown, sem texto extra) com:
 
 {
   "tipo": "um de: IVA | IRC | IRS_RETENCOES | IRS_DECLARACAO | SS | IUC | OUTRO",
-  "designacao": "designação curta em PT, ex: 'IVA Janeiro 2026', 'SS Fevereiro 2026', 'IRC 2024 — Pagamento por Conta', 'IUC Matrícula XX-00-XX 2026'",
-  "entidade_credora": "AT (Autoridade Tributária) | SS (Segurança Social) | nome literal se diferente",
-  "periodo_ano": "ano de referência do imposto (ex: 2026)",
-  "periodo_mes": "mês de referência 1-12 (apenas para impostos mensais IVA/SS/IRS Retenções; vazio para anuais/IUC/IRC)",
-  "valor": "valor total a pagar com ponto decimal (ex: 1234.56)",
-  "mb_entidade": "código de entidade Multibanco (5 dígitos, ex: '10788' para AT, '21810' para SS)",
-  "mb_referencia": "referência Multibanco (9 dígitos exatos, sem espaços)",
-  "data_vencimento": "data limite de pagamento em YYYY-MM-DD",
+  "designacao": "designação curta em PT — ver regras de designação abaixo",
+  "entidade_credora": "AT (Autoridade Tributária) | SS (Segurança Social) | nome literal",
+  "periodo_ano": "ano de referência (ex: 2026)",
+  "periodo_mes": "mês 1-12 (mensal IVA/SS/IRS-Retenções); vazio anual/parcelado",
+  "valor": "valor total a pagar nesta guia, ponto decimal (ex: 1234.56)",
+  "mb_entidade": "código entidade MB (5 dígitos, ex: '10788' AT, '21810' SS)",
+  "mb_referencia": "referência MB (9 dígitos, SEM espaços)",
+  "data_vencimento": "data limite de pagamento YYYY-MM-DD",
+
+  "numero_plano": "número do plano/processo (ex: '8482/2026', '8482.2026'); '' se não for plano em prestações",
+  "parcela_numero": "número desta prestação (ex: 1, 2, 3); null se não aplicável",
+  "parcela_total": "total de prestações no plano (ex: 12); null se não aplicável",
+  "valor_capital": "componente capital/imposto (ponto decimal); null se não decomposto",
+  "valor_juros": "componente juros de mora (ponto decimal); null se zero/não decomposto",
+  "valor_outros": "outros encargos/custas (ponto decimal); null se não houver",
+
+  "nif_contribuinte": "NIF do contribuinte/devedor (9 dígitos PT)",
+  "nome_contribuinte": "razão social do contribuinte se visível",
+  "documento_origem": "nº do documento de origem (liquidação, processo executivo, ex: 'LIQ 12345')",
+  "iban_pagamento": "IBAN para pagamento bancário PT (ex: 'PT50 ...'); '' se só há MB",
+  "data_emissao_guia": "data de emissão DESTA guia YYYY-MM-DD (≠ vencimento); '' se não distinguível",
+
   "confidence": "low | medium | high"
 }
 
 Regras estritas:
-- Usa "" para campos string e null para numéricos se não estiverem
-  legíveis ou ausentes.
-- Datas SEMPRE em formato ISO YYYY-MM-DD.
-- Valores SEMPRE com ponto decimal (não vírgula).
+- Usa "" para strings vazias e null para numéricos/datas ausentes.
+- Datas em ISO YYYY-MM-DD.
+- Valores com ponto decimal (não vírgula).
 - mb_entidade e mb_referencia SÓ DÍGITOS, sem espaços nem hífenes.
+- nif_contribuinte: 9 dígitos PT, sem espaços nem prefixo 'PT'.
+- iban_pagamento: mantém formato com espaços (ex: 'PT50 0036 ...').
+- numero_plano: preserva separador original ('8482/2026' ou '8482.2026').
 
 Mapeamento do tipo (case-insensitive):
-- IVA: documento menciona "IVA", "Imposto sobre o Valor Acrescentado",
-  declaração periódica, "Período de Imposto".
-- IRC: "IRC", "pagamento por conta", "Imposto sobre o Rendimento das
-  Pessoas Colectivas", Modelo 22.
-- IRS_RETENCOES: "IRS — Retenção na Fonte", "Retenções na Fonte",
-  guia mensal de retenções (cat. A, B, F).
+- IVA: "IVA", "Imposto sobre o Valor Acrescentado", declaração periódica.
+- IRC: "IRC", "pagamento por conta", Modelo 22.
+- IRS_RETENCOES: "Retenção na Fonte", "Retenções", guia mensal cat. A/B/F.
 - IRS_DECLARACAO: declaração anual de IRS — Modelo 3.
 - SS: "Segurança Social", "Contribuições", "TSU", "IGFSS".
 - IUC: "IUC", "Imposto Único de Circulação", referência a matrícula.
-- OUTRO: outros impostos não classificáveis acima.
+- OUTRO: dívidas executivas mistas ou outros impostos. Para PLANOS DE
+  PAGAMENTO de execuções fiscais (sem tipo claro), usa o tipo do imposto
+  original quando indicado; se misto, OUTRO.
 
 Reconhecimento de entidade:
 - Autoridade Tributária e Aduaneira → entidade_credora="AT".
 - Instituto da Segurança Social / IGFSS → entidade_credora="SS".
-- Se aparece outro nome literal (ex: 'CTT Expresso'), usar esse nome.
+- Outro nome literal se diferente.
 
 Designação sugerida (português):
 - IVA mensal: 'IVA <Mês por extenso> <Ano>' (ex: 'IVA Janeiro 2026')
@@ -78,6 +94,9 @@ Designação sugerida (português):
 - IRS Retenções mensal: 'IRS Retenções <Mês> <Ano>'
 - IRC: 'IRC <Ano> — <descrição>' (ex: 'IRC 2024 — 1º PPC')
 - IUC: 'IUC <matrícula se visível> <ano>'
+- PLANO em prestações: 'Plano <numero_plano> — Prestação <X>/<Y>'
+  (ex: 'Plano 8482/2026 — Prestação 1/12'). Se há tipo identificável,
+  prefixa: 'IVA · Plano 8482/2026 — Prestação 1/12'.
 
 Confidence:
 - 'high': todos os campos críticos (tipo, valor, mb_referencia,
@@ -85,8 +104,7 @@ Confidence:
 - 'medium': falta um ou dois campos não críticos.
 - 'low': documento ilegível ou parcial.
 
-Não inventes dados. Se um campo não está no documento, usa "" ou null.
-Devolve APENAS o JSON. Nada de comentários, explicações ou markdown.
+Não inventes dados. Devolve APENAS o JSON.
 """
 
 
@@ -110,7 +128,15 @@ def _normalize_imposto_response(raw_json: str) -> dict:
             "tipo": "", "designacao": "", "entidade_credora": "",
             "periodo_ano": None, "periodo_mes": None, "valor": None,
             "mb_entidade": "", "mb_referencia": "",
-            "data_vencimento": None, "confidence": "low",
+            "data_vencimento": None,
+            "numero_plano": "", "parcela_numero": None,
+            "parcela_total": None,
+            "valor_capital": None, "valor_juros": None,
+            "valor_outros": None,
+            "nif_contribuinte": "", "nome_contribuinte": "",
+            "documento_origem": "", "iban_pagamento": "",
+            "data_emissao_guia": None,
+            "confidence": "low",
         }
 
     def _s(v):
@@ -141,6 +167,14 @@ def _normalize_imposto_response(raw_json: str) -> dict:
     if tipo not in _VALID_TIPOS:
         tipo = ""
 
+    # Normaliza numero_plano (preserva separador / ou .)
+    numero_plano_raw = _s(data.get("numero_plano"))
+    numero_plano = re.sub(r"[^\d./-]", "", numero_plano_raw)[:32]
+
+    # IBAN: normaliza espaços
+    iban_raw = _s(data.get("iban_pagamento")).upper()
+    iban_clean = re.sub(r"\s+", " ", iban_raw).strip()
+
     return {
         "tipo": tipo,
         "designacao": _s(data.get("designacao")),
@@ -155,6 +189,20 @@ def _normalize_imposto_response(raw_json: str) -> dict:
             r"\D", "", _s(data.get("mb_referencia")),
         )[:9],
         "data_vencimento": _s(data.get("data_vencimento")) or None,
+        # ── Campos extra (parcelamento, decomposição, contribuinte) ──
+        "numero_plano": numero_plano,
+        "parcela_numero": _int(data.get("parcela_numero"), lo=1, hi=999),
+        "parcela_total": _int(data.get("parcela_total"), lo=1, hi=999),
+        "valor_capital": _dec(data.get("valor_capital")),
+        "valor_juros": _dec(data.get("valor_juros")),
+        "valor_outros": _dec(data.get("valor_outros")),
+        "nif_contribuinte": re.sub(
+            r"\D", "", _s(data.get("nif_contribuinte")),
+        )[:9],
+        "nome_contribuinte": _s(data.get("nome_contribuinte")),
+        "documento_origem": _s(data.get("documento_origem")),
+        "iban_pagamento": iban_clean,
+        "data_emissao_guia": _s(data.get("data_emissao_guia")) or None,
         "confidence": _s(data.get("confidence")).lower() or "low",
     }
 

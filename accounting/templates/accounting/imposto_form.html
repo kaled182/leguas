@@ -54,12 +54,50 @@
           <i data-lucide="check" class="w-3.5 h-3.5"></i> Aplicar
         </button>
       </div>
-      <div id="ocr-preview" class="hidden mt-2 text-[11px] bg-violet-50 dark:bg-violet-900/20 rounded p-2 border border-violet-200 dark:border-violet-700/40 space-y-0.5">
-        <div><strong>Tipo:</strong> <span id="ocr-tipo">—</span> · <strong>Designação:</strong> <span id="ocr-desig">—</span></div>
-        <div><strong>Período:</strong> <span id="ocr-periodo">—</span> · <strong>Valor:</strong> <span id="ocr-valor" class="font-mono">—</span></div>
-        <div><strong>MB:</strong> <span id="ocr-mb" class="font-mono">—</span> · <strong>Vencimento:</strong> <span id="ocr-venc">—</span></div>
+      <div id="ocr-preview" class="hidden mt-2 text-[11px] bg-violet-50 dark:bg-violet-900/20 rounded p-2 border border-violet-200 dark:border-violet-700/40 space-y-1">
+        {# ─── Identificação ─── #}
+        <div class="font-bold text-violet-700 dark:text-violet-300 uppercase text-[9px] tracking-wide mb-0.5">Identificação</div>
+        <div><strong>Tipo:</strong> <span id="ocr-tipo">—</span>
+          <span id="ocr-modalidade-suggest" class="ml-1 text-amber-600 font-semibold"></span></div>
+        <div><strong>Designação:</strong> <span id="ocr-desig">—</span></div>
         <div><strong>Entidade:</strong> <span id="ocr-entidade">—</span>
           <span id="ocr-forn-match" class="text-emerald-600 ml-1"></span>
+        </div>
+
+        {# ─── Plano de parcelamento (só se aplicável) ─── #}
+        <div id="ocr-plano-block" class="hidden mt-1.5 pt-1.5 border-t border-violet-200/60">
+          <div class="font-bold text-violet-700 dark:text-violet-300 uppercase text-[9px] tracking-wide mb-0.5">Plano de Parcelamento</div>
+          <div><strong>Nº Plano:</strong> <span id="ocr-num-plano" class="font-mono">—</span>
+            · <strong>Prestação:</strong> <span id="ocr-parcela">—</span></div>
+          <div id="ocr-doc-origem-row" class="hidden"><strong>Doc. origem:</strong> <span id="ocr-doc-origem" class="font-mono">—</span></div>
+        </div>
+
+        {# ─── Período e Valor ─── #}
+        <div class="mt-1.5 pt-1.5 border-t border-violet-200/60">
+          <div class="font-bold text-violet-700 dark:text-violet-300 uppercase text-[9px] tracking-wide mb-0.5">Período e Valor</div>
+          <div><strong>Período:</strong> <span id="ocr-periodo">—</span>
+            · <strong>Valor:</strong> <span id="ocr-valor" class="font-mono font-bold">—</span></div>
+          <div id="ocr-decomp-row" class="hidden flex flex-wrap gap-x-3 text-[10px] text-violet-600/80 dark:text-violet-400/80 mt-0.5">
+            <span id="ocr-capital-span" class="hidden"><strong>Capital:</strong> <span id="ocr-capital" class="font-mono">—</span></span>
+            <span id="ocr-juros-span" class="hidden"><strong>Juros:</strong> <span id="ocr-juros" class="font-mono">—</span></span>
+            <span id="ocr-outros-span" class="hidden"><strong>Outros:</strong> <span id="ocr-outros" class="font-mono">—</span></span>
+          </div>
+        </div>
+
+        {# ─── Pagamento ─── #}
+        <div class="mt-1.5 pt-1.5 border-t border-violet-200/60">
+          <div class="font-bold text-violet-700 dark:text-violet-300 uppercase text-[9px] tracking-wide mb-0.5">Pagamento</div>
+          <div><strong>MB:</strong> <span id="ocr-mb" class="font-mono">—</span>
+            · <strong>Vencimento:</strong> <span id="ocr-venc">—</span></div>
+          <div id="ocr-iban-row" class="hidden"><strong>IBAN:</strong> <span id="ocr-iban" class="font-mono">—</span></div>
+          <div id="ocr-data-emissao-row" class="hidden text-[10px] text-violet-600/80"><strong>Emitida em:</strong> <span id="ocr-data-emissao">—</span></div>
+        </div>
+
+        {# ─── Contribuinte (se diferente de Léguas) ─── #}
+        <div id="ocr-contrib-block" class="hidden mt-1.5 pt-1.5 border-t border-violet-200/60">
+          <div class="font-bold text-violet-700 dark:text-violet-300 uppercase text-[9px] tracking-wide mb-0.5">Contribuinte</div>
+          <div><strong>NIF:</strong> <span id="ocr-nif" class="font-mono">—</span>
+            · <span id="ocr-nome-contrib">—</span></div>
         </div>
       </div>
     </div>
@@ -200,6 +238,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let ocrData = null;
   let ocrForn = null;
+  let ocrModalidade = null;
 
   function getCsrf() {
     return (
@@ -238,22 +277,73 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       ocrData = j.data;
       ocrForn = j.suggested_fornecedor;
+      ocrModalidade = j.suggested_modalidade;
       // Preview
       const monthName = ocrData.periodo_mes
         ? new Date(2000, ocrData.periodo_mes - 1, 1).toLocaleDateString('pt-PT', { month: 'long' })
         : '';
-      document.getElementById('ocr-tipo').textContent = ocrData.tipo || '—';
-      document.getElementById('ocr-desig').textContent = ocrData.designacao || '—';
-      document.getElementById('ocr-periodo').textContent = ocrData.periodo_ano
+      const fmt = v => v ? `€ ${parseFloat(v).toFixed(2)}` : '—';
+      const $ = id => document.getElementById(id);
+      const show = (id) => $(id)?.classList.remove('hidden');
+      const hide = (id) => $(id)?.classList.add('hidden');
+
+      $('ocr-tipo').textContent = ocrData.tipo || '—';
+      $('ocr-modalidade-suggest').textContent = ocrModalidade
+        ? `→ ${ocrModalidade === 'PARCELADO' ? 'Parcelado' : ocrModalidade === 'MENSAL_VIGENTE' ? 'Mensal' : 'Pontual'}`
+        : '';
+      $('ocr-desig').textContent = ocrData.designacao || '—';
+      $('ocr-entidade').textContent = ocrData.entidade_credora || '—';
+      $('ocr-forn-match').textContent = ocrForn ? `→ ${ocrForn.name}` : '';
+
+      // Parcelamento
+      if (ocrData.numero_plano || (ocrData.parcela_numero && ocrData.parcela_total)) {
+        show('ocr-plano-block');
+        $('ocr-num-plano').textContent = ocrData.numero_plano || '—';
+        $('ocr-parcela').textContent = (ocrData.parcela_numero && ocrData.parcela_total)
+          ? `${ocrData.parcela_numero}/${ocrData.parcela_total}`
+          : '—';
+        if (ocrData.documento_origem) {
+          show('ocr-doc-origem-row');
+          $('ocr-doc-origem').textContent = ocrData.documento_origem;
+        } else hide('ocr-doc-origem-row');
+      } else hide('ocr-plano-block');
+
+      $('ocr-periodo').textContent = ocrData.periodo_ano
         ? (ocrData.periodo_mes ? `${monthName} ${ocrData.periodo_ano}` : String(ocrData.periodo_ano))
         : '—';
-      document.getElementById('ocr-valor').textContent = ocrData.valor ? `€ ${ocrData.valor}` : '—';
+      $('ocr-valor').textContent = fmt(ocrData.valor);
+
+      // Decomposição capital/juros/outros
+      const hasDecomp = ocrData.valor_capital || ocrData.valor_juros || ocrData.valor_outros;
+      if (hasDecomp) {
+        show('ocr-decomp-row');
+        if (ocrData.valor_capital) { show('ocr-capital-span'); $('ocr-capital').textContent = fmt(ocrData.valor_capital); } else hide('ocr-capital-span');
+        if (ocrData.valor_juros) { show('ocr-juros-span'); $('ocr-juros').textContent = fmt(ocrData.valor_juros); } else hide('ocr-juros-span');
+        if (ocrData.valor_outros) { show('ocr-outros-span'); $('ocr-outros').textContent = fmt(ocrData.valor_outros); } else hide('ocr-outros-span');
+      } else hide('ocr-decomp-row');
+
       const ent = ocrData.mb_entidade || '—';
       const ref = ocrData.mb_referencia || '—';
-      document.getElementById('ocr-mb').textContent = `${ent} / ${ref}`;
-      document.getElementById('ocr-venc').textContent = ocrData.data_vencimento || '—';
-      document.getElementById('ocr-entidade').textContent = ocrData.entidade_credora || '—';
-      document.getElementById('ocr-forn-match').textContent = ocrForn ? `→ ${ocrForn.name}` : '';
+      $('ocr-mb').textContent = `${ent} / ${ref}`;
+      $('ocr-venc').textContent = ocrData.data_vencimento || '—';
+
+      if (ocrData.iban_pagamento) {
+        show('ocr-iban-row');
+        $('ocr-iban').textContent = ocrData.iban_pagamento;
+      } else hide('ocr-iban-row');
+
+      if (ocrData.data_emissao_guia) {
+        show('ocr-data-emissao-row');
+        $('ocr-data-emissao').textContent = ocrData.data_emissao_guia;
+      } else hide('ocr-data-emissao-row');
+
+      // Contribuinte (só mostra se diferente de NIF da Léguas — admin decide)
+      if (ocrData.nif_contribuinte || ocrData.nome_contribuinte) {
+        show('ocr-contrib-block');
+        $('ocr-nif').textContent = ocrData.nif_contribuinte || '—';
+        $('ocr-nome-contrib').textContent = ocrData.nome_contribuinte || '—';
+      } else hide('ocr-contrib-block');
+
       ocrPreview.classList.remove('hidden');
       ocrBtn.disabled = false;
       ocrStatus.textContent = `✓ Extraído (${ocrData.confidence})`;
@@ -270,11 +360,17 @@ document.addEventListener('DOMContentLoaded', () => {
       const el = document.querySelector(`[name=${name}]`);
       if (el && !el.value) el.value = val;
     };
+    const setSel = (name, val) => {
+      if (!val) return;
+      const el = document.querySelector(`[name=${name}]`);
+      if (el && !el.value) {
+        el.value = val;
+        el.dispatchEvent(new Event('change'));
+      }
+    };
     setVal('nome', ocrData.designacao);
-    if (ocrData.tipo) {
-      const tipoSel = document.querySelector('[name=tipo]');
-      if (tipoSel && !tipoSel.value) tipoSel.value = ocrData.tipo;
-    }
+    setSel('tipo', ocrData.tipo);
+    setSel('modalidade', ocrModalidade);
     if (ocrForn) {
       const fSel = document.querySelector('[name=fornecedor]');
       if (fSel) fSel.value = ocrForn.id;
@@ -285,6 +381,30 @@ document.addEventListener('DOMContentLoaded', () => {
     setVal('mb_entidade', ocrData.mb_entidade);
     setVal('mb_referencia', ocrData.mb_referencia);
     setVal('data_vencimento', ocrData.data_vencimento);
+
+    // Parcelamento: se OCR detectou parcela_total, preencher campo
+    // do form (se existe — modalidade PARCELADO mostra os inputs)
+    if (ocrData.parcela_total) {
+      setVal('n_prestacoes', ocrData.parcela_total);
+    }
+
+    // Notas: agregar info útil que não tem campo dedicado
+    const notas = document.querySelector('[name=notas]');
+    if (notas && !notas.value) {
+      const parts = [];
+      if (ocrData.numero_plano) parts.push(`Plano: ${ocrData.numero_plano}`);
+      if (ocrData.parcela_numero && ocrData.parcela_total)
+        parts.push(`Prestação ${ocrData.parcela_numero}/${ocrData.parcela_total}`);
+      if (ocrData.documento_origem) parts.push(`Doc. origem: ${ocrData.documento_origem}`);
+      if (ocrData.valor_capital) parts.push(`Capital: €${ocrData.valor_capital}`);
+      if (ocrData.valor_juros) parts.push(`Juros: €${ocrData.valor_juros}`);
+      if (ocrData.valor_outros) parts.push(`Outros: €${ocrData.valor_outros}`);
+      if (ocrData.iban_pagamento) parts.push(`IBAN: ${ocrData.iban_pagamento}`);
+      if (ocrData.data_emissao_guia) parts.push(`Emitida: ${ocrData.data_emissao_guia}`);
+      if (ocrData.nif_contribuinte) parts.push(`NIF contrib.: ${ocrData.nif_contribuinte}`);
+      if (parts.length > 0) notas.value = parts.join(' · ');
+    }
+
     // Anexar o próprio ficheiro como guia_pagamento se ainda vazio
     const guiaInput = document.querySelector('[name=guia_pagamento]');
     if (guiaInput && !guiaInput.value && ocrInput.files?.[0]) {

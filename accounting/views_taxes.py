@@ -340,9 +340,21 @@ def imposto_ocr_extract(request):
         if match:
             suggested_fornecedor = {"id": match.id, "name": match.name}
 
+    # Sugestão de modalidade — se OCR detectou prestações, é PARCELADO
+    suggested_modalidade = None
+    pn = data.get("parcela_numero")
+    pt = data.get("parcela_total")
+    if (pn and pt) or data.get("numero_plano"):
+        suggested_modalidade = "PARCELADO"
+    elif data.get("periodo_mes"):
+        suggested_modalidade = "MENSAL_VIGENTE"
+    elif data.get("periodo_ano"):
+        suggested_modalidade = "PONTUAL"
+
     return JsonResponse({
         "success": True,
         "data": data,
         "suggested_fornecedor": suggested_fornecedor,
+        "suggested_modalidade": suggested_modalidade,
         "skipped_files": [f.name for f in files[1:]] if len(files) > 1 else [],
     })

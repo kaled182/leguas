@@ -936,6 +936,23 @@ class Bill(models.Model):
     amount_total = models.DecimalField(
         "Valor com IVA", max_digits=12, decimal_places=2,
     )
+    # ── Retenção na Fonte (IRS/IRC) ──────────────────────────────────
+    # Aplica-se a faturas de rendas (25%), prestação de serviços (11.5%/25%),
+    # honorários, etc. O valor é DEDUZIDO do total a pagar ao fornecedor
+    # (o resto é entregue ao Estado pela Léguas).
+    irs_retention_rate = models.DecimalField(
+        "Retenção na Fonte (%)", max_digits=5, decimal_places=2,
+        default=Decimal("0.00"),
+        help_text=(
+            "0 = sem retenção. Comum: 25% (rendas), 11.5% (cat. B IRS), "
+            "25% (cat. B IRS sem contabilidade)."
+        ),
+    )
+    irs_retention_amount = models.DecimalField(
+        "Valor Retido (€)", max_digits=12, decimal_places=2,
+        default=Decimal("0.00"),
+        help_text="Calculado automaticamente: amount_net × irs_retention_rate / 100.",
+    )
     issue_date = models.DateField("Data Emissão")
     due_date = models.DateField("Data Vencimento")
     paid_date = models.DateField("Data Pagamento", null=True, blank=True)
@@ -1100,6 +1117,16 @@ class Bill(models.Model):
     @property
     def iva_amount(self):
         return self.amount_total - self.amount_net
+
+    @property
+    def amount_payable(self):
+        """Valor efectivo a pagar ao fornecedor (após retenção).
+
+        amount_total (c/ IVA) - irs_retention_amount = o que sai da
+        Tesouraria para o fornecedor. A retenção fica como dívida ao
+        Estado (entregue depois pela Léguas).
+        """
+        return self.amount_total - (self.irs_retention_amount or Decimal("0"))
 
     @property
     def is_driver_passthrough(self):

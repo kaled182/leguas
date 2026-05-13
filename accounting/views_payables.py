@@ -280,6 +280,19 @@ def _row_bill(bill):
         block = "Aguardando aprovação"
     elif not payable:
         block = f"Estado {bill.get_status_display()} não permite pagamento"
+
+    # Valor a sair da Tesouraria = total c/IVA - retenção (esta fica
+    # como dívida ao Estado, entregue depois pela Léguas)
+    irs_amt = bill.irs_retention_amount or Decimal("0.00")
+    payable_amount = bill.amount_payable
+    vat_label = ""
+    if irs_amt > 0:
+        try:
+            rate = bill.irs_retention_rate or Decimal("0")
+            vat_label = f"Retém IRS {float(rate):.2f}% (-€{float(irs_amt):.2f})"
+        except (TypeError, ValueError):
+            vat_label = f"Retém IRS (-€{float(irs_amt):.2f})"
+
     return PayableRow(
         entity_type="bill",
         entity_id=bill.id,
@@ -290,7 +303,10 @@ def _row_bill(bill):
         descricao=f"{bill.supplier} — {bill.description[:60]}",
         detail_url=reverse("accounting:bill_detail", kwargs={"pk": bill.id}),
         due_date=bill.due_date,
-        amount=bill.amount_total,
+        amount=payable_amount,
+        amount_base=bill.amount_total,
+        vat_amount=irs_amt,
+        vat_label=vat_label,
         status=bill.status,
         status_display=bill.get_status_display(),
         payable=payable,

@@ -86,6 +86,8 @@ seguinte estrutura:
   "amount_net": "valor sem IVA com ponto decimal (ex: 123.45)",
   "iva_rate": "taxa IVA % (ex: 23.00 ou 6.00 ou 13.00)",
   "amount_total": "valor com IVA com ponto decimal (ex: 151.84)",
+  "irs_retention_rate": "% de retenção na fonte se aplicável (ex: 25.00 para rendas, 11.50 ou 25.00 para Cat. B IRS); '' se não houver",
+  "irs_retention_amount": "valor retido em € com ponto decimal (ex: 204.48); '' se não houver",
   "category_hint": "categoria curta em PT, ex: 'Combustível', 'Peças e Manutenção', 'Renda', 'Internet/Telecom', 'Eletricidade', 'Água', 'Honorários', 'Material de Escritório', 'Limpeza', 'Seguros', 'Imposto'",
   "category_keywords": "1-3 palavras-chave dos produtos/serviços facturados, ex: 'gasóleo abastecimento', 'pneus alinhamento', 'fibra 1Gbps'",
   "payment_method": "um de: CASH | CARD | MULTIBANCO | TRANSFER | OTHER (ver guia abaixo)",
@@ -120,6 +122,18 @@ Regras estritas:
     * OTHER      → cheque ou método não identificável
   Se o recibo é de um POS (REDSYS, MULTIBANCO, etc.) e mostra "Mastercard"
   ou "Visa", é CARD com TOTAL CERTEZA — não deixes vazio.
+
+- irs_retention_rate / irs_retention_amount: procura no documento as
+  palavras-chave "Retenção", "Retencao", "Reten." "IRS", "IRC", "Cat. B",
+  ou linhas "(-) Retenção na fonte". Exemplos típicos PT:
+    * Renda de imóvel → 25% (art.º 101.º CIRS)
+    * Honorários cat. B IRS, contabilidade organizada → 11.5%
+    * Honorários cat. B IRS, sem contabilidade → 25%
+    * IRC → 25%
+  Devolve "" em ambos os campos se NÃO houver linha de retenção no
+  documento. Se houver, devolve a % E o valor. Se só vires o valor sem
+  a %, calcula: rate = (valor_retido / amount_net) × 100 e arredonda
+  ao 0.5%/1% típico.
 
 - card_last4: SÓ DÍGITOS, exactamente 4. Padrões frequentes:
     * "************9113" (asteriscos seguidos de 4 dígitos)
@@ -179,6 +193,8 @@ def _normalize_response(raw_json: str) -> dict:
         "amount_net": _dec(data.get("amount_net")),
         "iva_rate": _dec(data.get("iva_rate")),
         "amount_total": _dec(data.get("amount_total")),
+        "irs_retention_rate": _dec(data.get("irs_retention_rate")),
+        "irs_retention_amount": _dec(data.get("irs_retention_amount")),
         "category_hint": (data.get("category_hint") or "").strip(),
         "category_keywords": (data.get("category_keywords") or "").strip(),
         "payment_method": pm,

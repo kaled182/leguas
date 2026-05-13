@@ -15,6 +15,7 @@ class BillForm(forms.ModelForm):
             "supplier", "supplier_nif", "invoice_number",
             "category", "cost_center",
             "amount_net", "iva_rate", "amount_total",
+            "irs_retention_rate", "irs_retention_amount",
             "issue_date", "due_date", "paid_date",
             "status", "recurrence",
             "paid_by_source", "paid_by_lender",
@@ -47,6 +48,15 @@ class BillForm(forms.ModelForm):
             }),
             "amount_total": forms.NumberInput(attrs={
                 "class": "fld", "step": "0.01", "min": "0",
+            }),
+            "irs_retention_rate": forms.NumberInput(attrs={
+                "class": "fld", "step": "0.01", "min": "0", "max": "100",
+                "data-irs-rate": "1",
+                "placeholder": "0 = sem retenção",
+            }),
+            "irs_retention_amount": forms.NumberInput(attrs={
+                "class": "fld", "step": "0.01", "min": "0",
+                "data-irs-amount": "1",
             }),
             "issue_date": forms.DateInput(
                 attrs={"class": "fld", "type": "date"},
@@ -97,13 +107,22 @@ class BillForm(forms.ModelForm):
             pass
 
     def clean(self):
+        from decimal import Decimal
         cleaned = super().clean()
-        net = cleaned.get("amount_net") or 0
-        total = cleaned.get("amount_total") or 0
+        net = cleaned.get("amount_net") or Decimal("0")
+        total = cleaned.get("amount_total") or Decimal("0")
         if total < net:
             raise ValidationError(
                 "Valor com IVA não pode ser menor que valor sem IVA.",
             )
+        # Auto-cálculo da retenção: se o admin pôs rate mas não amount,
+        # calcula. Se pôs ambos, respeita o amount (override manual).
+        irs_rate = cleaned.get("irs_retention_rate") or Decimal("0")
+        irs_amt = cleaned.get("irs_retention_amount") or Decimal("0")
+        if irs_rate > 0 and irs_amt == 0 and net > 0:
+            cleaned["irs_retention_amount"] = (
+                net * irs_rate / Decimal("100")
+            ).quantize(Decimal("0.01"))
         status = cleaned.get("status")
         paid = cleaned.get("paid_date")
         if status == Bill.STATUS_PAID and not paid:

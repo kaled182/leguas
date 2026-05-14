@@ -84,6 +84,18 @@ urlpatterns = [
     path("contas-a-pagar/", views.bill_list, name="bill_list"),
     path("contas-a-pagar/nova/", views.bill_create, name="bill_create"),
     path(
+        "contas-a-pagar/lixeira/",
+        views.bill_trash, name="bill_trash",
+    ),
+    path(
+        "contas-a-pagar/<int:pk>/restaurar/",
+        views.bill_restore, name="bill_restore",
+    ),
+    path(
+        "contas-a-pagar/<int:pk>/eliminar-definitivo/",
+        views.bill_hard_delete, name="bill_hard_delete",
+    ),
+    path(
         "contas-a-pagar/<int:pk>/",
         views.bill_detail, name="bill_detail",
     ),

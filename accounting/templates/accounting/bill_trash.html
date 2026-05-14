@@ -1,0 +1,104 @@
+{% extends 'settlements/base.html' %}
+{% load static %}
+{% block title %}Lixeira — Contas a Pagar{% endblock %}
+{% block content %}
+<div class="max-w-screen-2xl mx-auto px-4 py-6 space-y-4">
+
+  <div class="flex items-center justify-between flex-wrap gap-3">
+    <div>
+      <h1 class="text-2xl font-bold flex items-center gap-2">
+        <i data-lucide="trash-2" class="w-6 h-6 text-rose-500"></i>
+        Lixeira — Contas a Pagar
+      </h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400">
+        Contas apagadas ({{ total }}). Ficam aqui para auditoria —
+        podem ser restauradas ou eliminadas definitivamente.
+      </p>
+    </div>
+    <a href="{% url 'accounting:bill_list' %}"
+      class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-semibold flex items-center gap-1.5">
+      <i data-lucide="arrow-left" class="w-4 h-4"></i> Voltar
+    </a>
+  </div>
+
+  <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="bg-gray-50 dark:bg-gray-900 text-xs uppercase text-gray-500">
+        <tr class="text-left">
+          <th class="px-3 py-2">Descrição / Fornecedor</th>
+          <th class="px-3 py-2">Categoria</th>
+          <th class="px-3 py-2 text-right">Valor</th>
+          <th class="px-3 py-2">Estado</th>
+          <th class="px-3 py-2">Apagada por</th>
+          <th class="px-3 py-2">Apagada em</th>
+          <th class="px-3 py-2">Motivo</th>
+          <th class="px-3 py-2 text-right">Acções</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+        {% for b in bills %}
+        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+          <td class="px-3 py-2">
+            <div class="font-medium">{{ b.description }}</div>
+            <div class="text-xs text-gray-400">{{ b.supplier|default:"—" }}</div>
+          </td>
+          <td class="px-3 py-2 text-xs">{{ b.category.name|default:"—" }}</td>
+          <td class="px-3 py-2 text-right font-mono">€{{ b.amount_total|floatformat:2 }}</td>
+          <td class="px-3 py-2 text-xs">{{ b.get_status_display }}</td>
+          <td class="px-3 py-2 text-xs">
+            {{ b.deleted_by.get_full_name|default:b.deleted_by.username|default:"—" }}
+          </td>
+          <td class="px-3 py-2 text-xs">{{ b.deleted_at|date:"d/m/Y H:i" }}</td>
+          <td class="px-3 py-2 text-xs text-gray-500 max-w-xs truncate" title="{{ b.delete_reason }}">
+            {{ b.delete_reason|default:"—" }}
+          </td>
+          <td class="px-3 py-2">
+            <div class="flex justify-end gap-1">
+              <button type="button"
+                onclick="restoreBill({{ b.pk }}, '{{ b.description|escapejs }}')"
+                class="p-1 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded" title="Restaurar">
+                <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+              </button>
+              <button type="button"
+                onclick="hardDeleteBill({{ b.pk }}, '{{ b.description|escapejs }}')"
+                class="p-1 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded" title="Eliminar definitivamente">
+                <i data-lucide="x-circle" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8" class="px-3 py-10 text-center text-gray-400">A lixeira está vazia.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+function getCsrf() {
+  return document.querySelector('[name=csrfmiddlewaretoken]')?.value
+    || document.cookie.split(';').find(c => c.trim().startsWith('csrftoken='))?.split('=')[1];
+}
+function _postForm(action) {
+  const f = document.createElement('form');
+  f.method = 'POST';
+  f.action = action;
+  f.innerHTML = `<input type="hidden" name="csrfmiddlewaretoken" value="${getCsrf()}">`;
+  document.body.appendChild(f);
+  f.submit();
+}
+function restoreBill(pk, desc) {
+  if (!confirm(`Restaurar a conta «${desc}»? Volta a aparecer em Contas a Pagar.`)) return;
+  _postForm(`/accounting/contas-a-pagar/${pk}/restaurar/`);
+}
+function hardDeleteBill(pk, desc) {
+  if (!confirm(`ELIMINAR DEFINITIVAMENTE a conta «${desc}»?\n\nEsta acção é IRREVERSÍVEL — a conta é removida da base de dados.`)) return;
+  _postForm(`/accounting/contas-a-pagar/${pk}/eliminar-definitivo/`);
+}
+document.addEventListener('DOMContentLoaded', () => {
+  if (window.lucide) lucide.createIcons();
+});
+</script>
+{% csrf_token %}
+{% endblock %}

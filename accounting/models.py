@@ -842,7 +842,14 @@ class BillManager(models.Manager):
     desembolsa, mas é o motorista que efectivamente deve, sendo descontado
     na próxima PF. Para o DRE / análise de margem, esses Bills NÃO são
     despesa própria. Para cash flow / "A Pagar", continuam a ser saídas.
+
+    O manager por defeito (`Bill.objects`) exclui contas soft-deleted —
+    elas somem de todas as listagens, DRE, cash flow, etc. Para aceder
+    às apagadas (lixeira / auditoria) usar `Bill.all_objects`.
     """
+
+    def get_queryset(self):
+        return super().get_queryset().filter(is_deleted=False)
 
     def company_only(self):
         """Bills que SÃO despesa real da empresa (sem motorista)."""
@@ -861,6 +868,8 @@ class Bill(models.Model):
     """
 
     objects = BillManager()
+    # Manager sem filtro de soft-delete — lixeira, auditoria, admin.
+    all_objects = models.Manager()
 
     STATUS_AWAITING = "AWAITING"
     STATUS_PENDING = "PENDING"
@@ -1091,6 +1100,22 @@ class Bill(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    # Soft-delete com auditoria — a conta não é apagada da BD, fica
+    # marcada e some das listagens, mas pode ser consultada/restaurada.
+    is_deleted = models.BooleanField(
+        "Apagada", default=False, db_index=True,
+    )
+    deleted_at = models.DateTimeField(
+        "Apagada em", null=True, blank=True,
+    )
+    deleted_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name="bills_deleted",
+    )
+    delete_reason = models.CharField(
+        "Motivo da remoção", max_length=300, blank=True,
+    )
+
     class Meta:
         verbose_name = "Conta a Pagar"
         verbose_name_plural = "Contas a Pagar"
@@ -1099,7 +1124,31 @@ class Bill(models.Model):
             models.Index(fields=["status", "due_date"]),
             models.Index(fields=["category", "issue_date"]),
             models.Index(fields=["cost_center", "issue_date"]),
+            models.Index(fields=["is_deleted", "-deleted_at"]),
         ]
+
+    def soft_delete(self, user=None, reason=""):
+        """Marca a conta como apagada (auditável, reversível)."""
+        from django.utils import timezone as _tz
+        self.is_deleted = True
+        self.deleted_at = _tz.now()
+        self.deleted_by = user
+        self.delete_reason = (reason or "")[:300]
+        self.save(update_fields=[
+            "is_deleted", "deleted_at", "deleted_by",
+            "delete_reason", "updated_at",
+        ])
+
+    def restore(self):
+        """Reverte o soft-delete."""
+        self.is_deleted = False
+        self.deleted_at = None
+        self.deleted_by = None
+        self.delete_reason = ""
+        self.save(update_fields=[
+            "is_deleted", "deleted_at", "deleted_by",
+            "delete_reason", "updated_at",
+        ])
 
     def __str__(self):
         return (

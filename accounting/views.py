@@ -517,10 +517,59 @@ def bill_detail(request, pk):
 @login_required
 @require_http_methods(["POST"])
 def bill_delete(request, pk):
+    """Soft-delete: marca a conta como apagada (auditável e reversível).
+
+    A conta some das listagens / DRE / cash flow, mas fica registada
+    com quem apagou, quando e o motivo. Pode ser restaurada na lixeira
+    (/contas-a-pagar/lixeira/).
+    """
     bill = get_object_or_404(Bill, pk=pk)
-    bill.delete()
-    messages.success(request, "Conta apagada.")
+    reason = (request.POST.get("reason") or "").strip()
+    bill.soft_delete(user=request.user, reason=reason)
+    messages.success(
+        request,
+        f"Conta «{bill.description}» movida para a lixeira. "
+        "Pode restaurá-la em Contas a Pagar → Lixeira.",
+    )
     return redirect("accounting:bill_list")
+
+
+@login_required
+def bill_trash(request):
+    """Lixeira / auditoria — contas a pagar soft-deleted."""
+    qs = (
+        Bill.all_objects.filter(is_deleted=True)
+        .select_related("category", "cost_center", "deleted_by",
+                        "created_by")
+        .order_by("-deleted_at")
+    )
+    return render(request, "accounting/bill_trash.html", {
+        "bills": qs,
+        "total": qs.count(),
+    })
+
+
+@login_required
+@require_http_methods(["POST"])
+def bill_restore(request, pk):
+    """Restaura uma conta a pagar soft-deleted."""
+    bill = get_object_or_404(Bill.all_objects, pk=pk, is_deleted=True)
+    bill.restore()
+    messages.success(request, f"Conta «{bill.description}» restaurada.")
+    return redirect("accounting:bill_trash")
+
+
+@login_required
+@require_http_methods(["POST"])
+def bill_hard_delete(request, pk):
+    """Remoção definitiva — só de contas já na lixeira. Irreversível."""
+    bill = get_object_or_404(Bill.all_objects, pk=pk, is_deleted=True)
+    desc = bill.description
+    bill.delete()
+    messages.success(
+        request, f"Conta «{desc}» eliminada definitivamente.",
+    )
+    return redirect("accounting:bill_trash")
 
 
 @login_required

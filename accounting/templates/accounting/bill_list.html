@@ -26,6 +26,11 @@
       </p>
     </div>
     <div class="flex gap-2">
+      <a href="{% url 'accounting:bill_trash' %}"
+        class="px-3 py-2 border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-sm font-semibold flex items-center gap-1.5"
+        title="Lixeira / auditoria de contas apagadas">
+        <i data-lucide="trash-2" class="w-4 h-4"></i> Lixeira
+      </a>
       <a href="{% url 'accounting:dre' %}"
         class="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold flex items-center gap-1.5">
         <i data-lucide="bar-chart-3" class="w-4 h-4"></i> Demonstração de Resultados
@@ -172,6 +177,11 @@
               <a href="{% url 'accounting:bill_detail' b.pk %}" class="p-1 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded" title="Ver detalhe">
                 <i data-lucide="eye" class="w-4 h-4"></i>
               </a>
+              <button type="button"
+                onclick="deleteBill({{ b.pk }}, '{{ b.description|escapejs }}')"
+                class="p-1 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded" title="Apagar (vai para a lixeira)">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+              </button>
             </div>
           </td>
         </tr>
@@ -209,6 +219,26 @@ async function markPaid(pk) {
   });
   const d = await r.json();
   if (d.success) location.reload();
+}
+
+function deleteBill(pk, desc) {
+  const reason = prompt(
+    `Apagar a conta «${desc}»?\n\n` +
+    'A conta vai para a lixeira (não é eliminada — fica auditável e ' +
+    'pode ser restaurada).\n\nMotivo (opcional):',
+    ''
+  );
+  if (reason === null) return;   // cancelou
+  // POST via form para respeitar o redirect do servidor
+  const f = document.createElement('form');
+  f.method = 'POST';
+  f.action = `/accounting/contas-a-pagar/${pk}/apagar/`;
+  f.innerHTML =
+    `<input type="hidden" name="csrfmiddlewaretoken" value="${getCsrf()}">` +
+    `<input type="hidden" name="reason">`;
+  f.querySelector('[name=reason]').value = reason;
+  document.body.appendChild(f);
+  f.submit();
 }
 document.addEventListener('DOMContentLoaded', () => {
   if (window.lucide) lucide.createIcons();

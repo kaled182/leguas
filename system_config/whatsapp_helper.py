@@ -606,14 +606,23 @@ class WhatsAppWPPConnectAPI:
         b64_content: str,
         filename: str,
         caption: str = "",
+        mimetype: str = "application/pdf",
     ) -> Dict:
         """Envia um documento já em base64 (sem download via URL).
 
         Útil para PDFs gerados em memória que estão atrás de login.
+
+        O WPPConnect passa o campo `base64` directamente ao
+        `client.sendFile()` da wa-js, que só reconhece o conteúdo se
+        vier como data-URI (`data:<mimetype>;base64,<...>`). Se o
+        chamador passar base64 cru, prefixamos automaticamente.
         """
+        b64 = (b64_content or "").strip()
+        if not b64.startswith("data:"):
+            b64 = f"data:{mimetype};base64,{b64}"
         payload = {
             "phone": self._ensure_recipients(number),
-            "base64": b64_content,
+            "base64": b64,
             "filename": filename,
             "caption": caption or filename,
         }

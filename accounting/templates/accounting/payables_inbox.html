@@ -426,8 +426,17 @@
           <input type="text" x-model="modal.payment_reference" placeholder="MB WAY, IBAN, transferência…" class="fld">
         </div>
         <div>
-          <label class="block text-xs uppercase font-semibold text-gray-600 dark:text-gray-300 mb-1">Comprovativo (opcional)</label>
-          <input type="file" x-ref="comprovante" accept=".pdf,.jpg,.jpeg,.png" class="fld">
+          <label class="block text-xs uppercase font-semibold text-gray-600 dark:text-gray-300 mb-1">
+            Comprovativo <span class="text-rose-500">(obrigatório)</span>
+          </label>
+          <input type="file" x-ref="comprovante" required
+                 accept=".pdf,.jpg,.jpeg,.png" class="fld"
+                 @change="modal.proofError = ''">
+          <p class="text-[11px] text-gray-400 mt-1">
+            O valor do comprovativo é verificado por OCR contra o valor a pagar.
+          </p>
+          <p x-show="modal.proofError" x-cloak
+             class="text-xs text-rose-600 mt-1" x-text="modal.proofError"></p>
         </div>
       </div>
 
@@ -453,7 +462,7 @@ function payablesInbox() {
       open: false, submitting: false,
       entity_type: '', entity_id: 0, numero: '', amount: '',
       paid_date: new Date().toISOString().slice(0, 10),
-      payment_reference: '',
+      payment_reference: '', proofError: '',
     },
     health: { open: false, loading: false, data: null },
     async openHealth(pfId) {
@@ -480,10 +489,18 @@ function payablesInbox() {
       this.modal.amount = amount;
       this.modal.paid_date = new Date().toISOString().slice(0, 10);
       this.modal.payment_reference = '';
+      this.modal.proofError = '';
+      if (this.$refs.comprovante) this.$refs.comprovante.value = '';
       this.modal.open = true;
       setTimeout(() => { if (window.lucide) window.lucide.createIcons(); }, 50);
     },
-    async confirmPay() {
+    async confirmPay(force) {
+      const file = this.$refs.comprovante.files[0];
+      if (!file) {
+        this.modal.proofError = 'O comprovativo de pagamento é obrigatório.';
+        return;
+      }
+      this.modal.proofError = '';
       this.modal.submitting = true;
       const csrf = document.cookie.split('csrftoken=')[1]?.split(';')[0] || '';
       const fd = new FormData();
@@ -491,8 +508,8 @@ function payablesInbox() {
       fd.append('entity_id', this.modal.entity_id);
       fd.append('paid_date', this.modal.paid_date);
       fd.append('payment_reference', this.modal.payment_reference);
-      const file = this.$refs.comprovante.files[0];
-      if (file) fd.append('comprovante', file);
+      fd.append('comprovante', file);
+      if (force) fd.append('force', '1');
       try {
         const r = await fetch('{% url "accounting:payables_mark_paid" %}', {
           method: 'POST', headers: { 'X-CSRFToken': csrf }, body: fd,
@@ -501,10 +518,22 @@ function payablesInbox() {
         if (d.success) {
           window.toast && window.toast({ type: 'success', message: `${d.numero} marcada como paga.` });
           setTimeout(() => window.location.reload(), 600);
-        } else {
-          window.toast && window.toast({ type: 'error', title: 'Falha', message: d.error });
-          this.modal.submitting = false;
+          return;
         }
+        // Acareação OCR: valor não confere ou não legível → confirmar
+        if (d.needs_confirmation) {
+          this.modal.submitting = false;
+          const ok = confirm(
+            (d.message || 'O comprovativo não confere com o valor a pagar.') +
+            '\n\nConfirmar o pagamento mesmo assim?'
+          );
+          if (ok) {
+            await this.confirmPay(true);   // reenvia com force=1
+          }
+          return;
+        }
+        window.toast && window.toast({ type: 'error', title: 'Falha', message: d.error });
+        this.modal.submitting = false;
       } catch (e) {
         window.toast && window.toast({ type: 'error', message: e.message });
         this.modal.submitting = false;

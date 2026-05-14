@@ -303,6 +303,130 @@ def _extract_gemini(file_obj, ocr_cfg=None) -> dict:
     return _normalize_response(resp.text or "")
 
 
+# ── OCR de comprovativos de pagamento ───────────────────────────────────
+
+_PROMPT_PAYMENT_PROOF = """És um assistente que extrai dados de
+COMPROVATIVOS DE PAGAMENTO portugueses (transferências bancárias,
+MB WAY, comprovativos de homebanking, talões Multibanco, recibos de
+pagamento). Analisa o documento e devolve EXCLUSIVAMENTE um objecto
+JSON (sem markdown, sem texto extra):
+
+{
+  "amount": "valor TRANSFERIDO/PAGO com ponto decimal (ex: 146.80)",
+  "date": "YYYY-MM-DD da operação",
+  "reference": "referência/descritivo da operação (ex: 'TRF Jansen', NIB, MB WAY)",
+  "beneficiary": "nome do beneficiário/destinatário do pagamento",
+  "doc_type": "um de: TRANSFER | MBWAY | MULTIBANCO | RECIBO | OTHER",
+  "confidence": "low | medium | high"
+}
+
+Regras estritas:
+- "amount" é o VALOR EFECTIVAMENTE PAGO/TRANSFERIDO. Se o documento
+  mostrar vários montantes (saldo, comissão, etc.), escolhe o valor
+  da OPERAÇÃO/TRANSFERÊNCIA, não o saldo da conta.
+- Valores SEMPRE com ponto decimal (ex: 146.80, nunca 146,80).
+- Datas SEMPRE ISO YYYY-MM-DD.
+- Usa "" se um campo não estiver legível. NUNCA inventes valores.
+- confidence: 'high' se o valor está claramente legível; 'medium' se
+  inferido; 'low' se o documento está ilegível ou não parece um
+  comprovativo de pagamento.
+
+Devolve APENAS o JSON.
+"""
+
+
+def _normalize_payment_proof(raw_json: str) -> dict:
+    """Parseia a resposta do modelo para um comprovativo de pagamento."""
+    cleaned = (raw_json or "").strip()
+    if cleaned.startswith("```"):
+        cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned)
+        cleaned = re.sub(r"\s*```$", "", cleaned)
+    try:
+        data = json.loads(cleaned)
+    except json.JSONDecodeError:
+        logger.warning("[ocr-proof] JSON inválido: %s", cleaned[:200])
+        return {
+            "amount": None, "date": None, "reference": "",
+            "beneficiary": "", "doc_type": "", "confidence": "low",
+        }
+
+    def _dec(v):
+        if v in (None, ""):
+            return None
+        try:
+            return Decimal(str(v).replace(",", "."))
+        except (InvalidOperation, TypeError, ValueError):
+            return None
+
+    return {
+        "amount": _dec(data.get("amount")),
+        "date": (data.get("date") or "").strip() or None,
+        "reference": (data.get("reference") or "").strip(),
+        "beneficiary": (data.get("beneficiary") or "").strip(),
+        "doc_type": (data.get("doc_type") or "").strip().upper(),
+        "confidence": (data.get("confidence") or "low").lower(),
+    }
+
+
+def _ocr_call(file_obj, prompt: str, provider: str | None = None) -> str:
+    """Executa o OCR (anthropic/gemini) com um prompt arbitrário.
+
+    Devolve o texto cru da resposta do modelo.
+    """
+    cfg = _get_ocr_settings()
+    chosen = (provider or cfg["provider"]).lower()
+    b64, media_type = _read_file_b64(file_obj)
+
+    if chosen == "anthropic":
+        if not cfg["anthropic_key"]:
+            raise RuntimeError("Anthropic API key não configurada.")
+        from anthropic import Anthropic
+        client = Anthropic(api_key=cfg["anthropic_key"])
+        src = (
+            {"type": "document", "source": {
+                "type": "base64", "media_type": "application/pdf",
+                "data": b64}}
+            if media_type == "application/pdf"
+            else {"type": "image", "source": {
+                "type": "base64", "media_type": media_type, "data": b64}}
+        )
+        resp = client.messages.create(
+            model=cfg["anthropic_model"], max_tokens=1024,
+            messages=[{"role": "user", "content": [
+                src, {"type": "text", "text": prompt},
+            ]}],
+        )
+        return resp.content[0].text if resp.content else ""
+
+    if chosen == "gemini":
+        if not cfg["gemini_key"]:
+            raise RuntimeError("Gemini API key não configurada.")
+        import google.generativeai as genai
+        genai.configure(api_key=cfg["gemini_key"])
+        model = genai.GenerativeModel(cfg["gemini_model"])
+        raw = base64.b64decode(b64)
+        resp = model.generate_content(
+            [prompt, {"mime_type": media_type, "data": raw}],
+            generation_config={
+                "temperature": 0.1,
+                "response_mime_type": "application/json",
+            },
+        )
+        return resp.text or ""
+
+    raise ValueError(f"OCR provider desconhecido: {chosen}")
+
+
+def extract_payment_proof(file_obj, provider: str | None = None) -> dict:
+    """Extrai o valor/data/referência de um comprovativo de pagamento.
+
+    Devolve: {amount: Decimal|None, date, reference, beneficiary,
+              doc_type, confidence}.
+    """
+    text = _ocr_call(file_obj, _PROMPT_PAYMENT_PROOF, provider=provider)
+    return _normalize_payment_proof(text)
+
+
 # ── Entry point ─────────────────────────────────────────────────────────
 
 def extract_invoice_data(file_obj, provider: str | None = None) -> dict:

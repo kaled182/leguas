@@ -25,6 +25,10 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 def _notify_driver_payment_async(pf):
     """Envia WhatsApp ao motorista a confirmar pagamento da PF.
@@ -944,12 +948,58 @@ def payables_inbox(request):
     })
 
 
+# Tolerância na acareação valor-comprovativo (cobre arredondamentos /
+# pequenas diferenças de apresentação). Acima disto → confirmação manual.
+_PROOF_TOLERANCE = Decimal("0.50")
+
+
+def _payable_expected_amount(entity_type, entity_id):
+    """Valor esperado a pagar para um payable, ou None se não resolver."""
+    from drivers_app.models import EmpresaParceiraLancamento
+    from settlements.models import (
+        DriverPreInvoice, ThirdPartyReimbursement, FleetInvoice,
+    )
+    from .models import Bill
+    try:
+        if entity_type == "pre_invoice":
+            return DriverPreInvoice.objects.get(id=entity_id).total_a_receber
+        if entity_type == "fleet":
+            return EmpresaParceiraLancamento.objects.get(
+                id=entity_id).total_com_iva
+        if entity_type == "fleet_invoice":
+            return FleetInvoice.objects.get(id=entity_id).total_com_iva
+        if entity_type == "shareholder":
+            return ThirdPartyReimbursement.objects.get(id=entity_id).valor
+        if entity_type == "bill":
+            return Bill.objects.get(id=entity_id).amount_total
+    except Exception:
+        return None
+    return None
+
+
+def _append_audit_note(entity, note):
+    """Acrescenta uma nota de auditoria ao primeiro campo de texto
+    disponível da entidade. Devolve o nome do campo usado, ou None."""
+    for fname in ("observacoes", "notas", "notes"):
+        if hasattr(entity, fname):
+            cur = getattr(entity, fname) or ""
+            setattr(entity, fname, (cur + "\n" + note).strip()[:5000])
+            return fname
+    return None
+
+
 @login_required
 @require_http_methods(["POST"])
 def payables_mark_paid(request):
     """Marca um payable como pago. Inputs (multipart):
        entity_type, entity_id, paid_date (YYYY-MM-DD),
-       payment_reference, comprovante (file, opcional).
+       payment_reference, comprovante (file, OBRIGATÓRIO), force.
+
+    O comprovativo é obrigatório e passa por OCR: o valor extraído é
+    confrontado com o valor esperado (acareação). Se não conferir — ou
+    se o OCR não conseguir ler o valor — devolve `needs_confirmation`
+    e o pagamento só avança com `force=1`. A acareação fica registada
+    nas observações da entidade (auditoria).
     """
     from datetime import datetime
     from drivers_app.models import EmpresaParceiraLancamento
@@ -963,11 +1013,96 @@ def payables_mark_paid(request):
     paid_date_str = request.POST.get("paid_date", "")
     payment_reference = (request.POST.get("payment_reference") or "").strip()
     comprovante = request.FILES.get("comprovante")
+    force = request.POST.get("force") == "1"
 
     try:
         paid_date = datetime.strptime(paid_date_str, "%Y-%m-%d").date()
     except (ValueError, TypeError):
         paid_date = timezone.now().date()
+
+    # ── Comprovativo OBRIGATÓRIO ────────────────────────────────────────
+    if not comprovante:
+        return JsonResponse({
+            "success": False,
+            "error": "O comprovativo de pagamento é obrigatório.",
+        }, status=400)
+
+    # ── OCR + acareação do valor ────────────────────────────────────────
+    expected = _payable_expected_amount(entity_type, entity_id)
+    ocr_amount = None
+    ocr_conf = ""
+    ocr_failed = False
+    try:
+        from .services_ocr import extract_payment_proof
+        proof = extract_payment_proof(comprovante)
+        ocr_amount = proof.get("amount")
+        ocr_conf = proof.get("confidence") or ""
+    except Exception as exc:
+        ocr_failed = True
+        logger.warning("[payables] OCR do comprovativo falhou: %s", exc)
+
+    if not force:
+        if ocr_amount is None:
+            return JsonResponse({
+                "success": False,
+                "needs_confirmation": True,
+                "ocr_amount": None,
+                "expected_amount": (
+                    str(expected) if expected is not None else None
+                ),
+                "message": (
+                    "Não foi possível ler o valor do comprovativo "
+                    "automaticamente. Confirma que o comprovativo está "
+                    "correcto e corresponde a este pagamento?"
+                ),
+            })
+        if (
+            expected is not None
+            and abs(Decimal(ocr_amount) - Decimal(expected))
+            > _PROOF_TOLERANCE
+        ):
+            return JsonResponse({
+                "success": False,
+                "needs_confirmation": True,
+                "ocr_amount": str(ocr_amount),
+                "expected_amount": str(expected),
+                "message": (
+                    f"O comprovativo indica €{ocr_amount} mas o valor "
+                    f"esperado é €{expected}. Os valores não conferem — "
+                    "confirmar o pagamento mesmo assim?"
+                ),
+            })
+
+    # Nota de auditoria da acareação (gravada nas observações da entidade)
+    _ts = timezone.now().strftime("%Y-%m-%d %H:%M")
+    if ocr_failed:
+        audit_note = (
+            f"[{_ts}] Acareação comprovativo: OCR indisponível — "
+            "pagamento confirmado manualmente."
+        )
+    elif ocr_amount is None:
+        audit_note = (
+            f"[{_ts}] Acareação comprovativo: valor não legível por OCR "
+            "— pagamento confirmado manualmente."
+        )
+    elif expected is not None:
+        diff = abs(Decimal(ocr_amount) - Decimal(expected))
+        if diff <= _PROOF_TOLERANCE:
+            audit_note = (
+                f"[{_ts}] Acareação comprovativo: OCR €{ocr_amount} ≈ "
+                f"esperado €{expected} — CONFERE (conf. {ocr_conf})."
+            )
+        else:
+            audit_note = (
+                f"[{_ts}] Acareação comprovativo: OCR €{ocr_amount} ≠ "
+                f"esperado €{expected} (dif. €{diff}) — DIVERGÊNCIA, "
+                "confirmado manualmente."
+            )
+    else:
+        audit_note = (
+            f"[{_ts}] Acareação comprovativo: OCR €{ocr_amount} "
+            f"(conf. {ocr_conf})."
+        )
 
     # Dispatch
     if entity_type == "pre_invoice":
@@ -988,6 +1123,7 @@ def payables_mark_paid(request):
             pf.referencia_pagamento = payment_reference
         if comprovante:
             pf.comprovante_pagamento = comprovante
+        _append_audit_note(pf, audit_note)
         pf.save()
         # Notifica motorista via WhatsApp (best-effort, não bloqueia)
         _notify_driver_payment_async(pf)
@@ -1006,6 +1142,7 @@ def payables_mark_paid(request):
             lanc.referencia_pagamento = payment_reference
         if comprovante:
             lanc.comprovante_pagamento = comprovante
+        _append_audit_note(lanc, audit_note)
         lanc.save()
         return JsonResponse({"success": True, "numero": f"FRT-{lanc.id:04d}"})
 
@@ -1023,8 +1160,10 @@ def payables_mark_paid(request):
         fi.data_pagamento = paid_date
         if payment_reference:
             fi.referencia_pagamento = payment_reference
+        _append_audit_note(fi, audit_note)
         fi.save(update_fields=[
-            "status", "data_pagamento", "referencia_pagamento", "updated_at",
+            "status", "data_pagamento", "referencia_pagamento",
+            "observacoes", "updated_at",
         ])
         return JsonResponse({"success": True, "numero": fi.numero})
 
@@ -1043,6 +1182,7 @@ def payables_mark_paid(request):
             reemb.comprovante_pagamento = comprovante
         if request.user.is_authenticated:
             reemb.pago_por = request.user
+        _append_audit_note(reemb, audit_note)
         reemb.save()
         return JsonResponse({"success": True, "numero": f"REE-{reemb.id:04d}"})
 
@@ -1060,6 +1200,7 @@ def payables_mark_paid(request):
             bill.payment_reference = payment_reference
         if comprovante:
             bill.payment_proof = comprovante
+        _append_audit_note(bill, audit_note)
         bill.save()
         return JsonResponse({"success": True, "numero": f"CNT-{bill.id:04d}"})
 

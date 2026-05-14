@@ -13,6 +13,10 @@
         <h3 class="text-sm font-bold text-gray-700 dark:text-gray-300 uppercase">
           Faturas ({{ invoices|length }})
         </h3>
+        <button @click="openGenerate()"
+                class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-semibold transition">
+          <i data-lucide="plus" class="w-3.5 h-3.5"></i> Gerar
+        </button>
       </div>
       <div class="divide-y divide-gray-100 dark:divide-gray-700 max-h-[70vh] overflow-y-auto">
         {% for fi in invoices %}
@@ -22,7 +26,7 @@
           <div class="flex items-center justify-between mb-1">
             <span class="font-mono font-bold text-purple-600">{{ fi.numero }}</span>
             <span class="px-1.5 py-0.5 text-[10px] rounded-full font-semibold
-              {% if fi.status == 'PAGO' %}bg-emerald-100 text-emerald-700{% elif fi.status == 'EMITIDO' %}bg-blue-100 text-blue-700{% elif fi.status == 'CALCULADO' %}bg-amber-100 text-amber-700{% elif fi.status == 'CANCELADO' %}bg-gray-200 text-gray-500{% else %}bg-gray-100 text-gray-700{% endif %}">
+              {% if fi.status == 'PAGO' %}bg-emerald-100 text-emerald-700{% elif fi.status == 'APROVADO' %}bg-blue-100 text-blue-700{% elif fi.status == 'CALCULADO' %}bg-amber-100 text-amber-700{% elif fi.status == 'CANCELADO' %}bg-gray-200 text-gray-500{% else %}bg-gray-100 text-gray-700{% endif %}">
               {{ fi.get_status_display }}
             </span>
           </div>
@@ -30,7 +34,12 @@
           <div class="text-sm font-bold text-gray-900 dark:text-white mt-0.5">€{{ fi.total_a_receber|floatformat:2 }}</div>
         </a>
         {% empty %}
-        <div class="px-4 py-8 text-center text-gray-400 text-sm">Sem pré-faturas emitidas.</div>
+        <div class="px-4 py-8 text-center text-gray-400 text-sm">
+          Sem pré-faturas emitidas.<br>
+          <button @click="openGenerate()" class="mt-2 text-purple-600 hover:underline font-semibold">
+            Gerar a primeira
+          </button>
+        </div>
         {% endfor %}
       </div>
     </div>
@@ -43,25 +52,50 @@
       <div class="bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 rounded-xl p-5 border border-purple-200 dark:border-purple-800 shadow-sm mb-4">
         <div class="flex items-start justify-between mb-3">
           <div>
-            <div class="text-xs uppercase font-semibold text-purple-600 dark:text-purple-400">Pré-fatura</div>
+            <div class="text-xs uppercase font-semibold text-purple-600 dark:text-purple-400 flex items-center gap-2">
+              Pré-fatura
+              <span class="px-2 py-0.5 rounded-full text-[10px]
+                {% if detail.status == 'PAGO' %}bg-emerald-100 text-emerald-700{% elif detail.status == 'APROVADO' %}bg-blue-100 text-blue-700{% elif detail.status == 'CALCULADO' %}bg-amber-100 text-amber-700{% elif detail.status == 'CANCELADO' %}bg-gray-200 text-gray-500{% else %}bg-gray-100 text-gray-700{% endif %}">
+                {{ detail.get_status_display }}
+              </span>
+            </div>
             <div class="text-2xl font-extrabold text-purple-700 dark:text-purple-300 font-mono">{{ detail.numero }}</div>
             <div class="text-sm text-gray-600 dark:text-gray-400 mt-1">
               {{ detail.periodo_inicio|date:"d/m/Y" }} → {{ detail.periodo_fim|date:"d/m/Y" }}
             </div>
           </div>
-          <div class="flex items-center gap-2">
+          <div class="flex flex-wrap items-center gap-2 justify-end">
             <a href="{% url 'fleet-invoice-pdf' detail.id %}" target="_blank"
                class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-sm font-semibold transition">
-              <i data-lucide="file-down" class="w-4 h-4"></i>
-              PDF
+              <i data-lucide="file-down" class="w-4 h-4"></i> PDF
             </a>
+            {% if detail.status != 'PAGO' and detail.status != 'CANCELADO' %}
+            <button @click="recalculate()"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold transition">
+              <i data-lucide="refresh-cw" class="w-4 h-4"></i> Recalcular
+            </button>
+            {% endif %}
+            <button @click="openStatus()"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-sm font-semibold transition">
+              <i data-lucide="git-branch" class="w-4 h-4"></i> Estado
+            </button>
+            {% if detail.status == 'RASCUNHO' or detail.status == 'CANCELADO' %}
+            <button @click="deleteInvoice()"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-200 dark:bg-gray-700 hover:bg-rose-100 dark:hover:bg-rose-900/30 text-rose-600 rounded-lg text-sm font-semibold transition">
+              <i data-lucide="trash-2" class="w-4 h-4"></i> Eliminar
+            </button>
+            {% endif %}
           </div>
         </div>
 
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
           <div class="bg-white/60 dark:bg-gray-800/60 rounded-lg p-3">
             <div class="text-xs text-gray-500">Entregas</div>
             <div class="text-xl font-bold">{{ detail.total_deliveries }}</div>
+          </div>
+          <div class="bg-white/60 dark:bg-gray-800/60 rounded-lg p-3">
+            <div class="text-xs text-gray-500">Base</div>
+            <div class="text-xl font-bold">€{{ detail.total_base|floatformat:2 }}</div>
           </div>
           <div class="bg-white/60 dark:bg-gray-800/60 rounded-lg p-3">
             <div class="text-xs text-gray-500">Bónus</div>
@@ -72,7 +106,7 @@
             <div class="text-xl font-bold text-rose-600">-€{{ detail.total_claims|floatformat:2 }}</div>
           </div>
           <div class="bg-white/60 dark:bg-gray-800/60 rounded-lg p-3">
-            <div class="text-xs text-gray-500">Total c/ IVA</div>
+            <div class="text-xs text-gray-500">Total c/ IVA ({{ detail.vat_rate|floatformat:0 }}%)</div>
             <div class="text-xl font-bold text-purple-700 dark:text-purple-300">€{{ detail.total_com_iva|floatformat:2 }}</div>
           </div>
         </div>
@@ -173,82 +207,354 @@
           </table>
         </div>
       </div>
-
-      {# ── Modal Upload ── #}
-      <div x-show="uploadOpen" x-cloak
-           class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
-           @click.self="uploadOpen = false">
-        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md p-6">
-          <div class="flex items-center justify-between mb-4">
-            <h3 class="text-lg font-bold flex items-center gap-2">
-              <i data-lucide="upload" class="w-5 h-5 text-blue-600"></i>
-              Novo anexo
-            </h3>
-            <button @click="uploadOpen = false" class="text-gray-400 hover:text-gray-600">
-              <i data-lucide="x" class="w-5 h-5"></i>
-            </button>
-          </div>
-          <form @submit.prevent="submitUpload()">
-            <div class="space-y-3">
-              <div>
-                <label class="block text-xs font-semibold mb-1">Tipo</label>
-                <select x-model="form.kind"
-                        class="w-full px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700">
-                  <option value="FATURA">Fatura emitida pela frota</option>
-                  <option value="RECIBO">Recibo de pagamento</option>
-                  <option value="NOTA_CREDITO">Nota de crédito</option>
-                  <option value="OUTRO">Outro</option>
-                </select>
-              </div>
-              <div>
-                <label class="block text-xs font-semibold mb-1">Ficheiro</label>
-                <input type="file" x-ref="fileInput" required
-                       class="w-full text-sm">
-              </div>
-              <div>
-                <label class="block text-xs font-semibold mb-1">Descrição (opcional)</label>
-                <input type="text" x-model="form.description" maxlength="255"
-                       placeholder="Ex: Fatura A/2026/001"
-                       class="w-full px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700">
-              </div>
-            </div>
-            <div class="flex justify-end gap-2 mt-6">
-              <button type="button" @click="uploadOpen = false"
-                      class="px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-sm">Cancelar</button>
-              <button type="submit" :disabled="uploading"
-                      class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold disabled:opacity-50">
-                <span x-show="!uploading">Enviar</span>
-                <span x-show="uploading">A enviar...</span>
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-
     {% else %}
       <div class="bg-white dark:bg-gray-800 rounded-xl p-10 border border-dashed border-gray-300 dark:border-gray-600 text-center">
         <i data-lucide="receipt" class="w-12 h-12 text-gray-300 mx-auto mb-3"></i>
-        <p class="text-gray-500">Selecciona uma pré-fatura à esquerda para ver o detalhe.</p>
+        <p class="text-gray-500 mb-3">Selecciona uma pré-fatura à esquerda, ou gera uma nova.</p>
+        <button @click="openGenerate()"
+                class="inline-flex items-center gap-1.5 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-semibold transition">
+          <i data-lucide="plus" class="w-4 h-4"></i> Gerar Pré-Fatura
+        </button>
       </div>
     {% endif %}
   </div>
+
+  {# ════════════ Modal: Gerar Pré-Fatura ════════════ #}
+  <div x-show="genOpen" x-cloak
+       class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
+       @click.self="genOpen = false">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+      <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between sticky top-0 bg-white dark:bg-gray-800 z-10">
+        <h3 class="text-lg font-bold flex items-center gap-2">
+          <i data-lucide="file-plus" class="w-5 h-5 text-purple-600"></i>
+          Gerar Pré-Fatura — {{ empresa.nome }}
+        </h3>
+        <button @click="genOpen = false" class="text-gray-400 hover:text-gray-600">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="p-6 space-y-4">
+        {# Período #}
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold mb-1">Período — Início</label>
+            <input type="date" x-model="gen.from"
+                   class="w-full px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold mb-1">Período — Fim</label>
+            <input type="date" x-model="gen.to"
+                   class="w-full px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700">
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button @click="runPreview()" :disabled="gen.loading"
+                  class="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold disabled:opacity-50">
+            <i data-lucide="search" class="w-4 h-4"></i>
+            <span x-show="!gen.loading">Pré-visualizar</span>
+            <span x-show="gen.loading">A calcular...</span>
+          </button>
+          <label class="flex items-center gap-1.5 text-xs text-gray-500">
+            <input type="checkbox" x-model="gen.skipOverlap" class="rounded">
+            Saltar se já existir fatura no período
+          </label>
+        </div>
+
+        {# Erro #}
+        <div x-show="gen.error" x-cloak
+             class="px-4 py-2 rounded-lg bg-rose-100 text-rose-700 text-sm" x-text="gen.error"></div>
+
+        {# Preview resultado #}
+        <template x-if="gen.preview">
+          <div class="space-y-3">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+              <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-2.5">
+                <div class="text-[10px] uppercase text-gray-500">Motoristas</div>
+                <div class="font-bold" x-text="gen.preview.totals.drivers_with_deliveries + ' / ' + gen.preview.totals.drivers"></div>
+              </div>
+              <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-2.5">
+                <div class="text-[10px] uppercase text-gray-500">Entregas</div>
+                <div class="font-bold" x-text="gen.preview.totals.deliveries"></div>
+              </div>
+              <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-2.5">
+                <div class="text-[10px] uppercase text-gray-500">Bónus</div>
+                <div class="font-bold text-amber-600" x-text="'€' + gen.preview.totals.bonus"></div>
+              </div>
+              <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-2.5">
+                <div class="text-[10px] uppercase text-gray-500">Total s/ IVA</div>
+                <div class="font-bold text-purple-700" x-text="'€' + gen.preview.totals.amount"></div>
+              </div>
+            </div>
+
+            <div x-show="gen.preview.has_any_overlap" x-cloak
+                 class="px-3 py-2 rounded-lg bg-amber-100 text-amber-800 text-xs flex items-center gap-2">
+              <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+              Alguns motoristas já têm PF individual que sobrepõe este período.
+            </div>
+
+            <div class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden max-h-64 overflow-y-auto">
+              <table class="w-full text-xs">
+                <thead class="bg-gray-100 dark:bg-gray-900 text-gray-500 uppercase sticky top-0">
+                  <tr>
+                    <th class="px-3 py-1.5 text-left">Motorista</th>
+                    <th class="px-3 py-1.5 text-right">Entregas</th>
+                    <th class="px-3 py-1.5 text-right">Bónus</th>
+                    <th class="px-3 py-1.5 text-right">Claims</th>
+                    <th class="px-3 py-1.5 text-right">Subtotal</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                  <template x-for="r in gen.preview.rows" :key="r.driver_id">
+                    <tr :class="r.deliveries > 0 ? '' : 'opacity-40'">
+                      <td class="px-3 py-1.5">
+                        <span x-text="r.name"></span>
+                        <span x-show="r.has_overlap" class="text-amber-500 text-[9px]">⚠ sobreposto</span>
+                      </td>
+                      <td class="px-3 py-1.5 text-right font-mono" x-text="r.deliveries"></td>
+                      <td class="px-3 py-1.5 text-right font-mono text-amber-600" x-text="'€' + r.bonus_amount"></td>
+                      <td class="px-3 py-1.5 text-right font-mono text-rose-600" x-text="'-€' + r.claims_amount"></td>
+                      <td class="px-3 py-1.5 text-right font-mono font-bold" x-text="'€' + r.subtotal"></td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </template>
+      </div>
+
+      <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-2 sticky bottom-0 bg-white dark:bg-gray-800">
+        <button @click="genOpen = false"
+                class="px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-sm">Cancelar</button>
+        <button @click="runEmit()" :disabled="!gen.preview || gen.emitting"
+                class="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold disabled:opacity-40">
+          <span x-show="!gen.emitting">Emitir Pré-Fatura</span>
+          <span x-show="gen.emitting">A emitir...</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  {# ════════════ Modal: Mudar Estado ════════════ #}
+  {% if detail %}
+  <div x-show="statusOpen" x-cloak
+       class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
+       @click.self="statusOpen = false">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-bold flex items-center gap-2">
+          <i data-lucide="git-branch" class="w-5 h-5 text-amber-600"></i>
+          Mudar Estado
+        </h3>
+        <button @click="statusOpen = false" class="text-gray-400 hover:text-gray-600">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <p class="text-sm text-gray-500 mb-3">
+        Estado actual: <span class="font-bold">{{ detail.get_status_display }}</span>
+      </p>
+      <div class="space-y-2">
+        {% for t in status_transitions %}
+        <button @click="changeStatus('{{ t.0 }}')"
+                class="w-full text-left px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-amber-50 dark:hover:bg-amber-900/20 text-sm font-semibold transition">
+          → {{ t.1 }}
+        </button>
+        {% empty %}
+        <p class="text-sm text-gray-400 text-center py-2">Sem transições disponíveis a partir deste estado.</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {# ════════════ Modal Upload ════════════ #}
+  {% if detail %}
+  <div x-show="uploadOpen" x-cloak
+       class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
+       @click.self="uploadOpen = false">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-bold flex items-center gap-2">
+          <i data-lucide="upload" class="w-5 h-5 text-blue-600"></i>
+          Novo anexo
+        </h3>
+        <button @click="uploadOpen = false" class="text-gray-400 hover:text-gray-600">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <form @submit.prevent="submitUpload()">
+        <div class="space-y-3">
+          <div>
+            <label class="block text-xs font-semibold mb-1">Tipo</label>
+            <select x-model="form.kind"
+                    class="w-full px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700">
+              <option value="FATURA">Fatura emitida pela frota</option>
+              <option value="RECIBO">Recibo de pagamento</option>
+              <option value="NOTA_CREDITO">Nota de crédito</option>
+              <option value="OUTRO">Outro</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold mb-1">Ficheiro</label>
+            <input type="file" x-ref="fileInput" required class="w-full text-sm">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold mb-1">Descrição (opcional)</label>
+            <input type="text" x-model="form.description" maxlength="255"
+                   placeholder="Ex: Fatura A/2026/001"
+                   class="w-full px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700">
+          </div>
+        </div>
+        <div class="flex justify-end gap-2 mt-6">
+          <button type="button" @click="uploadOpen = false"
+                  class="px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-sm">Cancelar</button>
+          <button type="submit" :disabled="uploading"
+                  class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold disabled:opacity-50">
+            <span x-show="!uploading">Enviar</span>
+            <span x-show="uploading">A enviar...</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+  {% endif %}
 
 </div>
 
 <script>
 function invoicePortal() {
+  const EMPRESA_ID = {{ empresa.id }};
+  const DETAIL_ID = {{ detail.id|default:0 }};
+  const csrf = () => document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+  function todayISO(offsetDays) {
+    const d = new Date();
+    d.setDate(d.getDate() + (offsetDays || 0));
+    return d.toISOString().slice(0, 10);
+  }
+
   return {
-    uploadOpen: false,
-    uploading: false,
+    uploadOpen: false, uploading: false,
     form: { kind: 'FATURA', description: '' },
+    genOpen: false,
+    statusOpen: false,
+    gen: {
+      from: todayISO(-30), to: todayISO(0),
+      skipOverlap: true,
+      loading: false, emitting: false,
+      preview: null, error: '',
+    },
 
     init() { this.$nextTick(() => { if (window.lucide) window.lucide.createIcons(); }); },
 
+    _icons() { this.$nextTick(() => { if (window.lucide) window.lucide.createIcons(); }); },
+
+    // ─── Gerar Pré-Fatura ───
+    openGenerate() {
+      this.gen.preview = null;
+      this.gen.error = '';
+      this.genOpen = true;
+      this._icons();
+    },
+
+    async runPreview() {
+      this.gen.loading = true;
+      this.gen.error = '';
+      this.gen.preview = null;
+      try {
+        const url = `/settlements/empresas/${EMPRESA_ID}/lote-preview/?from=${this.gen.from}&to=${this.gen.to}`;
+        const r = await fetch(url, { headers: { 'X-CSRFToken': csrf() }, credentials: 'same-origin' });
+        const j = await r.json();
+        if (!j.success) { this.gen.error = j.error || 'Erro ao pré-visualizar.'; return; }
+        this.gen.preview = j;
+        this._icons();
+      } catch (e) {
+        this.gen.error = 'Falha de rede: ' + e.message;
+      } finally {
+        this.gen.loading = false;
+      }
+    },
+
+    async runEmit() {
+      if (!this.gen.preview) return;
+      this.gen.emitting = true;
+      this.gen.error = '';
+      try {
+        const r = await fetch(`/settlements/empresas/${EMPRESA_ID}/lote-emit/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf() },
+          credentials: 'same-origin',
+          body: JSON.stringify({
+            from: this.gen.from, to: this.gen.to,
+            skip_overlap: this.gen.skipOverlap,
+          }),
+        });
+        const j = await r.json();
+        if (!j.success) { this.gen.error = j.error || 'Erro ao emitir.'; return; }
+        // Recarrega na fatura recém-criada
+        const newId = j.fleet_invoice && j.fleet_invoice.id;
+        window.location.href = newId
+          ? `?id=${newId}`
+          : window.location.pathname;
+      } catch (e) {
+        this.gen.error = 'Falha de rede: ' + e.message;
+      } finally {
+        this.gen.emitting = false;
+      }
+    },
+
+    // ─── Acções no detalhe ───
+    openStatus() { this.statusOpen = true; this._icons(); },
+
+    async changeStatus(novo) {
+      if (!confirm(`Mudar estado para "${novo}"?`)) return;
+      try {
+        const r = await fetch(`/settlements/fleet-invoices/${DETAIL_ID}/status/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf() },
+          credentials: 'same-origin',
+          body: JSON.stringify({ status: novo }),
+        });
+        const j = await r.json();
+        if (!j.success) { alert(j.error || 'Erro'); return; }
+        window.location.reload();
+      } catch (e) { alert('Falha de rede: ' + e.message); }
+    },
+
+    async recalculate() {
+      try {
+        const r = await fetch(`/settlements/fleet-invoices/${DETAIL_ID}/recalcular/`, {
+          method: 'POST',
+          headers: { 'X-CSRFToken': csrf() },
+          credentials: 'same-origin',
+        });
+        const j = await r.json();
+        if (!j.success) { alert(j.error || 'Erro'); return; }
+        window.location.reload();
+      } catch (e) { alert('Falha de rede: ' + e.message); }
+    },
+
+    async deleteInvoice() {
+      if (!confirm('Eliminar esta pré-fatura? Esta acção não pode ser desfeita.')) return;
+      try {
+        const r = await fetch(`/settlements/fleet-invoices/${DETAIL_ID}/delete/`, {
+          method: 'POST',
+          headers: { 'X-CSRFToken': csrf() },
+          credentials: 'same-origin',
+        });
+        const j = await r.json();
+        if (!j.success) { alert(j.error || 'Erro'); return; }
+        window.location.href = window.location.pathname;
+      } catch (e) { alert('Falha de rede: ' + e.message); }
+    },
+
+    // ─── Anexos ───
     openUpload() {
       this.form = { kind: 'FATURA', description: '' };
       if (this.$refs.fileInput) this.$refs.fileInput.value = '';
       this.uploadOpen = true;
-      this.$nextTick(() => { if (window.lucide) window.lucide.createIcons(); });
+      this._icons();
     },
 
     async submitUpload() {
@@ -256,13 +562,12 @@ function invoicePortal() {
       if (!f) { alert('Escolhe um ficheiro.'); return; }
       this.uploading = true;
       try {
-        const csrf = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
         const fd = new FormData();
         fd.append('file', f);
         fd.append('kind', this.form.kind);
         fd.append('description', this.form.description);
-        const r = await fetch(`/settlements/empresas/{{ empresa.id }}/portal/faturas/{{ detail.id|default:0 }}/anexos/upload/`, {
-          method: 'POST', headers: { 'X-CSRFToken': csrf }, body: fd,
+        const r = await fetch(`/settlements/empresas/${EMPRESA_ID}/portal/faturas/${DETAIL_ID}/anexos/upload/`, {
+          method: 'POST', headers: { 'X-CSRFToken': csrf() }, body: fd,
         });
         const j = await r.json();
         if (!j.success) { alert(j.error || 'Erro'); return; }
@@ -274,9 +579,8 @@ function invoicePortal() {
 
     async deleteAttachment(id, name) {
       if (!confirm(`Remover anexo "${name}"?`)) return;
-      const csrf = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-      const r = await fetch(`/settlements/empresas/{{ empresa.id }}/portal/anexos/${id}/delete/`, {
-        method: 'POST', headers: { 'X-CSRFToken': csrf },
+      const r = await fetch(`/settlements/empresas/${EMPRESA_ID}/portal/anexos/${id}/delete/`, {
+        method: 'POST', headers: { 'X-CSRFToken': csrf() },
       });
       const j = await r.json();
       if (!j.success) { alert(j.error || 'Erro'); return; }

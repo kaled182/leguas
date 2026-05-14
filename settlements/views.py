@@ -5409,6 +5409,45 @@ def empresa_fleet_invoice_pdf(request, fleet_invoice_id):
 
 @login_required
 @require_http_methods(["POST"])
+def empresa_fleet_invoice_recalculate(request, fleet_invoice_id):
+    """Recalcula os totais de uma FleetInvoice a partir das suas linhas.
+
+    Útil depois de editar linhas/bónus/claims manualmente ou para
+    forçar a re-agregação. Bloqueado para faturas PAGAS/CANCELADAS.
+    """
+    from .models import FleetInvoice
+
+    fi = get_object_or_404(FleetInvoice, id=fleet_invoice_id)
+    if fi.status in ("PAGO", "CANCELADO"):
+        return JsonResponse({
+            "success": False,
+            "error": (
+                f"Não é possível recalcular uma fatura em {fi.status}."
+            ),
+        }, status=400)
+
+    # Garante que os subtotais das linhas estão coerentes antes de somar
+    for ln in fi.lines.all():
+        ln.recalc_subtotal()
+        ln.save(update_fields=["subtotal"])
+
+    fi.recalcular()
+    return JsonResponse({
+        "success": True,
+        "totals": {
+            "total_deliveries": fi.total_deliveries,
+            "total_base": str(fi.total_base),
+            "total_bonus": str(fi.total_bonus),
+            "total_claims": str(fi.total_claims),
+            "total_a_receber": str(fi.total_a_receber),
+            "vat_amount": str(fi.vat_amount),
+            "total_com_iva": str(fi.total_com_iva),
+        },
+    })
+
+
+@login_required
+@require_http_methods(["POST"])
 def empresa_whatsapp_lote(request, empresa_id):
     """Envia mensagens WhatsApp em lote a drivers da frota com PFs no período.
 

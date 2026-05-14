@@ -560,6 +560,11 @@ urlpatterns = [
         name="fleet-invoice-pdf",
     ),
     path(
+        "fleet-invoices/<int:fleet_invoice_id>/recalcular/",
+        views.empresa_fleet_invoice_recalculate,
+        name="fleet-invoice-recalculate",
+    ),
+    path(
         "pre-invoices/driver/<int:driver_id>/create/",
         views.driver_pre_invoice_create,
         name="pre-invoice-create",

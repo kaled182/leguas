@@ -194,10 +194,20 @@ def empresa_portal_invoices(request, empresa_id):
         except FleetInvoice.DoesNotExist:
             detail = None
 
+    # Transições de estado disponíveis para a fatura em detalhe
+    status_transitions = []
+    if detail:
+        status_display = dict(FleetInvoice.STATUS_CHOICES)
+        status_transitions = [
+            (s, status_display.get(s, s))
+            for s in FleetInvoice.TRANSICOES.get(detail.status, [])
+        ]
+
     ctx = _common_ctx(empresa)
     ctx.update({
         "invoices": invoices,
         "detail": detail,
+        "status_transitions": status_transitions,
         "active_tab": "invoices",
     })
     return render(request, "settlements/portal_empresa/invoices.html", ctx)

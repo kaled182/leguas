@@ -526,10 +526,10 @@
         }, 3000);
     }
 
-    // Fluxo central: verifica serviço → sessão → arranca + QR se preciso.
-    // O endpoint /ensure/ fecha sessões presas e re-arranca, devolvendo
-    // o QR Code directamente na resposta (o servidor bloqueia até ~90s).
-    // Não há mais polling separado de /qrcode/.
+    // Fluxo central: verifica serviço → sessão → arranca se preciso.
+    // O /ensure/ é RÁPIDO (não bloqueia): devolve o QR se já o tiver,
+    // senão devolve o estado e o frontend faz polling leve de /qrcode/
+    // até o QR materializar.
     let _ensureInFlight = false;
     async function refreshAndEnsure(opts) {
         opts = opts || {};
@@ -554,18 +554,20 @@
             if (h.connected) return h;          // sessão activa
             if (!h.service_up) { renderQr({}); return h; }  // serviço offline
 
-            // Não conectado mas serviço up — o /ensure/ já devolveu o QR
+            // Não conectado mas serviço up
             if (h.qrcode || h.pairingCode) {
-                renderQr(h);
+                renderQr(h);                    // QR já veio no /ensure/
             } else {
-                // Sem QR e sem erro claro — mostra placeholder + dica
+                // Ainda sem QR — sessão a inicializar. Faz polling leve
+                // de /qrcode/ até o QR aparecer (até 90s).
                 renderQr({});
                 const txt = document.getElementById('qrPlaceholderText');
                 if (txt) {
                     txt.textContent = h.error
                         ? `Erro: ${h.error}`
-                        : 'QR não disponível. Clique em "Iniciar sessão".';
+                        : 'A gerar QR Code, aguarde...';
                 }
+                startQrPolling();
             }
             return h;
         } catch (error) {

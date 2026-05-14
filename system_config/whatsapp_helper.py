@@ -42,8 +42,40 @@ class WhatsAppWPPConnectAPI:
         bcrypt_pattern = r"^\$2[ayb]\$\d{2}\$[A-Za-z0-9./]{53}$"
         return bool(re.match(bcrypt_pattern, token))
 
+    def _generate_token_with_secret(self, secret: str) -> Optional[str]:
+        """Tenta gerar um token bcrypt usando um SECRET_KEY específico.
+
+        Devolve o token gerado, ou None se o secret for recusado.
+        """
+        if not secret:
+            return None
+        url = (
+            f"{self.base_url}/api/{self.session_name}/{secret}/generate-token"
+        )
+        try:
+            response = requests.post(url, timeout=DEFAULT_TIMEOUT)
+            response.raise_for_status()
+            data = response.json()
+            # WPPConnect devolve {"status":"success","token":"..."} em êxito
+            # ou {"response":false,"message":"The SECRET_KEY is incorrect"}
+            if data.get("response") is False or data.get("status") == "error":
+                logger.warning(
+                    "[WhatsApp] generate-token recusou o secret "
+                    f"({data.get('message')})"
+                )
+                return None
+            return data.get("token") or None
+        except Exception as e:
+            logger.warning(f"[WhatsApp] generate-token falhou: {e}")
+            return None
+
     def _ensure_token_hash(self) -> str:
-        """Garante que temos um token hash bcrypt válido."""
+        """Garante que temos um token hash bcrypt válido.
+
+        Tenta gerar com o SECRET_KEY configurado; se for recusado, faz
+        fallback ao default do WPPConnect (THISISMYSECURETOKEN) — cobre
+        ambientes onde o container ainda corre com o secret antigo.
+        """
         if self._token_hash:
             return self._token_hash
 
@@ -51,30 +83,30 @@ class WhatsAppWPPConnectAPI:
             self._token_hash = self.auth_token
             return self._token_hash
 
-        # Token não é hash bcrypt, precisa gerar via servidor
-        try:
-            # WPPConnect usa SECRET_KEY padrão: THISISMYSECURETOKEN
-            secret_for_generation = "THISISMYSECURETOKEN"
-            url = f"{self.base_url}/api/{self.session_name}/{secret_for_generation}/generate-token"
-            logger.info(f"[WhatsApp] Gerando token hash via: {url}")
-            response = requests.post(url, timeout=DEFAULT_TIMEOUT)
-            response.raise_for_status()
-            data = response.json()
-            logger.info(f"[WhatsApp] Resposta generate-token: {data}")
-            self._token_hash = data.get("token", "")
+        # Token não é hash bcrypt — gerar via servidor.
+        # Ordem de tentativa: secret configurado → secret default.
+        candidates = []
+        if self.secret_key:
+            candidates.append(self.secret_key)
+        if "THISISMYSECURETOKEN" not in candidates:
+            candidates.append("THISISMYSECURETOKEN")
 
-            # Atualizar header para requisições futuras
-            if self._token_hash:
-                self.headers["Authorization"] = f"Bearer {self._token_hash}"
+        for secret in candidates:
+            token = self._generate_token_with_secret(secret)
+            if token:
+                self._token_hash = token
+                self.headers["Authorization"] = f"Bearer {token}"
                 logger.info(
-                    f"[WhatsApp] Token hash gerado com sucesso: {self._token_hash[:20]}..."
+                    "[WhatsApp] Token hash gerado com sucesso "
+                    f"({token[:20]}...)"
                 )
+                return self._token_hash
 
-            return self._token_hash
-        except Exception as e:
-            logger.error(f"[WhatsApp] Erro ao gerar token hash: {e}")
-            # Se falhar, usa o token original e deixa o servidor recusar
-            return self.auth_token
+        logger.error(
+            "[WhatsApp] Não foi possível gerar token hash — nenhum "
+            "SECRET_KEY aceite. Usando token original."
+        )
+        return self.auth_token
 
     @classmethod
     def from_config(cls):

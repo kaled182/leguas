@@ -3955,6 +3955,24 @@ def pre_invoice_send_whatsapp(request, pre_invoice_id):
             auth_token=settings.WPPCONNECT_TOKEN,
             secret_key=settings.WPPCONNECT_SECRET,
         )
+    except Exception as e:
+        return JsonResponse(
+            {"success": False, "error":
+             f"Erro a inicializar WhatsApp: {e}"},
+            status=502,
+        )
+
+    # Pré-verifica que a sessão está conectada — caso contrário o
+    # WPPConnect responde 404/401 a /send-message com mensagem críptica.
+    if not api.is_connected():
+        return JsonResponse(
+            {"success": False, "error":
+             "Sessão WhatsApp não está conectada. Vai a "
+             "Configurações → WhatsApp e lê o QR Code para ligar."},
+            status=409,
+        )
+
+    try:
         result = api.send_text(number=digits, text=msg)
     except Exception as e:
         return JsonResponse(

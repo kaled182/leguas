@@ -3,6 +3,7 @@
 Acesso: admin (Django User com is_staff) pode ver qualquer driver;
         driver autenticado via DriverAccess só pode ver o seu próprio.
 """
+import logging
 from collections import defaultdict
 from datetime import date, timedelta
 from decimal import Decimal
@@ -14,6 +15,8 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from .models import DriverProfile
+
+logger = logging.getLogger(__name__)
 
 
 def portal_access_required(view_func):
@@ -717,9 +720,17 @@ def driver_pre_invoice_pdf(request, driver_id, pre_invoice_id):
 
 @portal_access_required
 def driver_pre_invoice_upload_recibo(request, driver_id, pre_invoice_id):
-    """Upload da fatura-recibo emitida pelo motorista — disponível ao próprio
-    driver (via DriverAccess) ou ao admin."""
+    """Upload da fatura-recibo emitida pelo motorista.
+
+    O recibo passa por OCR: o valor extraído é confrontado com o
+    total a receber da pré-fatura (acareação). Se não conferir — ou
+    se o OCR não conseguir ler o valor — devolve `needs_confirmation`
+    e o anexo só avança com `force=1`. A acareação fica registada nas
+    observações da PF (auditoria).
+    """
+    from decimal import Decimal
     from django.http import JsonResponse
+    from django.utils import timezone as _tz
     from settlements.models import DriverPreInvoice
 
     if request.method != "POST":
@@ -736,15 +747,115 @@ def driver_pre_invoice_upload_recibo(request, driver_id, pre_invoice_id):
             {"success": False, "error": "Nenhum ficheiro enviado."},
             status=400,
         )
+
+    force = request.POST.get("force") == "1"
+    tolerance = Decimal("0.50")
+    expected = pf.total_a_receber
+
+    # ── OCR + acareação do valor ────────────────────────────────────────
+    ocr_amount = None
+    ocr_conf = ""
+    ocr_failed = False
+    try:
+        from accounting.services_ocr import extract_invoice_data
+        data = extract_invoice_data(ficheiro)
+        raw = data.get("amount_total")
+        ocr_amount = Decimal(str(raw)) if raw else None
+        ocr_conf = data.get("confidence") or ""
+    except Exception as exc:
+        ocr_failed = True
+        logger.warning("[recibo] OCR falhou: %s", exc)
+
+    if not force:
+        if ocr_amount is None:
+            return JsonResponse({
+                "success": False,
+                "needs_confirmation": True,
+                "ocr_amount": None,
+                "expected_amount": str(expected),
+                "message": (
+                    "Não foi possível ler o valor do recibo "
+                    "automaticamente. Confirma que o recibo "
+                    f"corresponde a {pf.numero} (€{expected})?"
+                ),
+            })
+        if abs(ocr_amount - Decimal(expected)) > tolerance:
+            return JsonResponse({
+                "success": False,
+                "needs_confirmation": True,
+                "ocr_amount": str(ocr_amount),
+                "expected_amount": str(expected),
+                "message": (
+                    f"O recibo indica €{ocr_amount} mas {pf.numero} "
+                    f"é de €{expected}. Os valores não conferem — "
+                    "anexar mesmo assim?"
+                ),
+            })
+
+    # ── Nota de auditoria da acareação ──────────────────────────────────
+    _ts = _tz.now().strftime("%Y-%m-%d %H:%M")
+    if ocr_failed:
+        note = (
+            f"[{_ts}] Recibo anexado — OCR indisponível, "
+            "valor confirmado manualmente."
+        )
+    elif ocr_amount is None:
+        note = (
+            f"[{_ts}] Recibo anexado — valor não legível por OCR, "
+            "confirmado manualmente."
+        )
+    elif abs(ocr_amount - Decimal(expected)) <= tolerance:
+        note = (
+            f"[{_ts}] Recibo anexado — OCR €{ocr_amount} ≈ PF "
+            f"€{expected}: CONFERE (conf. {ocr_conf})."
+        )
+    else:
+        note = (
+            f"[{_ts}] Recibo anexado — OCR €{ocr_amount} ≠ PF "
+            f"€{expected}: DIVERGÊNCIA, confirmado manualmente."
+        )
+
     if pf.fatura_ficheiro:
         pf.fatura_ficheiro.delete(save=False)
     pf.fatura_ficheiro = ficheiro
-    pf.save(update_fields=["fatura_ficheiro"])
+    pf.observacoes = ((pf.observacoes or "") + "\n" + note).strip()[:5000]
+    pf.save(update_fields=["fatura_ficheiro", "observacoes"])
     return JsonResponse({
         "success": True,
         "fatura_url": pf.fatura_ficheiro.url,
         "fatura_name": ficheiro.name,
+        "ocr_amount": str(ocr_amount) if ocr_amount is not None else None,
+        "expected_amount": str(expected),
     })
+
+
+@portal_access_required
+def driver_pre_invoice_clear_recibo(request, driver_id, pre_invoice_id):
+    """Remove a fatura-recibo anexada a uma pré-fatura (admin/driver)."""
+    from django.http import JsonResponse
+    from django.utils import timezone as _tz
+    from settlements.models import DriverPreInvoice
+
+    if request.method != "POST":
+        return JsonResponse(
+            {"success": False, "error": "Método não permitido."}, status=405,
+        )
+    pf = get_object_or_404(
+        DriverPreInvoice, id=pre_invoice_id, driver_id=driver_id,
+    )
+    if not pf.fatura_ficheiro:
+        return JsonResponse(
+            {"success": False, "error": "Esta PF não tem recibo anexado."},
+            status=400,
+        )
+    pf.fatura_ficheiro.delete(save=False)
+    pf.fatura_ficheiro = None
+    _ts = _tz.now().strftime("%Y-%m-%d %H:%M")
+    pf.observacoes = (
+        (pf.observacoes or "") + f"\n[{_ts}] Recibo removido."
+    ).strip()[:5000]
+    pf.save(update_fields=["fatura_ficheiro", "observacoes"])
+    return JsonResponse({"success": True, "numero": pf.numero})
 
 
 @portal_access_required

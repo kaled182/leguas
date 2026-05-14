@@ -3740,6 +3740,7 @@ from .portal_views import (
     driver_caderneta_pdf,
     driver_pre_invoice_pdf,
     driver_pre_invoice_upload_recibo,
+    driver_pre_invoice_clear_recibo,
 )
 
 

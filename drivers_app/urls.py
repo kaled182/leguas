@@ -83,6 +83,11 @@ urlpatterns = [
         name="driver_pre_invoice_upload_recibo",
     ),
     path(
+        "portal/<int:driver_id>/pf/<int:pre_invoice_id>/clear-recibo/",
+        views.driver_pre_invoice_clear_recibo,
+        name="driver_pre_invoice_clear_recibo",
+    ),
+    path(
         "portal/<int:driver_id>/pf/<int:pre_invoice_id>/pdf/",
         views.driver_pre_invoice_pdf,
         name="driver_pre_invoice_pdf",

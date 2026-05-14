@@ -350,6 +350,10 @@ async function emitirPF() {
                       class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md text-amber-600 hover:text-amber-700 inline-flex">
                 <i data-lucide="refresh-cw" class="w-4 h-4"></i>
               </button>
+              <button type="button" onclick="limparRecibo({{ pf.id }}, '{{ pf.numero }}')" title="Limpar recibo anexado"
+                      class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md text-rose-600 hover:text-rose-700 inline-flex">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+              </button>
               {% endif %}
             {% else %}
               <button type="button" onclick="anexarRecibo({{ pf.id }}, '{{ pf.numero }}', false)" title="Anexar fatura-recibo"
@@ -400,6 +404,38 @@ async function emitirPF() {
     input.click();
   };
 
+  async function _enviarRecibo(pfId, numero, file, force) {
+    const fd = new FormData();
+    fd.append('fatura', file);
+    if (force) fd.append('force', '1');
+    const r = await fetch(
+      `/driversapp/portal/{{ driver.id }}/pf/${pfId}/upload-recibo/`,
+      { method: 'POST', headers: { 'X-CSRFToken': csrfCookie() }, body: fd },
+    );
+    const d = await r.json();
+    if (d.success) {
+      window.toast({
+        type: 'success',
+        title: 'Recibo anexado',
+        message: `Pagamento de ${numero} pode ser libertado.`,
+      });
+      setTimeout(() => window.location.reload(), 800);
+      return;
+    }
+    // Acareação OCR: valor não confere / não legível → confirmar
+    if (d.needs_confirmation) {
+      const ok = await window.confirmModal({
+        type: 'warning',
+        title: 'Recibo não confere',
+        message: d.message || 'O valor do recibo não confere com a pré-fatura.',
+        confirmText: 'Anexar mesmo assim', icon: 'alert-triangle',
+      });
+      if (ok) await _enviarRecibo(pfId, numero, file, true);
+      return;
+    }
+    window.toast({ type: 'error', title: 'Falha no upload', message: d.error || 'Erro' });
+  }
+
   document.getElementById('reciboFileInput').addEventListener('change', async (e) => {
     if (!_ctx) return;
     const file = e.target.files[0];
@@ -412,30 +448,38 @@ async function emitirPF() {
       return;
     }
 
-    const fd = new FormData();
-    fd.append('fatura', file);
-
-    window.toast({ type: 'info', message: `A enviar recibo de ${numero}…` });
+    window.toast({ type: 'info', message: `A enviar recibo de ${numero}… (verificação OCR)` });
     try {
-      const r = await fetch(
-        `/driversapp/portal/{{ driver.id }}/pf/${pfId}/upload-recibo/`,
-        { method: 'POST', headers: { 'X-CSRFToken': csrfCookie() }, body: fd },
-      );
-      const d = await r.json();
-      if (d.success) {
-        window.toast({
-          type: 'success',
-          title: 'Recibo anexado',
-          message: `Pagamento de ${numero} pode ser libertado.`,
-        });
-        setTimeout(() => window.location.reload(), 800);
-      } else {
-        window.toast({ type: 'error', title: 'Falha no upload', message: d.error || 'Erro' });
-      }
+      await _enviarRecibo(pfId, numero, file, false);
     } catch (err) {
       window.toast({ type: 'error', message: err.message });
     }
   });
+
+  window.limparRecibo = async function (pfId, numero) {
+    const ok = await window.confirmModal({
+      type: 'danger',
+      title: 'Limpar fatura-recibo?',
+      message: `O recibo anexado a ${numero} será removido. A PF volta a "Pendente".`,
+      confirmText: 'Limpar recibo', icon: 'trash-2',
+    });
+    if (!ok) return;
+    try {
+      const r = await fetch(
+        `/driversapp/portal/{{ driver.id }}/pf/${pfId}/clear-recibo/`,
+        { method: 'POST', headers: { 'X-CSRFToken': csrfCookie() } },
+      );
+      const d = await r.json();
+      if (d.success) {
+        window.toast({ type: 'success', message: `Recibo de ${numero} removido.` });
+        setTimeout(() => window.location.reload(), 600);
+      } else {
+        window.toast({ type: 'error', message: d.error || 'Erro' });
+      }
+    } catch (err) {
+      window.toast({ type: 'error', message: err.message });
+    }
+  };
 })();
 </script>
 

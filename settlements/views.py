@@ -3969,21 +3969,16 @@ def pre_invoice_send_whatsapp(request, pre_invoice_id):
             status=409,
         )
 
-    try:
-        result = api.send_text(number=digits, text=msg)
-    except Exception as e:
-        return JsonResponse(
-            {"success": False, "error": f"Erro a enviar: {e}"},
-            status=502,
-        )
+    # Estratégia: enviar o PDF da pré-fatura com o RESUMO como legenda
+    # — uma única chamada /send-file-base64. O endpoint /send-message
+    # da wa-js está instável nesta build do WPPConnect (devolve 500
+    # "Erro ao enviar a mensagem"), mas o /send-file-base64 funciona de
+    # forma fiável. Se a geração do PDF falhar, recorre-se ao texto.
+    import base64 as _b64
 
-    # Anexa o PDF da pré-fatura (gerado em memória, enviado em base64).
-    # Best-effort: se falhar, o texto já foi entregue — devolve aviso.
-    pdf_sent = False
-    pdf_error = None
+    pdf_b64 = None
+    pdf_filename = None
     try:
-        import base64 as _b64
-
         generator = PDFGenerator()
         pdf_buffer = generator.generate_pre_invoice_pdf(pf)
         pdf_bytes = (
@@ -3991,26 +3986,53 @@ def pre_invoice_send_whatsapp(request, pre_invoice_id):
             if hasattr(pdf_buffer, "getvalue") else bytes(pdf_buffer)
         )
         pdf_b64 = _b64.b64encode(pdf_bytes).decode("utf-8")
-        filename = (
+        pdf_filename = (
             f"PreFatura_{pf.numero}_"
             f"{driver.nome_completo.replace(' ', '_')}.pdf"
         )
-        api.send_document_base64(
-            number=digits,
-            b64_content=pdf_b64,
-            filename=filename,
-            caption=f"Pré-Fatura {pf.numero}",
-        )
-        pdf_sent = True
     except Exception as e:
-        pdf_error = str(e)
+        pdf_b64 = None
+        logger = __import__("logging").getLogger(__name__)
+        logger.warning("[PF WhatsApp] Falha a gerar PDF: %s", e)
 
+    if pdf_b64:
+        # Caminho principal: PDF + resumo na legenda, uma só mensagem
+        try:
+            result = api.send_document_base64(
+                number=digits,
+                b64_content=pdf_b64,
+                filename=pdf_filename,
+                caption=msg,
+            )
+        except Exception as e:
+            return JsonResponse(
+                {"success": False, "error": f"Erro a enviar PDF: {e}"},
+                status=502,
+            )
+        return JsonResponse({
+            "success": True,
+            "phone": digits,
+            "message_preview": msg[:200],
+            "pdf_sent": True,
+            "wpp_response": result,
+        })
+
+    # Fallback (sem PDF): tenta o texto simples
+    try:
+        result = api.send_text(number=digits, text=msg)
+    except Exception as e:
+        return JsonResponse(
+            {"success": False, "error":
+             f"Não foi possível gerar o PDF e o envio de texto "
+             f"falhou: {e}"},
+            status=502,
+        )
     return JsonResponse({
         "success": True,
         "phone": digits,
         "message_preview": msg[:200],
-        "pdf_sent": pdf_sent,
-        "pdf_error": pdf_error,
+        "pdf_sent": False,
+        "pdf_error": "PDF não gerado — enviado apenas o resumo em texto.",
         "wpp_response": result,
     })
 

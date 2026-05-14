@@ -395,6 +395,25 @@ class WhatsAppWPPConnectAPI:
         }
         return self._request("post", "/send-file-base64", json=payload)
 
+    def send_document_base64(
+        self,
+        number: Sequence[str] | str,
+        b64_content: str,
+        filename: str,
+        caption: str = "",
+    ) -> Dict:
+        """Envia um documento já em base64 (sem download via URL).
+
+        Útil para PDFs gerados em memória que estão atrás de login.
+        """
+        payload = {
+            "phone": self._ensure_recipients(number),
+            "base64": b64_content,
+            "filename": filename,
+            "caption": caption or filename,
+        }
+        return self._request("post", "/send-file-base64", json=payload)
+
     def send_audio(
         self,
         number: Sequence[str] | str,

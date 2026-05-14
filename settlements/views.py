@@ -3962,10 +3962,40 @@ def pre_invoice_send_whatsapp(request, pre_invoice_id):
             status=502,
         )
 
+    # Anexa o PDF da pré-fatura (gerado em memória, enviado em base64).
+    # Best-effort: se falhar, o texto já foi entregue — devolve aviso.
+    pdf_sent = False
+    pdf_error = None
+    try:
+        import base64 as _b64
+
+        generator = PDFGenerator()
+        pdf_buffer = generator.generate_pre_invoice_pdf(pf)
+        pdf_bytes = (
+            pdf_buffer.getvalue()
+            if hasattr(pdf_buffer, "getvalue") else bytes(pdf_buffer)
+        )
+        pdf_b64 = _b64.b64encode(pdf_bytes).decode("utf-8")
+        filename = (
+            f"PreFatura_{pf.numero}_"
+            f"{driver.nome_completo.replace(' ', '_')}.pdf"
+        )
+        api.send_document_base64(
+            number=digits,
+            b64_content=pdf_b64,
+            filename=filename,
+            caption=f"Pré-Fatura {pf.numero}",
+        )
+        pdf_sent = True
+    except Exception as e:
+        pdf_error = str(e)
+
     return JsonResponse({
         "success": True,
         "phone": digits,
         "message_preview": msg[:200],
+        "pdf_sent": pdf_sent,
+        "pdf_error": pdf_error,
         "wpp_response": result,
     })
 

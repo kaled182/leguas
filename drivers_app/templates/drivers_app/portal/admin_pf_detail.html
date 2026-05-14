@@ -485,9 +485,16 @@ async function enviarWhatsapp() {
     confirmText: 'Enviar', icon: 'message-circle',
   });
   if (!ok) return;
-  const d = await _post(`/settlements/pre-invoices/${PF_ID}/send-whatsapp/`);
-  if (d.success) window.toast({type:'success', message:'Enviado!'});
-  else window.toast({type:'error', message: d.error || 'Erro'});
+  const d = await _post(`/settlements/pre-invoices/${PF_ID}/whatsapp/`);
+  if (d.success) {
+    if (d.pdf_sent === false) {
+      window.toast({type:'warning', message:'Resumo enviado, mas o PDF falhou: ' + (d.pdf_error || 'erro desconhecido')});
+    } else {
+      window.toast({type:'success', message:'Resumo + PDF enviados!'});
+    }
+  } else {
+    window.toast({type:'error', message: d.error || 'Erro'});
+  }
 }
 
 async function alterarStatus() {

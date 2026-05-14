@@ -75,6 +75,7 @@ urlpatterns = [
     path("whatsapp/ensure/", views.whatsapp_ensure, name="whatsapp_ensure"),
     path("whatsapp/qrcode/", views.whatsapp_qrcode, name="whatsapp_qrcode"),
     path("whatsapp/webhook/", views.whatsapp_webhook, name="whatsapp_webhook"),
+    path("whatsapp/diagnose/", views.whatsapp_diagnose, name="whatsapp_diagnose"),
     path("whatsapp/logout/", views.whatsapp_logout, name="whatsapp_logout"),
     path(
         "whatsapp/send-test/",

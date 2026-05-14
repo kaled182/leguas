@@ -486,6 +486,16 @@ def whatsapp_webhook(request):
     session = (payload.get("session") or "").strip() or "default"
     key = f"wpp_qr:{session}"
 
+    # Regista que o webhook foi recebido — sinal de diagnóstico crucial:
+    # se o WPPConnect não estiver a chamar o webhook (imagem não
+    # reconstruída, ALLOWED_HOSTS, rede), este timestamp fica vazio.
+    from django.utils import timezone as _tz
+    cache.set(
+        "wpp_webhook_last",
+        {"ts": _tz.now().isoformat(), "event": event, "session": session},
+        timeout=3600,
+    )
+
     if event == "qrcode":
         raw = payload.get("qrcode") or payload.get("base64") or ""
         urlcode = payload.get("urlcode") or payload.get("urlCode") or ""
@@ -507,6 +517,116 @@ def whatsapp_webhook(request):
         cache.delete(key)
 
     return JsonResponse({"success": True})
+
+
+@login_required
+@require_GET
+def whatsapp_diagnose(request):
+    """Diagnóstico completo da integração WhatsApp.
+
+    Devolve um checklist accionável — útil para perceber porque é que
+    o QR não aparece sem ter de adivinhar (imagem não reconstruída,
+    webhook bloqueado, sessão presa, etc.).
+    """
+    from django.conf import settings
+    from django.core.cache import cache
+    from django.utils import timezone as _tz
+
+    checks = []
+
+    def add(label, ok, detail=""):
+        checks.append({"label": label, "ok": bool(ok), "detail": detail})
+
+    # 1. Helper / config
+    api, err = _load_whatsapp_api()
+    add(
+        "Configuração WhatsApp válida",
+        api is not None,
+        err or f"sessão: {getattr(api, 'session_name', '?')}",
+    )
+
+    health = {}
+    if api is not None:
+        try:
+            health = api.get_health()
+        except Exception as exc:
+            health = {"error": str(exc)}
+        add(
+            "Serviço WPPConnect acessível",
+            health.get("service_up"),
+            health.get("error") or "",
+        )
+        add(
+            "Sessão conectada",
+            health.get("connected"),
+            f"estado: {health.get('state', '?')}",
+        )
+
+    # 2. Webhook configurado no Django
+    wh_url = getattr(settings, "WPPCONNECT_WEBHOOK_URL", "")
+    add("WPPCONNECT_WEBHOOK_URL definido", bool(wh_url), wh_url)
+
+    # 3. Webhook a chegar do WPPConnect — o sinal crítico
+    last = cache.get("wpp_webhook_last")
+    if last:
+        try:
+            from datetime import datetime
+            ts = datetime.fromisoformat(last["ts"])
+            age = (_tz.now() - ts).total_seconds()
+            add(
+                "Webhook do WPPConnect a chegar ao Django",
+                age < 180,
+                f"último: há {int(age)}s (evento '{last.get('event')}')",
+            )
+        except Exception:
+            add("Webhook do WPPConnect a chegar ao Django", True,
+                "recebido (timestamp ilegível)")
+    else:
+        add(
+            "Webhook do WPPConnect a chegar ao Django",
+            False,
+            "NUNCA recebido — reconstrói a imagem: "
+            "docker compose build wppconnect && up -d wppconnect",
+        )
+
+    # 4. QR em cache
+    session = getattr(api, "session_name", "") if api else ""
+    qr_cached = bool(cache.get(f"wpp_qr:{session}")) if session else False
+    add("QR Code em cache (via webhook)", qr_cached,
+        "" if qr_cached else "nenhum QR recebido ainda")
+
+    all_ok = all(c["ok"] for c in checks)
+    # Veredicto accionável
+    verdict = "Tudo OK."
+    if api is None and "não está habilitado" in (err or "").lower():
+        verdict = (
+            "O serviço WhatsApp está DESATIVADO. Clica no botão "
+            "'Ativar' (em Configurações do serviço) para o ligar."
+        )
+    elif api is None:
+        verdict = "Configura URL/instância/token nas Configurações."
+    elif api and not health.get("service_up"):
+        verdict = "O container wppconnect não responde — verifica se está a correr."
+    elif health.get("connected"):
+        verdict = "Sessão já conectada — não é preciso QR."
+    elif not last:
+        verdict = (
+            "O WPPConnect nunca chamou o webhook. Quase de certeza a "
+            "imagem não foi reconstruída. No servidor: "
+            "`docker compose build wppconnect && docker compose up -d wppconnect`."
+        )
+    elif not qr_cached:
+        verdict = (
+            "Webhook a funcionar mas sem QR — a sessão pode estar presa. "
+            "Reinicia o wppconnect: `docker compose restart wppconnect`."
+        )
+
+    return JsonResponse({
+        "success": True,
+        "all_ok": all_ok,
+        "verdict": verdict,
+        "checks": checks,
+    })
 
 
 @login_required

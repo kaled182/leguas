@@ -239,9 +239,15 @@
                     <i data-lucide="log-out" class="w-4 h-4"></i>
                     Desconectar sessão
                 </button>
+                <button type="button" id="diagnoseButton" class="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-900/50">
+                    <i data-lucide="stethoscope" class="w-4 h-4"></i>
+                    Diagnóstico
+                </button>
                 <div class="text-xs text-gray-500 dark:text-gray-400">
                     <p>Use "Desconectar" se desejar remover a sessão corrente do WhatsApp e iniciar uma nova leitura de QR.</p>
+                    <p class="mt-1">Se o QR não aparecer, clica em <b>Diagnóstico</b> — diz exactamente o que está em falta.</p>
                 </div>
+                <div id="diagnoseResult" class="hidden mt-2 text-xs space-y-1.5"></div>
             </div>
 
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 text-sm text-gray-600 dark:text-gray-300 space-y-2">
@@ -308,11 +314,12 @@
         refreshQr: document.getElementById('refreshQRCode'),
         status: document.getElementById('statusButton'),
         logout: document.getElementById('logoutButton'),
+        diagnose: document.getElementById('diagnoseButton'),
         test: document.getElementById('testSubmit'),
         generateToken: document.getElementById('generateTokenBtn')
     };
 
-    const alwaysEnabledButtons = new Set(['generateToken']);
+    const alwaysEnabledButtons = new Set(['generateToken', 'diagnose']);
 
     function setPanelAvailability(flag) {
         if (!panel) {
@@ -360,6 +367,7 @@
         start: '{% url "system_config:whatsapp_start_session" %}',
         status: '{% url "system_config:whatsapp_status" %}',
         ensure: '{% url "system_config:whatsapp_ensure" %}',
+        diagnose: '{% url "system_config:whatsapp_diagnose" %}',
         qrcode: '{% url "system_config:whatsapp_qrcode" %}',
         logout: '{% url "system_config:whatsapp_logout" %}',
         sendTest: '{% url "system_config:whatsapp_send_test" %}',
@@ -602,6 +610,36 @@
         }
         if (connectedStatus) {
             connectedStatus.textContent = 'Ativo e operacional';
+        }
+    }
+
+    async function runDiagnose() {
+        const box = document.getElementById('diagnoseResult');
+        if (buttons.diagnose) buttons.diagnose.disabled = true;
+        if (box) {
+            box.classList.remove('hidden');
+            box.innerHTML = '<div class="text-gray-400">A diagnosticar...</div>';
+        }
+        try {
+            const d = await callEndpoint(endpoints.diagnose, { method: 'GET' });
+            let html = '';
+            (d.checks || []).forEach(c => {
+                const icon = c.ok ? '✅' : '❌';
+                html += `<div class="flex items-start gap-1.5">
+                    <span>${icon}</span>
+                    <span><b>${c.label}</b>${c.detail ? ' — <span class="text-gray-500">' + c.detail + '</span>' : ''}</span>
+                </div>`;
+            });
+            if (d.verdict) {
+                html += `<div class="mt-2 p-2 rounded-lg ${d.all_ok ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">
+                    <b>Veredicto:</b> ${d.verdict}
+                </div>`;
+            }
+            if (box) box.innerHTML = html;
+        } catch (e) {
+            if (box) box.innerHTML = `<div class="text-rose-600">Erro: ${e.message}</div>`;
+        } finally {
+            if (buttons.diagnose) buttons.diagnose.disabled = false;
         }
     }
 
@@ -885,6 +923,9 @@
         }
         if (buttons.logout) {
             buttons.logout.addEventListener('click', logoutSession);
+        }
+        if (buttons.diagnose) {
+            buttons.diagnose.addEventListener('click', runDiagnose);
         }
         if (testForm) {
             testForm.addEventListener('submit', sendTest);

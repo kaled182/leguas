@@ -29,6 +29,22 @@ for _internal_host in ("web", "localhost", "127.0.0.1"):
     if _internal_host not in ALLOWED_HOSTS:
         ALLOWED_HOSTS.append(_internal_host)
 
+# CSRF_TRUSTED_ORIGINS — o Django 4+ valida o cabeçalho Origin em
+# pedidos POST. O painel é servido pelo Caddy nas portas 8090 (HTTP)
+# e 8453 (HTTPS), por isso o Origin do browser inclui essas portas e
+# tem de estar explicitamente confiável (senão dá 403 em todos os
+# POST AJAX — guardar config, ativar serviço, etc.). Derivamos os
+# origins de ALLOWED_HOSTS para cobrir qualquer deployment.
+_csrf_ports = ["", ":80", ":443", ":8000", ":8090", ":8453"]
+for _h in list(ALLOWED_HOSTS):
+    if not _h or _h == "*" or _h.startswith("."):
+        continue
+    for _scheme in ("http", "https"):
+        for _port in _csrf_ports:
+            _origin = f"{_scheme}://{_h}{_port}"
+            if _origin not in CSRF_TRUSTED_ORIGINS:
+                CSRF_TRUSTED_ORIGINS.append(_origin)
+
 FORCE_HTTPS = env.bool("FORCE_HTTPS", default=not DEBUG)
 
 # Nunca força HTTPS se DEBUG estiver True

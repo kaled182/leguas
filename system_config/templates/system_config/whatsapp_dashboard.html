@@ -359,6 +359,7 @@
     const endpoints = {
         start: '{% url "system_config:whatsapp_start_session" %}',
         status: '{% url "system_config:whatsapp_status" %}',
+        ensure: '{% url "system_config:whatsapp_ensure" %}',
         qrcode: '{% url "system_config:whatsapp_qrcode" %}',
         logout: '{% url "system_config:whatsapp_logout" %}',
         sendTest: '{% url "system_config:whatsapp_send_test" %}',
@@ -386,51 +387,64 @@
         });
     }
 
-    function renderStatus(status) {
-        const connected = status && (
-            status.connected === true || 
-            status.status === 'connected' ||
-            String(status.status).toUpperCase() === 'CONNECTED' || 
-            String(status.state).toUpperCase() === 'CONNECTED' || 
-            String(status.session).toUpperCase() === 'ISLOGGED' ||
-            String(status.message).toLowerCase() === 'connected'
-        );
-        const waiting = status && (String(status.status).toUpperCase() === 'QRCODE' || String(status.status).toUpperCase() === 'PAIRING');
+    // ── Detecção de estado — fonte única: helper.get_health() ──────────
+    // O backend devolve sempre { service_up, connected, state, phone, ... }.
+    // O frontend NÃO tenta mais adivinhar a partir de múltiplos campos.
+    function renderStatus(health) {
+        health = health || {};
+        const serviceUp = health.service_up === true;
+        const connected = health.connected === true;
+        const state = String(health.state || 'UNKNOWN').toUpperCase();
+        const waiting = state === 'QRCODE' || state === 'INITIALIZING';
+
         const badge = statusBadge.querySelector('span:last-child');
         const dot = statusBadge.querySelector('span:first-child');
-        
         const qrCodeSection = document.getElementById('qrCodeSection');
         const sessionInfoCard = document.getElementById('sessionInfoCard');
+
+        function show(el, visible) {
+            if (el) el.classList.toggle('hidden', !visible);
+        }
+
+        if (!serviceUp) {
+            statusBadge.className = 'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-red-100 text-red-700';
+            dot.className = 'w-2 h-2 rounded-full bg-red-500';
+            badge.textContent = 'Serviço offline';
+            statusSummary.textContent = health.error
+                ? `WPPConnect inacessível: ${health.error}`
+                : 'Container WPPConnect não responde';
+            show(qrCodeSection, false);
+            show(sessionInfoCard, false);
+            return;
+        }
 
         if (connected) {
             statusBadge.className = 'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-emerald-100 text-emerald-700';
             dot.className = 'w-2 h-2 rounded-full bg-emerald-500';
             badge.textContent = 'Conectado';
-            statusSummary.textContent = status.phone ? `Conectado: ${status.phone}` : 'Sessão ativa';
-            
-            // Esconder QR Code quando conectado
-            if (qrCodeSection) qrCodeSection.classList.add('hidden');
-            if (sessionInfoCard) sessionInfoCard.classList.remove('hidden');
-            
+            statusSummary.textContent = health.phone
+                ? `Conectado: ${health.phone}`
+                : `Conectado · Sessão: ${health.session || ''}`;
+            show(qrCodeSection, false);
+            show(sessionInfoCard, true);
         } else if (waiting) {
             statusBadge.className = 'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-amber-100 text-amber-700';
             dot.className = 'w-2 h-2 rounded-full bg-amber-500';
-            badge.textContent = 'Aguardando conexão';
-            statusSummary.textContent = 'Aguardando leitura do QR';
-            
-            // Mostrar QR Code quando aguardando
-            if (qrCodeSection) qrCodeSection.classList.remove('hidden');
-            if (sessionInfoCard) sessionInfoCard.classList.add('hidden');
-            
+            badge.textContent = state === 'INITIALIZING'
+                ? 'A inicializar...' : 'Aguardando leitura do QR';
+            statusSummary.textContent = state === 'INITIALIZING'
+                ? 'WPPConnect a arrancar a sessão'
+                : 'Lê o QR Code com o telemóvel';
+            show(qrCodeSection, true);
+            show(sessionInfoCard, false);
         } else {
+            // CLOSED / UNKNOWN
             statusBadge.className = 'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-600';
             dot.className = 'w-2 h-2 rounded-full bg-gray-400';
             badge.textContent = 'Desconectado';
             statusSummary.textContent = 'Sessão não autenticada';
-            
-            // Mostrar QR Code quando desconectado
-            if (qrCodeSection) qrCodeSection.classList.remove('hidden');
-            if (sessionInfoCard) sessionInfoCard.classList.add('hidden');
+            show(qrCodeSection, true);
+            show(sessionInfoCard, false);
         }
     }
 
@@ -512,33 +526,46 @@
         }, 3000);
     }
 
-    async function startSession() {
-        setButtonsLoading(true, [buttons.start, buttons.refreshQr]);
+    // Fluxo central: verifica serviço → sessão → arranca + QR se preciso.
+    // Substitui a antiga orquestração status+start+qrcode espalhada.
+    async function refreshAndEnsure(opts) {
+        opts = opts || {};
+        const btns = opts.silent ? [] : [buttons.start, buttons.refreshQr, buttons.status];
+        if (btns.length) setButtonsLoading(true, btns);
         stopQrPolling();
         try {
-            console.log('[WhatsApp] Iniciando sessão...');
-            const data = await callEndpoint(endpoints.start, { method: 'POST', body: '{}' });
-            console.log('[WhatsApp] Resposta do start:', data);
+            const data = await callEndpoint(endpoints.ensure, { method: 'POST', body: '{}' });
+            const h = data.session || {};
+            renderStatus(h);
+            updateSessionInfo(h);
 
-            if (data.qrcode || data.pairingCode) {
-                renderQr(data);
-                console.log('[WhatsApp] QR Code renderizado a partir do start');
+            if (h.connected) {
+                return h;  // nada a fazer — sessão activa
+            }
+            if (!h.service_up) {
+                renderQr({});  // placeholder; serviço offline
+                return h;
+            }
+            // Não conectado mas serviço up — mostrar QR
+            if (h.qrcode || h.pairingCode) {
+                renderQr(h);
             } else {
-                // WPPConnect demora ~30-60s a carregar o Chromium — fazer polling até o QR aparecer
-                console.log('[WhatsApp] QR não disponível ainda — iniciando polling (até 90s)...');
-                renderQr({}); // mostra placeholder "Gerando QR Code..."
-                startQrPolling();
+                renderQr({});           // placeholder "a gerar..."
+                startQrPolling();       // WPPConnect demora a abrir o Chromium
             }
-
-            if (data.status) {
-                renderStatus(data.status);
-            }
+            return h;
         } catch (error) {
-            console.error('[WhatsApp] Erro ao iniciar sessão:', error);
-            alert(error.message);
+            console.error('[WhatsApp] refreshAndEnsure falhou:', error);
+            if (!opts.silent) alert(error.message);
+            return null;
         } finally {
-            setButtonsLoading(false, [buttons.start, buttons.refreshQr]);
+            if (btns.length) setButtonsLoading(false, btns);
         }
+    }
+
+    // "Iniciar sessão" e "Atualizar QR" reutilizam o fluxo central.
+    async function startSession() {
+        await refreshAndEnsure();
     }
 
     async function refreshQr() {
@@ -554,63 +581,21 @@
     }
 
     async function refreshStatus() {
-        setButtonsLoading(true, [buttons.status]);
-        try {
-            const data = await callEndpoint(endpoints.status, { method: 'GET' });
-            if (data.session) {
-                renderStatus(data.session);
-                updateSessionInfo(data.session);
-            }
-        } catch (error) {
-            alert(error.message);
-        } finally {
-            setButtonsLoading(false, [buttons.status]);
-        }
+        await refreshAndEnsure();
     }
 
-    function updateSessionInfo(session) {
-        const sessionInfoCard = document.getElementById('sessionInfoCard');
-        const qrCodeSection = document.getElementById('qrCodeSection');
+    function updateSessionInfo(health) {
+        // renderStatus já trata a visibilidade dos cartões; aqui só
+        // preenchemos os campos da sessão conectada.
+        if (!health || !health.connected) return;
         const connectedPhone = document.getElementById('connectedPhone');
         const connectedStatus = document.getElementById('connectedStatus');
-        const deviceName = document.getElementById('deviceName');
-        const devicePlatform = document.getElementById('devicePlatform');
-
-        if (!session || !session.connected) {
-            // Não conectado - esconder info e mostrar QR
-            if (sessionInfoCard) sessionInfoCard.classList.add('hidden');
-            if (qrCodeSection) qrCodeSection.classList.remove('hidden');
-            return;
+        if (connectedPhone) {
+            connectedPhone.textContent = health.phone
+                || `Sessão: ${health.session || ''}`;
         }
-
-        // Conectado - mostrar info e esconder QR
-        if (sessionInfoCard) sessionInfoCard.classList.remove('hidden');
-        if (qrCodeSection) qrCodeSection.classList.add('hidden');
-
-        // Atualizar identificação (número ou sessão)
-        if (connectedPhone && session.phone) {
-            connectedPhone.textContent = session.phone;
-        } else if (connectedPhone && session.session_name) {
-            connectedPhone.textContent = session.session_name;
-        }
-
-        // Atualizar status
         if (connectedStatus) {
-            connectedStatus.textContent = session.status === 'connected' ? 'Ativo e operacional' : session.status;
-        }
-
-        // Atualizar informações do dispositivo se disponíveis
-        if (session.device) {
-            if (deviceName && session.device.pushname) {
-                deviceName.textContent = session.device.pushname;
-                const container = document.getElementById('deviceNameContainer');
-                if (container) container.classList.remove('opacity-50');
-            }
-            if (devicePlatform && session.device.platform) {
-                devicePlatform.textContent = session.device.platform;
-                const container = document.getElementById('devicePlatformContainer');
-                if (container) container.classList.remove('opacity-50');
-            }
+            connectedStatus.textContent = 'Ativo e operacional';
         }
     }
 
@@ -620,13 +605,15 @@
         }
         setButtonsLoading(true, [buttons.logout]);
         try {
+            // logout é idempotente no backend — mesmo sem sessão activa
+            // devolve sucesso. A seguir reavaliamos e geramos novo QR.
             await callEndpoint(endpoints.logout, { method: 'POST', body: '{}' });
-            renderStatus({});
-            renderQr({});
         } catch (error) {
-            alert(error.message);
+            console.warn('[WhatsApp] logout:', error.message);
         } finally {
             setButtonsLoading(false, [buttons.logout]);
+            // Reavaliar estado e preparar nova leitura de QR
+            await refreshAndEnsure({ silent: true });
         }
     }
 
@@ -923,103 +910,40 @@
             console.warn('Estado inicial indisponivel:', error);
         }
 
-        // Carregar informações da sessão automaticamente se estiver configurado
-        if (serviceEnabled && initialReady) {
-            setTimeout(async () => {
-                try {
-                    console.log('[WhatsApp] Verificando status da sessão...');
-                    
-                    // Verificar se está desconectado e gerar QR automaticamente
-                    const data = await callEndpoint(endpoints.status, { method: 'GET' });
-                    console.log('[WhatsApp] Dados de status recebidos:', data);
-                    
-                    const isConnected = data.session && (
-                        data.session.connected === true || 
-                        data.session.status === 'connected' ||
-                        String(data.session.message || '').toLowerCase() === 'connected'
-                    );
-                    
-                    console.log('[WhatsApp] Status de conexão:', isConnected ? 'CONECTADO' : 'DESCONECTADO');
-                    
-                    if (!isConnected) {
-                        console.log('[WhatsApp] Sessão desconectada, gerando QR Code automaticamente...');
-                        const qrPlaceholderText = document.getElementById('qrPlaceholderText');
-                        const qrLoading = document.getElementById('qrLoading');
-                        const qrPlaceholder = document.getElementById('qrPlaceholder');
-                        
-                        // Mostrar loading
-                        if (qrPlaceholder) qrPlaceholder.classList.add('hidden');
-                        if (qrLoading) qrLoading.classList.remove('hidden');
-                        
-                        try {
-                            // Iniciar sessão automaticamente
-                            console.log('[WhatsApp] Chamando startSession()...');
-                            await startSession();
-                            console.log('[WhatsApp] QR Code gerado com sucesso!');
-                        } catch (err) {
-                            console.error('[WhatsApp] Erro ao gerar QR Code:', err);
-                            if (qrPlaceholder) {
-                                qrPlaceholder.classList.remove('hidden');
-                                if (qrPlaceholderText) {
-                                    qrPlaceholderText.textContent = 'Erro ao gerar QR Code. Clique em "Iniciar sessão".';
-                                }
-                            }
-                        } finally {
-                            // Esconder loading
-                            if (qrLoading) qrLoading.classList.add('hidden');
-                        }
-                    } else {
-                        console.log('[WhatsApp] Sessão conectada, QR Code não necessário');
-                        // Garantir que renderizou corretamente
-                        renderStatus(data.session);
-                        updateSessionInfo(data.session);
-                    }
-                } catch (err) {
-                    console.error('[WhatsApp] Erro ao verificar status inicial:', err);
-                }
-            }, 1000); // Aumentado para 1 segundo para dar tempo do DOM carregar
-        }
-
         const currentInstance = configInstanceInput ? configInstanceInput.value.trim() : (sessionDisplay ? sessionDisplay.textContent.trim() : '');
         const currentApi = configApiUrlInput ? configApiUrlInput.value.trim() : (apiDisplay ? apiDisplay.textContent.trim() : '');
         updateConfigSummary(currentInstance, currentApi, panel && panel.dataset.hasKey === 'true');
 
-        // Polling para atualizar status automaticamente a cada 5 segundos (mais frequente para detectar conexão)
-        let lastStatus = null;
-        let consecutiveConnected = 0;
-        
+        // ── Refresh unificado ──────────────────────────────────────────
+        // Ao carregar: um único refreshAndEnsure() avalia serviço+sessão
+        // e, se necessário, arranca a sessão e mostra o QR.
+        // Depois: polling leve a cada 5s só para reflectir o estado real
+        // (sem voltar a arrancar sessão). Quando passa a conectado,
+        // recarrega a página uma vez para mostrar o cartão da sessão.
         if (serviceEnabled && initialReady) {
+            let wasConnected = null;
+
+            // Arranque inicial (dá tempo ao DOM)
+            setTimeout(() => { refreshAndEnsure({ silent: true }); }, 800);
+
             setInterval(async () => {
                 try {
-                    console.log('[WhatsApp] Atualizando status automaticamente...');
                     const data = await callEndpoint(endpoints.status, { method: 'GET' });
-                    if (data.session) {
-                        const currentStatus = data.session.status || 'unknown';
-                        const isFullyConnected = data.session.connected === true || currentStatus === 'isLogged';
-                        const isConnecting = currentStatus === 'qrReadSuccess' || currentStatus === 'inChat';
-                        
-                        console.log('[WhatsApp] Status atual:', currentStatus, 'Connected:', data.session.connected, 'IsFullyConnected:', isFullyConnected);
-                        
-                        // Só recarrega se realmente conectou (não apenas "lendo QR")
-                        if (isFullyConnected && lastStatus !== 'isLogged' && lastStatus !== 'connected') {
-                            consecutiveConnected++;
-                            if (consecutiveConnected >= 2) {  // 2 verificações consecutivas = 10 segundos
-                                console.log('[WhatsApp] ✅ SESSÃO TOTALMENTE CONECTADA! Recarregando página...');
-                                setTimeout(() => window.location.reload(), 1500);
-                                return;
-                            }
-                        } else if (!isFullyConnected) {
-                            consecutiveConnected = 0;
-                        }
-                        
-                        lastStatus = currentStatus;
-                        renderStatus(data.session);
-                        updateSessionInfo(data.session);
+                    const h = data.session || {};
+                    renderStatus(h);
+                    updateSessionInfo(h);
+
+                    // Transição desconectado → conectado: recarrega 1x
+                    if (wasConnected === false && h.connected === true) {
+                        console.log('[WhatsApp] ✅ Sessão conectada — a recarregar...');
+                        setTimeout(() => window.location.reload(), 1200);
+                        return;
                     }
+                    wasConnected = h.connected === true;
                 } catch (err) {
-                    console.debug('[WhatsApp] Erro no polling de status:', err);
+                    console.debug('[WhatsApp] polling status falhou:', err);
                 }
-            }, 5000); // 5 segundos - polling mais frequente para detectar conexão rapidamente
+            }, 5000);
         }
 
         // Funcionalidade de collapse para Configurações

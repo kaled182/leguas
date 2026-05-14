@@ -109,17 +109,33 @@ class WhatsAppWPPConnectAPI:
         return self.auth_token
 
     @classmethod
-    def from_config(cls):
-        """Cria instância usando SystemConfiguration e variáveis de ambiente."""
+    def from_config(cls, require_enabled: bool = True):
+        """Cria instância a partir de SystemConfiguration + variáveis de ambiente.
+
+        SystemConfiguration tem prioridade; quando um campo está vazio,
+        recorre às env vars (WPPCONNECT_URL / WPPCONNECT_INSTANCE / …).
+        Isto evita divergências entre o painel de configurações e os
+        serviços que enviam mensagens (ex.: pré-faturas).
+        """
         from system_config.models import SystemConfiguration
 
         config = SystemConfiguration.get_config()
 
-        if not config.whatsapp_enabled:
+        if require_enabled and not config.whatsapp_enabled:
             raise ValueError("WhatsApp não está habilitado nas configurações")
 
-        base_url = (config.whatsapp_evolution_api_url or "").strip()
-        session_name = (config.whatsapp_instance_name or "").strip()
+        base_url = (
+            (config.whatsapp_evolution_api_url or "").strip()
+            or cls._first_env_value(["WPPCONNECT_URL"])
+            or ""
+        )
+        session_name = (
+            (config.whatsapp_instance_name or "").strip()
+            or cls._first_env_value(
+                ["WPPCONNECT_INSTANCE", "WPPCONNECT_SESSION"]
+            )
+            or ""
+        )
 
         token = (
             cls._first_env_value(
@@ -138,6 +154,7 @@ class WhatsAppWPPConnectAPI:
                     "WPP_CONNECT_SECRET_KEY",
                     "WPP_SECRET_KEY",
                     "WPPCONNECT_SECRET_KEY",
+                    "WPPCONNECT_SECRET",
                 ]
             )
             or token
@@ -228,12 +245,38 @@ class WhatsAppWPPConnectAPI:
         return self.create_instance(**kwargs)
 
     def logout(self) -> Dict:
-        try:
-            return self._request("post", "/logout-session", json={})
-        except requests.HTTPError as exc:
-            if exc.response is not None and exc.response.status_code == 404:
-                return self._request("post", "/logout", json={})
-            raise
+        """Encerra a sessão. Idempotente — se já estiver fechada, devolve ok.
+
+        Diferentes versões do WPPConnect expõem endpoints distintos e
+        respondem 500 "Error closing session" quando não há nada a fechar.
+        """
+        last_exc = None
+        for endpoint in ("/logout-session", "/close-session", "/logout"):
+            try:
+                return self._request("post", endpoint, json={})
+            except requests.HTTPError as exc:
+                last_exc = exc
+                code = (
+                    exc.response.status_code
+                    if exc.response is not None else 0
+                )
+                if code == 404:
+                    continue  # endpoint não existe nesta versão
+                if code in (409, 500):
+                    # sessão já estava fechada/sem sessão activa
+                    return {
+                        "status": True,
+                        "message": "Session already closed",
+                    }
+                raise
+            except Exception as exc:
+                last_exc = exc
+                continue
+        return {
+            "status": True,
+            "message": "Nenhum endpoint de logout disponível",
+            "warning": str(last_exc) if last_exc else None,
+        }
 
     def close_session(self) -> Dict:
         return self._request("post", "/close-session", json={})
@@ -279,108 +322,146 @@ class WhatsAppWPPConnectAPI:
             raise last_exc
         return {}
 
-    def is_connected(self) -> bool:
+    # Mapeamento dos status textuais do WPPConnect → estado normalizado
+    _CONNECTED_STATES = {
+        "CONNECTED", "INCHAT", "ISLOGGED", "QRREADSUCCESS", "MAINLOADED",
+    }
+    _QR_STATES = {"QRCODE", "PAIRING", "UNPAIRED", "UNPAIRED_IDLE", "NOTLOGGED"}
+    _INIT_STATES = {"INITIALIZING", "STARTING", "WAITING", "BROWSER"}
+    _CLOSED_STATES = {"CLOSED", "DISCONNECTED", "DESTROYED", "CONFLICT"}
+
+    def get_health(self) -> Dict:
+        """Diagnóstico unificado do serviço + sessão — fonte única de verdade.
+
+        Devolve:
+          service_up : o servidor WPPConnect respondeu
+          connected  : WhatsApp autenticado e operacional
+          state      : CONNECTED | QRCODE | INITIALIZING | CLOSED | UNKNOWN
+          phone, session, raw, error
+        """
+        health = {
+            "service_up": False,
+            "session": self.session_name,
+            "connected": False,
+            "state": "UNKNOWN",
+            "phone": "",
+            "raw": {},
+            "error": None,
+        }
+
+        # status-session — status textual rico (CLOSED/CONNECTED/QRCODE/…)
+        raw = {}
         try:
-            state = self.get_connection_state()
+            raw = self._request("get", "/status-session")
+            health["service_up"] = True
+        except requests.HTTPError as exc:
+            # o servidor respondeu (mesmo que com erro) → está de pé
+            health["service_up"] = True
+            code = getattr(exc.response, "status_code", "?")
+            health["error"] = f"status-session HTTP {code}"
+        except Exception as exc:
+            health["error"] = f"Serviço WPPConnect inacessível: {exc}"
+            return health  # service_up permanece False
+
+        health["raw"] = raw
+        state_str = str(raw.get("status", "")).upper()
+
+        if state_str in self._CONNECTED_STATES:
+            health["state"] = "CONNECTED"
+            health["connected"] = True
+        elif state_str in self._QR_STATES:
+            health["state"] = "QRCODE"
+        elif state_str in self._INIT_STATES:
+            health["state"] = "INITIALIZING"
+        elif state_str in self._CLOSED_STATES:
+            health["state"] = "CLOSED"
+
+        # Confirmação cruzada — check-connection-session usa status booleano
+        try:
+            chk = self._request("get", "/check-connection-session")
+            if chk.get("status") is True:
+                health["connected"] = True
+                if health["state"] in ("UNKNOWN", "CLOSED"):
+                    health["state"] = "CONNECTED"
+            elif chk.get("status") is False and health["connected"]:
+                # status-session disse conectado mas o check diz que não —
+                # confia no check (mais fiável p/ sessão realmente activa)
+                health["connected"] = False
+                if health["state"] == "CONNECTED":
+                    health["state"] = "CLOSED"
+        except Exception:
+            pass  # check-connection é apenas confirmação
+
+        # Número de telefone quando conectado
+        if health["connected"]:
+            try:
+                host = self._request("get", "/host-device")
+                wid = host.get("id") or host.get("wid") or {}
+                if isinstance(wid, dict) and wid.get("user"):
+                    health["phone"] = wid["user"]
+                elif raw.get("number"):
+                    health["phone"] = raw["number"]
+            except Exception:
+                if raw.get("number"):
+                    health["phone"] = raw["number"]
+
+        return health
+
+    def is_connected(self) -> bool:
+        """True só se o WhatsApp estiver realmente autenticado e operacional."""
+        try:
+            return bool(self.get_health().get("connected"))
         except Exception:
             return False
 
-        status_flags = {
-            str(state.get("status", "")).upper(),
-            str(state.get("state", "")).upper(),
-            str(state.get("session", "")).upper(),
-        }
-        if state.get("connected") is True:
-            return True
-        return any(
-            flag in {"CONNECTED", "OPEN", "LOGGED", "ISLOGGED"} for flag in status_flags
-        )
-
     def get_session_info(self) -> Dict:
-        """Obtém informações detalhadas da sessão incluindo status e dados do perfil."""
+        """Compat: shape antigo, agora derivado de `get_health()`."""
+        h = self.get_health()
+        return {
+            "connected": h["connected"],
+            "service_up": h["service_up"],
+            "state": h["state"],
+            "status": "connected" if h["connected"] else h["state"].lower(),
+            "session_name": h["session"],
+            "phone": h["phone"],
+            "raw_status": h["raw"],
+            "error": h["error"],
+        }
+
+    def ensure_session(self) -> Dict:
+        """Garante uma sessão utilizável e devolve o que o frontend precisa.
+
+        - Serviço em baixo → devolve health (service_up=False).
+        - Já conectado → devolve health.
+        - Fechado/desconhecido → arranca a sessão e devolve o QR Code.
+        - Já em modo QR → devolve o QR actual.
+        """
+        result = dict(self.get_health())
+        result["qrcode"] = None
+        result["pairingCode"] = None
+
+        if not result["service_up"] or result["connected"]:
+            return result
+
         try:
-            info = {
-                "connected": False,
-                "status": "disconnected",
-                "session_name": self.session_name,
-            }
-
-            # 1. Status da conexão
-            try:
-                state = self.get_connection_state()
-                is_connected = (
-                    state.get("status")
-                    or str(state.get("message", "")).lower() == "connected"
+            if result["state"] == "QRCODE":
+                payload = self.get_qrcode()
+            else:  # CLOSED / UNKNOWN / INITIALIZING
+                payload = self.create_instance(
+                    wait_qrcode=True, wait_connection=False, webhook="",
                 )
-                info.update(
-                    {
-                        "connected": is_connected,
-                        "status": ("connected" if is_connected else "disconnected"),
-                        "raw_status": state,
-                    }
-                )
+                result["state"] = "QRCODE"
+            result["qrcode"] = (
+                payload.get("qrcode") or payload.get("base64")
+                or payload.get("qrCode")
+            )
+            result["pairingCode"] = (
+                payload.get("pairingCode") or payload.get("code")
+            )
+        except Exception as exc:
+            result["error"] = f"Falha ao preparar sessão: {exc}"
 
-                # Extrair número da sessão se disponível
-                session_id = state.get("session", "")
-                if session_id and is_connected:
-                    info["phone"] = f"Sessão: {session_id}"
-
-            except Exception as e:
-                logger.warning(f"[WhatsApp] Erro ao obter status da conexão: {e}")
-
-            # 2. Informações adicionais se conectado
-            if info.get("connected"):
-                # Tentar obter detalhes via diferentes endpoints
-                additional_endpoints = [
-                    ("/status-session", "Status detalhado"),
-                    ("/host-device", "Dispositivo host"),
-                    ("/get-battery-level", "Bateria"),
-                ]
-
-                for endpoint, desc in additional_endpoints:
-                    try:
-                        result = self._request("get", endpoint)
-                        logger.info(f"[WhatsApp] {desc} obtido: {result}")
-
-                        # Processar resposta baseado no endpoint
-                        if "host-device" in endpoint and result:
-                            phone_data = result.get("id") or result.get("wid") or {}
-                            if phone_data.get("user"):
-                                info["phone"] = phone_data["user"]
-                            info["device"] = {
-                                "pushname": result.get("pushname"),
-                                "platform": result.get("platform"),
-                                "phone": phone_data.get("user"),
-                            }
-                        elif "battery" in endpoint and result:
-                            info["battery"] = {
-                                "level": result.get("battery") or result.get("level"),
-                                "plugged": result.get("plugged"),
-                            }
-                        elif "status-session" in endpoint and result:
-                            # Extrair informações do status da sessão
-                            if result.get("number"):
-                                info["phone"] = result["number"]
-                            if result.get("state") == "CONNECTED":
-                                info["status"] = "connected"
-                                info["connected"] = True
-
-                    except Exception as e:
-                        logger.debug(
-                            f"[WhatsApp] Endpoint {endpoint} não disponível: {e}"
-                        )
-                        continue
-
-            return info
-
-        except Exception as e:
-            logger.error(f"[WhatsApp] Erro ao obter informações da sessão: {e}")
-            return {
-                "connected": False,
-                "status": "error",
-                "error": str(e),
-                "session_name": self.session_name,
-            }
+        return result
 
     # ========================================
     # MENSAGENS

@@ -299,21 +299,19 @@ def whatsapp_dashboard(request):
     """Painel de controle do WhatsApp via WPPConnect."""
     config = SystemConfiguration.get_config()
     api, error = _load_whatsapp_api()
-    session_info = {}
+    health = {}
 
     if api is not None:
         try:
-            session_info = api.get_session_info()
-        except Exception as exc:  # pragma: no cover - depende do servidor externo
+            health = api.get_health()
+        except Exception as exc:  # pragma: no cover - servidor externo
             logger.warning(
-                "Não foi possível obter informações da sessão do WhatsApp: %s",
-                exc,
+                "Não foi possível obter health do WhatsApp: %s", exc,
             )
             error = error or str(exc)
-            session_info = {
-                "connected": False,
-                "status": "error",
-                "error": str(exc),
+            health = {
+                "service_up": False, "connected": False,
+                "state": "UNKNOWN", "phone": "", "error": str(exc),
             }
 
     if (
@@ -333,14 +331,14 @@ def whatsapp_dashboard(request):
     context = {
         "config": config,
         "whatsapp_error": error,
-        "session_info": session_info,
+        # `session_info` mantém o nome para o json_script do template
+        "session_info": health,
         "session_name": session_name.strip(),
         "is_enabled": bool(config.whatsapp_enabled),
-        "is_connected": session_info.get("connected", False),
-        "connection_status": session_info.get("status", "unknown"),
-        "phone_number": session_info.get("phone", ""),
-        "device_info": session_info.get("device", {}),
-        "battery_info": session_info.get("battery", {}),
+        "service_up": health.get("service_up", False),
+        "is_connected": health.get("connected", False),
+        "connection_status": health.get("state", "UNKNOWN"),
+        "phone_number": health.get("phone", ""),
         "token_value": stored_token,
         "has_api_key": bool(stored_token),
     }
@@ -431,12 +429,31 @@ def whatsapp_logout(request):
 @login_required
 @require_GET
 def whatsapp_status(request):
+    """Estado unificado da sessão (fonte única: helper.get_health())."""
 
     def _status(api: WhatsAppWPPConnectAPI):
-        session_info = api.get_session_info()
-        return JsonResponse({"success": True, "session": session_info})
+        health = api.get_health()
+        # `session` mantido p/ compat com o frontend; é o health normalizado
+        return JsonResponse({"success": True, "session": health})
 
     return _whatsapp_response(_status)
+
+
+@login_required
+@require_POST
+def whatsapp_ensure(request):
+    """Garante uma sessão utilizável num único pedido.
+
+    Verifica se o serviço está de pé → se a sessão está conectada →
+    se não estiver, arranca a sessão e devolve o QR Code. O frontend
+    chama este endpoint em vez de orquestrar status+start+qrcode.
+    """
+
+    def _ensure(api: WhatsAppWPPConnectAPI):
+        result = api.ensure_session()
+        return JsonResponse({"success": True, "session": result})
+
+    return _whatsapp_response(_ensure)
 
 
 @login_required

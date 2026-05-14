@@ -3941,19 +3941,16 @@ def pre_invoice_send_whatsapp(request, pre_invoice_id):
     if pdf_url:
         msg += f"\n📎 PDF: {pdf_url}"
 
-    if not settings.WPPCONNECT_URL:
+    # Usa a MESMA fonte de configuração do painel de WhatsApp
+    # (SystemConfiguration + fallback a env vars) para garantir que
+    # ambos apontam para a mesma sessão.
+    try:
+        api = WhatsAppWPPConnectAPI.from_config()
+    except ValueError as e:
         return JsonResponse(
             {"success": False, "error":
-             "WPPCONNECT_URL não configurado em settings."},
-            status=500,
-        )
-
-    try:
-        api = WhatsAppWPPConnectAPI(
-            base_url=settings.WPPCONNECT_URL,
-            session_name=settings.WPPCONNECT_SESSION,
-            auth_token=settings.WPPCONNECT_TOKEN,
-            secret_key=settings.WPPCONNECT_SECRET,
+             f"WhatsApp não configurado: {e}"},
+            status=503,
         )
     except Exception as e:
         return JsonResponse(

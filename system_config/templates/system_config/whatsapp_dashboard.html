@@ -527,62 +527,66 @@
     }
 
     // Fluxo central: verifica serviço → sessão → arranca + QR se preciso.
-    // Substitui a antiga orquestração status+start+qrcode espalhada.
+    // O endpoint /ensure/ fecha sessões presas e re-arranca, devolvendo
+    // o QR Code directamente na resposta (o servidor bloqueia até ~90s).
+    // Não há mais polling separado de /qrcode/.
+    let _ensureInFlight = false;
     async function refreshAndEnsure(opts) {
         opts = opts || {};
+        if (_ensureInFlight) return null;   // evita chamadas sobrepostas
+        _ensureInFlight = true;
         const btns = opts.silent ? [] : [buttons.start, buttons.refreshQr, buttons.status];
         if (btns.length) setButtonsLoading(true, btns);
         stopQrPolling();
+
+        // Mostra o spinner enquanto o servidor prepara a sessão/QR
+        const qrLoading = document.getElementById('qrLoading');
+        const qrPlaceholder = document.getElementById('qrPlaceholder');
         try {
+            if (qrPlaceholder) qrPlaceholder.classList.add('hidden');
+            if (qrLoading) qrLoading.classList.remove('hidden');
+
             const data = await callEndpoint(endpoints.ensure, { method: 'POST', body: '{}' });
             const h = data.session || {};
             renderStatus(h);
             updateSessionInfo(h);
 
-            if (h.connected) {
-                return h;  // nada a fazer — sessão activa
-            }
-            if (!h.service_up) {
-                renderQr({});  // placeholder; serviço offline
-                return h;
-            }
-            // Não conectado mas serviço up — mostrar QR
+            if (h.connected) return h;          // sessão activa
+            if (!h.service_up) { renderQr({}); return h; }  // serviço offline
+
+            // Não conectado mas serviço up — o /ensure/ já devolveu o QR
             if (h.qrcode || h.pairingCode) {
                 renderQr(h);
             } else {
-                renderQr({});           // placeholder "a gerar..."
-                startQrPolling();       // WPPConnect demora a abrir o Chromium
+                // Sem QR e sem erro claro — mostra placeholder + dica
+                renderQr({});
+                const txt = document.getElementById('qrPlaceholderText');
+                if (txt) {
+                    txt.textContent = h.error
+                        ? `Erro: ${h.error}`
+                        : 'QR não disponível. Clique em "Iniciar sessão".';
+                }
             }
             return h;
         } catch (error) {
             console.error('[WhatsApp] refreshAndEnsure falhou:', error);
+            renderQr({});
+            const txt = document.getElementById('qrPlaceholderText');
+            if (txt) txt.textContent = `Erro: ${error.message}`;
             if (!opts.silent) alert(error.message);
             return null;
         } finally {
+            if (qrLoading) qrLoading.classList.add('hidden');
             if (btns.length) setButtonsLoading(false, btns);
+            _ensureInFlight = false;
         }
     }
 
-    // "Iniciar sessão" e "Atualizar QR" reutilizam o fluxo central.
-    async function startSession() {
-        await refreshAndEnsure();
-    }
-
-    async function refreshQr() {
-        setButtonsLoading(true, [buttons.refreshQr]);
-        try {
-            const data = await callEndpoint(endpoints.qrcode, { method: 'GET' });
-            renderQr(data);
-        } catch (error) {
-            alert(error.message);
-        } finally {
-            setButtonsLoading(false, [buttons.refreshQr]);
-        }
-    }
-
-    async function refreshStatus() {
-        await refreshAndEnsure();
-    }
+    // "Iniciar sessão", "Atualizar QR" e "Atualizar status" reutilizam
+    // o fluxo central — /ensure/ fecha sessões presas e devolve o QR.
+    async function startSession() { await refreshAndEnsure(); }
+    async function refreshQr() { await refreshAndEnsure(); }
+    async function refreshStatus() { await refreshAndEnsure(); }
 
     function updateSessionInfo(health) {
         // renderStatus já trata a visibilidade dos cartões; aqui só

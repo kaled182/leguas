@@ -282,12 +282,58 @@ class WhatsAppWPPConnectAPI:
         return self._request("post", "/close-session", json={})
 
     def get_qrcode(self) -> Dict:
-        try:
-            return self._request("get", "/qrcode-session")
-        except requests.HTTPError as exc:
-            if exc.response is not None and exc.response.status_code == 404:
-                return self._request("get", "/qrcode/base64")
-            raise
+        """Obtém o QR Code da sessão de forma defensiva.
+
+        O WPPConnect pode responder JSON ({status, qrcode}) ou — quando
+        o QR está pronto — a imagem PNG crua. Normalizamos sempre para
+        {"qrcode": <data-uri|None>, "status": <str>, ...} e NUNCA
+        levantamos JSONDecodeError (era a causa do 500 em /qrcode/).
+        """
+        self._ensure_token_hash()
+        last_err = None
+        for endpoint in ("/qrcode-session", "/qrcode/base64"):
+            try:
+                resp = requests.get(
+                    self._build_url(endpoint),
+                    headers=self.headers,
+                    timeout=DEFAULT_TIMEOUT,
+                )
+                if resp.status_code == 404:
+                    continue
+                resp.raise_for_status()
+                ctype = resp.headers.get("Content-Type", "")
+                if ctype.startswith("image/"):
+                    b64 = base64.b64encode(resp.content).decode("utf-8")
+                    return {
+                        "qrcode": f"data:{ctype};base64,{b64}",
+                        "status": "QRCODE",
+                    }
+                try:
+                    data = resp.json()
+                except ValueError:
+                    last_err = "resposta não-JSON do /qrcode"
+                    continue
+                qr = (
+                    data.get("qrcode") or data.get("base64")
+                    or data.get("qrCode")
+                )
+                return {
+                    "qrcode": qr,
+                    "pairingCode": (
+                        data.get("pairingCode") or data.get("urlcode")
+                        or data.get("code")
+                    ),
+                    "status": data.get("status", ""),
+                    "message": data.get("message", ""),
+                    "raw": data,
+                }
+            except requests.HTTPError as exc:
+                last_err = str(exc)
+                continue
+            except Exception as exc:
+                last_err = str(exc)
+                continue
+        return {"qrcode": None, "status": "UNKNOWN", "error": last_err}
 
     def get_qrcode_image(self) -> Optional[Image.Image]:
         try:
@@ -433,33 +479,79 @@ class WhatsAppWPPConnectAPI:
 
         - Serviço em baixo → devolve health (service_up=False).
         - Já conectado → devolve health.
-        - Fechado/desconhecido → arranca a sessão e devolve o QR Code.
-        - Já em modo QR → devolve o QR actual.
+        - Sessão CLOSED → arranca-a; o WPPConnect bloqueia o
+          /start-session (waitQrCode) e devolve o QR directamente.
+        - Sessão INITIALIZING/QRCODE → já está a arrancar; faz um
+          curto polling à espera que o QR materialize. Se não
+          aparecer, devolve `needs_restart=True` para o frontend
+          aconselhar reinício do serviço WPPConnect.
+
+        Nota: o WPPConnect só entrega o QR de forma fiável quando a
+        sessão arranca a partir de CLOSED. Sessões presas em
+        INITIALIZING não recuperam pela API (o close-session deixa
+        órfãos de puppeteer) — a recuperação fiável é reiniciar o
+        container do WPPConnect.
         """
-        result = dict(self.get_health())
+        import time as _time
+
+        health = self.get_health()
+        result = dict(health)
         result["qrcode"] = None
         result["pairingCode"] = None
+        result["needs_restart"] = False
 
-        if not result["service_up"] or result["connected"]:
+        if not health["service_up"] or health["connected"]:
             return result
 
-        try:
-            if result["state"] == "QRCODE":
-                payload = self.get_qrcode()
-            else:  # CLOSED / UNKNOWN / INITIALIZING
+        # Caminho feliz: sessão fechada → arranca e recebe o QR na resposta
+        if health["state"] in ("CLOSED", "UNKNOWN"):
+            try:
                 payload = self.create_instance(
                     wait_qrcode=True, wait_connection=False, webhook="",
                 )
-                result["state"] = "QRCODE"
-            result["qrcode"] = (
-                payload.get("qrcode") or payload.get("base64")
-                or payload.get("qrCode")
-            )
-            result["pairingCode"] = (
-                payload.get("pairingCode") or payload.get("code")
-            )
-        except Exception as exc:
-            result["error"] = f"Falha ao preparar sessão: {exc}"
+                result["qrcode"] = (
+                    payload.get("qrcode") or payload.get("base64")
+                    or payload.get("qrCode")
+                )
+                result["pairingCode"] = (
+                    payload.get("pairingCode") or payload.get("urlcode")
+                    or payload.get("code")
+                )
+                pstate = str(payload.get("status", "")).upper()
+                if result["qrcode"] or pstate in ("QRCODE", "QRCODE"):
+                    result["state"] = "QRCODE"
+                elif pstate in self._CONNECTED_STATES:
+                    result["state"] = "CONNECTED"
+                    result["connected"] = True
+            except Exception as exc:
+                result["error"] = f"Falha ao arrancar sessão: {exc}"
+                return result
+
+        # Sessão já a arrancar (ou acabou de arrancar sem QR na resposta):
+        # faz um curto polling — o QR costuma materializar em segundos.
+        if not result["qrcode"] and not result["connected"]:
+            for _ in range(8):  # ~24s no total
+                _time.sleep(3)
+                qr = self.get_qrcode()
+                if qr.get("qrcode"):
+                    result["qrcode"] = qr["qrcode"]
+                    result["pairingCode"] = qr.get("pairingCode")
+                    result["state"] = "QRCODE"
+                    break
+                hh = self.get_health()
+                if hh["connected"]:
+                    result["connected"] = True
+                    result["state"] = "CONNECTED"
+                    break
+                result["state"] = hh["state"]
+            else:
+                # esgotou o polling sem QR — sessão presa
+                result["needs_restart"] = True
+                result["error"] = (
+                    "A sessão não gerou o QR Code. Reinicie o serviço "
+                    "WPPConnect (botão 'Desativar/Ativar' ou reinício "
+                    "do container) e tente novamente."
+                )
 
         return result
 

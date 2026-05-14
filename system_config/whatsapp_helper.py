@@ -222,12 +222,25 @@ class WhatsAppWPPConnectAPI:
     # SESSÃO
     # ========================================
 
+    @staticmethod
+    def _default_webhook_url() -> str:
+        """URL do webhook que o WPPConnect usa para entregar eventos."""
+        try:
+            from django.conf import settings
+            return getattr(settings, "WPPCONNECT_WEBHOOK_URL", "") or ""
+        except Exception:
+            return ""
+
     def create_instance(
         self,
         wait_qrcode: bool = True,
         wait_connection: bool = False,
-        webhook: str = "",
+        webhook: str = None,
     ) -> Dict:
+        # Quando não é dado um webhook explícito, usa o configurado —
+        # garante que a sessão entrega o QR via webhook (fonte fiável).
+        if webhook is None:
+            webhook = self._default_webhook_url()
         payload = {
             "waitQrCode": wait_qrcode,
             "waitConnection": wait_connection,
@@ -281,14 +294,40 @@ class WhatsAppWPPConnectAPI:
     def close_session(self) -> Dict:
         return self._request("post", "/close-session", json={})
 
+    def _cached_qr(self) -> Optional[Dict]:
+        """QR Code entregue pelo webhook do WPPConnect (cache redis).
+
+        Fonte preferida: o webhook recebe o QR fresco directamente do
+        callWebHook, contornando o bug que prende /qrcode-session em
+        INITIALIZING.
+        """
+        try:
+            from django.core.cache import cache
+            data = cache.get(f"wpp_qr:{self.session_name}")
+            if data and data.get("qrcode"):
+                return {
+                    "qrcode": data["qrcode"],
+                    "pairingCode": data.get("pairingCode"),
+                    "status": "QRCODE",
+                    "source": "webhook",
+                }
+        except Exception:
+            pass
+        return None
+
     def get_qrcode(self) -> Dict:
         """Obtém o QR Code da sessão de forma defensiva.
 
+        Ordem: 1) cache do webhook (fiável) → 2) /qrcode-session.
         O WPPConnect pode responder JSON ({status, qrcode}) ou — quando
         o QR está pronto — a imagem PNG crua. Normalizamos sempre para
         {"qrcode": <data-uri|None>, "status": <str>, ...} e NUNCA
         levantamos JSONDecodeError (era a causa do 500 em /qrcode/).
         """
+        cached = self._cached_qr()
+        if cached:
+            return cached
+
         self._ensure_token_hash()
         last_err = None
         for endpoint in ("/qrcode-session", "/qrcode/base64"):
@@ -497,8 +536,9 @@ class WhatsAppWPPConnectAPI:
         if health["state"] in ("CLOSED", "UNKNOWN"):
             # Caminho feliz: sessão fechada → arranca.
             try:
+                # webhook=None → usa o WPPCONNECT_WEBHOOK_URL configurado
                 payload = self.create_instance(
-                    wait_qrcode=True, wait_connection=False, webhook="",
+                    wait_qrcode=True, wait_connection=False,
                 )
                 result["qrcode"] = (
                     payload.get("qrcode") or payload.get("base64")

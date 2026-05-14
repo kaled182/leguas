@@ -390,10 +390,10 @@ def whatsapp_start_session(request):
     """Inicia a sessão e retorna QR code quando disponível."""
 
     def _start(api: WhatsAppWPPConnectAPI):
-        # wait_connection=False para evitar timeout, mas com webhook para receber notificação
-        # O polling do frontend detectará quando conectar
+        # webhook=None → usa o WPPCONNECT_WEBHOOK_URL configurado, para
+        # o WPPConnect entregar o QR via webhook (fonte fiável)
         payload = api.create_instance(
-            wait_qrcode=True, wait_connection=False, webhook=""
+            wait_qrcode=True, wait_connection=False,
         )
         qrcode = payload.get("qrcode") or payload.get("base64") or payload.get("qrCode")
         pairing = payload.get("pairingCode") or payload.get("code")
@@ -454,6 +454,59 @@ def whatsapp_ensure(request):
         return JsonResponse({"success": True, "session": result})
 
     return _whatsapp_response(_ensure)
+
+
+# ── Webhook do WPPConnect ───────────────────────────────────────────
+# O WPPConnect chama este endpoint a cada evento (config webhook.url
+# global aplicada via patch.js). É a forma fiável de receber o QR
+# Code: o callWebHook do WPPConnect é invocado directamente com o
+# valor fresco, contornando o bug que prende /qrcode-session em
+# INITIALIZING. O QR fica em cache (redis, partilhado entre workers)
+# e é servido por get_qrcode().
+from django.views.decorators.csrf import csrf_exempt  # noqa: E402
+
+
+@csrf_exempt
+@require_POST
+def whatsapp_webhook(request):
+    """Recebe eventos do WPPConnect e mantém o QR Code em cache.
+
+    Sem autenticação (o WPPConnect não autentica os webhooks) — só
+    acessível na rede interna do docker. Apenas guarda dados
+    transitórios do QR; baixo risco.
+    """
+    from django.core.cache import cache
+
+    try:
+        payload = json.loads(request.body or b"{}")
+    except (json.JSONDecodeError, ValueError):
+        payload = {}
+
+    event = (payload.get("event") or "").strip().lower()
+    session = (payload.get("session") or "").strip() or "default"
+    key = f"wpp_qr:{session}"
+
+    if event == "qrcode":
+        raw = payload.get("qrcode") or payload.get("base64") or ""
+        urlcode = payload.get("urlcode") or payload.get("urlCode") or ""
+        if raw:
+            # o webhook envia base64 cru — re-adiciona o data-URI
+            if not str(raw).startswith("data:"):
+                raw = f"data:image/png;base64,{raw}"
+            cache.set(
+                key,
+                {"qrcode": raw, "pairingCode": urlcode},
+                timeout=120,
+            )
+            logger.info("[WhatsApp] QR recebido via webhook (%s)", session)
+    elif event in (
+        "status-find", "session-logged", "qrreadsuccess",
+        "inchat", "connected", "closesession",
+    ):
+        # sessão mudou de estado — o QR antigo já não interessa
+        cache.delete(key)
+
+    return JsonResponse({"success": True})
 
 
 @login_required

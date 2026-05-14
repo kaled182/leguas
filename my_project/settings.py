@@ -22,6 +22,13 @@ if DEBUG:
         if host not in ALLOWED_HOSTS:
             ALLOWED_HOSTS.append(host)
 
+# Hostnames internos da rede docker — necessários para que serviços
+# como o WPPConnect possam chamar o Django (ex.: webhook do QR Code)
+# via http://web:8000/. Não são expostos ao exterior.
+for _internal_host in ("web", "localhost", "127.0.0.1"):
+    if _internal_host not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(_internal_host)
+
 FORCE_HTTPS = env.bool("FORCE_HTTPS", default=not DEBUG)
 
 # Nunca força HTTPS se DEBUG estiver True
@@ -76,6 +83,12 @@ WPPCONNECT_URL = env("WPPCONNECT_URL", default="")
 WPPCONNECT_SESSION = env("WPPCONNECT_SESSION", default="leguas_wppconnect")
 WPPCONNECT_TOKEN = env("WPPCONNECT_TOKEN", default="")
 WPPCONNECT_SECRET = env("WPPCONNECT_SECRET", default="THISISMYSECURETOKEN")
+# URL que o WPPConnect usa para entregar eventos (incl. QR Code) ao
+# Django. Resolvido na rede interna do docker (serviço `web`).
+WPPCONNECT_WEBHOOK_URL = env(
+    "WPPCONNECT_WEBHOOK_URL",
+    default="http://web:8000/system/whatsapp/webhook/",
+)
 
 # Tailwind
 TAILWIND_APP_NAME = "theme"

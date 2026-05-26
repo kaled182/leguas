@@ -41,6 +41,12 @@
         <i data-lucide="building-2" class="w-4 h-4"></i>
         Sem FF
       </a>
+      <a href="{% url 'accounting:pending_reconciliation' %}"
+         class="px-4 py-2 text-sm bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-semibold inline-flex items-center gap-2"
+         title="Pagamentos efectuados sem fatura/recibo — pendentes de regularização">
+        <i data-lucide="file-warning" class="w-4 h-4"></i>
+        Pendentes
+      </a>
     </div>
   </div>
 
@@ -215,8 +221,10 @@
             </td>
             <td class="px-3 py-3 text-center">
               {% if r.has_recibo == False %}
-                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-gray-100 dark:bg-gray-700/50 text-gray-600 dark:text-gray-400">
-                  <i data-lucide="circle-dashed" class="w-3 h-3"></i> Aguarda recibo
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-gray-100 dark:bg-gray-700/50 text-gray-600 dark:text-gray-400"
+                      title="{{ r.block_reason }}">
+                  <i data-lucide="circle-dashed" class="w-3 h-3"></i>
+                  {% if r.entity_type == 'bill' %}Sem fatura{% else %}Sem recibo{% endif %}
                 </span>
               {% elif r.payable %}
                 <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300">
@@ -246,7 +254,7 @@
                         class="px-3 py-1.5 ml-1 {% if r.has_recibo == False %}bg-amber-600 hover:bg-amber-700{% else %}bg-emerald-600 hover:bg-emerald-700{% endif %} text-white rounded-lg text-xs font-semibold inline-flex items-center gap-1"
                         title="{% if r.has_recibo == False %}Pagar sem fatura-recibo (vai pedir confirmação){% else %}Pagar{% endif %}">
                   <i data-lucide="banknote" class="w-3 h-3"></i>
-                  {% if r.has_recibo == False %}Pagar (sem recibo){% else %}Pagar{% endif %}
+                  {% if r.has_recibo == False %}Pagar ({% if r.entity_type == 'bill' %}s/ fatura{% else %}s/ recibo{% endif %}){% else %}Pagar{% endif %}
                 </button>
               {% else %}
                 <button type="button" disabled
@@ -418,14 +426,23 @@
         <span x-text="modal.numero"></span> · <strong>€<span x-text="modal.amount"></span></strong>
       </p>
 
-      {# Aviso quando se vai pagar PF sem fatura-recibo #}
+      {# Aviso quando se vai pagar SEM documento de suporte #}
       <div x-show="!modal.has_recibo" x-cloak
            class="mb-3 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 text-xs text-amber-800 dark:text-amber-200 flex gap-2">
         <i data-lucide="alert-triangle" class="w-4 h-4 flex-shrink-0 mt-0.5"></i>
-        <div>
+        <div x-show="modal.entity_type === 'pre_invoice'">
           <strong>Pré-fatura SEM fatura-recibo do motorista.</strong>
           O pagamento vai ser registado mas a PF fica marcada como
-          "paga sem recibo" para regularizar depois. Confirma?
+          "paga sem recibo" para regularizar depois.
+        </div>
+        <div x-show="modal.entity_type === 'bill'">
+          <strong>Conta SEM fatura anexada.</strong>
+          O pagamento vai ser registado mas a conta fica marcada
+          como "paga sem fatura" para regularizar depois.
+        </div>
+        <div x-show="modal.entity_type !== 'pre_invoice' && modal.entity_type !== 'bill'">
+          <strong>Sem documento de suporte.</strong>
+          Pagamento vai ser registado; documento fica pendente.
         </div>
       </div>
 
@@ -528,7 +545,10 @@ function payablesInbox() {
       fd.append('comprovante', file);
       if (force) fd.append('force', '1');
       if (this.modal.force_without_recibo) {
+        // Bill chama-lhe 'fatura', PF chama-lhe 'recibo' — enviamos
+        // os dois flags; o backend usa o que pertence à entidade.
         fd.append('force_without_recibo', '1');
+        fd.append('force_without_invoice', '1');
       }
       try {
         const r = await fetch('{% url "accounting:payables_mark_paid" %}', {
@@ -540,11 +560,11 @@ function payablesInbox() {
           setTimeout(() => window.location.reload(), 600);
           return;
         }
-        // PF sem fatura-recibo do motorista → confirmar explicitamente
-        if (d.needs_recibo_confirmation) {
+        // Documento de suporte em falta (recibo da PF ou fatura da Bill)
+        if (d.needs_recibo_confirmation || d.needs_invoice_confirmation) {
           this.modal.submitting = false;
           const ok = confirm(
-            (d.message || 'PF sem fatura-recibo.') +
+            (d.message || 'Documento de suporte em falta.') +
             '\n\nMarcar como paga mesmo assim?'
           );
           if (ok) {

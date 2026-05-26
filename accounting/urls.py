@@ -14,6 +14,11 @@ urlpatterns = [
     # ── Inbox unificado de Pagamentos a Fazer ──
     path("a-pagar/", views_payables.payables_inbox, name="payables_inbox"),
     path(
+        "pendentes-regularizacao/",
+        views_payables.pending_reconciliation,
+        name="pending_reconciliation",
+    ),
+    path(
         "a-pagar/marcar-pago/", views_payables.payables_mark_paid,
         name="payables_mark_paid",
     ),

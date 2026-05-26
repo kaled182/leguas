@@ -18,6 +18,7 @@ from decimal import Decimal
 from typing import Optional
 
 from django.contrib.auth.decorators import login_required
+from django.db import models
 from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
@@ -286,12 +287,25 @@ def _row_shareholder(reemb):
 
 
 def _row_bill(bill):
+    from .models import BillAttachment
     payable = bill.status in ("PENDING", "OVERDUE")
+    has_invoice = bool(
+        (bill.invoice_number or "").strip()
+        or bill.attachments.filter(
+            kind=BillAttachment.KIND_INVOICE,
+        ).exists()
+    )
     block = ""
     if bill.status == "AWAITING":
         block = "Aguardando aprovação"
+        payable = False
     elif not payable:
         block = f"Estado {bill.get_status_display()} não permite pagamento"
+    elif not has_invoice:
+        block = (
+            "Sem fatura anexada — pagamento permitido com confirmação "
+            "explícita (vai ficar pendente da fatura)."
+        )
 
     # Valor a sair da Tesouraria = total c/IVA - retenção (esta fica
     # como dívida ao Estado, entregue depois pela Léguas)
@@ -323,6 +337,7 @@ def _row_bill(bill):
         status_display=bill.get_status_display(),
         payable=payable,
         block_reason=block,
+        has_recibo=has_invoice,  # reutilizado: "tem documento de suporte?"
     )
 
 
@@ -956,6 +971,56 @@ def payables_inbox(request):
     })
 
 
+@login_required
+def pending_reconciliation(request):
+    """Pagamentos efectuados sem o documento de suporte.
+
+    Cobre dois universos:
+      • Bills PAGAS sem `invoice_number` nem anexo kind=INVOICE.
+      • Pré-Faturas PAGAS sem `fatura_ficheiro`.
+
+    Permite ao operador anexar o documento em falta a posteriori sem
+    voltar a marcar nada como pago.
+    """
+    from settlements.models import DriverPreInvoice
+    from .models import Bill, BillAttachment
+
+    # Bills pagas sem fatura (sem invoice_number e sem anexo INVOICE)
+    bill_qs = (
+        Bill.objects.filter(status=Bill.STATUS_PAID)
+        .annotate(
+            _n_inv_attachments=models.Count(
+                "attachments",
+                filter=models.Q(
+                    attachments__kind=BillAttachment.KIND_INVOICE,
+                ),
+            ),
+        )
+        .filter(
+            models.Q(invoice_number="") | models.Q(invoice_number__isnull=True),
+            _n_inv_attachments=0,
+        )
+        .select_related("category", "cost_center", "fornecedor")
+        .order_by("-paid_date", "-id")
+    )
+
+    # PFs pagas sem fatura-recibo do motorista
+    pf_qs = (
+        DriverPreInvoice.objects.filter(
+            status="PAGO", fatura_ficheiro="",
+        )
+        .select_related("driver")
+        .order_by("-data_pagamento", "-id")
+    )
+
+    return render(request, "accounting/pending_reconciliation.html", {
+        "bills": list(bill_qs),
+        "pfs": list(pf_qs),
+        "n_bills": bill_qs.count(),
+        "n_pfs": pf_qs.count(),
+    })
+
+
 # Tolerância na acareação valor-comprovativo (cobre arredondamentos /
 # pequenas diferenças de apresentação). Acima disto → confirmação manual.
 _PROOF_TOLERANCE = Decimal("0.50")
@@ -1261,6 +1326,29 @@ def payables_mark_paid(request):
                 "success": False,
                 "error": f"Estado {bill.get_status_display()} não permite pagamento.",
             }, status=400)
+        # Verifica se a Bill tem a FACTURA (documento) presente:
+        # quer pelo campo invoice_number, quer por anexo kind=INVOICE.
+        from .models import BillAttachment
+        has_invoice = bool(
+            (bill.invoice_number or "").strip()
+            or bill.attachments.filter(
+                kind=BillAttachment.KIND_INVOICE,
+            ).exists()
+        )
+        force_without_invoice = (
+            request.POST.get("force_without_invoice") == "1"
+        )
+        if not has_invoice and not force_without_invoice:
+            return JsonResponse({
+                "success": False,
+                "needs_invoice_confirmation": True,
+                "message": (
+                    f"A conta «{bill.description}» não tem fatura "
+                    "anexada nem número de factura preenchido. Pagar "
+                    "mesmo assim? Vai ficar registada como 'paga sem "
+                    "fatura' para regularizar depois."
+                ),
+            })
         bill.status = Bill.STATUS_PAID
         bill.paid_date = paid_date
         bill.paid_amount = bill.amount_total
@@ -1269,6 +1357,12 @@ def payables_mark_paid(request):
         if comprovante:
             bill.payment_proof = comprovante
         _append_audit_note(bill, audit_note)
+        if not has_invoice:
+            _append_audit_note(
+                bill,
+                f"[{_ts}] ⚠ Pago SEM fatura anexada (confirmação "
+                "explícita) — pendente regularização.",
+            )
         bill.save()
         return JsonResponse({"success": True, "numero": f"CNT-{bill.id:04d}"})
 

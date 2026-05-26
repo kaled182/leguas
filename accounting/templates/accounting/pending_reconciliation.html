@@ -1,0 +1,121 @@
+{% extends 'settlements/base.html' %}
+{% load static %}
+{% block title %}Pendentes de Regularização{% endblock %}
+{% block content %}
+<div class="max-w-screen-2xl mx-auto px-4 py-6 space-y-4">
+
+  <div class="flex items-center justify-between flex-wrap gap-3">
+    <div>
+      <h1 class="text-2xl font-bold flex items-center gap-2">
+        <i data-lucide="alert-triangle" class="w-6 h-6 text-amber-500"></i>
+        Pendentes de Regularização
+      </h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400">
+        Pagamentos efectuados sem o documento de suporte. Anexa a
+        factura/recibo quando o receberes para fechar a regularização.
+      </p>
+    </div>
+    <a href="{% url 'accounting:payables_inbox' %}"
+       class="px-3 py-2 border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-sm font-semibold flex items-center gap-1.5">
+      <i data-lucide="arrow-left" class="w-4 h-4"></i> Voltar
+    </a>
+  </div>
+
+  <!-- KPIs -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+    <div class="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-sm">
+      <div class="text-xs text-gray-500">Contas pagas sem fatura</div>
+      <div class="text-2xl font-bold text-rose-600">{{ n_bills }}</div>
+    </div>
+    <div class="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-sm">
+      <div class="text-xs text-gray-500">PFs pagas sem recibo</div>
+      <div class="text-2xl font-bold text-amber-600">{{ n_pfs }}</div>
+    </div>
+    <div class="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-sm flex items-center">
+      <div class="text-xs text-gray-500">
+        Total pendente: <b class="text-lg text-gray-800 dark:text-gray-200">{{ n_bills|add:n_pfs }}</b>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bills sem fatura -->
+  <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-x-auto">
+    <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
+      <i data-lucide="receipt" class="w-4 h-4 text-rose-500"></i>
+      <h2 class="text-sm font-bold uppercase">Contas a Pagar pagas sem fatura ({{ n_bills }})</h2>
+    </div>
+    <table class="w-full text-sm">
+      <thead class="bg-gray-50 dark:bg-gray-900 text-xs uppercase text-gray-500">
+        <tr class="text-left">
+          <th class="px-3 py-2">Pago em</th>
+          <th class="px-3 py-2">Descrição</th>
+          <th class="px-3 py-2">Fornecedor</th>
+          <th class="px-3 py-2">Categoria</th>
+          <th class="px-3 py-2 text-right">Valor</th>
+          <th class="px-3 py-2 text-right">Acções</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+        {% for b in bills %}
+        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+          <td class="px-3 py-2 text-xs">{{ b.paid_date|date:"d/m/Y"|default:"—" }}</td>
+          <td class="px-3 py-2">
+            <a href="{% url 'accounting:bill_detail' b.pk %}" class="font-medium text-indigo-600 hover:underline">{{ b.description }}</a>
+          </td>
+          <td class="px-3 py-2 text-xs">{{ b.supplier|default:"—" }}</td>
+          <td class="px-3 py-2 text-xs">{{ b.category.name|default:"—" }}</td>
+          <td class="px-3 py-2 text-right font-mono">€ {{ b.amount_total|floatformat:2 }}</td>
+          <td class="px-3 py-2 text-right">
+            <a href="{% url 'accounting:bill_edit' b.pk %}#anexos"
+               class="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-xs font-semibold">
+              <i data-lucide="upload" class="w-3.5 h-3.5"></i> Anexar fatura
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="px-3 py-6 text-center text-gray-400 italic">Sem contas pendentes — todas as contas pagas têm fatura associada.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- PFs sem recibo -->
+  <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-x-auto">
+    <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
+      <i data-lucide="user" class="w-4 h-4 text-blue-500"></i>
+      <h2 class="text-sm font-bold uppercase">Pré-Faturas pagas sem fatura-recibo ({{ n_pfs }})</h2>
+    </div>
+    <table class="w-full text-sm">
+      <thead class="bg-gray-50 dark:bg-gray-900 text-xs uppercase text-gray-500">
+        <tr class="text-left">
+          <th class="px-3 py-2">Pago em</th>
+          <th class="px-3 py-2">PF</th>
+          <th class="px-3 py-2">Motorista</th>
+          <th class="px-3 py-2">Período</th>
+          <th class="px-3 py-2 text-right">Total</th>
+          <th class="px-3 py-2 text-right">Acções</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+        {% for pf in pfs %}
+        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+          <td class="px-3 py-2 text-xs">{{ pf.data_pagamento|date:"d/m/Y"|default:"—" }}</td>
+          <td class="px-3 py-2 font-mono font-bold text-purple-600">{{ pf.numero }}</td>
+          <td class="px-3 py-2">{{ pf.driver.nome_completo }}</td>
+          <td class="px-3 py-2 text-xs">{{ pf.periodo_inicio|date:"d/m/Y" }} → {{ pf.periodo_fim|date:"d/m/Y" }}</td>
+          <td class="px-3 py-2 text-right font-mono">€ {{ pf.total_a_receber|floatformat:2 }}</td>
+          <td class="px-3 py-2 text-right">
+            <a href="{% url 'drivers_app:driver_portal_invoices' pf.driver.id %}"
+               class="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-xs font-semibold">
+              <i data-lucide="upload" class="w-3.5 h-3.5"></i> Anexar recibo
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="px-3 py-6 text-center text-gray-400 italic">Sem PFs pendentes — todas as pagas têm fatura-recibo.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

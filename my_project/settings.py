@@ -103,6 +103,17 @@ ACCOUNTING_AUTO_RECURRING_BILLS_ENABLED = env.bool(
     "ACCOUNTING_AUTO_RECURRING_BILLS_ENABLED", default=False,
 )
 
+# Limiares para `treasury_alert` (em euros). O alerta dispara quando:
+#   - saldo_projectado_30d < 0  (sempre)
+#   - Σ saídas vencidas > OVERDUE_THRESHOLD
+#   - saídas a vencer amanhã > HEADSUP_THRESHOLD
+TREASURY_ALERT_OVERDUE_THRESHOLD = env.int(
+    "TREASURY_ALERT_OVERDUE_THRESHOLD", default=500,
+)
+TREASURY_ALERT_HEADSUP_THRESHOLD = env.int(
+    "TREASURY_ALERT_HEADSUP_THRESHOLD", default=100,
+)
+
 # WPPConnect Server (Leguas)
 WPPCONNECT_URL = env("WPPCONNECT_URL", default="")
 WPPCONNECT_SESSION = env("WPPCONNECT_SESSION", default="leguas_wppconnect")

@@ -150,24 +150,21 @@
                   <a href="{% url 'invoice-detail' invoice.id %}" class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 mr-2">Ver</a>
                 {% endif %}
                 <a href="{% url 'invoice-pdf' invoice.id %}" class="text-emerald-600 hover:text-emerald-900 dark:text-emerald-400 dark:hover:text-emerald-300 mr-2">PDF</a>
-                {# Acções de workflow — geradas a partir das transições válidas #}
-                {% for t in invoice.available_transitions %}
+                {# Acções de workflow — dropdown com todas as transições válidas #}
+                {% with transitions=invoice.available_transitions %}
+                {% if transitions %}
                   <button type="button"
-                          onclick="changeInvoiceStatus({{ invoice.id }}, '{{ t.status }}', '{{ invoice.invoice_number|escapejs }}')"
-                          class="ml-1 px-2 py-0.5 rounded text-xs font-semibold text-white inline-flex items-center gap-1
-                            {% if t.color == 'blue' %}bg-blue-600 hover:bg-blue-700
-                            {% elif t.color == 'emerald' %}bg-emerald-600 hover:bg-emerald-700
-                            {% elif t.color == 'amber' %}bg-amber-600 hover:bg-amber-700
-                            {% elif t.color == 'orange' %}bg-orange-600 hover:bg-orange-700
-                            {% elif t.color == 'red' %}bg-red-600 hover:bg-red-700
-                            {% elif t.color == 'rose' %}bg-rose-600 hover:bg-rose-700
-                            {% else %}bg-gray-500 hover:bg-gray-600{% endif %}"
-                          title="{{ t.label }}">
-                    <i data-lucide="{{ t.icon }}" class="w-3 h-3"></i> {{ t.label }}
+                          class="status-menu-trigger ml-1 px-2 py-0.5 rounded text-xs font-semibold text-white inline-flex items-center gap-1 bg-indigo-600 hover:bg-indigo-700"
+                          data-invoice-id="{{ invoice.id }}"
+                          data-invoice-number="{{ invoice.invoice_number|escapejs }}"
+                          data-transitions='{% for t in transitions %}{"status":"{{ t.status }}","label":"{{ t.label|escapejs }}","color":"{{ t.color }}","icon":"{{ t.icon }}"}{% if not forloop.last %},{% endif %}{% endfor %}'>
+                    <i data-lucide="list" class="w-3 h-3"></i> Estado
+                    <i data-lucide="chevron-down" class="w-3 h-3"></i>
                   </button>
-                {% empty %}
+                {% else %}
                   <span class="ml-1 text-[10px] text-gray-400 italic">sem acções</span>
-                {% endfor %}
+                {% endif %}
+                {% endwith %}
               </td>
             </tr>
             {% endfor %}
@@ -225,6 +222,10 @@
   </div>
   {% endif %}
 </div>
+
+{# Floating status menu, repositioned & populated on each trigger click #}
+<div id="status-floating-menu" style="display:none; position:fixed; z-index:9999;"
+     class="w-48 rounded-md shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5 py-1"></div>
 {% endblock %}
 
 {% block extra_js %}
@@ -233,7 +234,57 @@
     if (typeof lucide !== 'undefined') {
       lucide.createIcons();
     }
+    initStatusMenu();
   });
+
+  function initStatusMenu() {
+    const menu = document.getElementById('status-floating-menu');
+    if (!menu) return;
+    const colorClass = {
+      blue: 'text-blue-700 dark:text-blue-300',
+      emerald: 'text-emerald-700 dark:text-emerald-300',
+      amber: 'text-amber-700 dark:text-amber-300',
+      orange: 'text-orange-700 dark:text-orange-300',
+      red: 'text-red-700 dark:text-red-300',
+      rose: 'text-rose-700 dark:text-rose-300',
+      gray: 'text-gray-700 dark:text-gray-300',
+    };
+    function closeMenu() { menu.style.display = 'none'; menu.dataset.openFor = ''; }
+    document.querySelectorAll('.status-menu-trigger').forEach(btn => {
+      btn.addEventListener('click', function(ev) {
+        ev.stopPropagation();
+        const id = btn.dataset.invoiceId;
+        if (menu.dataset.openFor === id) { closeMenu(); return; }
+        let transitions = [];
+        try { transitions = JSON.parse('[' + btn.dataset.transitions + ']'); } catch(e) { console.error(e); return; }
+        menu.innerHTML = transitions.map(t => {
+          const cls = colorClass[t.color] || colorClass.gray;
+          return `<button type="button" data-status="${t.status}"
+            class="status-menu-item w-full text-left px-3 py-1.5 text-xs font-medium flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 whitespace-nowrap ${cls}">
+            <i data-lucide="${t.icon}" class="w-3.5 h-3.5"></i> ${t.label}
+          </button>`;
+        }).join('');
+        menu.querySelectorAll('.status-menu-item').forEach(item => {
+          item.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const status = item.dataset.status;
+            closeMenu();
+            changeInvoiceStatus(parseInt(id, 10), status, btn.dataset.invoiceNumber);
+          });
+        });
+        const r = btn.getBoundingClientRect();
+        menu.style.display = 'block';
+        menu.style.top = (r.bottom + 4) + 'px';
+        menu.style.left = Math.max(8, r.right - menu.offsetWidth) + 'px';
+        menu.dataset.openFor = id;
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+      });
+    });
+    document.addEventListener('click', closeMenu);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenu(); });
+    window.addEventListener('scroll', closeMenu, true);
+    window.addEventListener('resize', closeMenu);
+  }
 
   function _csrf() {
     return document.querySelector('[name=csrfmiddlewaretoken]')?.value

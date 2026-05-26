@@ -1,0 +1,198 @@
+{% extends 'settlements/base.html' %}
+{% load static %}
+{% block title %}Reconciliação Bancária{% endblock %}
+{% block content %}
+<style>
+  .pill { padding:0.125rem 0.5rem; border-radius:9999px; font-size:0.7rem; font-weight:600; }
+  .pill-credit { background:#d1fae5; color:#065f46; }
+  .pill-debit { background:#fee2e2; color:#991b1b; }
+  .pill-bill { background:#fef3c7; color:#92400e; }
+  .pill-partner { background:#dbeafe; color:#1e40af; }
+  .pill-pf { background:#fce7f3; color:#9d174d; }
+  .pill-matched { background:#d1fae5; color:#065f46; }
+  .pill-no-sug { background:#e5e7eb; color:#374151; }
+  .sug-card { transition:background 0.15s; }
+  .sug-card:hover { background:rgba(99, 102, 241, 0.05); }
+  .score-dot { display:inline-block; width:8px; height:8px; border-radius:9999px; background:#10b981; }
+</style>
+
+<div class="max-w-screen-2xl mx-auto px-4 py-6 space-y-4">
+
+  <div class="flex items-center justify-between flex-wrap gap-3">
+    <div>
+      <h1 class="text-2xl font-bold flex items-center gap-2">
+        <i data-lucide="git-compare" class="w-6 h-6 text-emerald-500"></i>
+        Reconciliação Bancária
+      </h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400">
+        Match BankTransaction ↔ Bills · PartnerInvoice · PFs (tolerância €0.02 / ±3 dias)
+      </p>
+    </div>
+    <a href="{% url 'accounting:hub_financeiro' %}"
+       class="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold flex items-center gap-1.5">
+      <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Hub Financeiro
+    </a>
+  </div>
+
+  {% if messages %}
+  <div class="space-y-2">
+    {% for m in messages %}
+    <div class="px-4 py-2.5 rounded-lg text-sm
+      {% if m.tags == 'success' %}bg-emerald-50 dark:bg-emerald-900/20 text-emerald-800 dark:text-emerald-300
+      {% elif m.tags == 'error' %}bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300
+      {% else %}bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300{% endif %}">{{ m }}</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- KPIs -->
+  <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+    <div class="bg-white dark:bg-gray-800 rounded-xl border-l-4 border-amber-500 border border-gray-200/50 dark:border-gray-700/50 p-4">
+      <p class="text-xs uppercase tracking-wide text-amber-600 font-semibold">Por conciliar</p>
+      <p class="text-2xl font-bold text-amber-700 dark:text-amber-300">{{ total_unmatched }}</p>
+      <p class="text-[11px] text-amber-600/70">transacções sem match</p>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl border-l-4 border-indigo-500 border border-gray-200/50 dark:border-gray-700/50 p-4">
+      <p class="text-xs uppercase tracking-wide text-indigo-600 font-semibold">Com sugestão automática</p>
+      <p class="text-2xl font-bold text-indigo-700 dark:text-indigo-300">{{ with_suggestions }}</p>
+      <p class="text-[11px] text-indigo-600/70">candidatos encontrados</p>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl border-l-4 border-emerald-500 border border-gray-200/50 dark:border-gray-700/50 p-4">
+      <p class="text-xs uppercase tracking-wide text-emerald-600 font-semibold">Já conciliadas</p>
+      <p class="text-2xl font-bold text-emerald-700 dark:text-emerald-300">{{ total_matched }}</p>
+      <p class="text-[11px] text-emerald-600/70">histórico</p>
+    </div>
+  </div>
+
+  <!-- Filtros -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+    <form method="get" class="flex flex-wrap items-end gap-3">
+      <div>
+        <label class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 block mb-1">Sentido</label>
+        <select name="direction" class="px-3 py-2 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm">
+          <option value="">Todos</option>
+          <option value="DEBIT" {% if filters.direction == 'DEBIT' %}selected{% endif %}>Débito (saídas)</option>
+          <option value="CREDIT" {% if filters.direction == 'CREDIT' %}selected{% endif %}>Crédito (entradas)</option>
+        </select>
+      </div>
+      <label class="flex items-center gap-2 text-sm">
+        <input type="checkbox" name="matched" value="1" {% if filters.show_matched %}checked{% endif %}>
+        Mostrar já conciliadas
+      </label>
+      <button class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold flex items-center gap-1.5">
+        <i data-lucide="filter" class="w-4 h-4"></i> Filtrar
+      </button>
+      <a href="{% url 'accounting:bank_reconciliation' %}" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-100 rounded-lg text-sm font-semibold flex items-center gap-1.5">
+        <i data-lucide="rotate-ccw" class="w-4 h-4"></i> Limpar
+      </a>
+    </form>
+  </div>
+
+  <!-- Transacções -->
+  <div class="space-y-3">
+    {% for r in rows %}
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <div class="px-4 py-3 flex items-center justify-between flex-wrap gap-3 border-b border-gray-100 dark:border-gray-700/50">
+        <div class="flex items-center gap-3 flex-wrap">
+          <span class="text-xs text-gray-500">{{ r.tx.date|date:"d/m/Y" }}</span>
+          {% if r.tx.direction == 'CREDIT' %}
+            <span class="pill pill-credit"><i data-lucide="arrow-down-left" class="inline w-3 h-3"></i> Crédito</span>
+          {% else %}
+            <span class="pill pill-debit"><i data-lucide="arrow-up-right" class="inline w-3 h-3"></i> Débito</span>
+          {% endif %}
+          <span class="font-mono font-bold {% if r.tx.direction == 'CREDIT' %}text-emerald-600{% else %}text-red-600{% endif %}">
+            {% if r.tx.direction == 'CREDIT' %}+{% else %}−{% endif %}€{{ r.tx.amount|floatformat:2 }}
+          </span>
+          <span class="text-sm text-gray-700 dark:text-gray-300 truncate max-w-md" title="{{ r.tx.description }}">
+            {{ r.tx.description }}
+          </span>
+        </div>
+        <div>
+          {% if r.tx.is_matched %}
+            <span class="pill pill-matched"><i data-lucide="check-circle" class="inline w-3 h-3"></i> Conciliada</span>
+            <form method="post" action="{% url 'accounting:bank_match_clear' r.tx.id %}" class="inline ml-2">
+              {% csrf_token %}
+              <button type="submit" onclick="return confirm('Remover match?');"
+                      class="text-xs text-red-500 hover:underline">
+                <i data-lucide="x" class="inline w-3 h-3"></i> Limpar
+              </button>
+            </form>
+          {% elif r.suggestions %}
+            <span class="text-xs text-indigo-500 font-semibold">{{ r.suggestions|length }} sugestão(ões)</span>
+          {% else %}
+            <span class="pill pill-no-sug">Sem sugestões</span>
+          {% endif %}
+        </div>
+      </div>
+
+      {% if r.tx.is_matched %}
+        <div class="px-4 py-3 bg-emerald-50 dark:bg-emerald-900/10 text-sm">
+          {% if r.tx.matched_bill_id %}
+            <i data-lucide="receipt" class="inline w-3.5 h-3.5"></i>
+            Bill: <a href="/accounting/contas-a-pagar/{{ r.tx.matched_bill_id }}/" class="text-indigo-600 hover:underline">#{{ r.tx.matched_bill_id }}</a>
+          {% elif r.tx.matched_partner_invoice_id %}
+            <i data-lucide="file-text" class="inline w-3.5 h-3.5"></i>
+            Fatura parceiro: <a href="/settlements/invoices/{{ r.tx.matched_partner_invoice_id }}/" class="text-indigo-600 hover:underline">#{{ r.tx.matched_partner_invoice_id }}</a>
+          {% elif r.tx.matched_pf_id %}
+            <i data-lucide="users" class="inline w-3.5 h-3.5"></i>
+            PF: <a href="/settlements/pre-invoices/{{ r.tx.matched_pf_id }}/" class="text-indigo-600 hover:underline">#{{ r.tx.matched_pf_id }}</a>
+          {% endif %}
+          {% if r.tx.matched_at %}
+            <span class="text-xs text-gray-500 ml-3">em {{ r.tx.matched_at|date:"d/m/Y H:i" }}{% if r.tx.matched_by %} por {{ r.tx.matched_by.get_full_name|default:r.tx.matched_by.username }}{% endif %}</span>
+          {% endif %}
+        </div>
+      {% elif r.suggestions %}
+        <div class="divide-y divide-gray-100 dark:divide-gray-700/50">
+          {% for s in r.suggestions %}
+          <div class="sug-card px-4 py-2.5 flex items-center justify-between gap-3 flex-wrap">
+            <div class="flex items-center gap-3 flex-wrap">
+              {% if s.score >= 10 %}<span class="score-dot" title="Match forte"></span>{% endif %}
+              {% if s.type == 'bill' %}<span class="pill pill-bill">Bill</span>
+              {% elif s.type == 'partner' %}<span class="pill pill-partner">Parceiro</span>
+              {% elif s.type == 'pf' %}<span class="pill pill-pf">PF</span>{% endif %}
+              <span class="text-xs text-gray-500">{{ s.date|date:"d/m/Y" }}</span>
+              <span class="font-mono font-semibold">€{{ s.amount|floatformat:2 }}</span>
+              <span class="text-sm text-gray-700 dark:text-gray-300 truncate max-w-md">{{ s.label }}</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <a href="{{ s.url }}" target="_blank" class="text-indigo-500 hover:text-indigo-700" title="Abrir">
+                <i data-lucide="external-link" class="w-4 h-4"></i>
+              </a>
+              <form method="post" action="{% url 'accounting:bank_match_confirm' r.tx.id %}" class="inline">
+                {% csrf_token %}
+                <input type="hidden" name="type" value="{{ s.type }}">
+                <input type="hidden" name="id" value="{{ s.id }}">
+                <button type="submit"
+                        class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-semibold flex items-center gap-1">
+                  <i data-lucide="check" class="w-3 h-3"></i> Conciliar
+                </button>
+              </form>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="px-4 py-3 text-xs text-gray-500 italic">
+          Sem candidatos automáticos. Procura manualmente em
+          <a href="{% url 'accounting:payables_inbox' %}" class="text-indigo-500 hover:underline">A Pagar</a>
+          ou <a href="{% url 'invoice-list' %}" class="text-indigo-500 hover:underline">Faturas de Parceiros</a>.
+        </div>
+      {% endif %}
+    </div>
+    {% empty %}
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-12 text-center text-gray-500">
+      <i data-lucide="inbox" class="w-12 h-12 mx-auto mb-2 opacity-50"></i>
+      <p>Sem transacções para os filtros seleccionados.</p>
+      <p class="text-xs mt-1">Verifica se foram importados extractos bancários.</p>
+    </div>
+    {% endfor %}
+  </div>
+
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  });
+</script>
+{% endblock %}

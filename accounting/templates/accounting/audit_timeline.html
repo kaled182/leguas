@@ -1,0 +1,136 @@
+{% extends 'settlements/base.html' %}
+{% load static %}
+{% block title %}Auditoria{% endblock %}
+{% block content %}
+<style>
+  .pill { padding:0.125rem 0.5rem; border-radius:9999px; font-size:0.7rem; font-weight:600; }
+  .pill-in { background:#d1fae5; color:#065f46; }
+  .pill-out { background:#fee2e2; color:#991b1b; }
+  .ev-bill_created { color:#92400e; }
+  .ev-bill_paid { color:#065f46; }
+  .ev-bill_deleted { color:#991b1b; }
+  .ev-partner_created { color:#1e40af; }
+  .ev-partner_approved { color:#3730a3; }
+  .ev-partner_paid { color:#047857; }
+  .ev-imposto_created { color:#3730a3; }
+  .ev-imposto_paid { color:#065f46; }
+  .ev-bank_matched { color:#0e7490; }
+  .ev-pf_paid { color:#9d174d; }
+
+  .tl { position:relative; padding-left:2rem; }
+  .tl::before { content:''; position:absolute; left:0.85rem; top:0; bottom:0; width:2px; background:#e5e7eb; }
+  .dark .tl::before { background:#374151; }
+  .tl-item { position:relative; padding:0.6rem 0; }
+  .tl-dot { position:absolute; left:-1.6rem; top:1rem; width:1.1rem; height:1.1rem; border-radius:9999px; background:#fff; border:3px solid #9ca3af; }
+  .dark .tl-dot { background:#1f2937; }
+  .tl-dot.in { border-color:#10b981; background:#d1fae5; }
+  .tl-dot.out { border-color:#ef4444; background:#fee2e2; }
+
+  .type-chip { display:inline-flex; gap:0.25rem; padding:0.15rem 0.45rem; border-radius:0.375rem; font-size:0.65rem; font-weight:600; background:#f3f4f6; color:#374151; cursor:pointer; }
+  .dark .type-chip { background:#374151; color:#d1d5db; }
+  .type-chip.active { background:#6366f1; color:#fff; }
+</style>
+
+<div class="max-w-5xl mx-auto px-4 py-6 space-y-4">
+
+  <div class="flex items-center justify-between flex-wrap gap-3">
+    <div>
+      <h1 class="text-2xl font-bold flex items-center gap-2">
+        <i data-lucide="history" class="w-6 h-6 text-indigo-500"></i>
+        Auditoria
+      </h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400">
+        Timeline dos eventos financeiros · {{ date_from|date:"d/m/Y" }} → {{ date_to|date:"d/m/Y" }} · {{ events|length }} evento(s)
+      </p>
+    </div>
+    <a href="{% url 'accounting:hub_financeiro' %}"
+       class="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold flex items-center gap-1.5">
+      <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Hub Financeiro
+    </a>
+  </div>
+
+  <!-- Filtros -->
+  <form method="get" class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+    <div class="flex items-center gap-2 flex-wrap mb-3">
+      <label class="text-xs uppercase tracking-wide text-gray-500">Últimos</label>
+      <select name="days" class="px-2 py-1 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm">
+        <option value="7"   {% if filters.days == 7 %}selected{% endif %}>7 dias</option>
+        <option value="15"  {% if filters.days == 15 %}selected{% endif %}>15 dias</option>
+        <option value="30"  {% if filters.days == 30 %}selected{% endif %}>30 dias</option>
+        <option value="60"  {% if filters.days == 60 %}selected{% endif %}>60 dias</option>
+        <option value="90"  {% if filters.days == 90 %}selected{% endif %}>90 dias</option>
+        <option value="180" {% if filters.days == 180 %}selected{% endif %}>180 dias</option>
+        <option value="365" {% if filters.days == 365 %}selected{% endif %}>1 ano</option>
+      </select>
+      <button class="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-sm font-semibold">Aplicar</button>
+      <a href="{% url 'accounting:audit_timeline' %}" class="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded text-sm">Limpar</a>
+    </div>
+    <div class="flex flex-wrap gap-1.5">
+      {% for v, label in type_choices %}
+        <label class="type-chip {% if v in filters.types %}active{% endif %}">
+          <input type="checkbox" name="type" value="{{ v }}" {% if v in filters.types %}checked{% endif %} class="hidden">
+          {{ label }}
+        </label>
+      {% endfor %}
+    </div>
+  </form>
+
+  {% if messages %}
+  <div class="space-y-2">
+    {% for m in messages %}
+    <div class="px-4 py-2.5 rounded-lg text-sm bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300">{{ m }}</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Timeline -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
+    {% if events %}
+    <div class="tl">
+      {% for e in events %}
+      <div class="tl-item">
+        <span class="tl-dot {{ e.sign }}"></span>
+        <div class="flex items-start justify-between gap-3 flex-wrap">
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2 flex-wrap text-xs text-gray-500 mb-0.5">
+              <span class="font-mono">{{ e.ts|date:"d/m/Y H:i" }}</span>
+              <span class="font-semibold ev-{{ e.type }}">
+                {% for v, label in type_choices %}{% if v == e.type %}{{ label }}{% endif %}{% endfor %}
+              </span>
+              {% if e.actor %}
+                <span class="text-gray-400">· por {{ e.actor.get_full_name|default:e.actor.username }}</span>
+              {% endif %}
+            </div>
+            <div class="text-sm text-gray-800 dark:text-gray-200 truncate">{{ e.label }}</div>
+          </div>
+          <div class="flex items-center gap-2 flex-shrink-0">
+            <span class="font-mono font-bold {% if e.sign == 'in' %}text-emerald-600{% else %}text-red-600{% endif %}">
+              {% if e.sign == 'in' %}+{% else %}−{% endif %}€{{ e.amount|floatformat:2 }}
+            </span>
+            <a href="{{ e.url }}" class="text-indigo-500 hover:text-indigo-700">
+              <i data-lucide="external-link" class="w-4 h-4"></i>
+            </a>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="py-12 text-center text-gray-500">
+      <i data-lucide="inbox" class="w-12 h-12 mx-auto mb-2 opacity-50"></i>
+      <p>Sem eventos para os filtros seleccionados.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+    // Auto-submeter quando se altera os checkboxes de tipo
+    document.querySelectorAll('.type-chip input[type=checkbox]').forEach(cb => {
+      cb.addEventListener('change', () => cb.form.submit());
+    });
+  });
+</script>
+{% endblock %}

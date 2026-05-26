@@ -26,9 +26,21 @@
         Receitas, custos directos e fixos — análise de margem por período.
       </p>
     </div>
-    <a href="{% url 'accounting:bill_list' %}" class="px-3 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-sm font-semibold flex items-center gap-1.5">
-      <i data-lucide="receipt" class="w-4 h-4"></i> Contas a Pagar
-    </a>
+    <div class="flex items-center gap-2 flex-wrap">
+      <a href="{% url 'accounting:dre_export' %}?format=csv&date_from={{ date_from|date:'Y-m-d' }}&date_to={{ date_to|date:'Y-m-d' }}"
+         class="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold flex items-center gap-1.5"
+         title="Descarregar DRE em CSV (Excel-friendly)">
+        <i data-lucide="file-text" class="w-4 h-4"></i> CSV
+      </a>
+      <a href="{% url 'accounting:dre_export' %}?format=xlsx&date_from={{ date_from|date:'Y-m-d' }}&date_to={{ date_to|date:'Y-m-d' }}"
+         class="px-3 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-semibold flex items-center gap-1.5"
+         title="Descarregar DRE em XLSX com folhas separadas">
+        <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> XLSX
+      </a>
+      <a href="{% url 'accounting:bill_list' %}" class="px-3 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-sm font-semibold flex items-center gap-1.5">
+        <i data-lucide="receipt" class="w-4 h-4"></i> Contas a Pagar
+      </a>
+    </div>
   </div>
 
   <!-- Filtros de Período -->
@@ -236,19 +248,85 @@
     <h2 class="text-sm font-bold mb-3 flex items-center gap-2">
       <i data-lucide="map-pin" class="w-4 h-4 text-blue-500"></i>
       Despesas por Centro de Custo
+      <span class="text-[10px] font-normal text-gray-500">— Bills (despesa pr&oacute;pria) + Pr&eacute;-faturas de motoristas</span>
     </h2>
     <table class="w-full text-sm">
       <thead class="text-xs text-gray-500 uppercase">
-        <tr><th class="text-left py-2">Centro</th><th class="text-left">Tipo</th><th class="text-right">Total</th></tr>
+        <tr>
+          <th class="text-left py-2">Centro</th>
+          <th class="text-left">Tipo</th>
+          <th class="text-right" title="Bills da empresa imputadas a este centro">Bills</th>
+          <th class="text-right" title="Pr&eacute;-faturas de motoristas imputadas a este centro">PFs Motorista</th>
+          <th class="text-right">Total</th>
+        </tr>
       </thead>
       <tbody class="divide-y divide-gray-100 dark:divide-gray-700/50">
         {% for name, info in by_cost_center.items %}
-        <tr><td class="py-1.5">{{ name }}</td>
-          <td><span class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-xs">{{ info.type }}</span></td>
-          <td class="text-right font-mono neg">€{{ info.total|floatformat:2 }}</td></tr>
+        <tr>
+          <td class="py-1.5">{{ name }}</td>
+          <td><span class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-xs">{{ info.type|default:"&mdash;" }}</span></td>
+          <td class="text-right font-mono {% if info.from_bills %}neg{% else %}text-gray-400{% endif %}">€{{ info.from_bills|default:0|floatformat:2 }}</td>
+          <td class="text-right font-mono {% if info.from_drivers %}neg{% else %}text-gray-400{% endif %}">€{{ info.from_drivers|default:0|floatformat:2 }}</td>
+          <td class="text-right font-mono neg font-bold">€{{ info.total|floatformat:2 }}</td>
+        </tr>
         {% endfor %}
       </tbody>
     </table>
+  </div>
+  {% endif %}
+
+  <!-- Evolução por Centro nos últimos 6 meses -->
+  {% if cc_evolution.rows %}
+  <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+    <h2 class="text-sm font-bold mb-3 flex items-center gap-2">
+      <i data-lucide="trending-up" class="w-4 h-4 text-violet-500"></i>
+      Evolu&ccedil;&atilde;o por Centro de Custo &mdash; &uacute;ltimos 6 meses
+      <span class="text-[10px] font-normal text-gray-500">Bills + PFs por m&ecirc;s, ordenado por total</span>
+    </h2>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="text-xs text-gray-500 uppercase">
+          <tr>
+            <th class="text-left py-2 sticky left-0 bg-white dark:bg-gray-800">Centro</th>
+            {% for m in cc_evolution.months %}
+              <th class="text-right px-2">{{ m.label }}</th>
+            {% endfor %}
+            <th class="text-right px-2">Total</th>
+            <th class="text-right px-2" title="Varia&ccedil;&atilde;o do m&ecirc;s mais recente vs o primeiro">Δ</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-700/50">
+          {% for row in cc_evolution.rows %}
+          <tr>
+            <td class="py-1.5 sticky left-0 bg-white dark:bg-gray-800">{{ row.cc }}</td>
+            {% for v in row.values %}
+              <td class="text-right px-2 font-mono {% if v %}neg{% else %}text-gray-400{% endif %}">€{{ v|floatformat:0 }}</td>
+            {% endfor %}
+            <td class="text-right px-2 font-mono neg font-bold">€{{ row.total|floatformat:0 }}</td>
+            <td class="text-right px-2 text-xs">
+              {% if row.delta_pct is None %}
+                <span class="text-amber-500">novo</span>
+              {% elif row.delta_pct > 5 %}
+                <span class="text-red-500">↑ {{ row.delta_pct|floatformat:0 }}%</span>
+              {% elif row.delta_pct < -5 %}
+                <span class="text-emerald-500">↓ {{ row.delta_pct|floatformat:0 }}%</span>
+              {% else %}
+                <span class="text-gray-400">{{ row.delta_pct|floatformat:0 }}%</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+          <tr class="border-t-2 border-gray-300 dark:border-gray-600 font-bold">
+            <td class="py-2 sticky left-0 bg-white dark:bg-gray-800">Total mensal</td>
+            {% for t in cc_evolution.totals_by_month %}
+              <td class="text-right px-2 font-mono neg">€{{ t|floatformat:0 }}</td>
+            {% endfor %}
+            <td class="text-right px-2 font-mono neg">€{{ cc_evolution.grand_total|floatformat:0 }}</td>
+            <td></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </div>
   {% endif %}
 </div>

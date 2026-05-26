@@ -64,3 +64,18 @@ def break_even_alert_task():
     except Exception as e:
         logger.exception("[accounting] break_even_alert falhou")
         return {"success": False, "error": str(e)}
+
+
+@shared_task(name="accounting.treasury_alert")
+def treasury_alert_task():
+    """Envia alerta WhatsApp sobre saldo projectado negativo,
+    vencidos acumulados ou heads-up de saídas D-1.
+
+    Schedule: 1× ao dia (Celery beat) — de manhã.
+    """
+    try:
+        call_command("treasury_alert")
+        return {"success": True}
+    except Exception as e:
+        logger.exception("[accounting] treasury_alert falhou")
+        return {"success": False, "error": str(e)}

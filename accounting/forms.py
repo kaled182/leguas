@@ -299,6 +299,7 @@ class ImpostoForm(forms.ModelForm):
         model = Imposto
         fields = [
             "nome", "tipo", "modalidade", "fornecedor",
+            "cost_center",
             "periodo_ano", "periodo_mes",
             "valor",
             "mb_entidade", "mb_referencia", "guia_pagamento",
@@ -315,6 +316,7 @@ class ImpostoForm(forms.ModelForm):
                 "class": "fld", "data-imposto-modalidade": "1",
             }),
             "fornecedor": forms.Select(attrs={"class": "fld"}),
+            "cost_center": forms.Select(attrs={"class": "fld"}),
             "periodo_ano": forms.NumberInput(attrs={
                 "class": "fld", "min": "2020", "max": "2099",
             }),

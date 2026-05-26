@@ -24,10 +24,16 @@
         Gestão de IVA, IRC, IRS, SS, IUC. Mensais, parcelados e pontuais.
       </p>
     </div>
-    <a href="{% url 'accounting:imposto_create' %}"
-      class="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold flex items-center gap-1.5">
-      <i data-lucide="plus" class="w-4 h-4"></i> Novo Imposto
-    </a>
+    <div class="flex items-center gap-2 flex-wrap">
+      <a href="{% url 'accounting:plano_list' %}"
+        class="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold flex items-center gap-1.5">
+        <i data-lucide="calendar-clock" class="w-4 h-4"></i> Planos prestacionais
+      </a>
+      <a href="{% url 'accounting:imposto_create' %}"
+        class="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold flex items-center gap-1.5">
+        <i data-lucide="plus" class="w-4 h-4"></i> Novo Imposto
+      </a>
+    </div>
   </div>
 
   {% if messages %}

@@ -157,6 +157,14 @@ app.conf.beat_schedule = {
         'options': {'expires': 3600},
     },
 
+    # Alerta WhatsApp de tesouraria — todos os dias 8:00
+    # Verifica: saldo projectado negativo, vencidos > €500, D-1 > €100
+    'accounting-treasury-alert': {
+        'task': 'accounting.treasury_alert',
+        'schedule': crontab(hour=8, minute=0),
+        'options': {'expires': 3600},
+    },
+
     # Auto-fecho de reclamações com prazo expirado (cenário 3):
     # cria DriverClaim automático e fecha a reclamação.
     # Corre 1x/dia às 8:00 para apanhar reclamações expiradas no dia anterior.

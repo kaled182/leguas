@@ -59,8 +59,10 @@ def imposto_list(request):
         qs = qs.filter(parent__isnull=False)
     elif modo == "todos":
         pass
-    else:  # principais
-        qs = qs.filter(parent__isnull=True)
+    else:  # principais — exclui pais PARCELADO (geridos em /planos/)
+        qs = qs.filter(parent__isnull=True).exclude(
+            modalidade=Imposto.MODALIDADE_PARCELADO,
+        )
 
     tipo = (request.GET.get("tipo") or "").strip()
     if tipo:
@@ -133,6 +135,7 @@ def imposto_create(request):
                             tipo=imposto.tipo,
                             modalidade=Imposto.MODALIDADE_PARCELADO,
                             fornecedor=imposto.fornecedor,
+                            cost_center=imposto.cost_center,
                             periodo_ano=venc.year,
                             periodo_mes=venc.month,
                             valor=valor_parcela,
@@ -168,7 +171,15 @@ def imposto_create(request):
 
 @login_required
 def imposto_edit(request, pk):
+    from .services_period_lock import is_period_locked_for_user
     imposto = get_object_or_404(Imposto, pk=pk)
+    if is_period_locked_for_user(imposto.data_vencimento, request.user):
+        messages.error(
+            request,
+            f"Período {imposto.data_vencimento:%m/%Y} está fechado. "
+            "Pede ao admin para reabrir antes de editar.",
+        )
+        return redirect("accounting:imposto_list")
     if request.method == "POST":
         form = ImpostoForm(request.POST, request.FILES, instance=imposto)
         if form.is_valid():
@@ -190,7 +201,14 @@ def imposto_edit(request, pk):
 def imposto_mark_paid(request, pk):
     """Marca imposto como PAGO + cria Bill espelho para entrar no
     fluxo de caixa do mês."""
+    from .services_period_lock import is_period_locked_for_user
     imposto = get_object_or_404(Imposto, pk=pk)
+    if is_period_locked_for_user(imposto.data_vencimento, request.user):
+        messages.error(
+            request,
+            f"Período {imposto.data_vencimento:%m/%Y} está fechado.",
+        )
+        return redirect("accounting:imposto_list")
     today = timezone.localdate()
     if imposto.status == Imposto.STATUS_PAGO:
         messages.info(request, "Imposto já estava marcado como pago.")
@@ -220,9 +238,15 @@ def imposto_mark_paid(request, pk):
                     "sort_order": 50,
                 },
             )
-            cc = CostCenter.objects.filter(
-                type=CostCenter.TYPE_ADMIN,
-            ).first()
+            # Centro de custo: usa o do imposto (ou herda do pai PARCELADO),
+            # caindo no ADMIN como fallback.
+            cc = imposto.cost_center or (
+                imposto.parent.cost_center if imposto.parent_id else None
+            )
+            if not cc:
+                cc = CostCenter.objects.filter(
+                    type=CostCenter.TYPE_ADMIN,
+                ).first()
             if not cc:
                 cc, _ = CostCenter.objects.get_or_create(
                     code="ADMIN",
@@ -271,6 +295,8 @@ def imposto_mark_paid(request, pk):
         f"Imposto '{imposto.nome}' marcado como PAGO. "
         f"Bill #{imposto.bill_espelho_id or '?'} criada.",
     )
+    if imposto.parent_id:
+        return redirect("accounting:plano_detail", pk=imposto.parent_id)
     return redirect("accounting:imposto_list")
 
 
@@ -278,7 +304,14 @@ def imposto_mark_paid(request, pk):
 @require_http_methods(["POST"])
 def imposto_anular(request, pk):
     """Anula um imposto (status=ANULADO). Não apaga histórico."""
+    from .services_period_lock import is_period_locked_for_user
     imposto = get_object_or_404(Imposto, pk=pk)
+    if is_period_locked_for_user(imposto.data_vencimento, request.user):
+        messages.error(
+            request,
+            f"Período {imposto.data_vencimento:%m/%Y} está fechado.",
+        )
+        return redirect("accounting:imposto_list")
     if imposto.status == Imposto.STATUS_PAGO:
         messages.error(
             request, "Não é possível anular um imposto já pago.",
@@ -357,4 +390,147 @@ def imposto_ocr_extract(request):
         "suggested_fornecedor": suggested_fornecedor,
         "suggested_modalidade": suggested_modalidade,
         "skipped_files": [f.name for f in files[1:]] if len(files) > 1 else [],
+    })
+
+
+# ─── Planos Prestacionais ──────────────────────────────────────────────
+
+def _plan_aggregates(parent: Imposto):
+    """Agrega totais das parcelas de um plano (pai PARCELADO)."""
+    parcelas = list(parent.parcelas.all())
+    n_total = len(parcelas) or (parent.parcela_total or 0)
+    n_pagas = sum(1 for p in parcelas if p.status == Imposto.STATUS_PAGO)
+    n_atraso = sum(1 for p in parcelas if p.status == Imposto.STATUS_EM_ATRASO)
+    pago = sum(
+        (p.valor for p in parcelas if p.status == Imposto.STATUS_PAGO),
+        Decimal("0"),
+    )
+    em_aberto = sum(
+        (p.valor for p in parcelas
+         if p.status in (Imposto.STATUS_PENDENTE, Imposto.STATUS_EM_ATRASO)),
+        Decimal("0"),
+    )
+    proxima = next(
+        (p for p in sorted(parcelas, key=lambda x: x.data_vencimento)
+         if p.status in (Imposto.STATUS_PENDENTE, Imposto.STATUS_EM_ATRASO)),
+        None,
+    )
+    progresso = int(round((n_pagas / n_total) * 100)) if n_total else 0
+    return {
+        "n_total": n_total,
+        "n_pagas": n_pagas,
+        "n_atraso": n_atraso,
+        "pago": pago,
+        "em_aberto": em_aberto,
+        "proxima": proxima,
+        "progresso": progresso,
+    }
+
+
+@login_required
+def plano_list(request):
+    """Lista de planos prestacionais (pais PARCELADO)."""
+    qs = (
+        Imposto.objects
+        .filter(modalidade=Imposto.MODALIDADE_PARCELADO, parent__isnull=True)
+        .select_related("fornecedor")
+        .prefetch_related("parcelas")
+    )
+    tipo = (request.GET.get("tipo") or "").strip()
+    if tipo:
+        qs = qs.filter(tipo=tipo)
+    status = (request.GET.get("status") or "").strip()
+    if status:
+        qs = qs.filter(status=status)
+    ano = (request.GET.get("ano") or "").strip()
+    if ano.isdigit():
+        qs = qs.filter(periodo_ano=int(ano))
+
+    qs = qs.order_by("-periodo_ano", "-id")
+
+    planos = []
+    today = timezone.localdate()
+    kpi_total_aberto = Decimal("0")
+    kpi_n_atraso = 0
+    kpi_total_atraso = Decimal("0")
+    kpi_proxima = None
+    kpi_n_activos = 0
+
+    for p in qs:
+        agg = _plan_aggregates(p)
+        planos.append({"obj": p, **agg})
+        kpi_total_aberto += agg["em_aberto"]
+        kpi_n_atraso += agg["n_atraso"]
+        if agg["em_aberto"] > 0:
+            kpi_n_activos += 1
+        if agg["proxima"]:
+            if (
+                kpi_proxima is None
+                or agg["proxima"].data_vencimento
+                < kpi_proxima["data"]
+            ):
+                kpi_proxima = {
+                    "data": agg["proxima"].data_vencimento,
+                    "valor": agg["proxima"].valor,
+                    "plano_id": p.id,
+                    "plano_nome": p.nome,
+                }
+        for parc in p.parcelas.all():
+            if (
+                parc.status == Imposto.STATUS_EM_ATRASO
+                or (
+                    parc.status == Imposto.STATUS_PENDENTE
+                    and parc.data_vencimento < today
+                )
+            ):
+                kpi_total_atraso += parc.valor
+
+    kpis = {
+        "n_activos": kpi_n_activos,
+        "total_aberto": kpi_total_aberto,
+        "n_atraso": kpi_n_atraso,
+        "total_atraso": kpi_total_atraso,
+        "proxima": kpi_proxima,
+    }
+
+    return render(request, "accounting/plano_list.html", {
+        "planos": planos,
+        "kpis": kpis,
+        "filters": {
+            "tipo": tipo, "status": status, "ano": ano or today.year,
+        },
+        "tipo_choices": Imposto.TIPO_CHOICES,
+        "status_choices": Imposto.STATUS_CHOICES,
+    })
+
+
+@login_required
+def plano_detail(request, pk):
+    """Detalhe de um plano prestacional — pai + timeline das parcelas."""
+    plano = get_object_or_404(
+        Imposto.objects.select_related("fornecedor"),
+        pk=pk, modalidade=Imposto.MODALIDADE_PARCELADO, parent__isnull=True,
+    )
+    parcelas = list(
+        plano.parcelas.select_related("bill_espelho").order_by(
+            "parcela_numero", "data_vencimento",
+        )
+    )
+    today = timezone.localdate()
+    # Marca prestações como EM_ATRASO se passaram do vencimento e estão pendentes
+    for p in parcelas:
+        if (
+            p.status == Imposto.STATUS_PENDENTE
+            and p.data_vencimento < today
+        ):
+            p.status = Imposto.STATUS_EM_ATRASO
+            p.save(update_fields=["status", "updated_at"])
+    plano.update_status_from_parcelas()
+    agg = _plan_aggregates(plano)
+
+    return render(request, "accounting/plano_detail.html", {
+        "plano": plano,
+        "parcelas": parcelas,
+        "agg": agg,
+        "today": today,
     })

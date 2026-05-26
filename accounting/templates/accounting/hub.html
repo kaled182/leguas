@@ -1,0 +1,302 @@
+{% extends 'settlements/base.html' %}
+{% load static %}
+{% block title %}Hub Financeiro{% endblock %}
+{% block content %}
+<style>
+  .pill { padding:0.125rem 0.5rem; border-radius:9999px; font-size:0.7rem; font-weight:600; }
+  .pill-in { background:#d1fae5; color:#065f46; }
+  .pill-out { background:#fee2e2; color:#991b1b; }
+  .pill-ap { background:#fef3c7; color:#92400e; }
+  .pill-tax { background:#e0e7ff; color:#3730a3; }
+  .pill-driver { background:#fce7f3; color:#9d174d; }
+  .pill-fleet { background:#ccfbf1; color:#115e59; }
+  .pill-overdue { background:#fecaca; color:#7f1d1d; }
+  .hm-cell { display:inline-flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:6px; font-size:10px; font-weight:600; margin:1px; cursor:default; position:relative; }
+  .hm-cell.today { box-shadow:0 0 0 2px #6366f1 inset; }
+  .hm-weekend { opacity:0.5; }
+  .hm-tooltip { position:absolute; bottom:38px; left:50%; transform:translateX(-50%); background:#111827; color:#fff; padding:4px 8px; border-radius:4px; font-size:11px; white-space:nowrap; display:none; z-index:50; }
+  .hm-cell:hover .hm-tooltip { display:block; }
+  .hub-card { transition:transform 0.15s; }
+  .hub-card:hover { transform:translateY(-2px); }
+</style>
+
+<div class="max-w-screen-2xl mx-auto px-4 py-6 space-y-5">
+
+  <!-- Header -->
+  <div class="flex items-center justify-between flex-wrap gap-3">
+    <div>
+      <h1 class="text-2xl font-bold flex items-center gap-2">
+        <i data-lucide="layout-dashboard" class="w-6 h-6 text-indigo-500"></i>
+        Hub Financeiro
+      </h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400">
+        Visão unificada · {{ today|date:"d/m/Y" }} → {{ horizon|date:"d/m/Y" }} ({{ n_movs }} movimentações esperadas)
+      </p>
+    </div>
+    <div class="flex flex-wrap gap-2 items-center text-xs">
+      <span class="text-gray-500">Saldo bancário:</span>
+      <span class="font-bold text-lg {% if snap.saldo_bancario < 0 %}text-red-600{% else %}text-emerald-600{% endif %}">
+        €{{ snap.saldo_bancario|floatformat:2 }}
+      </span>
+      {% if snap.saldo_data %}<span class="text-gray-400">@ {{ snap.saldo_data|date:"d/m/Y" }}</span>{% endif %}
+      <span class="text-gray-300">·</span>
+      <span class="text-gray-500">Projectado 30d:</span>
+      <span class="font-bold {% if snap.saldo_projectado_30d < 0 %}text-red-600{% else %}text-emerald-600{% endif %}">
+        €{{ snap.saldo_projectado_30d|floatformat:2 }}
+      </span>
+      <span class="text-gray-300">·</span>
+      <a href="{% url 'accounting:audit_timeline' %}" class="text-indigo-500 hover:underline inline-flex items-center gap-1">
+        <i data-lucide="history" class="w-3.5 h-3.5"></i> Auditoria
+      </a>
+      <span class="text-gray-300">·</span>
+      <a href="{% url 'accounting:executive_dashboard' %}" class="text-indigo-500 hover:underline inline-flex items-center gap-1">
+        <i data-lucide="file-text" class="w-3.5 h-3.5"></i> Resumo Executivo
+      </a>
+      <span class="text-gray-300">·</span>
+      <a href="{% url 'accounting:period_lock_list' %}" class="text-rose-500 hover:underline inline-flex items-center gap-1">
+        <i data-lucide="lock" class="w-3.5 h-3.5"></i> Fechos
+      </a>
+    </div>
+  </div>
+
+  <!-- 6 Cards -->
+  <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+
+    <a href="{% url 'invoice-list' %}" class="hub-card bg-white dark:bg-gray-800 rounded-xl border-l-4 border-emerald-500 border border-gray-200/50 dark:border-gray-700/50 p-4 block">
+      <div class="flex items-center justify-between">
+        <p class="text-xs uppercase tracking-wide text-emerald-600 font-semibold">A Receber</p>
+        <i data-lucide="trending-up" class="w-4 h-4 text-emerald-500"></i>
+      </div>
+      <p class="text-xl font-bold text-emerald-700 dark:text-emerald-300 mt-1">€{{ snap.a_receber_breakdown.partner_invoices|floatformat:2 }}</p>
+      <p class="text-[11px] text-gray-500">{{ snap.a_receber_breakdown.partner_count }} fatura(s) parceiro</p>
+      {% if snap.a_receber_breakdown.fleet_invoices %}<p class="text-[11px] text-gray-500">+ €{{ snap.a_receber_breakdown.fleet_invoices|floatformat:2 }} fleet ({{ snap.a_receber_breakdown.fleet_count }})</p>{% endif %}
+      {% if snap.a_receber_breakdown.driver_debt %}<p class="text-[11px] text-gray-500">+ €{{ snap.a_receber_breakdown.driver_debt|floatformat:2 }} dívida motoristas</p>{% endif %}
+    </a>
+
+    <a href="{% url 'accounting:payables_inbox' %}" class="hub-card bg-white dark:bg-gray-800 rounded-xl border-l-4 border-amber-500 border border-gray-200/50 dark:border-gray-700/50 p-4 block">
+      <div class="flex items-center justify-between">
+        <p class="text-xs uppercase tracking-wide text-amber-600 font-semibold">A Pagar</p>
+        <i data-lucide="trending-down" class="w-4 h-4 text-amber-500"></i>
+      </div>
+      <p class="text-xl font-bold text-amber-700 dark:text-amber-300 mt-1">€{{ snap.a_pagar_breakdown.bills|floatformat:2 }}</p>
+      <p class="text-[11px] text-gray-500">{{ snap.a_pagar_breakdown.bills_count }} bills</p>
+      {% if snap.a_pagar_breakdown.bills_passthrough %}<p class="text-[11px] text-gray-500">+ €{{ snap.a_pagar_breakdown.bills_passthrough|floatformat:2 }} passthrough</p>{% endif %}
+    </a>
+
+    <a href="{% url 'accounting:imposto_list' %}" class="hub-card bg-white dark:bg-gray-800 rounded-xl border-l-4 border-indigo-500 border border-gray-200/50 dark:border-gray-700/50 p-4 block">
+      <div class="flex items-center justify-between">
+        <p class="text-xs uppercase tracking-wide text-indigo-600 font-semibold">Impostos</p>
+        <i data-lucide="landmark" class="w-4 h-4 text-indigo-500"></i>
+      </div>
+      <p class="text-xl font-bold text-indigo-700 dark:text-indigo-300 mt-1">€{{ snap.a_pagar_breakdown.impostos|floatformat:2 }}</p>
+      <p class="text-[11px] text-gray-500">{{ snap.a_pagar_breakdown.impostos_count }} guia(s)</p>
+      <a href="{% url 'accounting:plano_list' %}" class="text-[11px] text-indigo-500 hover:underline">Planos prestacionais →</a>
+    </a>
+
+    <a href="{% url 'accounting:treasury_dashboard' %}" class="hub-card bg-white dark:bg-gray-800 rounded-xl border-l-4 border-sky-500 border border-gray-200/50 dark:border-gray-700/50 p-4 block">
+      <div class="flex items-center justify-between">
+        <p class="text-xs uppercase tracking-wide text-sky-600 font-semibold">Tesouraria</p>
+        <i data-lucide="banknote" class="w-4 h-4 text-sky-500"></i>
+      </div>
+      <p class="text-xl font-bold text-sky-700 dark:text-sky-300 mt-1">€{{ snap.saldo_bancario|floatformat:2 }}</p>
+      <p class="text-[11px] text-gray-500">IVA dedut: €{{ snap.iva_dedutivel|floatformat:2 }}</p>
+      <a href="{% url 'accounting:bank_reconciliation' %}" class="text-[11px] text-sky-500 hover:underline">Reconciliar →</a>
+    </a>
+
+    <a href="/accounting/dre/" class="hub-card bg-white dark:bg-gray-800 rounded-xl border-l-4 border-violet-500 border border-gray-200/50 dark:border-gray-700/50 p-4 block">
+      <div class="flex items-center justify-between">
+        <p class="text-xs uppercase tracking-wide text-violet-600 font-semibold">DRE · Mês</p>
+        <i data-lucide="bar-chart-3" class="w-4 h-4 text-violet-500"></i>
+      </div>
+      <p class="text-xl font-bold text-violet-700 dark:text-violet-300 mt-1">€{{ margem_mes|floatformat:2 }}</p>
+      <p class="text-[11px] text-gray-500">{{ margem_pct|floatformat:1 }}% margem</p>
+      <p class="text-[11px] text-gray-500">€{{ receita_mes|floatformat:0 }} rec · €{{ custos_mes|floatformat:0 }} cust</p>
+    </a>
+
+    <a href="/settlements/pre-invoices/" class="hub-card bg-white dark:bg-gray-800 rounded-xl border-l-4 border-pink-500 border border-gray-200/50 dark:border-gray-700/50 p-4 block">
+      <div class="flex items-center justify-between">
+        <p class="text-xs uppercase tracking-wide text-pink-600 font-semibold">Motoristas</p>
+        <i data-lucide="users" class="w-4 h-4 text-pink-500"></i>
+      </div>
+      <p class="text-xl font-bold text-pink-700 dark:text-pink-300 mt-1">€{{ snap.a_pagar_breakdown.drivers|floatformat:2 }}</p>
+      <p class="text-[11px] text-gray-500">{{ snap.a_pagar_breakdown.drivers_count }} PF(s) pendentes</p>
+      {% if snap.a_receber_breakdown.driver_debt_count %}<p class="text-[11px] text-gray-500">{{ snap.a_receber_breakdown.driver_debt_count }} adiantamento(s)</p>{% endif %}
+    </a>
+
+  </div>
+
+  <!-- Alerta vencidos -->
+  {% if vencidos_in or vencidos_out %}
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+    {% if vencidos_out %}
+    <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-xl p-4 flex items-center gap-3">
+      <i data-lucide="alert-triangle" class="w-6 h-6 text-red-500"></i>
+      <div>
+        <p class="font-semibold text-red-800 dark:text-red-300">Saídas vencidas: €{{ vencidos_out|floatformat:2 }}</p>
+        <p class="text-xs text-red-600 dark:text-red-400">Bills, impostos ou PFs com vencimento já ultrapassado</p>
+      </div>
+    </div>
+    {% endif %}
+    {% if vencidos_in %}
+    <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-xl p-4 flex items-center gap-3">
+      <i data-lucide="clock" class="w-6 h-6 text-amber-500"></i>
+      <div>
+        <p class="font-semibold text-amber-800 dark:text-amber-300">Entradas em atraso: €{{ vencidos_in|floatformat:2 }}</p>
+        <p class="text-xs text-amber-600 dark:text-amber-400">Faturas de parceiros não recebidas após o vencimento</p>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <!-- Heatmap 30d -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-5">
+    <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+      <h2 class="text-lg font-semibold flex items-center gap-2">
+        <i data-lucide="calendar-days" class="w-5 h-5 text-indigo-500"></i>
+        Heatmap · Próximos 30 dias
+      </h2>
+      <div class="flex items-center gap-3 text-xs text-gray-500">
+        <span class="flex items-center gap-1"><span class="inline-block w-3 h-3 rounded bg-emerald-500"></span>Entrada</span>
+        <span class="flex items-center gap-1"><span class="inline-block w-3 h-3 rounded bg-red-500"></span>Saída</span>
+        <span class="flex items-center gap-1"><span class="inline-block w-3 h-3 rounded bg-gray-300 dark:bg-gray-600"></span>Vazio</span>
+      </div>
+    </div>
+    <div id="heatmap-container" class="flex flex-wrap" data-heatmap="{{ heatmap_json|escape }}"></div>
+  </div>
+
+  <!-- Tabela de movimentos 30d -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/50 dark:border-gray-700/50">
+    <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between flex-wrap gap-2">
+      <h2 class="text-lg font-semibold flex items-center gap-2">
+        <i data-lucide="list" class="w-5 h-5 text-indigo-500"></i>
+        Movimentações esperadas
+      </h2>
+      <div class="flex gap-2 text-xs">
+        <button data-filter="all" class="mov-filter px-2.5 py-1 bg-indigo-600 text-white rounded font-semibold">Todas</button>
+        <button data-filter="IN" class="mov-filter px-2.5 py-1 bg-gray-200 dark:bg-gray-700 rounded font-semibold">Entradas</button>
+        <button data-filter="OUT" class="mov-filter px-2.5 py-1 bg-gray-200 dark:bg-gray-700 rounded font-semibold">Saídas</button>
+        <button data-filter="overdue" class="mov-filter px-2.5 py-1 bg-gray-200 dark:bg-gray-700 rounded font-semibold">Vencidas</button>
+      </div>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+        <thead class="bg-gray-50 dark:bg-gray-900/50">
+          <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+            <th class="px-4 py-2.5">Data</th>
+            <th class="px-4 py-2.5">Tipo</th>
+            <th class="px-4 py-2.5">Origem</th>
+            <th class="px-4 py-2.5">Descrição</th>
+            <th class="px-4 py-2.5 text-right">Valor</th>
+            <th class="px-4 py-2.5">Estado</th>
+            <th class="px-4 py-2.5"></th>
+          </tr>
+        </thead>
+        <tbody id="movs-tbody" class="divide-y divide-gray-200 dark:divide-gray-700">
+          {% for m in movs %}
+          <tr class="mov-row hover:bg-gray-50 dark:hover:bg-gray-900/30"
+              data-type="{{ m.type }}"
+              data-overdue="{% if m.date < today %}1{% else %}0{% endif %}">
+            <td class="px-4 py-2 whitespace-nowrap {% if m.date < today %}text-red-600 font-semibold{% endif %}">
+              {{ m.date|date:"d/m/Y" }}
+              {% if m.date < today %}<span class="pill pill-overdue ml-1">vencida</span>{% endif %}
+            </td>
+            <td class="px-4 py-2">
+              {% if m.type == 'IN' %}
+                <span class="pill pill-in"><i data-lucide="arrow-down-left" class="inline w-3 h-3"></i> Entrada</span>
+              {% else %}
+                <span class="pill pill-out"><i data-lucide="arrow-up-right" class="inline w-3 h-3"></i> Saída</span>
+              {% endif %}
+            </td>
+            <td class="px-4 py-2">
+              {% if m.source == 'AR' %}<span class="pill pill-in">AR</span>
+              {% elif m.source == 'FLEET' %}<span class="pill pill-fleet">Fleet</span>
+              {% elif m.source == 'AP' %}<span class="pill pill-ap">AP</span>
+              {% elif m.source == 'TAX' %}<span class="pill pill-tax">Imposto</span>
+              {% elif m.source == 'DRIVER' %}<span class="pill pill-driver">Motorista</span>
+              {% endif %}
+            </td>
+            <td class="px-4 py-2 text-gray-700 dark:text-gray-300">{{ m.label }}</td>
+            <td class="px-4 py-2 text-right font-mono {% if m.type == 'IN' %}text-emerald-600{% else %}text-red-600{% endif %}">
+              {% if m.type == 'IN' %}+{% else %}−{% endif %}€{{ m.amount|floatformat:2 }}
+            </td>
+            <td class="px-4 py-2 text-xs text-gray-500">{{ m.status }}</td>
+            <td class="px-4 py-2 text-right">
+              <a href="{{ m.url }}" class="text-indigo-500 hover:text-indigo-700 inline-flex items-center gap-1">
+                <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+              </a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="7" class="px-4 py-10 text-center text-gray-500">
+            <i data-lucide="inbox" class="w-10 h-10 mx-auto mb-2 opacity-40"></i>
+            <p>Sem movimentações esperadas nos próximos 30 dias.</p>
+          </td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+    renderHeatmap();
+    initMovFilters();
+  });
+
+  function renderHeatmap() {
+    const cont = document.getElementById('heatmap-container');
+    if (!cont) return;
+    let data;
+    try { data = JSON.parse(cont.dataset.heatmap); } catch(e) { return; }
+    const todayStr = '{{ today|date:"Y-m-d" }}';
+    const maxAbs = Math.max(1, ...data.map(d => Math.abs((d.net||0))));
+    const intensity = v => Math.min(1, Math.abs(v) / maxAbs);
+    const html = data.map(d => {
+      const dt = new Date(d.date + 'T00:00:00');
+      const day = dt.getDay(); // 0=Dom, 6=Sáb
+      const weekendCls = (day === 0 || day === 6) ? ' hm-weekend' : '';
+      const todayCls = d.date === todayStr ? ' today' : '';
+      let bg = '#e5e7eb';
+      const net = parseFloat(d.net) || 0;
+      if (net > 0) {
+        const a = 0.15 + 0.85 * intensity(net);
+        bg = `rgba(16, 185, 129, ${a})`;
+      } else if (net < 0) {
+        const a = 0.15 + 0.85 * intensity(net);
+        bg = `rgba(239, 68, 68, ${a})`;
+      }
+      const label = dt.getDate();
+      const tip = `${dt.toLocaleDateString('pt-PT')}<br>+€${(+d.in||0).toFixed(0)} / −€${(+d.out||0).toFixed(0)}<br>Net: €${net.toFixed(0)}`;
+      return `<div class="hm-cell${weekendCls}${todayCls}" style="background:${bg}; color:${Math.abs(net)>maxAbs*0.4?'#fff':'#374151'};">
+        ${label}
+        <span class="hm-tooltip">${tip}</span>
+      </div>`;
+    }).join('');
+    cont.innerHTML = html;
+  }
+
+  function initMovFilters() {
+    const btns = document.querySelectorAll('.mov-filter');
+    const rows = document.querySelectorAll('.mov-row');
+    btns.forEach(b => b.addEventListener('click', () => {
+      btns.forEach(x => {
+        x.classList.remove('bg-indigo-600', 'text-white');
+        x.classList.add('bg-gray-200', 'dark:bg-gray-700');
+      });
+      b.classList.remove('bg-gray-200', 'dark:bg-gray-700');
+      b.classList.add('bg-indigo-600', 'text-white');
+      const f = b.dataset.filter;
+      rows.forEach(r => {
+        let show = true;
+        if (f === 'IN' || f === 'OUT') show = r.dataset.type === f;
+        else if (f === 'overdue') show = r.dataset.overdue === '1';
+        r.style.display = show ? '' : 'none';
+      });
+    }));
+  }
+</script>
+{% endblock %}

@@ -1157,6 +1157,18 @@ class DriverPreInvoice(models.Model):
         default="LÉGUAS FRANZINAS - UNIPESSOAL LDA",
     )
 
+    # Atribuição ao centro de custo (opcional). Se vazio, infere do hub
+    # principal do motorista no DRE.
+    cost_center = models.ForeignKey(
+        "accounting.CostCenter", on_delete=models.SET_NULL,
+        null=True, blank=True, related_name="pre_invoices",
+        verbose_name="Centro de Custo",
+        help_text=(
+            "Centro de custo onde esta PF é imputada. Vazio = inferir "
+            "do hub principal do motorista."
+        ),
+    )
+
     # Controlo API (para futura integração)
     api_source = models.CharField(
         "Fonte API",

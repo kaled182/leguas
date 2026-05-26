@@ -773,6 +773,17 @@ class Imposto(models.Model):
         ),
     )
 
+    # Atribuição a centro de custo (opcional — default ADMIN se vazio)
+    cost_center = models.ForeignKey(
+        "CostCenter", on_delete=models.PROTECT,
+        null=True, blank=True, related_name="impostos",
+        verbose_name="Centro de Custo",
+        help_text=(
+            "Segrega a carga fiscal por centro. Se vazio, o Bill "
+            "espelho usa o ADMIN por defeito."
+        ),
+    )
+
     # Auditoria
     notas = models.TextField("Notas", blank=True)
     created_by = models.ForeignKey(
@@ -1585,11 +1596,50 @@ class BankTransaction(models.Model):
         related_name="bank_transactions",
         verbose_name="Conta conciliada",
     )
+    matched_partner_invoice = models.ForeignKey(
+        "settlements.PartnerInvoice", on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="bank_transactions",
+        verbose_name="Fatura de parceiro conciliada",
+    )
+    matched_pf = models.ForeignKey(
+        "settlements.DriverPreInvoice", on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="bank_transactions",
+        verbose_name="Pré-fatura conciliada",
+    )
     matched_at = models.DateTimeField(null=True, blank=True)
     matched_by = models.ForeignKey(
         User, on_delete=models.SET_NULL, null=True, blank=True,
         related_name="bank_transactions_matched",
     )
+
+    @property
+    def is_matched(self):
+        return bool(
+            self.matched_bill_id
+            or self.matched_partner_invoice_id
+            or self.matched_pf_id
+        )
+
+    def suggest_partner_invoice_matches(self, tolerance_days=5):
+        """Sugere PartnerInvoices (PAID ou PENDING) com valor próximo
+        para transacções CREDIT."""
+        if self.direction != self.DIRECTION_CREDIT:
+            return []
+        from datetime import timedelta
+        from settlements.models import PartnerInvoice
+        return list(
+            PartnerInvoice.objects.filter(
+                gross_amount=self.amount,
+                bank_transactions__isnull=True,
+                status__in=["PENDING", "APPROVED", "OVERDUE", "PAID"],
+                due_date__range=(
+                    self.date - timedelta(days=tolerance_days),
+                    self.date + timedelta(days=tolerance_days),
+                ),
+            ).select_related("partner")[:5]
+        )
 
     class Meta:
         verbose_name = "Transacção Bancária"
@@ -1714,3 +1764,68 @@ class BillAttachment(models.Model):
     @property
     def is_pdf(self):
         return self.extension == ".pdf"
+
+
+class AccountingPeriodLock(models.Model):
+    """Fecho contabilístico — período (ano/mês) marcado como imutável.
+
+    Bills, Impostos, PartnerInvoice e DriverPreInvoice com data de
+    referência dentro de um período bloqueado deixam de poder ser
+    editados/apagados pelos utilizadores normais. Apenas staff pode
+    desbloquear o período para corrigir histórico.
+
+    A data de referência considerada por modelo:
+      - Bill: `issue_date`
+      - Imposto: `data_vencimento`
+      - PartnerInvoice: `period_end`
+      - DriverPreInvoice: `periodo_fim`
+    """
+    year = models.PositiveSmallIntegerField("Ano", db_index=True)
+    month = models.PositiveSmallIntegerField("Mês", db_index=True)
+    is_locked = models.BooleanField("Fechado", default=True, db_index=True)
+    locked_at = models.DateTimeField("Fechado em", null=True, blank=True)
+    locked_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="periods_locked",
+    )
+    unlocked_at = models.DateTimeField("Reaberto em", null=True, blank=True)
+    unlocked_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="periods_unlocked",
+    )
+    notes = models.TextField("Notas", blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Fecho de Período"
+        verbose_name_plural = "Fechos de Período"
+        unique_together = [("year", "month")]
+        ordering = ["-year", "-month"]
+        indexes = [
+            models.Index(fields=["is_locked", "year", "month"]),
+        ]
+
+    def __str__(self):
+        return f"{self.year}-{self.month:02d} {'🔒' if self.is_locked else '🔓'}"
+
+    def lock(self, user=None, notes=""):
+        self.is_locked = True
+        from django.utils import timezone as _tz
+        self.locked_at = _tz.now()
+        self.locked_by = user
+        if notes:
+            self.notes = notes
+        self.save()
+
+    def unlock(self, user=None, reason=""):
+        self.is_locked = False
+        from django.utils import timezone as _tz
+        self.unlocked_at = _tz.now()
+        self.unlocked_by = user
+        if reason:
+            self.notes = (
+                (self.notes + "\n\n" if self.notes else "")
+                + f"[Reaberto] {reason}"
+            )
+        self.save()

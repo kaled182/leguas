@@ -1,0 +1,193 @@
+{% extends 'settlements/base.html' %}
+{% load static %}
+{% block title %}Planos Prestacionais{% endblock %}
+{% block content %}
+<style>
+  .fld { width:100%; padding:0.5rem 0.75rem; border:1px solid #d1d5db; border-radius:0.5rem; font-size:0.875rem; background:#fff; }
+  .dark .fld { background:#1f2937; border-color:#374151; color:#fff; }
+  .pill { padding:0.125rem 0.5rem; border-radius:9999px; font-size:0.7rem; font-weight:600; }
+  .pill-pendente { background:#fef3c7; color:#92400e; }
+  .pill-pago { background:#d1fae5; color:#065f46; }
+  .pill-em_atraso { background:#fee2e2; color:#991b1b; }
+  .pill-anulado { background:#e5e7eb; color:#6b7280; }
+  .progress { height:6px; background:#e5e7eb; border-radius:9999px; overflow:hidden; }
+  .dark .progress { background:#374151; }
+  .progress > div { height:100%; background:linear-gradient(90deg,#6366f1,#8b5cf6); }
+</style>
+<div class="max-w-screen-2xl mx-auto px-4 py-6 space-y-4">
+
+  <div class="flex items-center justify-between flex-wrap gap-3">
+    <div>
+      <h1 class="text-2xl font-bold flex items-center gap-2">
+        <i data-lucide="calendar-clock" class="w-6 h-6 text-indigo-500"></i>
+        Planos Prestacionais
+      </h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400">
+        Parcelamentos de IRS / IVA / SS — gestão dedicada com timeline das prestações.
+      </p>
+    </div>
+    <div class="flex items-center gap-2 flex-wrap">
+      <a href="{% url 'accounting:imposto_list' %}"
+         class="px-3 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-100 rounded-lg text-sm font-semibold flex items-center gap-1.5">
+        <i data-lucide="arrow-left" class="w-4 h-4"></i> Voltar a Impostos
+      </a>
+      <a href="{% url 'accounting:imposto_create' %}?modalidade=PARCELADO"
+         class="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold flex items-center gap-1.5">
+        <i data-lucide="plus" class="w-4 h-4"></i> Novo Plano
+      </a>
+    </div>
+  </div>
+
+  {% if messages %}
+  <div class="space-y-2">
+    {% for m in messages %}
+    <div class="px-4 py-2.5 rounded-lg text-sm
+      {% if m.tags == 'success' %}bg-emerald-50 dark:bg-emerald-900/20 text-emerald-800 dark:text-emerald-300
+      {% elif m.tags == 'error' %}bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300
+      {% else %}bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300{% endif %}">{{ m }}</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- KPIs -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+    <div class="bg-white dark:bg-gray-800 rounded-xl border-l-4 border-indigo-400 border border-gray-200/50 dark:border-gray-700/50 p-4">
+      <p class="text-xs uppercase tracking-wide text-indigo-600 dark:text-indigo-400">Planos activos</p>
+      <p class="text-2xl font-bold text-indigo-700 dark:text-indigo-300">{{ kpis.n_activos }}</p>
+      <p class="text-[11px] text-indigo-600/70">com prestações pendentes</p>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl border-l-4 border-amber-400 border border-gray-200/50 dark:border-gray-700/50 p-4">
+      <p class="text-xs uppercase tracking-wide text-amber-600 dark:text-amber-400">Dívida em aberto</p>
+      <p class="text-2xl font-bold text-amber-700 dark:text-amber-300">€{{ kpis.total_aberto|floatformat:2 }}</p>
+      <p class="text-[11px] text-amber-600/70">Σ prestações por liquidar</p>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl border-l-4 border-red-400 border border-gray-200/50 dark:border-gray-700/50 p-4">
+      <p class="text-xs uppercase tracking-wide text-red-600 dark:text-red-400">Em atraso</p>
+      <p class="text-2xl font-bold text-red-700 dark:text-red-300">€{{ kpis.total_atraso|floatformat:2 }}</p>
+      <p class="text-[11px] text-red-600/70">{{ kpis.n_atraso }} prestação(ões)</p>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl border-l-4 border-emerald-400 border border-gray-200/50 dark:border-gray-700/50 p-4">
+      <p class="text-xs uppercase tracking-wide text-emerald-600 dark:text-emerald-400">Próxima prestação</p>
+      {% if kpis.proxima %}
+      <p class="text-lg font-bold text-emerald-700 dark:text-emerald-300">
+        {{ kpis.proxima.data|date:"d/m/Y" }} · €{{ kpis.proxima.valor|floatformat:2 }}
+      </p>
+      <a href="{% url 'accounting:plano_detail' kpis.proxima.plano_id %}"
+         class="text-[11px] text-emerald-600/70 hover:underline truncate inline-block max-w-full">
+        {{ kpis.proxima.plano_nome }}
+      </a>
+      {% else %}
+      <p class="text-lg font-semibold text-gray-400">—</p>
+      <p class="text-[11px] text-gray-400">Nenhuma pendente</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Filtros -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+    <form method="get" class="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+      <div>
+        <label class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Tipo</label>
+        <select name="tipo" class="fld">
+          <option value="">Todos</option>
+          {% for v, l in tipo_choices %}
+          <option value="{{ v }}" {% if filters.tipo == v %}selected{% endif %}>{{ l }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Estado agregado</label>
+        <select name="status" class="fld">
+          <option value="">Todos</option>
+          {% for v, l in status_choices %}
+          <option value="{{ v }}" {% if filters.status == v %}selected{% endif %}>{{ l }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Ano</label>
+        <input type="number" name="ano" value="{{ filters.ano }}" class="fld">
+      </div>
+      <div class="flex gap-2">
+        <button class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold flex items-center gap-1.5">
+          <i data-lucide="filter" class="w-4 h-4"></i> Filtrar
+        </button>
+        <a href="{% url 'accounting:plano_list' %}" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-100 rounded-lg text-sm font-semibold flex items-center gap-1.5">
+          <i data-lucide="rotate-ccw" class="w-4 h-4"></i> Limpar
+        </a>
+      </div>
+    </form>
+  </div>
+
+  <!-- Tabela de planos -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <thead class="bg-gray-50 dark:bg-gray-900/50">
+          <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+            <th class="px-4 py-3">Tipo · Nome</th>
+            <th class="px-4 py-3">Fornecedor</th>
+            <th class="px-4 py-3 text-right">Valor total</th>
+            <th class="px-4 py-3 text-right">Pago</th>
+            <th class="px-4 py-3 text-right">Em aberto</th>
+            <th class="px-4 py-3">Progresso</th>
+            <th class="px-4 py-3">Próx. vencim.</th>
+            <th class="px-4 py-3">Estado</th>
+            <th class="px-4 py-3 text-right">Acções</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+          {% for p in planos %}
+          <tr class="hover:bg-gray-50 dark:hover:bg-gray-900/30">
+            <td class="px-4 py-3">
+              <div class="font-medium text-gray-900 dark:text-white">{{ p.obj.get_tipo_display }}</div>
+              <div class="text-xs text-gray-500 dark:text-gray-400">{{ p.obj.nome }}</div>
+            </td>
+            <td class="px-4 py-3 text-gray-700 dark:text-gray-300">
+              {% if p.obj.fornecedor %}{{ p.obj.fornecedor.name }}{% else %}<span class="text-gray-400 italic">—</span>{% endif %}
+            </td>
+            <td class="px-4 py-3 text-right font-semibold">€{{ p.obj.valor|floatformat:2 }}</td>
+            <td class="px-4 py-3 text-right text-emerald-600 dark:text-emerald-400">€{{ p.pago|floatformat:2 }}</td>
+            <td class="px-4 py-3 text-right text-amber-600 dark:text-amber-400">€{{ p.em_aberto|floatformat:2 }}</td>
+            <td class="px-4 py-3 min-w-[140px]">
+              <div class="flex items-center gap-2">
+                <div class="progress flex-1"><div style="width:{{ p.progresso }}%"></div></div>
+                <span class="text-xs text-gray-500 dark:text-gray-400">{{ p.n_pagas }}/{{ p.n_total }}</span>
+              </div>
+            </td>
+            <td class="px-4 py-3 text-xs">
+              {% if p.proxima %}
+                <div>{{ p.proxima.data_vencimento|date:"d/m/Y" }}</div>
+                <div class="text-gray-500">€{{ p.proxima.valor|floatformat:2 }}</div>
+              {% else %}
+                <span class="text-gray-400 italic">—</span>
+              {% endif %}
+            </td>
+            <td class="px-4 py-3">
+              <span class="pill pill-{{ p.obj.status|lower }}">{{ p.obj.get_status_display }}</span>
+            </td>
+            <td class="px-4 py-3 text-right">
+              <a href="{% url 'accounting:plano_detail' p.obj.pk %}"
+                 class="inline-flex items-center gap-1 px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-semibold">
+                <i data-lucide="eye" class="w-3 h-3"></i> Detalhe
+              </a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="9" class="px-4 py-12 text-center text-gray-500 dark:text-gray-400">
+            <i data-lucide="inbox" class="w-12 h-12 mx-auto mb-2 opacity-50"></i>
+            <p>Sem planos prestacionais para os filtros seleccionados.</p>
+          </td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  });
+</script>
+{% endblock %}

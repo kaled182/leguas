@@ -110,6 +110,22 @@ def treasury_snapshot(today: date | None = None) -> dict:
         partner_total = _zero()
         partner_n = 0
 
+    # FleetInvoice — pré-faturas globais a empresas parceiras de frota,
+    # paralelas às PartnerInvoice mas para o B2B fleet.
+    try:
+        from settlements.models import FleetInvoice
+        fleet_a_receber = FleetInvoice.objects.filter(
+            status__in=["CALCULADO", "APROVADO"],
+        )
+        fleet_total = (
+            fleet_a_receber.aggregate(t=Sum("total_a_receber"))["t"]
+            or _zero()
+        )
+        fleet_n = fleet_a_receber.count()
+    except Exception:
+        fleet_total = _zero()
+        fleet_n = 0
+
     # IVA dedutível pendente (sobre Bills pagas no trimestre atual)
     iva_dedutivel = iva_dedutivel_pendente(today)
 
@@ -130,7 +146,9 @@ def treasury_snapshot(today: date | None = None) -> dict:
         driver_debt_total = _zero()
         driver_debt_n = 0
 
-    a_receber_total = partner_total + iva_dedutivel + driver_debt_total
+    a_receber_total = (
+        partner_total + fleet_total + iva_dedutivel + driver_debt_total
+    )
 
     # ── SALDO BANCÁRIO ─────────────────────────────────────────────────
     saldo, saldo_data = _saldo_bancario_atual()
@@ -170,6 +188,8 @@ def treasury_snapshot(today: date | None = None) -> dict:
         "a_receber_breakdown": {
             "partner_invoices": partner_total,
             "partner_count": partner_n,
+            "fleet_invoices": fleet_total,
+            "fleet_count": fleet_n,
             "iva_dedutivel": iva_dedutivel,
             "driver_debt": driver_debt_total,
             "driver_debt_count": driver_debt_n,
@@ -310,6 +330,28 @@ def cash_projection_30d(today: date | None = None) -> dict:
                 "amount": pi.gross_amount,
                 "url": f"/settlements/invoices/{pi.pk}/",
             })
+    except Exception:
+        pass
+
+    # FleetInvoice — recebimentos B2B Fleet. Não tem due_date oficial,
+    # estimamos: periodo_fim + 30 dias como vencimento contratual típico.
+    try:
+        from settlements.models import FleetInvoice
+        for fi in FleetInvoice.objects.filter(
+            status__in=["CALCULADO", "APROVADO"],
+            periodo_fim__gte=today - timedelta(days=60),
+        ):
+            venc = fi.periodo_fim + timedelta(days=30)
+            if today <= venc <= horizon:
+                in_events_by_date.setdefault(venc, []).append({
+                    "type": "fleet_invoice",
+                    "label": (
+                        f"Fleet {fi.numero} — "
+                        f"{fi.empresa.nome[:30] if fi.empresa_id else '?'}"
+                    ),
+                    "amount": fi.total_a_receber,
+                    "url": f"/settlements/fleet-invoices/{fi.pk}/",
+                })
     except Exception:
         pass
 

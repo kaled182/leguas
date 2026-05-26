@@ -471,6 +471,16 @@ def bill_create(request):
 @login_required
 def bill_edit(request, pk):
     bill = get_object_or_404(Bill, pk=pk)
+    from .services_period_lock import is_period_locked_for_user
+    if bill.issue_date and is_period_locked_for_user(
+        bill.issue_date, request.user,
+    ):
+        messages.error(
+            request,
+            f"Período {bill.issue_date:%m/%Y} está fechado. "
+            "Pede ao admin para reabrir antes de editar.",
+        )
+        return redirect("accounting:bill_detail", pk=bill.pk)
     if request.method == "POST":
         form = BillForm(request.POST, instance=bill)
         if form.is_valid():
@@ -523,7 +533,16 @@ def bill_delete(request, pk):
     com quem apagou, quando e o motivo. Pode ser restaurada na lixeira
     (/contas-a-pagar/lixeira/).
     """
+    from .services_period_lock import is_period_locked_for_user
     bill = get_object_or_404(Bill, pk=pk)
+    if bill.issue_date and is_period_locked_for_user(
+        bill.issue_date, request.user,
+    ):
+        messages.error(
+            request,
+            f"Período {bill.issue_date:%m/%Y} está fechado.",
+        )
+        return redirect("accounting:bill_detail", pk=bill.pk)
     reason = (request.POST.get("reason") or "").strip()
     bill.soft_delete(user=request.user, reason=reason)
     messages.success(
@@ -736,10 +755,20 @@ def _compute_dre_metrics(date_from, date_to):
             "cost_center_name": cc.name if cc else "—",
         })
 
-    total_driver_cost = DriverPreInvoice.objects.filter(
+    driver_qs = DriverPreInvoice.objects.filter(
         periodo_inicio__lte=date_to,
         periodo_fim__gte=date_from,
-    ).aggregate(s=Sum("total_a_receber"))["s"] or Decimal("0")
+    )
+    total_driver_cost = (
+        driver_qs.aggregate(s=Sum("total_a_receber"))["s"] or Decimal("0")
+    )
+    # Segregação opcional por centro de custo (campo novo, pode estar vazio)
+    driver_cost_by_cc = {}
+    for r in driver_qs.values(
+        "cost_center_id", "cost_center__name",
+    ).annotate(s=Sum("total_a_receber")):
+        key = r["cost_center__name"] or "(sem centro)"
+        driver_cost_by_cc[key] = r["s"] or Decimal("0")
 
     total_returns_cost = WaybillReturn.objects.filter(
         return_date__range=(date_from, date_to),
@@ -797,7 +826,23 @@ def _compute_dre_metrics(date_from, date_to):
             "id": r["cost_center_id"],
             "type": r["cost_center__type"],
             "total": r["total"] or Decimal("0"),
+            "from_bills": r["total"] or Decimal("0"),
+            "from_drivers": Decimal("0"),
         }
+    # Acrescenta custo de motoristas por centro
+    for cc_name, val in driver_cost_by_cc.items():
+        bucket = by_cost_center.setdefault(cc_name, {
+            "id": None, "type": "",
+            "total": Decimal("0"),
+            "from_bills": Decimal("0"),
+            "from_drivers": Decimal("0"),
+        })
+        bucket["from_drivers"] = (bucket.get("from_drivers") or Decimal("0")) + val
+        bucket["total"] = (bucket.get("total") or Decimal("0")) + val
+    # Re-ordenar por total decrescente para apresentação no template
+    by_cost_center = dict(
+        sorted(by_cost_center.items(), key=lambda kv: -(kv[1]["total"] or Decimal("0")))
+    )
 
     total_direct_extra = sums[ExpenseCategory.NATURE_DIRETO]
     total_direct_op = (
@@ -831,6 +876,105 @@ def _compute_dre_metrics(date_from, date_to):
         "financeiro_lines": by_nature[ExpenseCategory.NATURE_FINANCEIRO],
         "resultado_liquido": resultado_liquido,
         "by_cost_center": by_cost_center,
+        "driver_cost_by_cc": driver_cost_by_cc,
+    }
+
+
+def _compute_cc_breakdown(date_from, date_to):
+    """Versão light de by_cost_center: só Bills (company_only) + PFs,
+    sem todo o cálculo do DRE. Usado em vistas de evolução.
+    """
+    from settlements.models import DriverPreInvoice
+
+    bills_q = Bill.objects.company_only().filter(
+        issue_date__range=(date_from, date_to),
+    ).exclude(status=Bill.STATUS_CANCELLED)
+    out = {}
+    for r in bills_q.values("cost_center__name").annotate(
+        t=Sum("amount_total"),
+    ):
+        key = r["cost_center__name"] or "(sem centro)"
+        out[key] = out.get(key, Decimal("0")) + (r["t"] or Decimal("0"))
+
+    pf_q = DriverPreInvoice.objects.filter(
+        periodo_inicio__lte=date_to,
+        periodo_fim__gte=date_from,
+    )
+    for r in pf_q.values("cost_center__name").annotate(
+        t=Sum("total_a_receber"),
+    ):
+        key = r["cost_center__name"] or "(sem centro)"
+        out[key] = out.get(key, Decimal("0")) + (r["t"] or Decimal("0"))
+
+    return out
+
+
+def _compute_cc_evolution(reference_date, n_months=6):
+    """Evolução de gastos por centro de custo nos últimos `n_months`
+    meses terminando em `reference_date` (inclui o mês de referência).
+
+    Devolve dict:
+      {
+        "months": [(year, month, label), ...] (do mais antigo para o mais recente),
+        "by_cc": OrderedDict[cc_name → list[Decimal] (mesmo tamanho que months)],
+        "totals_by_month": list[Decimal],
+        "totals_by_cc": dict[cc_name → Decimal],
+      }
+    """
+    from calendar import monthrange
+    from datetime import date
+
+    months = []
+    ref_year = reference_date.year
+    ref_month = reference_date.month
+    for offset in range(n_months - 1, -1, -1):
+        m = ref_month - offset
+        y = ref_year
+        while m < 1:
+            m += 12
+            y -= 1
+        last = monthrange(y, m)[1]
+        months.append({
+            "year": y, "month": m,
+            "from": date(y, m, 1),
+            "to": date(y, m, last),
+            "label": f"{m:02d}/{y % 100:02d}",
+        })
+
+    # Recolhe centros únicos de todos os meses
+    per_month = []
+    cc_set = set()
+    for mi in months:
+        bd = _compute_cc_breakdown(mi["from"], mi["to"])
+        per_month.append(bd)
+        cc_set.update(bd.keys())
+
+    # Constrói matriz: para cada centro, lista de n_months valores
+    rows = []
+    for cc in cc_set:
+        vals = [per_month[i].get(cc, Decimal("0")) for i in range(n_months)]
+        total = sum(vals, Decimal("0"))
+        first, last = vals[0], vals[-1]
+        if first and first > 0:
+            delta_pct = float((last - first) / first * 100)
+        elif last and not first:
+            delta_pct = None  # "novo"
+        else:
+            delta_pct = 0.0
+        rows.append({
+            "cc": cc, "values": vals, "total": total,
+            "delta_pct": delta_pct,
+        })
+    rows.sort(key=lambda r: -r["total"])
+    totals_by_month = [
+        sum(per_month[i].values(), Decimal("0")) for i in range(n_months)
+    ]
+    grand_total = sum(totals_by_month, Decimal("0"))
+    return {
+        "months": months,
+        "rows": rows,
+        "totals_by_month": totals_by_month,
+        "grand_total": grand_total,
     }
 
 
@@ -1606,6 +1750,8 @@ def dre(request):
         "resultado_pct": pct_of_revenue(cur["resultado_liquido"]),
         # Centro de custo
         "by_cost_center": cur["by_cost_center"],
+        # Evolução por centro de custo (últimos 6 meses até date_to)
+        "cc_evolution": _compute_cc_evolution(date_to, n_months=6),
         # Comparativos
         "deltas": deltas,
     }

@@ -3,6 +3,8 @@
 from . import (
     views, views_payables, views_suppliers, views_taxes,
     views_treasury, views_ocr, views_cost_centers, views_categories,
+    views_hub, views_reconciliation, views_dre_export, views_audit,
+    views_exec, views_period_lock,
 )
 
 app_name = "accounting"
@@ -10,6 +12,42 @@ app_name = "accounting"
 urlpatterns = [
     # Dashboard
     path("", views.dashboard, name="dashboard"),
+
+    # Hub financeiro unificado (AR + AP + Tesouraria + DRE + Motoristas)
+    path("hub/", views_hub.hub_financeiro, name="hub_financeiro"),
+
+    # Auditoria centralizada — timeline cross-modelo
+    path("auditoria/", views_audit.audit_timeline, name="audit_timeline"),
+
+    # Dashboard executivo mensal (imprimível em A4)
+    path("exec/", views_exec.executive_dashboard, name="executive_dashboard"),
+
+    # Fechos de período contabilístico (lock/unlock)
+    path(
+        "periodos/",
+        views_period_lock.period_lock_list, name="period_lock_list",
+    ),
+    path(
+        "periodos/toggle/",
+        views_period_lock.period_lock_toggle, name="period_lock_toggle",
+    ),
+
+    # Reconciliação bancária (match BankTransaction ↔ Bills/PartnerInvoice/PF)
+    path(
+        "reconciliacao-bancaria/",
+        views_reconciliation.bank_reconciliation,
+        name="bank_reconciliation",
+    ),
+    path(
+        "reconciliacao-bancaria/<int:tx_id>/confirm/",
+        views_reconciliation.bank_match_confirm,
+        name="bank_match_confirm",
+    ),
+    path(
+        "reconciliacao-bancaria/<int:tx_id>/clear/",
+        views_reconciliation.bank_match_clear,
+        name="bank_match_clear",
+    ),
 
     # ── Inbox unificado de Pagamentos a Fazer ──
     path("a-pagar/", views_payables.payables_inbox, name="payables_inbox"),
@@ -135,6 +173,7 @@ urlpatterns = [
         views.bill_reject, name="bill_reject",
     ),
     path("dre/", views.dre, name="dre"),
+    path("dre/export/", views_dre_export.dre_export, name="dre_export"),
     path("fluxo-caixa/", views.cash_flow_projection, name="cash_flow"),
     path(
         "break-even/", views.break_even_monitor,
@@ -234,6 +273,16 @@ urlpatterns = [
     path(
         "impostos/<int:pk>/anular/",
         views_taxes.imposto_anular, name="imposto_anular",
+    ),
+
+    # Planos prestacionais (subconjunto: pais PARCELADO)
+    path(
+        "impostos/planos/",
+        views_taxes.plano_list, name="plano_list",
+    ),
+    path(
+        "impostos/planos/<int:pk>/",
+        views_taxes.plano_detail, name="plano_detail",
     ),
 
     # ── Tesouraria ────────────────────────────────────────────────────

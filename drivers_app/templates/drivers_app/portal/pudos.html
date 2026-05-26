@@ -1,0 +1,126 @@
+{% extends 'drivers_app/portal/_base.html' %}
+
+{% block portal_content %}
+
+<div class="space-y-4">
+
+  {# ─── Cabeçalho ─── #}
+  <div class="bg-gradient-to-br from-violet-500 to-purple-600 rounded-2xl p-5 text-white shadow-md flex items-center justify-between flex-wrap gap-3">
+    <div>
+      <h2 class="text-xl font-extrabold flex items-center gap-2">
+        <i data-lucide="package" class="w-6 h-6"></i>
+        Entregas em PUDO
+      </h2>
+      <p class="text-xs text-violet-100 mt-1">
+        Agrupado por dia × PUDO. Múltiplos pacotes no mesmo PUDO/dia
+        contam como <em>1ª + (n-1) × adicional</em>.
+      </p>
+    </div>
+    <a href="{% url 'drivers_app:driver_portal_invoices' driver.id %}"
+       class="px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-semibold inline-flex items-center gap-1">
+      <i data-lucide="arrow-left" class="w-4 h-4"></i> Voltar a Faturas
+    </a>
+  </div>
+
+  {# ─── Filtros de período ─── #}
+  <form method="get" class="bg-white dark:bg-gray-800 rounded-2xl p-4 border border-gray-200/50 dark:border-gray-700/50 flex flex-wrap items-end gap-3">
+    <div class="flex gap-1">
+      <a href="?period=7d"  class="px-3 py-1.5 rounded text-xs font-semibold {% if period == '7d' %}bg-violet-600 text-white{% else %}bg-gray-100 dark:bg-gray-700{% endif %}">7d</a>
+      <a href="?period=30d" class="px-3 py-1.5 rounded text-xs font-semibold {% if period == '30d' %}bg-violet-600 text-white{% else %}bg-gray-100 dark:bg-gray-700{% endif %}">30d</a>
+      <a href="?period=90d" class="px-3 py-1.5 rounded text-xs font-semibold {% if period == '90d' %}bg-violet-600 text-white{% else %}bg-gray-100 dark:bg-gray-700{% endif %}">90d</a>
+    </div>
+    <div>
+      <label class="block text-[10px] uppercase text-gray-500">De</label>
+      <input type="date" name="date_from" value="{{ date_from|date:'Y-m-d' }}"
+             class="px-3 py-1.5 rounded bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-sm">
+    </div>
+    <div>
+      <label class="block text-[10px] uppercase text-gray-500">Até</label>
+      <input type="date" name="date_to" value="{{ date_to|date:'Y-m-d' }}"
+             class="px-3 py-1.5 rounded bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-sm">
+    </div>
+    <button class="px-4 py-1.5 bg-violet-600 hover:bg-violet-700 text-white rounded text-sm font-semibold">Filtrar</button>
+  </form>
+
+  {# ─── KPIs ─── #}
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl p-5 border border-gray-200/50 dark:border-gray-700/50 shadow-sm">
+      <p class="text-xs uppercase font-bold text-gray-500 dark:text-gray-400">Pacotes em PUDO</p>
+      <p class="text-3xl font-extrabold text-gray-900 dark:text-white mt-1">{{ totals.n_packages }}</p>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-2xl p-5 border border-gray-200/50 dark:border-gray-700/50 shadow-sm">
+      <p class="text-xs uppercase font-bold text-gray-500 dark:text-gray-400">Combinações PUDO × dia</p>
+      <p class="text-3xl font-extrabold text-purple-600 mt-1">{{ totals.n_pudo_days }}</p>
+    </div>
+    <div class="bg-gradient-to-br from-emerald-500 to-green-600 rounded-2xl p-5 text-white shadow-md">
+      <p class="text-xs uppercase font-bold tracking-wider text-emerald-100">Total a receber (PUDO)</p>
+      <p class="text-3xl font-extrabold mt-1">€ {{ totals.amount|floatformat:2 }}</p>
+    </div>
+  </div>
+
+  {# ─── Tabela detalhada ─── #}
+  <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
+    <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
+      <i data-lucide="list" class="w-4 h-4 text-violet-500"></i>
+      <h3 class="font-bold text-gray-900 dark:text-white text-sm uppercase">
+        Por dia × PUDO ({{ rows|length }})
+      </h3>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-gray-50 dark:bg-gray-900/40 text-xs uppercase text-gray-500">
+          <tr class="text-left">
+            <th class="px-4 py-2">Data</th>
+            <th class="px-4 py-2">PUDO (endereço)</th>
+            <th class="px-4 py-2 text-right">Pacotes</th>
+            <th class="px-4 py-2 text-right">Valor</th>
+            <th class="px-4 py-2 text-center">Waybills</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-700" x-data="{open: null}">
+          {% for r in rows %}
+          <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 {% if r.is_grouped %}bg-amber-50/50 dark:bg-amber-900/10{% endif %}">
+            <td class="px-4 py-2 whitespace-nowrap text-xs text-gray-700 dark:text-gray-300">{{ r.date|date:"d/m/Y" }}</td>
+            <td class="px-4 py-2 text-xs">
+              <div class="font-medium">{{ r.address|default:"(endereço não disponível)"|truncatechars:60 }}</div>
+              <div class="text-[10px] text-gray-400">
+                {% if r.zip_code %}{{ r.zip_code }} · {% endif %}{{ r.city|default:"—" }}
+                {% if r.lat %} · <span class="font-mono">{{ r.lat|truncatechars:8 }},{{ r.lng|truncatechars:8 }}</span>{% endif %}
+              </div>
+            </td>
+            <td class="px-4 py-2 text-right">
+              <span class="font-bold text-base {% if r.is_grouped %}text-amber-600{% endif %}">{{ r.n_packages }}</span>
+              {% if r.is_grouped %}<span class="text-[9px] text-amber-700 dark:text-amber-300 font-semibold">⚡ múltiplos</span>{% endif %}
+            </td>
+            <td class="px-4 py-2 text-right font-mono font-bold text-emerald-600">€ {{ r.amount|floatformat:2 }}</td>
+            <td class="px-4 py-2 text-center">
+              <button @click="open = open === {{ forloop.counter0 }} ? null : {{ forloop.counter0 }}"
+                      class="text-[11px] px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300">
+                <span x-show="open !== {{ forloop.counter0 }}">▾ ver</span>
+                <span x-show="open === {{ forloop.counter0 }}">▴ ocultar</span>
+              </button>
+            </td>
+          </tr>
+          <tr x-show="open === {{ forloop.counter0 }}" x-cloak>
+            <td colspan="5" class="px-6 py-2 bg-gray-50 dark:bg-gray-900/30">
+              <ul class="text-xs space-y-1">
+                {% for w in r.waybills %}
+                <li class="flex items-center gap-2 text-gray-700 dark:text-gray-300">
+                  <a href="{% url 'cainiao-waybill-detail' w.waybill_number %}" class="font-mono text-violet-600 dark:text-violet-400 hover:underline">{{ w.waybill_number }}</a>
+                  <span class="text-gray-500 text-[11px] truncate">{{ w.address|truncatechars:70 }}</span>
+                </li>
+                {% endfor %}
+              </ul>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="5" class="px-4 py-8 text-center text-sm text-gray-500 italic">Nenhuma entrega PUDO no período.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}

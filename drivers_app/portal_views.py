@@ -381,6 +381,14 @@ def driver_portal(request, driver_id):
     contracts_pending = 0
     contracts_signed = 0
 
+    # KPI PUDO (últimos 30 dias) — para o cartão no dashboard
+    try:
+        from settlements.services_pudo import pudo_breakdown_for_driver
+        _pudo = pudo_breakdown_for_driver(driver, month_start, today)
+        pudo_kpi = _pudo["totals"]
+    except Exception:
+        pudo_kpi = {"n_packages": 0, "n_pudo_days": 0, "amount": 0}
+
     return render(request, "drivers_app/portal/dashboard.html", {
         "driver": driver,
         "today": today,
@@ -400,6 +408,7 @@ def driver_portal(request, driver_id):
         "heatmap_year": year_start.year,
         "top_cp4": top_cp4,
         "waybills_page": waybills_page,
+        "pudo_kpi": pudo_kpi,
     })
 
 
@@ -588,6 +597,14 @@ def driver_portal_invoices(request, driver_id):
         .annotate(count=Count("id"), total=Sum("total_a_receber"))
     )
 
+    # KPI PUDO no período seleccionado
+    try:
+        from settlements.services_pudo import pudo_breakdown_for_driver
+        _pudo = pudo_breakdown_for_driver(driver, date_from, date_to)
+        pudo_kpi = _pudo["totals"]
+    except Exception:
+        pudo_kpi = {"n_packages": 0, "n_pudo_days": 0, "amount": 0}
+
     return render(request, "drivers_app/portal/invoices.html", {
         "driver": driver,
         "is_admin_view": is_admin_view,
@@ -597,6 +614,7 @@ def driver_portal_invoices(request, driver_id):
         "date_to": date_to,
         # KPIs operação no período (driver vê)
         "kpis_period": kpis_period,
+        "pudo_kpi": pudo_kpi,
         # Cálculos financeiros (só admin)
         "price_per_pkg": price_per_pkg,
         "price_source": price_source,
@@ -958,4 +976,52 @@ def driver_portal_referrals(request, driver_id):
         "date_to": date_to,
         "summary": summary,
         "received": received,
+    })
+
+
+@portal_access_required
+def driver_portal_pudos(request, driver_id):
+    """Relatório de entregas PUDO por dia / PUDO.
+
+    Agrupa tasks PUDO Delivered por (data, pudo_key) para evidenciar
+    casos de múltiplos pacotes no MESMO PUDO no mesmo dia (fórmula
+    1ª + adicional). Filtra por período como a aba Faturas.
+    """
+    from datetime import datetime as _dt
+    from settlements.services_pudo import pudo_breakdown_for_driver
+
+    driver = get_object_or_404(DriverProfile, pk=driver_id)
+    is_admin_view = (
+        request.user.is_authenticated
+        and (request.user.is_staff or request.user.is_superuser)
+    )
+
+    today = timezone.now().date()
+    period = request.GET.get("period", "30d")
+    custom_from = request.GET.get("date_from", "")
+    custom_to = request.GET.get("date_to", "")
+    if custom_from and custom_to:
+        try:
+            date_from = _dt.strptime(custom_from, "%Y-%m-%d").date()
+            date_to = _dt.strptime(custom_to, "%Y-%m-%d").date()
+            period = "custom"
+        except ValueError:
+            date_from, date_to = today - timedelta(days=29), today
+    elif period == "7d":
+        date_from, date_to = today - timedelta(days=6), today
+    elif period == "90d":
+        date_from, date_to = today - timedelta(days=89), today
+    else:
+        date_from, date_to = today - timedelta(days=29), today
+
+    breakdown = pudo_breakdown_for_driver(driver, date_from, date_to)
+
+    return render(request, "drivers_app/portal/pudos.html", {
+        "driver": driver,
+        "is_admin_view": is_admin_view,
+        "period": period,
+        "date_from": date_from,
+        "date_to": date_to,
+        "rows": breakdown["rows"],
+        "totals": breakdown["totals"],
     })

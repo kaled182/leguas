@@ -265,6 +265,87 @@ def find_fake_delivery_suspects(date_from, date_to, partner):
     return suspects, stats
 
 
+def pudo_breakdown_for_driver(driver, date_from, date_to, partner=None):
+    """Decompõe as entregas PUDO de um motorista por (dia, PUDO).
+
+    Agrega tasks PUDO Delivered pelo `pudo_key` (lat/lng arredondado)
+    dentro de cada dia — identifica os casos com >1 pacote no mesmo
+    PUDO no mesmo dia (relevante para a fórmula 1ª + (n-1)×adicional).
+
+    Args:
+      driver: DriverProfile
+      date_from / date_to: datas (inclusive)
+      partner: core.Partner — para resolver preço 1ª/adicional. Se None,
+               usa CAINIAO por defeito.
+
+    Retorna dict {
+      "rows": [
+        {date, pudo_key, n_packages, amount, addresses[set], zip_code,
+         waybills: [{waybill_number, address, ...}]},
+        ...
+      ] (ordenado por date desc),
+      "totals": {n_packages, n_pudo_days, amount},
+    }
+    """
+    from collections import defaultdict
+    from core.models import Partner
+    from drivers_app.portal_views import _driver_base_queryset
+
+    if partner is None:
+        partner = Partner.objects.filter(name__iexact="CAINIAO").first()
+
+    qs = _driver_base_queryset(driver, date_from, date_to).filter(
+        delivery_type__iexact="PUDO", task_status="Delivered",
+    ).order_by("task_date")
+
+    # Agrupa: (task_date, pudo_key) → [tasks]
+    grouped = defaultdict(list)
+    for t in qs:
+        k = pudo_key(t) or ("solo", t.id)
+        grouped[(t.task_date, k)].append(t)
+
+    rows = []
+    total_packages = 0
+    total_amount = Decimal("0.00")
+    for (day, k), tasks in grouped.items():
+        n = len(tasks)
+        amt = compute_pudo_payment(n, partner)
+        # Endereços/coords representativos
+        first = tasks[0]
+        rows.append({
+            "date": day,
+            "pudo_key": str(k),
+            "n_packages": n,
+            "amount": amt,
+            "is_grouped": n > 1,
+            "lat": first.receiver_latitude,
+            "lng": first.receiver_longitude,
+            "zip_code": (first.zip_code or "")[:8],
+            "city": first.destination_city or "",
+            "address": (first.detailed_address or "").strip(),
+            "waybills": [
+                {
+                    "id": t.id,
+                    "waybill_number": t.waybill_number,
+                    "address": (t.detailed_address or "").strip(),
+                }
+                for t in tasks
+            ],
+        })
+        total_packages += n
+        total_amount += amt
+
+    rows.sort(key=lambda r: (r["date"], -r["n_packages"]), reverse=True)
+    return {
+        "rows": rows,
+        "totals": {
+            "n_packages": total_packages,
+            "n_pudo_days": len(rows),
+            "amount": total_amount,
+        },
+    }
+
+
 def compute_pudo_total_for_driver(pudo_tasks, partner):
     """Calcula o total de pagamento para uma lista de tasks PUDO de
     um driver, agrupando por PUDO e aplicando a fórmula.

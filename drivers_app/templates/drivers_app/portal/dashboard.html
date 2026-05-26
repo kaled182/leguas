@@ -68,6 +68,34 @@
   </div>
 </div>
 
+{# ─── KPI PUDO (últimos 30d) — link para relatório ─── #}
+{% if pudo_kpi %}
+<a href="{% url 'drivers_app:driver_portal_pudos' driver.id %}?period=30d"
+   class="block mb-6 group">
+  <div class="bg-gradient-to-br from-violet-600 to-purple-700 rounded-2xl p-5 text-white shadow-md hover:shadow-lg transition-shadow">
+    <div class="flex items-center justify-between flex-wrap gap-3">
+      <div class="flex items-center gap-3">
+        <div class="bg-white/20 p-2 rounded-lg">
+          <i data-lucide="package" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <p class="text-[11px] uppercase tracking-wider text-violet-200">Entregas PUDO — últimos 30 dias</p>
+          <p class="text-2xl font-extrabold mt-0.5">
+            {{ pudo_kpi.n_packages }} pacotes
+            <span class="text-base font-medium text-violet-200 ml-2">em {{ pudo_kpi.n_pudo_days }} PUDO/dias</span>
+          </p>
+        </div>
+      </div>
+      <div class="text-right">
+        <p class="text-[11px] uppercase tracking-wider text-violet-200">Valor</p>
+        <p class="text-2xl font-extrabold">€ {{ pudo_kpi.amount|floatformat:2 }}</p>
+        <p class="text-[11px] text-violet-200 mt-1 group-hover:underline">Ver relatório →</p>
+      </div>
+    </div>
+  </div>
+</a>
+{% endif %}
+
 {# ─── Ranking + Última PF + Contratos ─── #}
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
 

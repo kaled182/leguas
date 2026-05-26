@@ -187,15 +187,21 @@ async function emitirPF() {
 
 {# ─── Conta-Corrente ─── #}
 <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden mb-4"
-     x-data="{ showCancelled: false }">
+     x-data="ccDriver()" x-init="init()">
   <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2 flex-wrap">
     <i data-lucide="wallet" class="w-5 h-5 text-amber-500"></i>
     <h3 class="font-bold text-gray-900 dark:text-white">Conta-Corrente</h3>
     {% if pending_advances %}
-    <span class="ml-auto text-xs">
+    <span class="text-xs">
       <span class="font-semibold text-amber-700 dark:text-amber-300">{{ pending_advances.count }} pendente{{ pending_advances.count|pluralize:"s" }}</span>
       <span class="ml-2 px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 font-bold">€ {{ advances_total_pending|floatformat:2 }}</span>
     </span>
+    {% endif %}
+    {% if is_admin_view %}
+    <button type="button" @click="openAdd()"
+            class="ml-auto inline-flex items-center gap-1 px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-md text-xs font-semibold transition">
+      <i data-lucide="plus" class="w-3.5 h-3.5"></i> Adicionar Lançamento
+    </button>
     {% endif %}
     {% if advances_cancelled_count %}
     <button type="button"
@@ -256,7 +262,141 @@ async function emitirPF() {
   {% else %}
   <p class="px-5 py-8 text-center text-sm text-gray-500 italic">Sem lançamentos.</p>
   {% endif %}
+
+  {# ─── Modal: Adicionar Lançamento (admin) ─── #}
+  {% if is_admin_view %}
+  <div x-show="addOpen" x-cloak
+       class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60"
+       @click.self="addOpen = false"
+       @keydown.escape.window="addOpen = false">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md">
+      <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+        <h3 class="text-lg font-bold flex items-center gap-2">
+          <i data-lucide="plus-circle" class="w-5 h-5 text-amber-600"></i>
+          Adicionar Lançamento — {{ driver.nome_completo }}
+        </h3>
+        <button @click="addOpen = false" class="text-gray-400 hover:text-gray-600">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <div class="p-6 space-y-3">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold mb-1">Data</label>
+            <input type="date" x-model="form.data"
+                   class="w-full px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold mb-1">Tipo</label>
+            <select x-model="form.tipo"
+                    class="w-full px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700">
+              <option value="ADIANTAMENTO">Adiantamento</option>
+              <option value="COMBUSTIVEL">Combustível</option>
+              <option value="ABASTECIMENTO">Abastecimento</option>
+              <option value="OUTRO">Outro</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold mb-1">Valor (€) <span class="text-rose-500">*</span></label>
+          <input type="number" step="0.01" min="0.01" x-model="form.valor"
+                 placeholder="0.00"
+                 class="w-full px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold mb-1">Descrição</label>
+          <input type="text" x-model="form.descricao" maxlength="300"
+                 placeholder="Ex: gasóleo BP Aveiro"
+                 class="w-full px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold mb-1">Documento de referência (opcional)</label>
+          <input type="text" x-model="form.documento_referencia" maxlength="300"
+                 placeholder="Nº recibo, talão, etc."
+                 class="w-full px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-700">
+        </div>
+        <div class="text-[11px] text-gray-500 dark:text-gray-400">
+          O lançamento será criado como <b>PENDENTE</b> e ficará disponível para
+          incluir numa próxima pré-fatura.
+        </div>
+        <p x-show="formError" x-cloak class="text-xs text-rose-600" x-text="formError"></p>
+      </div>
+      <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-2">
+        <button @click="addOpen = false"
+                class="px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-sm">Cancelar</button>
+        <button @click="submitAdd()" :disabled="submitting"
+                class="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold disabled:opacity-50">
+          <span x-show="!submitting">Criar lançamento</span>
+          <span x-show="submitting">A criar...</span>
+        </button>
+      </div>
+    </div>
+  </div>
+  {% endif %}
 </div>
+
+{% if is_admin_view %}
+<script>
+function ccDriver() {
+  return {
+    showCancelled: false,
+    addOpen: false,
+    submitting: false,
+    formError: '',
+    form: {
+      data: new Date().toISOString().slice(0, 10),
+      tipo: 'ADIANTAMENTO',
+      valor: '',
+      descricao: '',
+      documento_referencia: '',
+    },
+    init() {
+      this.$nextTick(() => { if (window.lucide) window.lucide.createIcons(); });
+    },
+    openAdd() {
+      this.formError = '';
+      this.form.data = new Date().toISOString().slice(0, 10);
+      this.form.tipo = 'ADIANTAMENTO';
+      this.form.valor = '';
+      this.form.descricao = '';
+      this.form.documento_referencia = '';
+      this.addOpen = true;
+      this.$nextTick(() => { if (window.lucide) window.lucide.createIcons(); });
+    },
+    async submitAdd() {
+      const v = parseFloat(this.form.valor);
+      if (!v || v <= 0) { this.formError = 'O valor tem de ser > 0.'; return; }
+      this.submitting = true;
+      this.formError = '';
+      const csrf = document.cookie.split('csrftoken=')[1]?.split(';')[0]
+        || document.querySelector('input[name=csrfmiddlewaretoken]')?.value || '';
+      try {
+        const r = await fetch('/settlements/cash-entries/create/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+          body: JSON.stringify({
+            driver_id: {{ driver.id }},
+            data: this.form.data,
+            tipo: this.form.tipo,
+            valor: this.form.valor,
+            descricao: this.form.descricao,
+            documento_referencia: this.form.documento_referencia,
+            paid_by_source: 'EMPRESA',
+          }),
+        });
+        const d = await r.json();
+        if (!d.success) { this.formError = d.error || 'Erro'; this.submitting = false; return; }
+        if (window.toast) window.toast({ type: 'success', message: `Lançamento de €${this.form.valor} criado.` });
+        setTimeout(() => window.location.reload(), 500);
+      } catch (e) {
+        this.formError = 'Falha de rede: ' + e.message;
+        this.submitting = false;
+      }
+    },
+  };
+}
+</script>
+{% endif %}
 
 {# ─── Resumo Pré-faturas ─── #}
 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">

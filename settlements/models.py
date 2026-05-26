@@ -369,8 +369,10 @@ class PartnerInvoice(models.Model):
         "APPROVED":  {"label": "Aprovar",  "color": "blue",    "icon": "check"},
         "PENDING":   {"label": "Em aberto","color": "amber",   "icon": "clock"},
         "PAID":      {"label": "Recebida", "color": "emerald", "icon": "banknote"},
-        "OVERDUE":   {"label": "Atrasada", "color": "red",     "icon": "alert-triangle"},
-        "CANCELLED": {"label": "Cancelar", "color": "gray",    "icon": "x"},
+        "OVERDUE":   {"label": "Atrasada", "color": "orange",  "icon": "alert-triangle"},
+        # Cancelar é destrutivo — vermelho prominente para não passar
+        # despercebido em qualquer tema (claro/escuro).
+        "CANCELLED": {"label": "Cancelar", "color": "rose",    "icon": "x-circle"},
     }
 
     def can_transition_to(self, new_status):

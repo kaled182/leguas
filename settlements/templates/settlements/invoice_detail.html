@@ -29,12 +29,20 @@
           <i data-lucide="download" class="w-4 h-4"></i>
           Baixar PDF
         </a>
-        {% if invoice.status == 'DRAFT' %}
-        <button class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200 gap-2">
-          <i data-lucide="send" class="w-4 h-4"></i>
-          Enviar
+        {# Acções de workflow — geradas a partir das transições válidas #}
+        {% for t in invoice.available_transitions %}
+        <button type="button"
+                onclick="changeInvoiceStatus({{ invoice.id }}, '{{ t.status }}', '{{ invoice.invoice_number|escapejs }}')"
+                class="inline-flex items-center px-4 py-2 rounded-lg font-medium transition-colors duration-200 gap-2 text-white
+                  {% if t.color == 'blue' %}bg-blue-600 hover:bg-blue-700
+                  {% elif t.color == 'emerald' %}bg-emerald-600 hover:bg-emerald-700
+                  {% elif t.color == 'amber' %}bg-amber-600 hover:bg-amber-700
+                  {% elif t.color == 'red' %}bg-red-600 hover:bg-red-700
+                  {% else %}bg-gray-500 hover:bg-gray-600{% endif %}">
+          <i data-lucide="{{ t.icon }}" class="w-4 h-4"></i>
+          {{ t.label }}
         </button>
-        {% endif %}
+        {% endfor %}
       </div>
     </div>
   </div>
@@ -55,23 +63,27 @@
             <div class="mt-1">
               {% if invoice.status == 'PAID' %}
                 <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400">
-                  <i data-lucide="check-circle" class="w-4 h-4 mr-1"></i>
-                  Pago
+                  <i data-lucide="check-circle" class="w-4 h-4 mr-1"></i> Recebida
+                </span>
+              {% elif invoice.status == 'APPROVED' %}
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
+                  <i data-lucide="check" class="w-4 h-4 mr-1"></i> Aprovada
                 </span>
               {% elif invoice.status == 'PENDING' %}
                 <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
-                  <i data-lucide="clock" class="w-4 h-4 mr-1"></i>
-                  Pendente
+                  <i data-lucide="clock" class="w-4 h-4 mr-1"></i> Em aberto
                 </span>
               {% elif invoice.status == 'OVERDUE' %}
                 <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
-                  <i data-lucide="alert-circle" class="w-4 h-4 mr-1"></i>
-                  Vencido
+                  <i data-lucide="alert-circle" class="w-4 h-4 mr-1"></i> Atrasada
                 </span>
               {% elif invoice.status == 'DRAFT' %}
                 <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
-                  <i data-lucide="file" class="w-4 h-4 mr-1"></i>
-                  Rascunho
+                  <i data-lucide="file" class="w-4 h-4 mr-1"></i> Rascunho
+                </span>
+              {% elif invoice.status == 'CANCELLED' %}
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-200 text-gray-500 dark:bg-gray-800 dark:text-gray-500">
+                  <i data-lucide="x-circle" class="w-4 h-4 mr-1"></i> Cancelada
                 </span>
               {% else %}
                 <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
@@ -305,6 +317,7 @@
     </div>
   </div>
 </div>
+{% csrf_token %}
 {% endblock %}
 
 {% block extra_js %}
@@ -314,5 +327,35 @@
       lucide.createIcons();
     }
   });
+
+  function _csrf() {
+    return document.querySelector('[name=csrfmiddlewaretoken]')?.value
+      || document.cookie.split(';').find(c => c.trim().startsWith('csrftoken='))?.split('=')[1] || '';
+  }
+
+  async function changeInvoiceStatus(id, novo, numero) {
+    let body = { status: novo };
+    if (novo === 'PAID') {
+      const ref = prompt(
+        `Marcar fatura ${numero} como Recebida.\nReferência de pagamento (opcional):`, ''
+      );
+      if (ref === null) return;
+      body.payment_reference = ref;
+      body.paid_date = new Date().toISOString().slice(0, 10);
+    } else {
+      const labels = { APPROVED: 'Aprovar', PENDING: 'Em aberto', OVERDUE: 'Marcar atrasada', CANCELLED: 'Cancelar' };
+      if (!confirm(`${labels[novo] || novo} — ${numero}?`)) return;
+    }
+    try {
+      const r = await fetch(`/settlements/invoices/${id}/status/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': _csrf() },
+        body: JSON.stringify(body),
+      });
+      const d = await r.json();
+      if (!d.success) { alert(d.error || 'Erro'); return; }
+      window.location.reload();
+    } catch (e) { alert('Falha de rede: ' + e.message); }
+  }
 </script>
 {% endblock %}

@@ -363,8 +363,31 @@ class PartnerInvoice(models.Model):
             self.save()
 
     # ── Workflow ───────────────────────────────────────────────────
+    # Metadata por estado-destino para renderização dos botões de
+    # acção na lista/detalhe (cor Tailwind + ícone Lucide).
+    _TRANSITION_META = {
+        "APPROVED":  {"label": "Aprovar",  "color": "blue",    "icon": "check"},
+        "PENDING":   {"label": "Em aberto","color": "amber",   "icon": "clock"},
+        "PAID":      {"label": "Recebida", "color": "emerald", "icon": "banknote"},
+        "OVERDUE":   {"label": "Atrasada", "color": "red",     "icon": "alert-triangle"},
+        "CANCELLED": {"label": "Cancelar", "color": "gray",    "icon": "x"},
+    }
+
     def can_transition_to(self, new_status):
         return new_status in self.TRANSICOES.get(self.status, [])
+
+    def available_transitions(self):
+        """Lista [{status, label, color, icon}] das transições válidas."""
+        out = []
+        for target in self.TRANSICOES.get(self.status, []):
+            meta = self._TRANSITION_META.get(target, {})
+            out.append({
+                "status": target,
+                "label": meta.get("label", target),
+                "color": meta.get("color", "gray"),
+                "icon": meta.get("icon", "arrow-right"),
+            })
+        return out
 
     def approve(self, user=None):
         """Marca como Aprovada (transição DRAFT → APPROVED)."""

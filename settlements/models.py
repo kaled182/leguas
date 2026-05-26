@@ -148,13 +148,29 @@ class PartnerInvoice(models.Model):
     Base para reconciliação financeira.
     """
 
+    STATUS_DRAFT = "DRAFT"
+    STATUS_APPROVED = "APPROVED"
+    STATUS_PENDING = "PENDING"
+    STATUS_PAID = "PAID"
+    STATUS_OVERDUE = "OVERDUE"
+    STATUS_CANCELLED = "CANCELLED"
     STATUS_CHOICES = [
-        ("DRAFT", "Rascunho"),
-        ("PENDING", "Pendente"),
-        ("PAID", "Pago"),
-        ("OVERDUE", "Atrasado"),
-        ("CANCELLED", "Cancelado"),
+        (STATUS_DRAFT,     "Rascunho"),
+        (STATUS_APPROVED,  "Aprovada"),
+        (STATUS_PENDING,   "Em aberto"),
+        (STATUS_PAID,      "Recebida"),
+        (STATUS_OVERDUE,   "Atrasada"),
+        (STATUS_CANCELLED, "Cancelada"),
     ]
+    # Transições válidas — protege o fluxo administrativo.
+    TRANSICOES = {
+        STATUS_DRAFT:     [STATUS_APPROVED, STATUS_CANCELLED],
+        STATUS_APPROVED:  [STATUS_PENDING, STATUS_PAID, STATUS_CANCELLED],
+        STATUS_PENDING:   [STATUS_PAID, STATUS_OVERDUE, STATUS_CANCELLED],
+        STATUS_OVERDUE:   [STATUS_PAID, STATUS_CANCELLED],
+        STATUS_PAID:      [STATUS_CANCELLED],
+        STATUS_CANCELLED: [],
+    }
 
     # Relacionamentos
     partner = models.ForeignKey(
@@ -255,6 +271,18 @@ class PartnerInvoice(models.Model):
 
     notes = models.TextField("Notas", blank=True)
 
+    # Auditoria do workflow
+    approved_at = models.DateTimeField(
+        "Aprovada em", null=True, blank=True,
+    )
+    approved_by = models.ForeignKey(
+        "auth.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="approved_partner_invoices",
+    )
+
     # Auditoria
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -333,6 +361,39 @@ class PartnerInvoice(models.Model):
         if self.status in ["PENDING"] and self.due_date < timezone.now().date():
             self.status = "OVERDUE"
             self.save()
+
+    # ── Workflow ───────────────────────────────────────────────────
+    def can_transition_to(self, new_status):
+        return new_status in self.TRANSICOES.get(self.status, [])
+
+    def approve(self, user=None):
+        """Marca como Aprovada (transição DRAFT → APPROVED)."""
+        if not self.can_transition_to(self.STATUS_APPROVED):
+            raise ValueError(
+                f"Transição {self.status} → APPROVED não permitida."
+            )
+        self.status = self.STATUS_APPROVED
+        self.approved_at = timezone.now()
+        self.approved_by = user
+        self.save(update_fields=[
+            "status", "approved_at", "approved_by", "updated_at",
+        ])
+
+    def mark_received(self, user=None, paid_date=None, paid_amount=None,
+                     payment_reference="", payment_proof=None):
+        """Marca como Recebida (transição APPROVED/PENDING/OVERDUE → PAID)."""
+        if not self.can_transition_to(self.STATUS_PAID):
+            raise ValueError(
+                f"Transição {self.status} → PAID não permitida."
+            )
+        self.status = self.STATUS_PAID
+        self.paid_date = paid_date or timezone.now().date()
+        self.paid_amount = paid_amount or self.net_amount
+        if payment_reference:
+            self.payment_reference = payment_reference
+        if payment_proof:
+            self.payment_proof = payment_proof
+        self.save()
 
 
 class DriverSettlement(models.Model):

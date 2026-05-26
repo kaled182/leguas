@@ -30,7 +30,7 @@
   <!-- KPIs -->
   <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
     <div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-amber-300 dark:border-amber-700/50">
-      <div class="text-[10px] uppercase tracking-wider text-amber-700 dark:text-amber-300">A Receber (Pendente)</div>
+      <div class="text-[10px] uppercase tracking-wider text-amber-700 dark:text-amber-300">A Receber (Em aberto + Aprovada)</div>
       <div class="text-2xl font-extrabold text-amber-700 dark:text-amber-300 mt-1">€ {{ kpi_total_pending|floatformat:2 }}</div>
     </div>
     <div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-rose-300 dark:border-rose-700/50">
@@ -125,38 +125,44 @@
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
                 {% if invoice.status == 'PAID' %}
-                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400">
-                    Pago
-                  </span>
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400">Recebida</span>
+                {% elif invoice.status == 'APPROVED' %}
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">Aprovada</span>
                 {% elif invoice.status == 'PENDING' %}
-                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
-                    Pendente
-                  </span>
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">Em aberto</span>
                 {% elif invoice.status == 'OVERDUE' %}
-                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
-                    Vencido
-                  </span>
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">Atrasada</span>
                 {% elif invoice.status == 'DRAFT' %}
-                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
-                    Rascunho
-                  </span>
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">Rascunho</span>
+                {% elif invoice.status == 'CANCELLED' %}
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-200 text-gray-500 dark:bg-gray-800 dark:text-gray-500">Cancelada</span>
                 {% else %}
-                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
-                    {{ invoice.get_status_display }}
-                  </span>
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">{{ invoice.get_status_display }}</span>
                 {% endif %}
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                 {% if invoice.cainiao_import %}
                   <a href="{% url 'cainiao-billing-detail' invoice.cainiao_import.id %}"
-                     class="text-violet-600 hover:text-violet-900 dark:text-violet-400 dark:hover:text-violet-300 mr-3 inline-flex items-center gap-1">
-                    <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i>
-                    Detalhe
+                     class="text-violet-600 hover:text-violet-900 dark:text-violet-400 dark:hover:text-violet-300 mr-2 inline-flex items-center gap-1">
+                    <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i> Detalhe
                   </a>
                 {% else %}
-                  <a href="{% url 'invoice-detail' invoice.id %}" class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 mr-3">Ver</a>
+                  <a href="{% url 'invoice-detail' invoice.id %}" class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 mr-2">Ver</a>
                 {% endif %}
-                <a href="{% url 'invoice-pdf' invoice.id %}" class="text-emerald-600 hover:text-emerald-900 dark:text-emerald-400 dark:hover:text-emerald-300">PDF</a>
+                <a href="{% url 'invoice-pdf' invoice.id %}" class="text-emerald-600 hover:text-emerald-900 dark:text-emerald-400 dark:hover:text-emerald-300 mr-2">PDF</a>
+                {# Acções de workflow #}
+                {% if invoice.status == 'DRAFT' %}
+                  <button type="button" onclick="changeInvoiceStatus({{ invoice.id }}, 'APPROVED', '{{ invoice.invoice_number|escapejs }}')"
+                          class="ml-1 px-2 py-0.5 rounded text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white inline-flex items-center gap-1" title="Aprovar fatura">
+                    <i data-lucide="check" class="w-3 h-3"></i> Aprovar
+                  </button>
+                {% endif %}
+                {% if invoice.status == 'APPROVED' or invoice.status == 'PENDING' or invoice.status == 'OVERDUE' %}
+                  <button type="button" onclick="changeInvoiceStatus({{ invoice.id }}, 'PAID', '{{ invoice.invoice_number|escapejs }}')"
+                          class="ml-1 px-2 py-0.5 rounded text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white inline-flex items-center gap-1" title="Marcar como recebida">
+                    <i data-lucide="banknote" class="w-3 h-3"></i> Recebida
+                  </button>
+                {% endif %}
               </td>
             </tr>
             {% endfor %}
@@ -223,5 +229,40 @@
       lucide.createIcons();
     }
   });
+
+  function _csrf() {
+    return document.querySelector('[name=csrfmiddlewaretoken]')?.value
+      || document.cookie.split(';').find(c => c.trim().startsWith('csrftoken='))?.split('=')[1] || '';
+  }
+
+  async function changeInvoiceStatus(id, novo, numero) {
+    const labels = {
+      APPROVED: 'Aprovar fatura',
+      PAID: 'Marcar como Recebida',
+      CANCELLED: 'Cancelar fatura',
+    };
+    let body = { status: novo };
+    if (novo === 'PAID') {
+      const ref = prompt(
+        `Marcar fatura ${numero} como Recebida.\n` +
+        'Referência de pagamento (opcional):', ''
+      );
+      if (ref === null) return;          // cancelado
+      body.payment_reference = ref;
+      body.paid_date = new Date().toISOString().slice(0, 10);
+    } else {
+      if (!confirm(`${labels[novo] || novo} — ${numero}?`)) return;
+    }
+    try {
+      const r = await fetch(`/settlements/invoices/${id}/status/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': _csrf() },
+        body: JSON.stringify(body),
+      });
+      const d = await r.json();
+      if (!d.success) { alert(d.error || 'Erro'); return; }
+      window.location.reload();
+    } catch (e) { alert('Falha de rede: ' + e.message); }
+  }
 </script>
 {% endblock %}

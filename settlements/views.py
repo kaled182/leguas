@@ -428,7 +428,7 @@ def invoice_list(request):
     # KPIs (sobre o queryset completo, antes da paginação)
     base_qs = PartnerInvoice.objects.all()
     total_pending = base_qs.filter(
-        status__in=["PENDING", "DRAFT"],
+        status__in=["PENDING", "DRAFT", "APPROVED"],
     ).aggregate(s=Sum("net_amount"))["s"] or 0
     total_overdue = base_qs.filter(status="OVERDUE").aggregate(
         s=Sum("net_amount"),
@@ -451,6 +451,71 @@ def invoice_list(request):
     }
 
     return render(request, "settlements/invoice_list_v2.html", context)
+
+
+@login_required
+@require_http_methods(["POST"])
+def invoice_change_status(request, invoice_id):
+    """Transição de estado de uma PartnerInvoice (workflow).
+
+    Body: {"status": "APPROVED" | "PAID" | "OVERDUE" | "CANCELLED",
+           "paid_date": "YYYY-MM-DD" (opcional para PAID),
+           "payment_reference": str (opcional)}
+    """
+    import json as _json
+    from datetime import datetime as _dt
+
+    invoice = get_object_or_404(PartnerInvoice, id=invoice_id)
+    try:
+        body = _json.loads(request.body or b"{}")
+    except _json.JSONDecodeError:
+        body = request.POST.dict()
+
+    novo = (body.get("status") or "").strip().upper()
+    if not invoice.can_transition_to(novo):
+        return JsonResponse({
+            "success": False,
+            "error": (
+                f"Transição {invoice.status} → {novo} não permitida. "
+                f"Permitidas: {invoice.TRANSICOES.get(invoice.status, [])}"
+            ),
+        }, status=400)
+
+    try:
+        if novo == PartnerInvoice.STATUS_APPROVED:
+            invoice.approve(user=request.user)
+        elif novo == PartnerInvoice.STATUS_PAID:
+            paid_date = None
+            pd_str = (body.get("paid_date") or "").strip()
+            if pd_str:
+                try:
+                    paid_date = _dt.strptime(pd_str, "%Y-%m-%d").date()
+                except ValueError:
+                    paid_date = None
+            invoice.mark_received(
+                user=request.user,
+                paid_date=paid_date,
+                payment_reference=(body.get("payment_reference") or "").strip(),
+            )
+        else:
+            invoice.status = novo
+            invoice.save(update_fields=["status", "updated_at"])
+    except ValueError as exc:
+        return JsonResponse(
+            {"success": False, "error": str(exc)}, status=400,
+        )
+
+    return JsonResponse({
+        "success": True,
+        "status": invoice.status,
+        "status_display": invoice.get_status_display(),
+        "approved_at": (
+            invoice.approved_at.isoformat() if invoice.approved_at else None
+        ),
+        "paid_date": (
+            invoice.paid_date.isoformat() if invoice.paid_date else None
+        ),
+    })
 
 
 @login_required

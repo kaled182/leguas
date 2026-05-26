@@ -120,14 +120,22 @@ class PayableRow:
 def _row_pre_invoice(pf):
     from .services_payable_alerts import alerts_for_pre_invoice
     has_recibo = bool(pf.fatura_ficheiro)
-    payable = pf.status in ("APROVADO", "PENDENTE") and has_recibo
+    # PF é pagável a partir de APROVADO/PENDENTE. A falta de fatura-
+    # recibo deixou de ser bloqueio (pode-se pagar e regularizar o
+    # recibo depois) — apenas surge como aviso no modal.
+    payable = pf.status in ("APROVADO", "PENDENTE")
     block = ""
     if not has_recibo:
-        block = "Aguardando fatura-recibo do motorista"
+        block = (
+            "Sem fatura-recibo — pagamento permitido com confirmação "
+            "explícita (vai ficar pendente do recibo)."
+        )
     elif pf.status == "CALCULADO":
         block = "Falta aprovar a pré-fatura"
+        payable = False
     elif pf.status not in ("APROVADO", "PENDENTE"):
         block = f"Estado {pf.get_status_display()} não permite pagamento"
+        payable = False
 
     alerts = alerts_for_pre_invoice(pf)
 
@@ -1153,16 +1161,30 @@ def payables_mark_paid(request):
     # Dispatch
     if entity_type == "pre_invoice":
         pf = get_object_or_404(DriverPreInvoice, id=entity_id)
-        if not pf.fatura_ficheiro:
+        force_without_recibo = request.POST.get("force_without_recibo") == "1"
+        if not pf.fatura_ficheiro and not force_without_recibo:
+            # Deixou de ser bloqueio rígido — pede confirmação explícita.
             return JsonResponse({
                 "success": False,
-                "error": "PF sem fatura-recibo. Não pode ser paga.",
-            }, status=400)
+                "needs_recibo_confirmation": True,
+                "message": (
+                    f"A PF {pf.numero} ainda não tem fatura-recibo do "
+                    "motorista. Marcar como paga mesmo assim? Vai ficar "
+                    "registada como 'paga sem recibo' para regularizar "
+                    "depois."
+                ),
+            })
         if pf.status not in ("APROVADO", "PENDENTE"):
             return JsonResponse({
                 "success": False,
                 "error": f"Estado {pf.get_status_display()} não permite pagamento.",
             }, status=400)
+        if not pf.fatura_ficheiro:
+            # Pagamento sem recibo — anota para reconciliação posterior.
+            audit_note += (
+                "\n[" + _ts + "] ⚠ Pago SEM fatura-recibo do motorista "
+                "(confirmação explícita) — pendente regularização."
+            )
         pf.status = "PAGO"
         pf.data_pagamento = paid_date
         if payment_reference:

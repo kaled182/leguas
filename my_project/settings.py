@@ -94,6 +94,15 @@ GEMINI_OCR_MODEL = env(
     "GEMINI_OCR_MODEL", default="gemini-2.5-flash",
 )
 
+# Auto-geração diária de Contas a Pagar recorrentes (Celery beat).
+# DESACTIVADO por defeito — havia bug de duplicação quando o mesmo
+# fornecedor tinha recorrência em ambos os mecanismos (template +
+# Fornecedor.recorrencia_default). A task respeita este flag e o
+# agendamento beat está comentado em my_project/celery.py.
+ACCOUNTING_AUTO_RECURRING_BILLS_ENABLED = env.bool(
+    "ACCOUNTING_AUTO_RECURRING_BILLS_ENABLED", default=False,
+)
+
 # WPPConnect Server (Leguas)
 WPPCONNECT_URL = env("WPPCONNECT_URL", default="")
 WPPCONNECT_SESSION = env("WPPCONNECT_SESSION", default="leguas_wppconnect")

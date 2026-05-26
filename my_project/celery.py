@@ -126,13 +126,21 @@ app.conf.beat_schedule = {
         'options': {'expires': 3600},
     },
 
-    # Gerar instâncias de contas recorrentes — todos os dias 06:00
-    'accounting-generate-recurring-bills': {
-        'task': 'accounting.generate_recurring_bills',
-        'schedule': crontab(hour=6, minute=0),
-        'kwargs': {'lookahead_days': 7},
-        'options': {'expires': 3600},
-    },
+    # NOTA: agendamento da auto-geração de contas recorrentes
+    # DESACTIVADO — estava a duplicar Bills quando o mesmo fornecedor
+    # tinha recorrência configurada nos dois lados (template + cadastro
+    # do Fornecedor). A task continua disponível em
+    # `accounting.tasks.generate_recurring_bills_task` (corrida manual
+    # ou via `python manage.py generate_recurring_bills`) e respeita
+    # o flag settings.ACCOUNTING_AUTO_RECURRING_BILLS_ENABLED.
+    # Para reactivar: pôr o flag a True e descomentar a entrada abaixo.
+    #
+    # 'accounting-generate-recurring-bills': {
+    #     'task': 'accounting.generate_recurring_bills',
+    #     'schedule': crontab(hour=6, minute=0),
+    #     'kwargs': {'lookahead_days': 7},
+    #     'options': {'expires': 3600},
+    # },
 
     # Alertas WhatsApp de contas a vencer/vencidas — todos os dias 09:00
     'accounting-send-bill-reminders': {

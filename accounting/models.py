@@ -1426,6 +1426,11 @@ class Bill(models.Model):
         next_issue = self._add_months(last.issue_date, offset)
         new_bill = Bill.objects.create(
             description=template.description,
+            # Copiar fornecedor/driver evita duplicados quando o gerador
+            # baseado em Fornecedor passa a seguir — antes este campo
+            # ficava a None e o gerador criava uma 2ª Bill no mesmo dia.
+            fornecedor=template.fornecedor,
+            driver=template.driver,
             supplier=template.supplier,
             supplier_nif=template.supplier_nif,
             invoice_number="",  # número novo, fica em branco

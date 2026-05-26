@@ -366,6 +366,7 @@ class PartnerInvoice(models.Model):
     # Metadata por estado-destino para renderização dos botões de
     # acção na lista/detalhe (cor Tailwind + ícone Lucide).
     _TRANSITION_META = {
+        "DRAFT":     {"label": "Rascunho", "color": "gray",    "icon": "file"},
         "APPROVED":  {"label": "Aprovar",  "color": "blue",    "icon": "check"},
         "PENDING":   {"label": "Em aberto","color": "amber",   "icon": "clock"},
         "PAID":      {"label": "Recebida", "color": "emerald", "icon": "banknote"},
@@ -376,16 +377,24 @@ class PartnerInvoice(models.Model):
     }
 
     def can_transition_to(self, new_status):
-        return new_status in self.TRANSICOES.get(self.status, [])
+        """Permite qualquer transição entre estados válidos exceto
+        o próprio. O operador humano tem total controlo — o TRANSICOES
+        fica como sugestão para auditoria, não como restrição."""
+        valid = {code for code, _ in self.STATUS_CHOICES}
+        return new_status in valid and new_status != self.status
 
     def available_transitions(self):
-        """Lista [{status, label, color, icon}] das transições válidas."""
+        """Lista [{status, label, color, icon}] de TODOS os estados a que
+        a fatura pode ir a partir do estado actual (excepto o próprio).
+        Nada é escondido com base em workflow — decisão do operador."""
         out = []
-        for target in self.TRANSICOES.get(self.status, []):
-            meta = self._TRANSITION_META.get(target, {})
+        for code, _label in self.STATUS_CHOICES:
+            if code == self.status:
+                continue
+            meta = self._TRANSITION_META.get(code, {})
             out.append({
-                "status": target,
-                "label": meta.get("label", target),
+                "status": code,
+                "label": meta.get("label", code),
                 "color": meta.get("color", "gray"),
                 "icon": meta.get("icon", "arrow-right"),
             })

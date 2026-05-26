@@ -953,8 +953,15 @@ def payables_inbox(request):
 _PROOF_TOLERANCE = Decimal("0.50")
 
 
-def _payable_expected_amount(entity_type, entity_id):
-    """Valor esperado a pagar para um payable, ou None se não resolver."""
+def _payable_expected_amounts(entity_type, entity_id):
+    """Devolve valores aceitáveis no comprovativo para este payable.
+
+    Conforme o regime fiscal do motorista (IVA / retenção IRS), o
+    comprovativo pode mostrar valores diferentes do total contratado.
+    Qualquer um destes candidatos faz match dentro da tolerância.
+
+    Devolve: (primary, candidates_dict).
+    """
     from drivers_app.models import EmpresaParceiraLancamento
     from settlements.models import (
         DriverPreInvoice, ThirdPartyReimbursement, FleetInvoice,
@@ -962,19 +969,45 @@ def _payable_expected_amount(entity_type, entity_id):
     from .models import Bill
     try:
         if entity_type == "pre_invoice":
-            return DriverPreInvoice.objects.get(id=entity_id).total_a_receber
+            pf = DriverPreInvoice.objects.get(id=entity_id)
+            cands = {
+                "sem_iva": Decimal(pf.total_a_receber),
+                "com_iva": Decimal(pf.total_com_iva),
+                "liquido": Decimal(pf.total_liquido),
+            }
+            return cands["com_iva"], cands
         if entity_type == "fleet":
-            return EmpresaParceiraLancamento.objects.get(
-                id=entity_id).total_com_iva
+            lanc = EmpresaParceiraLancamento.objects.get(id=entity_id)
+            cands = {"com_iva": Decimal(lanc.total_com_iva)}
+            if hasattr(lanc, "valor_base"):
+                cands["sem_iva"] = Decimal(lanc.valor_base)
+            return cands["com_iva"], cands
         if entity_type == "fleet_invoice":
-            return FleetInvoice.objects.get(id=entity_id).total_com_iva
+            fi = FleetInvoice.objects.get(id=entity_id)
+            cands = {
+                "com_iva": Decimal(fi.total_com_iva),
+                "sem_iva": Decimal(fi.total_a_receber),
+            }
+            return cands["com_iva"], cands
         if entity_type == "shareholder":
-            return ThirdPartyReimbursement.objects.get(id=entity_id).valor
+            r = ThirdPartyReimbursement.objects.get(id=entity_id)
+            return Decimal(r.valor), {"valor": Decimal(r.valor)}
         if entity_type == "bill":
-            return Bill.objects.get(id=entity_id).amount_total
+            b = Bill.objects.get(id=entity_id)
+            cands = {
+                "com_iva": Decimal(b.amount_total),
+                "sem_iva": Decimal(b.amount_net),
+            }
+            return cands["com_iva"], cands
     except Exception:
-        return None
-    return None
+        return None, {}
+    return None, {}
+
+
+def _payable_expected_amount(entity_type, entity_id):
+    """Compat — devolve só o valor principal (com IVA quando aplicável)."""
+    primary, _ = _payable_expected_amounts(entity_type, entity_id)
+    return primary
 
 
 def _append_audit_note(entity, note):
@@ -1028,7 +1061,7 @@ def payables_mark_paid(request):
         }, status=400)
 
     # ── OCR + acareação do valor ────────────────────────────────────────
-    expected = _payable_expected_amount(entity_type, entity_id)
+    expected, candidates = _payable_expected_amounts(entity_type, entity_id)
     ocr_amount = None
     ocr_conf = ""
     ocr_failed = False
@@ -1040,6 +1073,15 @@ def payables_mark_paid(request):
     except Exception as exc:
         ocr_failed = True
         logger.warning("[payables] OCR do comprovativo falhou: %s", exc)
+
+    # Tenta fazer match com qualquer um dos valores válidos (cobre
+    # diferenças de regime fiscal: com/sem IVA, líquido pós-retenção).
+    matched_label = None
+    if ocr_amount is not None and candidates:
+        for label, cand in candidates.items():
+            if abs(Decimal(ocr_amount) - cand) <= _PROOF_TOLERANCE:
+                matched_label = label
+                break
 
     if not force:
         if ocr_amount is None:
@@ -1056,25 +1098,31 @@ def payables_mark_paid(request):
                     "correcto e corresponde a este pagamento?"
                 ),
             })
-        if (
-            expected is not None
-            and abs(Decimal(ocr_amount) - Decimal(expected))
-            > _PROOF_TOLERANCE
-        ):
+        if candidates and matched_label is None:
+            options = ", ".join(
+                f"€{v}" for v in candidates.values()
+            )
             return JsonResponse({
                 "success": False,
                 "needs_confirmation": True,
                 "ocr_amount": str(ocr_amount),
-                "expected_amount": str(expected),
+                "expected_amount": str(expected) if expected else None,
+                "candidates": {k: str(v) for k, v in candidates.items()},
                 "message": (
                     f"O comprovativo indica €{ocr_amount} mas o valor "
-                    f"esperado é €{expected}. Os valores não conferem — "
-                    "confirmar o pagamento mesmo assim?"
+                    f"esperado é um de: {options}. "
+                    "Confirmar o pagamento mesmo assim?"
                 ),
             })
 
     # Nota de auditoria da acareação (gravada nas observações da entidade)
     _ts = timezone.now().strftime("%Y-%m-%d %H:%M")
+    _label_pt = {
+        "sem_iva": "sem IVA",
+        "com_iva": "com IVA",
+        "liquido": "líquido pós-retenção IRS",
+        "valor": "valor",
+    }
     if ocr_failed:
         audit_note = (
             f"[{_ts}] Acareação comprovativo: OCR indisponível — "
@@ -1085,23 +1133,21 @@ def payables_mark_paid(request):
             f"[{_ts}] Acareação comprovativo: valor não legível por OCR "
             "— pagamento confirmado manualmente."
         )
-    elif expected is not None:
-        diff = abs(Decimal(ocr_amount) - Decimal(expected))
-        if diff <= _PROOF_TOLERANCE:
-            audit_note = (
-                f"[{_ts}] Acareação comprovativo: OCR €{ocr_amount} ≈ "
-                f"esperado €{expected} — CONFERE (conf. {ocr_conf})."
-            )
-        else:
-            audit_note = (
-                f"[{_ts}] Acareação comprovativo: OCR €{ocr_amount} ≠ "
-                f"esperado €{expected} (dif. €{diff}) — DIVERGÊNCIA, "
-                "confirmado manualmente."
-            )
-    else:
+    elif matched_label is not None:
         audit_note = (
-            f"[{_ts}] Acareação comprovativo: OCR €{ocr_amount} "
+            f"[{_ts}] Acareação comprovativo: OCR €{ocr_amount} ≈ "
+            f"esperado €{candidates[matched_label]} "
+            f"({_label_pt.get(matched_label, matched_label)}) — CONFERE "
             f"(conf. {ocr_conf})."
+        )
+    else:
+        opts = " · ".join(
+            f"{_label_pt.get(k, k)} €{v}" for k, v in candidates.items()
+        )
+        audit_note = (
+            f"[{_ts}] Acareação comprovativo: OCR €{ocr_amount} ≠ "
+            f"esperado ({opts}) — DIVERGÊNCIA, "
+            "confirmado manualmente."
         )
 
     # Dispatch

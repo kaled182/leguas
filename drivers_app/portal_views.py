@@ -750,7 +750,19 @@ def driver_pre_invoice_upload_recibo(request, driver_id, pre_invoice_id):
 
     force = request.POST.get("force") == "1"
     tolerance = Decimal("0.50")
-    expected = pf.total_a_receber
+
+    # Candidatos a valor "esperado" no recibo do motorista, conforme o
+    # regime fiscal:
+    #   - total_a_receber  → motorista isento de IVA (Cat. B sem IVA)
+    #   - total_com_iva    → motorista com IVA (€base + 23%) — caso comum
+    #   - total_liquido    → recibo mostra valor pós-retenção IRS
+    # Qualquer um dentro da tolerância faz match.
+    expected_primary = Decimal(pf.total_com_iva)  # default ‘humano’
+    candidates = {
+        "sem_iva": Decimal(pf.total_a_receber),
+        "com_iva": Decimal(pf.total_com_iva),
+        "liquido": Decimal(pf.total_liquido),
+    }
 
     # ── OCR + acareação do valor ────────────────────────────────────────
     ocr_amount = None
@@ -766,34 +778,51 @@ def driver_pre_invoice_upload_recibo(request, driver_id, pre_invoice_id):
         ocr_failed = True
         logger.warning("[recibo] OCR falhou: %s", exc)
 
+    matched_label = None
+    if ocr_amount is not None:
+        for label, cand in candidates.items():
+            if abs(ocr_amount - cand) <= tolerance:
+                matched_label = label
+                expected_primary = cand
+                break
+
     if not force:
         if ocr_amount is None:
             return JsonResponse({
                 "success": False,
                 "needs_confirmation": True,
                 "ocr_amount": None,
-                "expected_amount": str(expected),
+                "expected_amount": str(expected_primary),
                 "message": (
                     "Não foi possível ler o valor do recibo "
                     "automaticamente. Confirma que o recibo "
-                    f"corresponde a {pf.numero} (€{expected})?"
+                    f"corresponde a {pf.numero} (€{expected_primary})?"
                 ),
             })
-        if abs(ocr_amount - Decimal(expected)) > tolerance:
+        if matched_label is None:
+            # Mostra ao operador as 3 hipóteses para evitar confusão de
+            # regime fiscal (com vs sem IVA, c/ vs s/ retenção IRS).
             return JsonResponse({
                 "success": False,
                 "needs_confirmation": True,
                 "ocr_amount": str(ocr_amount),
-                "expected_amount": str(expected),
+                "expected_amount": str(expected_primary),
                 "message": (
                     f"O recibo indica €{ocr_amount} mas {pf.numero} "
-                    f"é de €{expected}. Os valores não conferem — "
-                    "anexar mesmo assim?"
+                    f"deveria ser €{candidates['com_iva']} c/ IVA "
+                    f"(ou €{candidates['sem_iva']} s/ IVA, "
+                    f"€{candidates['liquido']} líquido pós-retenção). "
+                    "Valores não conferem — anexar mesmo assim?"
                 ),
             })
 
     # ── Nota de auditoria da acareação ──────────────────────────────────
     _ts = _tz.now().strftime("%Y-%m-%d %H:%M")
+    _label_pt = {
+        "sem_iva": "isento de IVA",
+        "com_iva": "com IVA",
+        "liquido": "líquido pós-retenção IRS",
+    }
     if ocr_failed:
         note = (
             f"[{_ts}] Recibo anexado — OCR indisponível, "
@@ -804,15 +833,19 @@ def driver_pre_invoice_upload_recibo(request, driver_id, pre_invoice_id):
             f"[{_ts}] Recibo anexado — valor não legível por OCR, "
             "confirmado manualmente."
         )
-    elif abs(ocr_amount - Decimal(expected)) <= tolerance:
+    elif matched_label is not None:
         note = (
             f"[{_ts}] Recibo anexado — OCR €{ocr_amount} ≈ PF "
-            f"€{expected}: CONFERE (conf. {ocr_conf})."
+            f"€{expected_primary} ({_label_pt[matched_label]}): "
+            f"CONFERE (conf. {ocr_conf})."
         )
     else:
         note = (
             f"[{_ts}] Recibo anexado — OCR €{ocr_amount} ≠ PF "
-            f"€{expected}: DIVERGÊNCIA, confirmado manualmente."
+            f"(s/IVA €{candidates['sem_iva']} · c/IVA "
+            f"€{candidates['com_iva']} · líquido "
+            f"€{candidates['liquido']}): DIVERGÊNCIA, "
+            "confirmado manualmente."
         )
 
     if pf.fatura_ficheiro:
@@ -825,7 +858,8 @@ def driver_pre_invoice_upload_recibo(request, driver_id, pre_invoice_id):
         "fatura_url": pf.fatura_ficheiro.url,
         "fatura_name": ficheiro.name,
         "ocr_amount": str(ocr_amount) if ocr_amount is not None else None,
-        "expected_amount": str(expected),
+        "expected_amount": str(expected_primary),
+        "matched": matched_label,
     })
 
 

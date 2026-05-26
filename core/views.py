@@ -364,11 +364,10 @@ def partner_detail(request, pk):
                     from settlements.services_pudo import (
                         find_fake_delivery_suspects,
                     )
-                    pudo_fake_count = len(
-                        find_fake_delivery_suspects(
-                            date_from, date_to, partner,
-                        )
+                    _susp, _ = find_fake_delivery_suspects(
+                        date_from, date_to, partner,
                     )
+                    pudo_fake_count = len(_susp)
                 except Exception:
                     pudo_fake_count = 0
 

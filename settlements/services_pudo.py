@@ -184,17 +184,26 @@ def find_fake_delivery_suspects(date_from, date_to, partner):
     from .models import CainiaoOperationTask, DriverClaim
 
     if not partner or not getattr(partner, "pudo_enabled", False):
-        return []
+        return [], {
+            "partner_pudo_enabled": False,
+            "n_pudo_delivered": 0, "n_with_coords": 0,
+            "n_above_tolerance": 0, "n_with_claim": 0, "n_final": 0,
+        }
 
     tolerance = partner.pudo_geo_tolerance_meters or 200
 
-    qs = CainiaoOperationTask.objects.filter(
+    base = CainiaoOperationTask.objects.filter(
         delivery_type__iexact="PUDO",
         task_status="Delivered",
         task_date__range=(date_from, date_to),
-    ).exclude(receiver_latitude="").exclude(
-        receiver_longitude="",
-    ).exclude(actual_latitude="").exclude(actual_longitude="")
+    )
+    n_pudo_delivered = base.count()
+    qs = (
+        base
+        .exclude(receiver_latitude="").exclude(receiver_longitude="")
+        .exclude(actual_latitude="").exclude(actual_longitude="")
+    )
+    n_with_coords = qs.count()
 
     # Pré-buscar DriverClaims existentes para evitar mostrar
     # suspeitas já tratadas
@@ -209,6 +218,8 @@ def find_fake_delivery_suspects(date_from, date_to, partner):
                 existing_claims_by_wb[wb] = c
 
     suspects = []
+    n_above_tolerance = 0
+    n_with_claim = 0
     for t in qs:
         d = haversine_meters(
             t.receiver_latitude, t.receiver_longitude,
@@ -216,7 +227,10 @@ def find_fake_delivery_suspects(date_from, date_to, partner):
         )
         if d is None or d <= tolerance:
             continue
+        n_above_tolerance += 1
         existing = existing_claims_by_wb.get(t.waybill_number)
+        if existing:
+            n_with_claim += 1
         suspects.append({
             "task": t,
             "id": t.id,
@@ -239,7 +253,16 @@ def find_fake_delivery_suspects(date_from, date_to, partner):
             ),
         })
     suspects.sort(key=lambda s: -s["distance_m"])
-    return suspects
+    stats = {
+        "partner_pudo_enabled": True,
+        "tolerance_m": tolerance,
+        "n_pudo_delivered": n_pudo_delivered,
+        "n_with_coords": n_with_coords,
+        "n_above_tolerance": n_above_tolerance,
+        "n_with_claim": n_with_claim,
+        "n_final": len(suspects),
+    }
+    return suspects, stats
 
 
 def compute_pudo_total_for_driver(pudo_tasks, partner):

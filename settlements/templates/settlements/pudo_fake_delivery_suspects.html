@@ -85,6 +85,49 @@
     </form>
   </div>
 
+  <!-- Diagnóstico funil (mostra onde os dados caem) -->
+  {% if stats %}
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-4 mb-4">
+    <div class="flex items-center gap-2 mb-3">
+      <i data-lucide="filter" class="w-4 h-4 text-gray-500"></i>
+      <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Funil de detecção</h3>
+      <span class="text-xs text-gray-400">tolerância {{ stats.tolerance_m }}m</span>
+    </div>
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-3 text-sm">
+      <div class="p-3 rounded-lg bg-gray-50 dark:bg-gray-900/40">
+        <div class="text-[10px] uppercase text-gray-500">PUDO Delivered</div>
+        <div class="text-xl font-bold {% if not stats.n_pudo_delivered %}text-rose-600{% endif %}">{{ stats.n_pudo_delivered }}</div>
+      </div>
+      <div class="p-3 rounded-lg bg-gray-50 dark:bg-gray-900/40">
+        <div class="text-[10px] uppercase text-gray-500">Com coordenadas</div>
+        <div class="text-xl font-bold {% if stats.n_pudo_delivered and not stats.n_with_coords %}text-rose-600{% endif %}">{{ stats.n_with_coords }}</div>
+      </div>
+      <div class="p-3 rounded-lg bg-gray-50 dark:bg-gray-900/40">
+        <div class="text-[10px] uppercase text-gray-500">Distância &gt; tol.</div>
+        <div class="text-xl font-bold text-amber-600">{{ stats.n_above_tolerance }}</div>
+      </div>
+      <div class="p-3 rounded-lg bg-gray-50 dark:bg-gray-900/40">
+        <div class="text-[10px] uppercase text-gray-500">Já com claim</div>
+        <div class="text-xl font-bold text-gray-500">{{ stats.n_with_claim }}</div>
+      </div>
+      <div class="p-3 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800">
+        <div class="text-[10px] uppercase text-emerald-700 dark:text-emerald-300">Suspeitos</div>
+        <div class="text-xl font-bold text-emerald-700 dark:text-emerald-300">{{ stats.n_final }}</div>
+      </div>
+    </div>
+    {# Mensagens accionáveis quando o funil "morre" #}
+    {% if not stats.partner_pudo_enabled %}
+      <p class="mt-2 text-xs text-rose-600">⚠ PUDO desactivado no parceiro CAINIAO — actualiza em /core/partners/.</p>
+    {% elif not stats.n_pudo_delivered %}
+      <p class="mt-2 text-xs text-rose-600">⚠ Nenhuma task PUDO Delivered no período. Confirma o intervalo de datas ou se as importações têm <code>delivery_type='PUDO'</code>.</p>
+    {% elif not stats.n_with_coords %}
+      <p class="mt-2 text-xs text-rose-600">⚠ Há {{ stats.n_pudo_delivered }} tasks PUDO mas <strong>nenhuma com coordenadas</strong> (receiver_lat/lng + actual_lat/lng). O importador não está a popular estes campos.</p>
+    {% elif not stats.n_above_tolerance %}
+      <p class="mt-2 text-xs text-gray-500">Todas as tasks PUDO estão dentro da tolerância de {{ stats.tolerance_m }}m — sem suspeitos.</p>
+    {% endif %}
+  </div>
+  {% endif %}
+
   <!-- Tabela de suspeitas -->
   <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
     <div class="overflow-x-auto">

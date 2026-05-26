@@ -56,8 +56,18 @@ def fake_delivery_suspects(request):
     dt = parse_date(request.GET.get("date_to", "") or "") or today
 
     suspects = []
+    stats = {
+        "partner_pudo_enabled": bool(
+            partner and getattr(partner, "pudo_enabled", False)
+        ),
+        "n_pudo_delivered": 0, "n_with_coords": 0,
+        "n_above_tolerance": 0, "n_with_claim": 0, "n_final": 0,
+        "tolerance_m": (
+            partner.pudo_geo_tolerance_meters if partner else 200
+        ),
+    }
     if partner and getattr(partner, "pudo_enabled", False):
-        suspects = find_fake_delivery_suspects(df, dt, partner)
+        suspects, stats = find_fake_delivery_suspects(df, dt, partner)
         # Adicionar driver resolvido a cada suspeita
         for s in suspects:
             s["driver"] = _resolve_driver_for_task(s["task"])
@@ -76,6 +86,7 @@ def fake_delivery_suspects(request):
         "date_from": df,
         "date_to": dt,
         "suspects": suspects,
+        "stats": stats,
         "n_total": len(suspects),
         "n_pending": sum(
             1 for s in suspects if not s.get("existing_claim_id")

@@ -8671,6 +8671,23 @@ def cainiao_packages_search(request):
         if r.return_status in (_WR.STATUS_RETURNED, _WR.STATUS_CLOSED)
     }
 
+    # Resolução courier_id_cainiao → DriverProfile para permitir abrir
+    # reclamações directamente desta página com o motorista pré-preenchido.
+    driver_by_courier_id = {}
+    courier_ids_seen = {
+        op.courier_id_cainiao for op in latest if op.courier_id_cainiao
+    }
+    if courier_ids_seen:
+        from .models import DriverCourierMapping
+        for m in DriverCourierMapping.objects.filter(
+            courier_id__in=courier_ids_seen,
+        ).select_related("driver"):
+            d = m.driver
+            driver_by_courier_id[m.courier_id] = {
+                "id": d.id,
+                "nome_completo": d.nome_completo,
+            }
+
     rows = []
     for op in latest:
         n_att = attempts_count.get(op.waybill_number, 0)
@@ -8738,6 +8755,9 @@ def cainiao_packages_search(request):
             "return_status": (
                 returns_by_wb[op.waybill_number].return_status
                 if op.waybill_number in returns_by_wb else ""
+            ),
+            "driver_info": driver_by_courier_id.get(
+                op.courier_id_cainiao,
             ),
         })
 

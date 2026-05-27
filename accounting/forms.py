@@ -343,7 +343,16 @@ class ImpostoForm(forms.ModelForm):
         cleaned = super().clean()
         modalidade = cleaned.get("modalidade")
         is_create = self.instance.pk is None
-        if modalidade == Imposto.MODALIDADE_PARCELADO and is_create:
+        # Edição de pai PARCELADO já existente também exige os campos
+        # de parcelamento (para suportar regeneração de parcelas).
+        is_edit_parent = (
+            not is_create
+            and modalidade == Imposto.MODALIDADE_PARCELADO
+            and self.instance.parent_id is None
+        )
+        if modalidade == Imposto.MODALIDADE_PARCELADO and (
+            is_create or is_edit_parent
+        ):
             n = cleaned.get("n_prestacoes")
             primeira = cleaned.get("primeira_prestacao_em")
             if not n or n < 2:

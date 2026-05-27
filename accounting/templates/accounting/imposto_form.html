@@ -157,14 +157,34 @@
       </div>
     </div>
 
-    <!-- Bloco condicional: só visível se modalidade=PARCELADO em criação -->
-    {% if is_create %}
-    <div class="grp" id="parcelado-block" style="display:none;">
+    <!-- Bloco condicional: visível se modalidade=PARCELADO em criação
+         OU sempre quando se está a editar um plano pai. -->
+    {% if is_create or is_parent_plan %}
+    <div class="grp" id="parcelado-block"
+         {% if not is_parent_plan %}style="display:none;"{% endif %}>
       <h2 class="text-sm font-bold mb-3 flex items-center gap-1.5"><i data-lucide="layers" class="w-4 h-4 text-violet-500"></i> Parcelamento</h2>
+      {% if is_create %}
       <p class="text-xs text-gray-500 mb-3">
         O sistema gera <strong>N prestações filhas</strong> mensais a partir da data indicada.
         O valor de cada prestação será <code>valor / N</code> (a última absorve o resto para somar exato).
       </p>
+      {% else %}
+        {% if has_paid_parcela %}
+        <div class="mb-3 p-2.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 text-xs text-amber-800 dark:text-amber-300 flex items-start gap-2">
+          <i data-lucide="alert-triangle" class="w-4 h-4 mt-0.5 flex-shrink-0"></i>
+          <div>
+            <strong>{{ n_parcelas_pagas }} prestação(ões) já PAGA(S).</strong>
+            Podes editar os parâmetros mas as prestações filhas <strong>não serão regeneradas</strong>
+            (seria destrutivo). Para regenerar do zero, anula primeiro as prestações pagas.
+          </div>
+        </div>
+        {% else %}
+        <p class="text-xs text-gray-500 mb-3">
+          Alterar <strong>valor</strong>, <strong>Nº de prestações</strong> ou <strong>data da 1ª</strong>
+          regenera todas as prestações filhas. Como ainda nenhuma está paga, esta operação é segura.
+        </p>
+        {% endif %}
+      {% endif %}
       <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div>
           <label class="lbl">Nº de Prestações *</label>

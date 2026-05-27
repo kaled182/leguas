@@ -180,19 +180,123 @@ def imposto_edit(request, pk):
             "Pede ao admin para reabrir antes de editar.",
         )
         return redirect("accounting:imposto_list")
+
+    def _redirect_after_edit(imp):
+        """Volta para a página de origem mais natural."""
+        if imp.is_parent:
+            return redirect("accounting:plano_detail", pk=imp.pk)
+        if imp.parent_id:
+            return redirect("accounting:plano_detail", pk=imp.parent_id)
+        return redirect("accounting:imposto_list")
+
+    is_parent_plan = imposto.is_parent
+    # Estado actual das parcelas (necessário tanto para o initial como
+    # para decidir se podemos regenerar).
+    parcelas_qs = imposto.parcelas.order_by(
+        "parcela_numero", "data_vencimento",
+    )
+    parcelas_pagas = parcelas_qs.filter(status=Imposto.STATUS_PAGO)
+    has_paid_parcela = parcelas_pagas.exists()
+    primeira_parcela = parcelas_qs.first()
+
     if request.method == "POST":
         form = ImpostoForm(request.POST, request.FILES, instance=imposto)
         if form.is_valid():
-            form.save()
-            # Se actualizámos uma prestação, recalcula status do pai
-            if imposto.parent_id:
-                imposto.parent.update_status_from_parcelas()
+            with transaction.atomic():
+                # Snapshot dos valores antigos antes do save para
+                # detectar mudança em parent PARCELADO.
+                old_valor = imposto.valor
+                old_n = imposto.parcela_total
+                old_primeira = (
+                    primeira_parcela.data_vencimento
+                    if primeira_parcela else None
+                )
+                form.save()
+                # Se for um pai PARCELADO e algum dos parâmetros de
+                # parcelamento mudou, regerar as filhas.
+                if is_parent_plan:
+                    new_n = form.cleaned_data.get("n_prestacoes")
+                    new_primeira = form.cleaned_data.get(
+                        "primeira_prestacao_em",
+                    )
+                    if new_n and new_primeira:
+                        changed = (
+                            old_valor != imposto.valor
+                            or old_n != new_n
+                            or old_primeira != new_primeira
+                        )
+                        if changed:
+                            if has_paid_parcela:
+                                messages.warning(
+                                    request,
+                                    "Existem prestações já PAGAS. Os "
+                                    "parâmetros foram guardados mas as "
+                                    "prestações NÃO foram regeneradas "
+                                    "(seria destrutivo). Para regenerar, "
+                                    "anula primeiro as prestações pagas.",
+                                )
+                            else:
+                                # Apaga filhas existentes e gera de novo
+                                parcelas_qs.delete()
+                                parcelas = _split_evenly(
+                                    imposto.valor, new_n,
+                                )
+                                for i, valor_p in enumerate(
+                                    parcelas, start=1,
+                                ):
+                                    venc = _add_months(new_primeira, i - 1)
+                                    Imposto.objects.create(
+                                        nome=f"{imposto.nome} — {i}/{new_n}",
+                                        tipo=imposto.tipo,
+                                        modalidade=(
+                                            Imposto.MODALIDADE_PARCELADO
+                                        ),
+                                        fornecedor=imposto.fornecedor,
+                                        cost_center=imposto.cost_center,
+                                        periodo_ano=venc.year,
+                                        periodo_mes=venc.month,
+                                        valor=valor_p,
+                                        mb_entidade=imposto.mb_entidade,
+                                        mb_referencia=imposto.mb_referencia,
+                                        data_vencimento=venc,
+                                        status=Imposto.STATUS_PENDENTE,
+                                        parent=imposto,
+                                        parcela_numero=i,
+                                        parcela_total=new_n,
+                                        created_by=request.user,
+                                    )
+                                imposto.parcela_total = new_n
+                                imposto.save(update_fields=[
+                                    "parcela_total", "updated_at",
+                                ])
+                                messages.success(
+                                    request,
+                                    f"Plano regenerado com {new_n} "
+                                    f"prestações a partir de "
+                                    f"{new_primeira:%d/%m/%Y}.",
+                                )
+                # Se actualizámos uma prestação filha, recalcula status do pai
+                if imposto.parent_id:
+                    imposto.parent.update_status_from_parcelas()
             messages.success(request, "Imposto actualizado.")
-            return redirect("accounting:imposto_list")
+            return _redirect_after_edit(imposto)
     else:
-        form = ImpostoForm(instance=imposto)
+        initial = {}
+        # Pré-preencher os campos de parcelamento ao editar parent
+        if is_parent_plan:
+            initial["n_prestacoes"] = (
+                imposto.parcela_total or parcelas_qs.count() or None
+            )
+            if primeira_parcela:
+                initial["primeira_prestacao_em"] = (
+                    primeira_parcela.data_vencimento
+                )
+        form = ImpostoForm(instance=imposto, initial=initial)
     return render(request, "accounting/imposto_form.html", {
         "form": form, "imposto": imposto, "is_create": False,
+        "is_parent_plan": is_parent_plan,
+        "has_paid_parcela": has_paid_parcela,
+        "n_parcelas_pagas": parcelas_pagas.count(),
     })
 
 

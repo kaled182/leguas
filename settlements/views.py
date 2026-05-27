@@ -4532,6 +4532,48 @@ def driver_pre_invoice_preview(request, driver_id):
 #  Fase 6.2 — Lote de PFs por Frota (EmpresaParceira)
 # ──────────────────────────────────────────────────────────────────────────
 
+def _billable_fleet_claims_for_driver(driver, date_to):
+    """Claims APROVADOS do motorista ainda não cobrados em nenhuma
+    FleetInvoice activa (não-cancelada).
+
+    Regra:
+      - status = APPROVED (REJECTED/APPEALED/PENDING ficam de fora)
+      - NÃO está ligado a um FleetInvoiceClaim cuja invoice esteja
+        em qualquer estado != CANCELADO
+      - ocorrência (operation_task_date OU occurred_at::date) <= date_to,
+        para evitar facturar antecipadamente eventos futuros.
+
+    Catches up automaticamente claims antigos esquecidos — se um claim
+    foi aprovado em Abril mas a fatura de Abril já saiu sem ele, será
+    incluído na próxima fatura. Não duplica.
+    """
+    from .models import DriverClaim, FleetInvoiceClaim
+    already_billed_ids = (
+        FleetInvoiceClaim.objects
+        .exclude(line__fleet_invoice__status="CANCELADO")
+        .exclude(driver_claim__isnull=True)
+        .values_list("driver_claim_id", flat=True)
+    )
+    qs = (
+        DriverClaim.objects
+        .filter(driver=driver, status="APPROVED")
+        .exclude(pk__in=already_billed_ids)
+    )
+    billable = []
+    for c in qs:
+        # Limite temporal: só facturar o que já aconteceu até date_to
+        if c.operation_task_date is not None:
+            ref_date = c.operation_task_date
+        elif c.occurred_at is not None:
+            ref_date = c.occurred_at.date()
+        else:
+            ref_date = None
+        if ref_date is not None and ref_date > date_to:
+            continue
+        billable.append(c)
+    return billable
+
+
 def _empresa_lote_compute(empresa, date_from, date_to):
     """Calcula lote de PFs para todos os drivers activos de uma frota.
 
@@ -4691,24 +4733,15 @@ def _empresa_lote_compute(empresa, date_from, date_to):
 
         base = price * n_delivered
 
-        # Claims do driver no período (mesma regra que empresa_lote_emit:
-        # APPROVED + PENDING; exclui REJECTED/APPEALED).
-        claims_count = 0
-        claims_amount = Decimal("0")
-        for c in DriverClaim.objects.filter(driver=d).exclude(
-            status__in=("REJECTED", "APPEALED")
-        ).exclude(waybill_number=""):
-            if c.operation_task_date is not None:
-                in_period = date_from <= c.operation_task_date <= date_to
-            else:
-                in_period = CainiaoOperationTask.objects.filter(
-                    waybill_number=c.waybill_number,
-                    task_date__range=(date_from, date_to),
-                ).exists()
-            if not in_period:
-                continue
-            claims_amount += Decimal(str(c.amount or 0))
-            claims_count += 1
+        # Claims APROVADOS do driver ainda não cobrados em fatura activa.
+        # Inclui claims antigos esquecidos em faturas anteriores
+        # (catch-up automático). NUNCA duplica.
+        billable_claims = _billable_fleet_claims_for_driver(d, date_to)
+        claims_count = len(billable_claims)
+        claims_amount = sum(
+            (Decimal(str(c.amount or 0)) for c in billable_claims),
+            Decimal("0"),
+        )
 
         # Overlap
         overlap = DriverPreInvoice.objects.filter(
@@ -4997,34 +5030,19 @@ def empresa_lote_emit(request, empresa_id):
         ids = all_ids
         names = all_names
 
-        # Claims do driver no período. Inclui APPROVED + PENDING
-        # (exclui REJECTED/APPEALED — ainda em discussão).
-        claims = list(
-            DriverClaim.objects.filter(driver=d)
-            .exclude(status__in=("REJECTED", "APPEALED"))
-            .exclude(waybill_number="")
-        )
+        # Claims APROVADOS do driver ainda não cobrados em fatura activa.
+        # Catch-up automático: se um claim foi aprovado depois da fatura
+        # do período em que foi gerado, é incluído na próxima fatura.
+        billable_claims = _billable_fleet_claims_for_driver(d, date_to)
         claims_detail = []
         claims_amount = Decimal("0")
-        for c in claims:
-            valor = c.amount or Decimal("0")
-            # Período: prefere operation_task_date (mais fiável); cai para
-            # presença da waybill no CainiaoOperationTask se vazio.
-            in_period = False
-            if c.operation_task_date is not None:
-                in_period = date_from <= c.operation_task_date <= date_to
-            else:
-                in_period = CainiaoOperationTask.objects.filter(
-                    waybill_number=c.waybill_number,
-                    task_date__range=(date_from, date_to),
-                ).exists()
-            if not in_period:
-                continue
-            claims_amount += Decimal(str(valor))
+        for c in billable_claims:
+            valor = Decimal(str(c.amount or 0))
+            claims_amount += valor
             claims_detail.append({
                 "claim_id": c.id,
                 "waybill_number": c.waybill_number,
-                "valor": Decimal(str(valor)),
+                "valor": valor,
                 "descricao": (c.description or "")[:300],
             })
 

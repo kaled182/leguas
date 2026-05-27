@@ -148,9 +148,11 @@
       </div>
     </div>
 
-    {# Determina a zona activa server-side baseado em pct_atingido,
-       garantindo que a classe .active aparece logo no HTML (não depende
-       de JS rodar sem erros). #}
+    {% comment %}
+      Determina a zona activa server-side baseado em pct_atingido,
+      garantindo que a classe .active aparece logo no HTML (não depende
+      de JS rodar sem erros).
+    {% endcomment %}
     {% with pct=d.pct_atingido %}
     {% if pct < 70 %}
       {% with active_zone="prejuizo" %}

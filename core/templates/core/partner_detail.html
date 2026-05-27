@@ -4627,7 +4627,13 @@ function forecastPlanApp() {
         const j = await this._api(`/settlements/forecast-plan/${this.plan.id}/assign/`, {cp4, ...payload});
         if (j.success) {
           this.plan = j.plan;
-          this.$nextTick(() => { if (window.lucide) lucide.createIcons(); this._initSortables(); });
+          this.$nextTick(() => {
+            if (window.lucide) lucide.createIcons();
+            this._initSortables();
+            // Após Alpine re-renderizar os pools, remove clones órfãos
+            // que o SortableJS possa ter deixado.
+            if (this._dedupeAllPools) this._dedupeAllPools();
+          });
         } else {
           appAlert(j.error || 'Erro desconhecido', 'error');
         }
@@ -4820,6 +4826,36 @@ function forecastPlanApp() {
         root.querySelectorAll('*').forEach(clean);
       };
 
+      // Remove clones órfãos deixados pelo SortableJS no pool de origem.
+      // Com pull:'clone' o Sortable insere uma cópia DOM que sobrevive ao
+      // re-render de Alpine x-for (chaves diferentes). Deduplica por
+      // data-attribute mantendo a primeira ocorrência (que é a que Alpine
+      // gere).
+      const dedupePool = (poolId) => {
+        const pool = document.getElementById(poolId);
+        if (!pool) return;
+        const seen = new Set();
+        pool.querySelectorAll('.driver-card').forEach((card) => {
+          const key = (
+            card.dataset.driverId ||
+            card.dataset.fleetId ||
+            card.dataset.manualName ||
+            ''
+          );
+          if (!key) return;
+          if (seen.has(key)) {
+            card.remove();
+          } else {
+            seen.add(key);
+          }
+        });
+      };
+      const dedupeAllPools = () => {
+        dedupePool('driversPool');
+        dedupePool('fleetsPool');
+        dedupePool('manualPool');
+      };
+
       const poolBaseOpts = {
         group: { name: 'plan', pull: 'clone', put: false },
         sort: false,
@@ -4831,7 +4867,14 @@ function forecastPlanApp() {
         filter: 'button, input, .no-drag',
         preventOnFilter: false,
         onClone: (evt) => stripAlpine(evt.clone),
+        // Após qualquer drag (drop bem-sucedido ou cancelado) limpa clones
+        // órfãos no pool de origem para evitar duplicação visual.
+        onEnd: () => {
+          requestAnimationFrame(dedupeAllPools);
+        },
       };
+      // Expõe para o handler dos CP4 reutilizar
+      this._dedupeAllPools = dedupeAllPools;
 
       // Só inicializa Sortable em pools que (1) existem,
       // (2) estão visíveis (offsetParent !== null) e
@@ -4872,9 +4915,11 @@ function forecastPlanApp() {
             const manualName = dragged.dataset.manualName;
             const displayName = dragged.dataset.driverName || fleetName || manualName || 'driver';
             // Remove o clone DEPOIS do SortableJS terminar o ciclo de drop
-            // (remover sync aqui causa "Cannot read lastElementChild of null")
+            // (remover sync aqui causa "Cannot read lastElementChild of null").
+            // Também deduplica os pools de origem para apanhar clones órfãos.
             requestAnimationFrame(() => {
               if (dragged.parentNode) dragged.parentNode.removeChild(dragged);
+              if (this._dedupeAllPools) this._dedupeAllPools();
             });
             // CP4 skipped não aceita atribuições
             const summary = this.plan.cp4_summary.find(c => c.cp4 === cp4);

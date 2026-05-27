@@ -148,19 +148,66 @@
       </div>
     </div>
 
-    <div class="thermo">
-      {# Zonas: 0-35%=red(0-70% da meta), 35-50%=yellow(70-100%), 50-75%=green(100-150%), 75-100%=blue(150%+) #}
-      <div class="thermo-zone" data-zone="prejuizo"></div>
-      <div class="thermo-zone" data-zone="caminho"></div>
-      <div class="thermo-zone" data-zone="equilibrio"></div>
-      <div class="thermo-zone" data-zone="lucro"></div>
-      <div class="thermo-zone-label" data-label="prejuizo"   style="left:14%;">PREJUÍZO</div>
-      <div class="thermo-zone-label" data-label="caminho"    style="left:38%;">A caminho</div>
-      <div class="thermo-zone-label" data-label="equilibrio" style="left:58%;">EQUILÍBRIO</div>
-      <div class="thermo-zone-label" data-label="lucro"      style="left:82%;">LUCRO</div>
-      <div class="thermo-be-line" style="left:50%;" title="Ponto de equilíbrio (100%)"></div>
-      <div class="thermo-marker" id="thermo-marker" style="left:0%;" title="Estás aqui"></div>
-    </div>
+    {# Determina a zona activa server-side baseado em pct_atingido,
+       garantindo que a classe .active aparece logo no HTML (não depende
+       de JS rodar sem erros). #}
+    {% with pct=d.pct_atingido %}
+    {% if pct < 70 %}
+      {% with active_zone="prejuizo" %}
+      <div class="thermo" data-active-zone="{{ active_zone }}">
+        <div class="thermo-zone active" data-zone="prejuizo"></div>
+        <div class="thermo-zone" data-zone="caminho"></div>
+        <div class="thermo-zone" data-zone="equilibrio"></div>
+        <div class="thermo-zone" data-zone="lucro"></div>
+        <div class="thermo-zone-label active" data-label="prejuizo"   style="left:14%;">PREJUÍZO</div>
+        <div class="thermo-zone-label"        data-label="caminho"    style="left:38%;">A caminho</div>
+        <div class="thermo-zone-label"        data-label="equilibrio" style="left:58%;">EQUILÍBRIO</div>
+        <div class="thermo-zone-label"        data-label="lucro"      style="left:82%;">LUCRO</div>
+        <div class="thermo-be-line" style="left:50%;" title="Ponto de equilíbrio (100%)"></div>
+        <div class="thermo-marker" id="thermo-marker" style="left:0%;" title="Estás aqui"></div>
+      </div>
+      {% endwith %}
+    {% elif pct < 100 %}
+      <div class="thermo" data-active-zone="caminho">
+        <div class="thermo-zone"        data-zone="prejuizo"></div>
+        <div class="thermo-zone active" data-zone="caminho"></div>
+        <div class="thermo-zone"        data-zone="equilibrio"></div>
+        <div class="thermo-zone"        data-zone="lucro"></div>
+        <div class="thermo-zone-label"        data-label="prejuizo"   style="left:14%;">PREJUÍZO</div>
+        <div class="thermo-zone-label active" data-label="caminho"    style="left:38%;">A caminho</div>
+        <div class="thermo-zone-label"        data-label="equilibrio" style="left:58%;">EQUILÍBRIO</div>
+        <div class="thermo-zone-label"        data-label="lucro"      style="left:82%;">LUCRO</div>
+        <div class="thermo-be-line" style="left:50%;" title="Ponto de equilíbrio (100%)"></div>
+        <div class="thermo-marker" id="thermo-marker" style="left:0%;" title="Estás aqui"></div>
+      </div>
+    {% elif pct < 150 %}
+      <div class="thermo" data-active-zone="equilibrio">
+        <div class="thermo-zone"        data-zone="prejuizo"></div>
+        <div class="thermo-zone"        data-zone="caminho"></div>
+        <div class="thermo-zone active" data-zone="equilibrio"></div>
+        <div class="thermo-zone"        data-zone="lucro"></div>
+        <div class="thermo-zone-label"        data-label="prejuizo"   style="left:14%;">PREJUÍZO</div>
+        <div class="thermo-zone-label"        data-label="caminho"    style="left:38%;">A caminho</div>
+        <div class="thermo-zone-label active" data-label="equilibrio" style="left:58%;">EQUILÍBRIO</div>
+        <div class="thermo-zone-label"        data-label="lucro"      style="left:82%;">LUCRO</div>
+        <div class="thermo-be-line" style="left:50%;" title="Ponto de equilíbrio (100%)"></div>
+        <div class="thermo-marker" id="thermo-marker" style="left:0%;" title="Estás aqui"></div>
+      </div>
+    {% else %}
+      <div class="thermo" data-active-zone="lucro">
+        <div class="thermo-zone"        data-zone="prejuizo"></div>
+        <div class="thermo-zone"        data-zone="caminho"></div>
+        <div class="thermo-zone"        data-zone="equilibrio"></div>
+        <div class="thermo-zone active" data-zone="lucro"></div>
+        <div class="thermo-zone-label"        data-label="prejuizo"   style="left:14%;">PREJUÍZO</div>
+        <div class="thermo-zone-label"        data-label="caminho"    style="left:38%;">A caminho</div>
+        <div class="thermo-zone-label"        data-label="equilibrio" style="left:58%;">EQUILÍBRIO</div>
+        <div class="thermo-zone-label active" data-label="lucro"      style="left:82%;">LUCRO</div>
+        <div class="thermo-be-line" style="left:50%;" title="Ponto de equilíbrio (100%)"></div>
+        <div class="thermo-marker" id="thermo-marker" style="left:0%;" title="Estás aqui"></div>
+      </div>
+    {% endif %}
+    {% endwith %}
     <div class="flex justify-between text-[10px] text-gray-500 mt-1 px-1">
       <span>0%</span><span>70%</span><span>100%</span><span>150%</span><span>+200%</span>
     </div>

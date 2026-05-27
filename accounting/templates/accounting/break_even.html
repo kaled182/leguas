@@ -14,15 +14,23 @@
     height: 50px;
     border-radius: 25px;
     overflow: hidden;
-    background: linear-gradient(
-      to right,
-      #ef4444 0%, #ef4444 35%,
-      #f59e0b 35%, #f59e0b 50%,
-      #10b981 50%, #10b981 75%,
-      #3b82f6 75%, #3b82f6 100%
-    );
+    background: #1f2937;
     box-shadow: inset 0 1px 4px rgba(0,0,0,.3);
   }
+  .thermo-zone {
+    position: absolute;
+    top: 0; bottom: 0;
+    opacity: 0.28;
+    transition: opacity .4s ease-out;
+  }
+  .thermo-zone.active {
+    opacity: 1;
+    box-shadow: inset 0 0 14px rgba(255,255,255,.25);
+  }
+  .thermo-zone[data-zone="prejuizo"]   { background: #ef4444; left: 0%;  width: 35%; }
+  .thermo-zone[data-zone="caminho"]    { background: #f59e0b; left: 35%; width: 15%; }
+  .thermo-zone[data-zone="equilibrio"] { background: #10b981; left: 50%; width: 25%; }
+  .thermo-zone[data-zone="lucro"]      { background: #3b82f6; left: 75%; width: 25%; }
   .thermo-marker {
     position: absolute;
     top: -8px; bottom: -8px;
@@ -32,6 +40,7 @@
     border-right: 2px solid #fff;
     box-shadow: 0 0 6px rgba(0,0,0,.5);
     transition: left .6s ease-out;
+    z-index: 3;
   }
   .thermo-be-line {
     position: absolute;
@@ -39,6 +48,7 @@
     width: 2px;
     background: rgba(255,255,255,.7);
     border-left: 1px dashed #1f2937;
+    z-index: 2;
   }
   .thermo-zone-label {
     position: absolute;
@@ -48,6 +58,14 @@
     font-size: 11px;
     text-shadow: 0 1px 2px rgba(0,0,0,.5);
     pointer-events: none;
+    opacity: 0.55;
+    transition: opacity .3s, font-weight .3s;
+    z-index: 4;
+  }
+  .thermo-zone-label.active {
+    opacity: 1;
+    font-size: 12px;
+    letter-spacing: 0.02em;
   }
   .be-history-cell {
     width: 24px; height: 24px;
@@ -129,12 +147,15 @@
     </div>
 
     <div class="thermo">
-      {# Cada zona ocupa 25% do termómetro: 0-70% (red) + 70-100% (yellow) + 100-150% (green) + 150%+ (blue) #}
-      {# A barra é dividida assim: 0-35%=red(0%-70% da meta), 35-50%=yellow(70-100%), 50-75%=green(100-150%), 75-100%=blue(150%+) #}
-      <div class="thermo-zone-label" style="left:14%;">PREJUÍZO</div>
-      <div class="thermo-zone-label" style="left:38%;">A caminho</div>
-      <div class="thermo-zone-label" style="left:58%;">EQUILÍBRIO</div>
-      <div class="thermo-zone-label" style="left:82%;">LUCRO</div>
+      {# Zonas: 0-35%=red(0-70% da meta), 35-50%=yellow(70-100%), 50-75%=green(100-150%), 75-100%=blue(150%+) #}
+      <div class="thermo-zone" data-zone="prejuizo"></div>
+      <div class="thermo-zone" data-zone="caminho"></div>
+      <div class="thermo-zone" data-zone="equilibrio"></div>
+      <div class="thermo-zone" data-zone="lucro"></div>
+      <div class="thermo-zone-label" data-label="prejuizo"   style="left:14%;">PREJUÍZO</div>
+      <div class="thermo-zone-label" data-label="caminho"    style="left:38%;">A caminho</div>
+      <div class="thermo-zone-label" data-label="equilibrio" style="left:58%;">EQUILÍBRIO</div>
+      <div class="thermo-zone-label" data-label="lucro"      style="left:82%;">LUCRO</div>
       <div class="thermo-be-line" style="left:50%;" title="Ponto de equilíbrio (100%)"></div>
       <div class="thermo-marker" id="thermo-marker" style="left:0%;" title="Estás aqui"></div>
     </div>
@@ -358,7 +379,28 @@ function positionMarker(pct) {
   let pos = (pct / 200) * 100;
   pos = Math.min(100, Math.max(0, pos));
   document.getElementById('thermo-marker').style.left = pos + '%';
+  highlightZone(pct);
 }
+
+// Destaca a zona activa conforme % atingido:
+//   < 70%   → PREJUÍZO
+//   70-99%  → A CAMINHO
+//   100-149%→ EQUILÍBRIO
+//   >= 150% → LUCRO
+function highlightZone(pct) {
+  let zone;
+  if (pct < 70) zone = 'prejuizo';
+  else if (pct < 100) zone = 'caminho';
+  else if (pct < 150) zone = 'equilibrio';
+  else zone = 'lucro';
+  document.querySelectorAll('.thermo-zone').forEach(z => {
+    z.classList.toggle('active', z.dataset.zone === zone);
+  });
+  document.querySelectorAll('.thermo-zone-label').forEach(l => {
+    l.classList.toggle('active', l.dataset.label === zone);
+  });
+}
+
 positionMarker({{ d.pct_atingido|floatformat:2 }});
 
 // Atalhos de período

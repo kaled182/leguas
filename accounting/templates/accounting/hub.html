@@ -60,7 +60,7 @@
   </div>
 
   <!-- 6 Cards -->
-  <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+  <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3">
 
     <a href="{% url 'invoice-list' %}" class="hub-card bg-white dark:bg-gray-800 rounded-xl border-l-4 border-emerald-500 border border-gray-200/50 dark:border-gray-700/50 p-4 block">
       <div class="flex items-center justify-between">
@@ -90,7 +90,16 @@
       </div>
       <p class="text-xl font-bold text-indigo-700 dark:text-indigo-300 mt-1">€{{ snap.a_pagar_breakdown.impostos|floatformat:2 }}</p>
       <p class="text-[11px] text-gray-500">{{ snap.a_pagar_breakdown.impostos_count }} guia(s)</p>
-      <a href="{% url 'accounting:plano_list' %}" class="text-[11px] text-indigo-500 hover:underline">Planos prestacionais →</a>
+    </a>
+
+    <a href="{% url 'accounting:plano_list' %}" class="hub-card bg-white dark:bg-gray-800 rounded-xl border-l-4 border-purple-500 border border-gray-200/50 dark:border-gray-700/50 p-4 block">
+      <div class="flex items-center justify-between">
+        <p class="text-xs uppercase tracking-wide text-purple-600 font-semibold">Planos Prestacionais</p>
+        <i data-lucide="calendar-clock" class="w-4 h-4 text-purple-500"></i>
+      </div>
+      <p class="text-xl font-bold text-purple-700 dark:text-purple-300 mt-1">{{ n_planos_activos }} <span class="text-xs font-normal text-gray-500">plano(s)</span></p>
+      <p class="text-[11px] text-gray-500">€{{ planos_total_mes|floatformat:2 }} a pagar este mês</p>
+      <p class="text-[11px] text-gray-500">{{ planos_n_parcelas_mes }} prestação(ões) c/ vencim. no mês</p>
     </a>
 
     <a href="{% url 'accounting:treasury_dashboard' %}" class="hub-card bg-white dark:bg-gray-800 rounded-xl border-l-4 border-sky-500 border border-gray-200/50 dark:border-gray-700/50 p-4 block">

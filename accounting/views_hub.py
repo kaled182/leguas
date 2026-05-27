@@ -195,6 +195,35 @@ def hub_financeiro(request):
         _zero(),
     )
 
+    # Planos prestacionais — KPI: nº planos com prestações em aberto
+    # + Σ das prestações com vencimento no mês corrente.
+    from calendar import monthrange as _mr
+    first_day_m = today.replace(day=1)
+    last_day_m = today.replace(day=_mr(today.year, today.month)[1])
+    n_planos_activos = Imposto.objects.filter(
+        modalidade=Imposto.MODALIDADE_PARCELADO,
+        parent__isnull=True,
+        parcelas__status__in=[
+            Imposto.STATUS_PENDENTE, Imposto.STATUS_EM_ATRASO,
+        ],
+    ).distinct().count()
+    planos_total_mes = (
+        Imposto.objects.filter(
+            parent__isnull=False,
+            data_vencimento__gte=first_day_m,
+            data_vencimento__lte=last_day_m,
+            status__in=[
+                Imposto.STATUS_PENDENTE, Imposto.STATUS_EM_ATRASO,
+            ],
+        ).aggregate(s=Sum("valor"))["s"] or _zero()
+    )
+    planos_n_parcelas_mes = Imposto.objects.filter(
+        parent__isnull=False,
+        data_vencimento__gte=first_day_m,
+        data_vencimento__lte=last_day_m,
+        status__in=[Imposto.STATUS_PENDENTE, Imposto.STATUS_EM_ATRASO],
+    ).count()
+
     # Receita do mês corrente (Cainiao) — soft import, falha silenciosa
     receita_mes = _zero()
     custos_mes = _zero()
@@ -263,5 +292,8 @@ def hub_financeiro(request):
         "margem_mes": margem_mes,
         "margem_pct": margem_pct,
         "n_movs": len(movs),
+        "n_planos_activos": n_planos_activos,
+        "planos_total_mes": planos_total_mes,
+        "planos_n_parcelas_mes": planos_n_parcelas_mes,
     }
     return render(request, "accounting/hub.html", context)

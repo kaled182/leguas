@@ -5667,8 +5667,29 @@ def cainiao_waybill_detail(request, waybill):
         .order_by("recorded_at")
     )
 
+    # Reclamações de cliente associadas a este waybill (qualquer estado)
+    customer_complaints = []
+    try:
+        from drivers_app.models import CustomerComplaint
+        customer_complaints = list(
+            CustomerComplaint.objects
+            .filter(numero_pacote=waybill)
+            .select_related("driver")
+            .order_by("-created_at" if hasattr(
+                CustomerComplaint, "created_at"
+            ) else "-id")
+        )
+    except Exception:
+        customer_complaints = []
+    open_complaints_count = sum(
+        1 for c in customer_complaints
+        if c.status in ("ABERTO", "NOTIFICADO", "RESPONDIDO")
+    )
+
     context = {
         "waybill": waybill,
+        "customer_complaints": customer_complaints,
+        "open_complaints_count": open_complaints_count,
         "records": records,
         "latest": latest,
         "timeline": timeline,

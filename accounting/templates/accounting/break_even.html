@@ -20,12 +20,14 @@
   .thermo-zone {
     position: absolute;
     top: 0; bottom: 0;
-    opacity: 0.28;
-    transition: opacity .4s ease-out;
+    opacity: 0.18;
+    filter: grayscale(0.7) brightness(0.6);
+    transition: opacity .4s ease-out, filter .4s ease-out;
   }
   .thermo-zone.active {
     opacity: 1;
-    box-shadow: inset 0 0 14px rgba(255,255,255,.25);
+    filter: none;
+    box-shadow: inset 0 0 20px rgba(255,255,255,.35);
   }
   .thermo-zone[data-zone="prejuizo"]   { background: #ef4444; left: 0%;  width: 35%; }
   .thermo-zone[data-zone="caminho"]    { background: #f59e0b; left: 35%; width: 15%; }
@@ -388,10 +390,15 @@ function positionMarker(pct) {
 //   100-149%→ EQUILÍBRIO
 //   >= 150% → LUCRO
 function highlightZone(pct) {
+  // Robust to NaN / strings com vírgula PT
+  let p = typeof pct === 'number' ? pct : parseFloat(
+    String(pct).replace(',', '.')
+  );
+  if (isNaN(p)) p = 0;
   let zone;
-  if (pct < 70) zone = 'prejuizo';
-  else if (pct < 100) zone = 'caminho';
-  else if (pct < 150) zone = 'equilibrio';
+  if (p < 70) zone = 'prejuizo';
+  else if (p < 100) zone = 'caminho';
+  else if (p < 150) zone = 'equilibrio';
   else zone = 'lucro';
   document.querySelectorAll('.thermo-zone').forEach(z => {
     z.classList.toggle('active', z.dataset.zone === zone);
@@ -401,7 +408,7 @@ function highlightZone(pct) {
   });
 }
 
-positionMarker({{ d.pct_atingido|floatformat:2 }});
+positionMarker(parseFloat("{{ d.pct_atingido|stringformat:'.2f'|default:'0' }}".replace(",", ".")) || 0);
 
 // Atalhos de período
 function setRange(kind) {

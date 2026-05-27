@@ -201,6 +201,9 @@ def imposto_edit(request, pk):
 
     if request.method == "POST":
         form = ImpostoForm(request.POST, request.FILES, instance=imposto)
+        force_regen = (
+            request.POST.get("force_regen") == "1"
+        )
         if form.is_valid():
             with transaction.atomic():
                 # Snapshot dos valores antigos antes do save para
@@ -213,7 +216,7 @@ def imposto_edit(request, pk):
                 )
                 form.save()
                 # Se for um pai PARCELADO e algum dos parâmetros de
-                # parcelamento mudou, regerar as filhas.
+                # parcelamento mudou (ou regen forçado), regerar filhas.
                 if is_parent_plan:
                     new_n = form.cleaned_data.get("n_prestacoes")
                     new_primeira = form.cleaned_data.get(
@@ -224,6 +227,7 @@ def imposto_edit(request, pk):
                             old_valor != imposto.valor
                             or old_n != new_n
                             or old_primeira != new_primeira
+                            or force_regen
                         )
                         if changed:
                             if has_paid_parcela:
@@ -292,11 +296,19 @@ def imposto_edit(request, pk):
                     primeira_parcela.data_vencimento
                 )
         form = ImpostoForm(instance=imposto, initial=initial)
+    # URL de regresso conforme contexto do imposto
+    if is_parent_plan:
+        back_url = f"/accounting/impostos/planos/{imposto.pk}/"
+    elif imposto.parent_id:
+        back_url = f"/accounting/impostos/planos/{imposto.parent_id}/"
+    else:
+        back_url = "/accounting/impostos/"
     return render(request, "accounting/imposto_form.html", {
         "form": form, "imposto": imposto, "is_create": False,
         "is_parent_plan": is_parent_plan,
         "has_paid_parcela": has_paid_parcela,
         "n_parcelas_pagas": parcelas_pagas.count(),
+        "back_url": back_url,
     })
 
 

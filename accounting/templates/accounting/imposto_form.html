@@ -12,7 +12,7 @@
 <div class="max-w-4xl mx-auto px-4 py-6 space-y-4">
 
   <div class="flex items-center gap-2">
-    <a href="{% url 'accounting:imposto_list' %}" class="text-gray-500 hover:text-gray-700 dark:hover:text-white">
+    <a href="{{ back_url|default:'/accounting/impostos/' }}" class="text-gray-500 hover:text-gray-700 dark:hover:text-white">
       <i data-lucide="arrow-left" class="w-5 h-5"></i>
     </a>
     <h1 class="text-2xl font-bold flex items-center gap-2">
@@ -236,11 +236,23 @@
       {{ form.notas }}
     </div>
 
-    <div class="flex justify-between items-center">
-      <a href="{% url 'accounting:imposto_list' %}" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-lg text-sm font-semibold">Cancelar</a>
-      <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold flex items-center gap-1.5">
-        <i data-lucide="save" class="w-4 h-4"></i> Guardar
-      </button>
+    {# Flag para forçar regeneração das parcelas (preenchido por JS) #}
+    <input type="hidden" name="force_regen" id="force_regen" value="0">
+
+    <div class="flex justify-between items-center flex-wrap gap-2">
+      <a href="{{ back_url|default:'/accounting/impostos/' }}" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-lg text-sm font-semibold">Cancelar</a>
+      <div class="flex items-center gap-2">
+        {% if is_parent_plan and not has_paid_parcela %}
+        <button type="button" id="btn-recalcular"
+                class="px-3 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg text-sm font-semibold inline-flex items-center gap-1.5"
+                title="Apaga e gera novamente todas as presta&ccedil;&otilde;es com os valores actuais (valor / N&ordm; / data da 1&ordf;)">
+          <i data-lucide="refresh-ccw" class="w-4 h-4"></i> Recalcular parcelas
+        </button>
+        {% endif %}
+        <button type="submit" id="btn-submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold flex items-center gap-1.5">
+          <i data-lucide="save" class="w-4 h-4"></i> Guardar
+        </button>
+      </div>
     </div>
   </form>
 </div>
@@ -257,6 +269,83 @@ document.addEventListener('DOMContentLoaded', () => {
     toggle();
     modSel.addEventListener('change', toggle);
   }
+
+  // ─── Confirmação de regeneração de parcelas (edit de pai PARCELADO)
+  {% if is_parent_plan and not has_paid_parcela %}
+  const form = document.getElementById('imposto-form');
+  const valorInput = document.querySelector('[name=valor]');
+  const nInput = document.querySelector('[name=n_prestacoes]');
+  const firstInput = document.querySelector('[name=primeira_prestacao_em]');
+  const forceFlag = document.getElementById('force_regen');
+  const btnRecalcular = document.getElementById('btn-recalcular');
+
+  const initialValor = valorInput ? valorInput.value : '';
+  const initialN = nInput ? nInput.value : '';
+  const initialFirst = firstInput ? firstInput.value : '';
+
+  function fmtEuro(s) {
+    const v = parseFloat((s || '').toString().replace(',', '.')) || 0;
+    return v.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function detectChanges() {
+    const out = [];
+    if (valorInput && valorInput.value !== initialValor) {
+      out.push(`Valor: €${fmtEuro(initialValor)} → €${fmtEuro(valorInput.value)}`);
+    }
+    if (nInput && nInput.value !== initialN) {
+      out.push(`Nº prestações: ${initialN} → ${nInput.value}`);
+    }
+    if (firstInput && firstInput.value !== initialFirst) {
+      out.push(`Vencimento 1ª: ${initialFirst} → ${firstInput.value}`);
+    }
+    return out;
+  }
+
+  if (form) {
+    form.addEventListener('submit', function(e) {
+      // Se o regen foi forçado pelo botão Recalcular, salta o diff
+      if (forceFlag && forceFlag.value === '1') {
+        const n = nInput ? nInput.value : '?';
+        const val = valorInput ? fmtEuro(valorInput.value) : '?';
+        const first = firstInput ? firstInput.value : '?';
+        if (!confirm(
+          `Recalcular as ${n} prestações com base em:\n` +
+          `  • Valor total: €${val}\n` +
+          `  • Nº prestações: ${n}\n` +
+          `  • 1ª prestação: ${first}\n\n` +
+          `Todas as prestações pendentes serão apagadas e regeneradas. Continuar?`
+        )) {
+          e.preventDefault();
+          forceFlag.value = '0';
+          return false;
+        }
+        return;
+      }
+      const changes = detectChanges();
+      if (changes.length === 0) return;
+      const msg = (
+        `Vais regenerar TODAS as prestações deste plano com os novos parâmetros:\n\n` +
+        changes.map(c => `  • ${c}`).join('\n') +
+        `\n\nAs prestações actuais (todas pendentes) serão APAGADAS e recalculadas.\nContinuar?`
+      );
+      if (!confirm(msg)) {
+        e.preventDefault();
+        return false;
+      }
+    });
+  }
+
+  if (btnRecalcular && forceFlag && form) {
+    btnRecalcular.addEventListener('click', function() {
+      forceFlag.value = '1';
+      // Submete via dispatch para passar pelo listener acima
+      form.requestSubmit
+        ? form.requestSubmit()
+        : form.submit();
+    });
+  }
+  {% endif %}
 
   // ─── OCR: extrair guia de pagamento ─────────────────────────────
   const ocrInput = document.getElementById('ocr-file-input');

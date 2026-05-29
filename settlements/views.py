@@ -1045,8 +1045,11 @@ def claim_detail(request, claim_id):
 
         return redirect("claim-detail", claim_id=claim.id)
 
+    from .services_appeals import whatsapp_message_for_claim
     context = {
         "claim": claim,
+        "wa_message": whatsapp_message_for_claim(claim),
+        "driver_phone": (claim.driver.telefone or "") if claim.driver else "",
     }
 
     return render(request, "settlements/claim_detail.html", context)
@@ -1185,6 +1188,42 @@ def appeals_set_reason(request, claim_id):
         return JsonResponse({"success": False, "error": "Motivo inválido."}, status=400)
     claim.appeal_reason = reason
     claim.save(update_fields=["appeal_reason", "updated_at"])
+    return JsonResponse({"success": True})
+
+
+@login_required
+@require_http_methods(["POST"])
+def claim_notify_whatsapp(request, claim_id):
+    """Envia WhatsApp ao motorista do claim (com confirmação/edição no modal)."""
+    import json
+    claim = get_object_or_404(
+        DriverClaim.objects.select_related("driver"), id=claim_id
+    )
+    if request.content_type and "application/json" in request.content_type:
+        try:
+            data = json.loads(request.body)
+        except (json.JSONDecodeError, ValueError):
+            data = request.POST.dict()
+    else:
+        data = request.POST.dict()
+
+    from .services_appeals import whatsapp_message_for_claim
+    mensagem = (data.get("mensagem") or "").strip() or whatsapp_message_for_claim(claim)
+    phone = (claim.driver.telefone or "").strip() if claim.driver else ""
+    if not phone:
+        return JsonResponse(
+            {"success": False, "error": "O motorista não tem telefone registado."},
+            status=400,
+        )
+    try:
+        from system_config.whatsapp_helper import WhatsAppWPPConnectAPI
+        api = WhatsAppWPPConnectAPI.from_config()
+        api.send_text(phone, mensagem)
+    except Exception as exc:  # noqa: BLE001 — erro amigável
+        return JsonResponse(
+            {"success": False, "error": f"Falha ao enviar WhatsApp: {exc}"},
+            status=502,
+        )
     return JsonResponse({"success": True})
 
 

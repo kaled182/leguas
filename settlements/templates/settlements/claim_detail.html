@@ -90,6 +90,64 @@
     </div>
   </div>
 
+  <!-- Notificar motorista por WhatsApp (com confirmação) -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-4"
+       x-data="{
+         open: false, sending: false, text: '{{ wa_message|escapejs }}',
+         async send() {
+           this.sending = true;
+           try {
+             const fd = new FormData(); fd.append('mensagem', this.text);
+             const r = await fetch('/settlements/claims/{{ claim.id }}/notificar-whatsapp/', {
+               method: 'POST',
+               headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value },
+               body: fd, credentials: 'same-origin',
+             });
+             const d = await r.json();
+             if (d.success) { alert('Mensagem enviada por WhatsApp.'); this.open = false; }
+             else { alert(d.error || 'Falha ao enviar.'); }
+           } catch (e) { alert('Erro de rede.'); }
+           finally { this.sending = false; }
+         }
+       }">
+    <div class="flex items-center justify-between gap-3 flex-wrap">
+      <div class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+        <i data-lucide="message-circle" class="w-4 h-4 text-green-500"></i>
+        Notificar o motorista sobre o estado do recurso
+        {% if not driver_phone %}<span class="text-xs text-amber-600">(sem telefone registado)</span>{% endif %}
+      </div>
+      <button type="button" @click="open = true; $nextTick(() => window.lucide && lucide.createIcons())"
+              class="px-3 py-1.5 text-sm rounded-lg bg-green-600 hover:bg-green-700 text-white inline-flex items-center gap-1.5">
+        <i data-lucide="message-circle" class="w-4 h-4"></i> Notificar motorista
+      </button>
+    </div>
+
+    <div x-show="open" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg mx-4 border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div class="bg-gradient-to-r from-green-500 to-emerald-600 px-6 py-4 flex items-center justify-between">
+          <h3 class="text-base font-bold text-white">WhatsApp ao motorista</h3>
+          <button @click="open = false" class="text-white/70 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+        </div>
+        <div class="px-6 py-5 space-y-3">
+          {% if driver_phone %}
+          <p class="text-xs text-gray-500">Para: <span class="font-mono">{{ driver_phone }}</span></p>
+          {% else %}
+          <div class="text-xs bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 rounded-lg px-3 py-2">Este motorista não tem telefone registado — o envio vai falhar.</div>
+          {% endif %}
+          <textarea x-model="text" rows="6"
+                    class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 resize-none"></textarea>
+        </div>
+        <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-2">
+          <button @click="open = false" class="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium">Cancelar</button>
+          <button @click="send()" :disabled="sending {% if not driver_phone %}|| true{% endif %}"
+                  class="px-5 py-2 bg-green-600 hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg text-sm font-semibold inline-flex items-center gap-2">
+            <i data-lucide="send" class="w-4 h-4"></i><span x-text="sending ? 'A enviar…' : 'Enviar'"></span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Grid Principal -->
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <!-- Coluna Esquerda: Informações Principais -->

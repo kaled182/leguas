@@ -105,6 +105,10 @@ urlpatterns = [
         "recursos/<int:claim_id>/motivo/",
         views.appeals_set_reason, name="appeals-set-reason",
     ),
+    path(
+        "claims/<int:claim_id>/notificar-whatsapp/",
+        views.claim_notify_whatsapp, name="claim-notify-whatsapp",
+    ),
     path("claims/<int:claim_id>/", views.claim_detail, name="claim-detail"),
     path(
         "claims/<int:claim_id>/update/",

@@ -86,6 +86,41 @@ def partner_approved(claim, user, notes=""):
     return claim
 
 
+def whatsapp_message_for_claim(claim):
+    """Mensagem WhatsApp pré-preenchida ao motorista, conforme o estado do recurso."""
+    nome = ""
+    if claim.driver and claim.driver.nome_completo:
+        nome = claim.driver.nome_completo.split()[0]
+    wb = claim.waybill_number or "—"
+    val = f"€{claim.amount}"
+    st = claim.status
+    pr = claim.partner_response
+
+    if st == "QUARANTINE":
+        return (
+            f"Olá {nome}, abrimos recurso junto do parceiro para o pacote {wb}. "
+            f"O desconto de {val} foi estornado provisoriamente e fica em "
+            f"quarentena (até 60 dias) à espera da decisão. Avisamos assim que "
+            f"houver resposta."
+        )
+    if st == "APPROVED" and pr == "DENIED":
+        return (
+            f"Olá {nome}, infelizmente o parceiro NEGOU o recurso do pacote {wb}. "
+            f"O desconto de {val} volta a ser aplicado na pré-fatura."
+        )
+    if st == "REJECTED" and pr == "APPROVED":
+        return (
+            f"Olá {nome}, boas notícias: o recurso do pacote {wb} foi ACEITE "
+            f"pelo parceiro. O desconto de {val} foi cancelado definitivamente."
+        )
+    if st == "APPEALED":
+        return (
+            f"Olá {nome}, recebemos a prova e abrimos recurso para o pacote {wb} "
+            f"(desconto de {val}). Vamos enviar ao parceiro e mantemos-te informado."
+        )
+    return f"Olá {nome}, atualização sobre o pacote {wb} (desconto de {val})."
+
+
 @transaction.atomic
 def reopen_appeal(claim, user=None):
     """Reabre um recurso fechado → volta a APPEALED (aguardando envio).

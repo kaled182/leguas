@@ -1008,13 +1008,13 @@ def claim_detail(request, claim_id):
             claim.reject(request.user, notes or "Recurso aceite.")
             messages.success(
                 request,
-                f"Recurso aceite. Reclamação #{claim.id} rejeitada.",
+                f"Recurso #{claim.id} aceite — desconto CANCELADO (motorista não paga).",
             )
         elif action == "reject_appeal" and claim.status == "APPEALED":
             claim.approve(request.user, notes or "Recurso rejeitado.")
             messages.success(
                 request,
-                f"Recurso rejeitado. Reclamação #{claim.id} aprovada.",
+                f"Recurso #{claim.id} rejeitado — desconto MANTIDO (aplicado na PF).",
             )
         elif action == "reject" and claim.status in ("PENDING", "APPEALED"):
             claim.reject(request.user, notes)

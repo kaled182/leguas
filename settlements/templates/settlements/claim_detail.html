@@ -40,20 +40,22 @@
           Rejeitar
         </button>
         {% elif claim.status == 'APPEALED' %}
-        <form method="post" class="contents" onsubmit="return confirm('Aceitar recurso e cancelar este desconto?')">
+        <form method="post" class="contents" onsubmit="return confirm('Aceitar o recurso do motorista e CANCELAR o desconto?')">
           {% csrf_token %}
           <input type="hidden" name="action" value="accept_appeal">
-          <button type="submit" class="inline-flex items-center px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium transition-colors duration-200 gap-2">
+          <button type="submit" title="Dar razão ao motorista — o desconto é cancelado"
+                  class="inline-flex items-center px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium transition-colors duration-200 gap-2">
             <i data-lucide="shield-check" class="w-4 h-4"></i>
-            Aceitar recurso
+            Aceitar recurso (cancelar desconto)
           </button>
         </form>
-        <form method="post" class="contents" onsubmit="return confirm('Rejeitar recurso e aplicar este desconto?')">
+        <form method="post" class="contents" onsubmit="return confirm('Rejeitar o recurso do motorista e MANTER o desconto?')">
           {% csrf_token %}
           <input type="hidden" name="action" value="reject_appeal">
-          <button type="submit" class="inline-flex items-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors duration-200 gap-2">
+          <button type="submit" title="Não dar razão ao motorista — o desconto mantém-se"
+                  class="inline-flex items-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors duration-200 gap-2">
             <i data-lucide="shield-x" class="w-4 h-4"></i>
-            Rejeitar recurso
+            Rejeitar recurso (manter desconto)
           </button>
         </form>
         <form method="post" class="contents" onsubmit="return confirm('Enviar este recurso ao parceiro? Estorna o valor ao motorista (quarentena 60 dias).')">

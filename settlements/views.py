@@ -658,6 +658,97 @@ def settlement_list(request):
 
 
 @login_required
+def package_360(request, waybill):
+    """Visão 360º de um pacote — agrega pacote (Cainiao), reclamações e claims.
+
+    O waybill é a chave-mestra: liga CainiaoOperationTask (entrega),
+    CustomerComplaint (ticket) e DriverClaim (financeiro) numa só tela,
+    para o atendente não saltar entre /packages, /reclamacoes e /claims.
+    """
+    from decimal import Decimal
+    from .models import CainiaoOperationTask, CainiaoHubCP4, DriverClaim
+    from drivers_app.models import CustomerComplaint
+
+    waybill = (waybill or "").strip()
+
+    tasks = list(
+        CainiaoOperationTask.objects.filter(waybill_number=waybill).order_by("-task_date")
+    )
+    package = tasks[0] if tasks else None
+
+    complaints = list(
+        CustomerComplaint.objects.filter(numero_pacote=waybill)
+        .select_related("driver")
+        .prefetch_related("attachments")
+        .order_by("-created_at")
+    )
+    claims = list(
+        DriverClaim.objects.filter(waybill_number=waybill)
+        .select_related("driver", "customer_complaint", "settlement")
+        .order_by("-created_at")
+    )
+
+    # HUB via CP4 do pacote (ou da reclamação se não houver pacote)
+    zip_code = (package.zip_code if package else "") or (
+        complaints[0].codigo_postal if complaints else ""
+    )
+    cp4 = (zip_code or "")[:4]
+    hub = None
+    if cp4:
+        hub_cp4 = (
+            CainiaoHubCP4.objects.filter(cp4=cp4).select_related("hub").first()
+        )
+        hub = hub_cp4.hub if hub_cp4 else None
+
+    # Motorista — preferir o da reclamação; senão o do claim
+    driver = None
+    if complaints and complaints[0].driver_id:
+        driver = complaints[0].driver
+    elif claims and claims[0].driver_id:
+        driver = claims[0].driver
+
+    # Timeline agregada (pacote + reclamações + claims)
+    events = []
+
+    def add(dt, label, icon, color):
+        if dt:
+            events.append({"dt": dt, "label": label, "icon": icon, "color": color})
+
+    if package:
+        add(package.creation_time, "Pacote criado (Cainiao)", "package", "gray")
+        add(package.receipt_time, "Recebido no HUB", "warehouse", "gray")
+        add(package.outbound_time, "Saída do HUB", "truck", "blue")
+        add(package.start_delivery_time, "Início de entrega", "navigation", "blue")
+        add(package.delivery_time, "Entregue", "check-circle", "emerald")
+        add(package.delivery_failure_time, "Falha na entrega", "x-circle", "red")
+    for c in complaints:
+        add(c.created_at, f"Reclamação #{c.id} aberta", "alert-triangle", "orange")
+        add(c.data_notificacao, f"Motorista notificado (recl. #{c.id})", "send", "yellow")
+        add(c.data_resposta, f"Resposta do motorista (recl. #{c.id})", "message-square", "purple")
+        add(c.data_fecho, f"Reclamação #{c.id} fechada", "lock", "gray")
+    for cl in claims:
+        add(cl.created_at, f"Claim #{cl.id} criado (€{cl.amount})", "minus-circle", "red")
+        add(cl.reviewed_at, f"Claim #{cl.id}: {cl.get_status_display()}", "gavel", "indigo")
+    # timestamp() funciona com datetimes naive e aware — evita TypeError ao ordenar
+    events.sort(key=lambda e: e["dt"].timestamp())
+
+    total_claims = sum((cl.amount for cl in claims), Decimal("0"))
+
+    return render(request, "settlements/package_360.html", {
+        "waybill": waybill,
+        "package": package,
+        "tasks": tasks,
+        "complaints": complaints,
+        "claims": claims,
+        "hub": hub,
+        "cp4": cp4,
+        "driver": driver,
+        "events": events,
+        "total_claims": total_claims,
+    })
+
+
+@login_required
 def claim_list(request):
     """Lista e criação de claims de motoristas"""
     from drivers_app.models import DriverProfile

@@ -677,6 +677,10 @@
           <i data-lucide="user" class="w-4 h-4"></i> Ver Motorista
         </a>
         <div class="flex gap-2">
+          <a :href="editComplaint && editComplaint.numero_pacote ? '/settlements/pacote/' + encodeURIComponent(editComplaint.numero_pacote) + '/' : '#'" target="_blank"
+             class="px-4 py-2 bg-orange-100 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400 rounded-lg text-sm font-medium hover:bg-orange-200 transition-colors flex items-center gap-1.5">
+            <i data-lucide="package-search" class="w-4 h-4"></i> Pacote 360º
+          </a>
           <a :href="editComplaint ? '/driversapp/complaints/' + editComplaint.id + '/pdf/' : '#'" target="_blank"
              class="px-4 py-2 bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-400 rounded-lg text-sm font-medium hover:bg-red-200 transition-colors flex items-center gap-1.5">
             <i data-lucide="file-down" class="w-4 h-4"></i> PDF

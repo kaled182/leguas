@@ -94,6 +94,8 @@ urlpatterns = [
     ),
     # Settlements (Liquidações de Motoristas — vista global de PFs)
     path("settlements/", views.settlement_list, name="settlement-list"),
+    # Visão 360º do pacote (waybill = chave-mestra)
+    path("pacote/<str:waybill>/", views.package_360, name="package-360"),
     # Claims
     path("claims/", views.claim_list, name="claim-list"),
     path("claims/appeals/", views.claim_list, name="claim-appeals"),

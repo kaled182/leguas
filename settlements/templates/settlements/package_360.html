@@ -1,0 +1,231 @@
+{% extends 'settlements/base.html' %}
+
+{% block title %}Pacote {{ waybill }}{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-6">
+
+  <!-- ── Header ──────────────────────────────────────────────────────────── -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-5 fade-in">
+    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center flex-shrink-0">
+          <i data-lucide="package-search" class="w-6 h-6 text-white"></i>
+        </div>
+        <div class="min-w-0">
+          <div class="flex items-center gap-2 flex-wrap">
+            <h1 class="text-xl font-bold text-gray-900 dark:text-white font-mono truncate">{{ waybill }}</h1>
+            {% if package.task_status %}
+            <span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">{{ package.task_status }}</span>
+            {% endif %}
+          </div>
+          <p class="text-xs text-gray-500 dark:text-gray-400">
+            {% if package.lp_number %}LP: <span class="font-mono">{{ package.lp_number }}</span> · {% endif %}
+            Visão 360º do pacote
+          </p>
+        </div>
+      </div>
+
+      <!-- Busca rápida: saltar para outro waybill -->
+      <form class="flex items-center gap-2"
+            onsubmit="event.preventDefault(); var v=this.wb.value.trim(); if(v){ window.location.href='/settlements/pacote/'+encodeURIComponent(v)+'/'; }">
+        <div class="relative">
+          <i data-lucide="search" class="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+          <input type="text" name="wb" placeholder="Ir para waybill / LP…"
+                 class="w-64 pl-9 pr-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+        </div>
+        <a href="{% url 'cainiao-packages-page' %}"
+           class="px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-200 transition-colors inline-flex items-center gap-1.5">
+          <i data-lucide="list" class="w-4 h-4"></i> Pacotes
+        </a>
+      </form>
+    </div>
+  </div>
+
+  <!-- ── 3 colunas ───────────────────────────────────────────────────────── -->
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+    <!-- ░░ Coluna esquerda: Identidade + Driver + Timeline ░░ -->
+    <div class="lg:col-span-4 space-y-6">
+
+      <!-- Identidade do pacote -->
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-5">
+        <h2 class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+          <i data-lucide="box" class="w-4 h-4"></i> Pacote
+        </h2>
+        {% if package %}
+        <dl class="space-y-2 text-sm">
+          <div class="flex justify-between gap-3"><dt class="text-gray-500">Cliente</dt><dd class="text-gray-900 dark:text-white font-medium text-right">{{ package.seller_name|default:"—" }}</dd></div>
+          <div class="flex justify-between gap-3"><dt class="text-gray-500">Cidade</dt><dd class="text-gray-900 dark:text-white text-right">{{ package.destination_city|default:"—" }}</dd></div>
+          <div class="flex justify-between gap-3"><dt class="text-gray-500">CP</dt><dd class="font-mono text-gray-900 dark:text-white text-right">{{ package.zip_code|default:"—" }}</dd></div>
+          <div class="flex justify-between gap-3"><dt class="text-gray-500">HUB</dt><dd class="text-right">{% if hub %}<span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400">{{ hub.name }}</span>{% else %}<span class="text-gray-400">— (CP4 {{ cp4|default:"?" }})</span>{% endif %}</dd></div>
+          <div class="pt-1"><dt class="text-gray-500 text-xs">Morada</dt><dd class="text-gray-700 dark:text-gray-300 text-xs mt-0.5">{{ package.detailed_address|default:"—" }}</dd></div>
+          {% if package.delivery_time %}<div class="flex justify-between gap-3"><dt class="text-gray-500">Entregue</dt><dd class="text-emerald-600 dark:text-emerald-400 text-right">{{ package.delivery_time|date:"d/m/Y H:i" }}</dd></div>{% endif %}
+          {% if package.wrong_hub_parcel %}<div class="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1 pt-1"><i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i> Wrong HUB</div>{% endif %}
+        </dl>
+        {% else %}
+        <p class="text-sm text-gray-400">Sem registo de pacote Cainiao para este waybill.</p>
+        {% endif %}
+      </div>
+
+      <!-- Driver -->
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-5">
+        <h2 class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+          <i data-lucide="user" class="w-4 h-4"></i> Motorista
+        </h2>
+        {% if driver %}
+        <div class="flex items-center justify-between gap-3">
+          <div class="min-w-0">
+            <p class="font-semibold text-gray-900 dark:text-white truncate">{{ driver.nome_completo }}</p>
+            <p class="text-xs text-gray-500">{{ driver.telefone|default:"sem telefone" }}</p>
+          </div>
+          <a href="/driversapp/admin/ativos/?open={{ driver.id }}&tab=reclamacoes"
+             class="px-3 py-1.5 text-xs bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 rounded-lg hover:bg-emerald-100 transition-colors inline-flex items-center gap-1.5 flex-shrink-0">
+            <i data-lucide="external-link" class="w-3.5 h-3.5"></i> Abrir
+          </a>
+        </div>
+        {% elif package.courier_name %}
+        <p class="text-sm text-gray-700 dark:text-gray-300">{{ package.courier_name }} <span class="text-xs text-gray-400">(courier Cainiao, sem perfil ligado)</span></p>
+        {% else %}
+        <p class="text-sm text-gray-400">Sem motorista associado.</p>
+        {% endif %}
+      </div>
+
+      <!-- Timeline -->
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-5">
+        <h2 class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+          <i data-lucide="history" class="w-4 h-4"></i> Linha do tempo
+        </h2>
+        {% if events %}
+        <ol class="relative border-l border-gray-200 dark:border-gray-700 ml-2 space-y-4">
+          {% for e in events %}
+          <li class="ml-4">
+            <span class="absolute -left-1.5 w-3 h-3 rounded-full bg-{{ e.color }}-500"></span>
+            <div class="flex items-center gap-1.5 text-xs text-gray-400">
+              <i data-lucide="{{ e.icon }}" class="w-3.5 h-3.5"></i>
+              {{ e.dt|date:"d/m/Y H:i" }}
+            </div>
+            <p class="text-sm text-gray-700 dark:text-gray-300">{{ e.label }}</p>
+          </li>
+          {% endfor %}
+        </ol>
+        {% else %}
+        <p class="text-sm text-gray-400">Sem eventos registados.</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- ░░ Coluna central: Tratativa (reclamações) ░░ -->
+    <div class="lg:col-span-5 space-y-4">
+      <div class="flex items-center justify-between">
+        <h2 class="text-sm font-bold text-gray-700 dark:text-gray-200 flex items-center gap-1.5">
+          <i data-lucide="message-circle-warning" class="w-4 h-4 text-orange-500"></i> Tratativa ({{ complaints|length }})
+        </h2>
+        <a href="{% url 'drivers_app:admin_complaints_dashboard' %}"
+           class="text-xs text-orange-600 dark:text-orange-400 hover:underline inline-flex items-center gap-1">
+          <i data-lucide="layout-dashboard" class="w-3.5 h-3.5"></i> Kanban
+        </a>
+      </div>
+
+      {% for c in complaints %}
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border-l-4
+                  {% if c.status == 'ABERTO' %}border-blue-500{% elif c.status == 'NOTIFICADO' %}border-yellow-400{% elif c.status == 'RESPONDIDO' %}border-purple-500{% elif c.status == 'FECHADO' %}border-emerald-500{% else %}border-gray-300{% endif %}
+                  border-y border-r border-gray-200/50 dark:border-gray-700/50 p-4">
+        <div class="flex items-center justify-between mb-2">
+          <span class="font-mono text-xs font-bold text-orange-600 dark:text-orange-400">#{{ c.id }}</span>
+          <span class="px-2 py-0.5 rounded-full text-xs font-semibold
+                {% if c.status == 'ABERTO' %}bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400
+                {% elif c.status == 'NOTIFICADO' %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400
+                {% elif c.status == 'RESPONDIDO' %}bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400
+                {% elif c.status == 'FECHADO' %}bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400
+                {% else %}bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300{% endif %}">{{ c.get_status_display }}</span>
+        </div>
+        <p class="text-xs text-gray-500 mb-1">{{ c.get_tipo_display }} · {{ c.created_at|date:"d/m/Y H:i" }}{% if c.deadline %} · prazo {{ c.deadline|date:"d/m H:i" }}{% endif %}</p>
+        <p class="text-sm text-gray-700 dark:text-gray-300">{{ c.descricao|truncatewords:40 }}</p>
+        {% if c.resposta_driver %}
+        <div class="mt-2 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg p-2 text-xs text-emerald-800 dark:text-emerald-300">
+          <span class="font-semibold">Resposta do motorista:</span> {{ c.resposta_driver|truncatewords:30 }}
+        </div>
+        {% endif %}
+        {% if c.attachments.all %}
+        <div class="mt-2 flex flex-wrap gap-1.5">
+          {% for att in c.attachments.all %}
+          <a href="{{ att.ficheiro.url }}" target="_blank" class="inline-flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-400 hover:underline bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded px-1.5 py-1">
+            <i data-lucide="paperclip" class="w-3 h-3"></i> {{ att.descricao|default:att.tipo }}
+          </a>
+          {% endfor %}
+        </div>
+        {% endif %}
+        <div class="mt-3 flex items-center gap-2">
+          <a href="/driversapp/complaints/{{ c.id }}/pdf/" target="_blank"
+             class="px-2.5 py-1 text-xs bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 rounded-lg hover:bg-red-100 transition-colors inline-flex items-center gap-1">
+            <i data-lucide="file-down" class="w-3.5 h-3.5"></i> PDF
+          </a>
+          <a href="{% url 'drivers_app:admin_complaints_dashboard' %}"
+             class="px-2.5 py-1 text-xs bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400 rounded-lg hover:bg-orange-100 transition-colors inline-flex items-center gap-1">
+            <i data-lucide="external-link" class="w-3.5 h-3.5"></i> Abrir no Kanban
+          </a>
+        </div>
+      </div>
+      {% empty %}
+      <div class="bg-white dark:bg-gray-800 rounded-xl border border-dashed border-gray-300 dark:border-gray-700 p-8 text-center text-gray-400">
+        <i data-lucide="inbox" class="w-10 h-10 mx-auto mb-2"></i>
+        <p class="text-sm">Nenhuma reclamação para este pacote.</p>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- ░░ Coluna direita: Financeiro (claims) ░░ -->
+    <div class="lg:col-span-3 space-y-4">
+      <div class="flex items-center justify-between">
+        <h2 class="text-sm font-bold text-gray-700 dark:text-gray-200 flex items-center gap-1.5">
+          <i data-lucide="euro" class="w-4 h-4 text-rose-500"></i> Financeiro
+        </h2>
+      </div>
+
+      {% if claims %}
+      <div class="bg-rose-50 dark:bg-rose-900/20 rounded-xl border border-rose-200/50 dark:border-rose-700/30 p-4">
+        <p class="text-xs uppercase font-bold text-rose-700 dark:text-rose-300">Total em claims</p>
+        <p class="text-2xl font-extrabold text-rose-700 dark:text-rose-300 mt-1">€{{ total_claims|floatformat:2 }}</p>
+      </div>
+      {% endif %}
+
+      {% for cl in claims %}
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-4">
+        <div class="flex items-center justify-between mb-1">
+          <span class="font-mono text-xs font-bold text-rose-600 dark:text-rose-400">claim #{{ cl.id }}</span>
+          <span class="px-2 py-0.5 rounded-full text-xs font-semibold
+                {% if cl.status == 'PENDING' %}bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400
+                {% elif cl.status == 'APPROVED' %}bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-400
+                {% elif cl.status == 'REJECTED' %}bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400
+                {% elif cl.status == 'APPEALED' %}bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400
+                {% else %}bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300{% endif %}">{{ cl.get_status_display }}</span>
+        </div>
+        <p class="text-lg font-bold text-gray-900 dark:text-white">€{{ cl.amount|floatformat:2 }}</p>
+        <p class="text-xs text-gray-500">{{ cl.get_claim_type_display }} · {{ cl.created_at|date:"d/m/Y" }}</p>
+        {% if cl.auto_detected %}<p class="text-[10px] text-blue-600 dark:text-blue-400 inline-flex items-center gap-1 mt-1"><i data-lucide="bot" class="w-3 h-3"></i> Automático</p>{% endif %}
+        {% if cl.settlement_id %}<p class="text-[10px] text-gray-400 mt-1">Em acerto #{{ cl.settlement_id }}</p>{% endif %}
+        <a href="{% url 'claim-detail' cl.id %}"
+           class="mt-2 block text-center px-2.5 py-1 text-xs bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 rounded-lg hover:bg-indigo-100 transition-colors">
+          Ver claim →
+        </a>
+      </div>
+      {% empty %}
+      <div class="bg-white dark:bg-gray-800 rounded-xl border border-dashed border-gray-300 dark:border-gray-700 p-6 text-center text-gray-400">
+        <i data-lucide="check-circle" class="w-8 h-8 mx-auto mb-2 text-emerald-400"></i>
+        <p class="text-xs">Sem desconto aplicado.</p>
+      </div>
+      {% endfor %}
+
+      <a href="{% url 'claim-appeals' %}"
+         class="block text-center text-xs text-blue-600 dark:text-blue-400 hover:underline pt-2">
+        <i data-lucide="shield" class="w-3.5 h-3.5 inline"></i> Ver recursos
+      </a>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => { if (window.lucide) lucide.createIcons(); });
+</script>
+{% endblock %}

@@ -2593,7 +2593,7 @@ def admin_complaints_list_api(request):
     """API JSON para o Kanban: cards agrupados por coluna + KPIs."""
     from .models import CustomerComplaint
     from django.db.models import (
-        Count, Avg, F, ExpressionWrapper, DurationField,
+        Count, Avg, F, ExpressionWrapper, DurationField, Q,
     )
     from django.utils import timezone
 
@@ -2606,11 +2606,22 @@ def admin_complaints_list_api(request):
     cp4_f     = request.GET.get("cp4", "")
     tipo_f    = (request.GET.get("tipo") or "").strip().upper()
     hub_f     = request.GET.get("hub", "")
+    q_f       = (request.GET.get("q") or "").strip()
     date_from = request.GET.get("date_from", "")
     date_to   = request.GET.get("date_to", "")
     overdue_f = request.GET.get("overdue", "")
     incluir_cancelados = request.GET.get("incluir_cancelados", "") == "1"
 
+    # Pesquisa livre — mesmo padrão de /settlements/packages/ (icontains)
+    if q_f:
+        qs = qs.filter(
+            Q(numero_pacote__icontains=q_f)
+            | Q(nome_cliente__icontains=q_f)
+            | Q(cidade__icontains=q_f)
+            | Q(morada__icontains=q_f)
+            | Q(codigo_postal__icontains=q_f)
+            | Q(driver__nome_completo__icontains=q_f)
+        )
     if driver_f:
         qs = qs.filter(driver_id=driver_f)
     if cp4_f:

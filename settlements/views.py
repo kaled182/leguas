@@ -1077,18 +1077,15 @@ def appeals_inbox(request):
         if action == "pdf":
             return _appeals_pdf_response(ids, lang=request.POST.get("lang", "es"))
         if action == "xlsx":
-            from .services_appeal_export import build_appeals_xlsx
+            from .services_appeal_export import build_appeals_xlsx_bundle
             claims = list(
                 DriverClaim.objects
                 .select_related("driver", "customer_complaint")
                 .filter(id__in=ids)
             )
-            content, fname = build_appeals_xlsx(claims)
-            resp = HttpResponse(
-                content,
-                content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            )
-            resp["Content-Disposition"] = f'attachment; filename="{fname}.xlsx"'
+            content, fname, ctype = build_appeals_xlsx_bundle(claims)
+            resp = HttpResponse(content, content_type=ctype)
+            resp["Content-Disposition"] = f'attachment; filename="{fname}"'
             return resp
         if action == "send_partner":
             from .services_appeals import send_appeals_to_partner
@@ -1228,11 +1225,54 @@ def claim_notify_whatsapp(request, claim_id):
 
 
 def _appeals_pdf_response(ids, lang="es"):
-    """Gera um PDF (ReportLab) com 1 secção por recurso, incluindo as imagens
-    de prova do recurso. Para enviar ao parceiro. lang: 'es' (default) ou 'pt'."""
+    """Gera o(s) PDF de provas agrupados por mês de dedução (regra Cainiao:
+    1 ficheiro por mês). 1 mês → PDF; N meses → ZIP com 1 PDF por mês."""
+    from django.http import HttpResponse
+    from .models import DriverClaim
+    from .services_appeal_export import (
+        batch_filename, group_claims_by_deduction_month,
+    )
+
+    claims = list(
+        DriverClaim.objects.select_related("driver", "customer_complaint")
+        .filter(id__in=list(ids))
+        .order_by("waybill_number")
+    )
+    groups = group_claims_by_deduction_month(claims)
+    if len(groups) <= 1:
+        resp = HttpResponse(
+            _appeals_pdf_bytes(claims, lang), content_type="application/pdf"
+        )
+        resp["Content-Disposition"] = (
+            f'attachment; filename="{batch_filename(claims)}.pdf"'
+        )
+        return resp
+
+    import io
+    import zipfile
+    buf = io.BytesIO()
+    used = set()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        for _y, _m, grp in groups:
+            name = f"{batch_filename(grp)}.pdf"
+            base, i = name, 2
+            while name in used:
+                name = f"{base[:-4]} ({i}).pdf"
+                i += 1
+            used.add(name)
+            z.writestr(name, _appeals_pdf_bytes(grp, lang))
+    buf.seek(0)
+    resp = HttpResponse(buf.getvalue(), content_type="application/zip")
+    resp["Content-Disposition"] = (
+        f'attachment; filename="recursos_provas_{len(groups)}_meses.zip"'
+    )
+    return resp
+
+
+def _appeals_pdf_bytes(claims, lang="es"):
+    """Constrói o PDF de provas para uma lista de recursos. Devolve bytes."""
     import io
     import os
-    from django.http import HttpResponse
     from reportlab.lib import colors
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
@@ -1241,13 +1281,7 @@ def _appeals_pdf_response(ids, lang="es"):
         HRFlowable, Image, PageBreak, Paragraph, SimpleDocTemplate, Spacer,
         Table, TableStyle,
     )
-    from .models import CainiaoOperationTask, DriverClaim
-
-    claims = list(
-        DriverClaim.objects.select_related("driver", "customer_complaint")
-        .filter(id__in=list(ids))
-        .order_by("waybill_number")
-    )
+    from .models import CainiaoOperationTask
 
     # LP (serial) por waybill — vem do CainiaoOperationTask
     waybills = [c.waybill_number for c in claims if c.waybill_number]
@@ -1371,11 +1405,7 @@ def _appeals_pdf_response(ids, lang="es"):
 
     doc.build(elems)
     buf.seek(0)
-    from .services_appeal_export import batch_filename
-    fname = batch_filename(claims)
-    resp = HttpResponse(buf.getvalue(), content_type="application/pdf")
-    resp["Content-Disposition"] = f'attachment; filename="{fname}.pdf"'
-    return resp
+    return buf.getvalue()
 
 
 # ============================================================================

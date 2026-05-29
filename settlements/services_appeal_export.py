@@ -148,6 +148,56 @@ def batch_filename(claims):
     return _safe_filename(base)
 
 
+def group_claims_by_deduction_month(claims):
+    """Agrupa recursos pelo mês da fatura de dedução (Cainiao).
+
+    Devolve lista ordenada de (ano, mes, [claims]); (0, 0) = sem data.
+    """
+    groups = {}
+    for c in claims:
+        info = claim_billing_info(c)
+        d = info["invoice_date"]
+        key = (d.year, d.month) if d else (0, 0)
+        groups.setdefault(key, []).append(c)
+    return [(y, m, groups[(y, m)]) for (y, m) in sorted(groups)]
+
+
+def _dedup_name(name, used):
+    base = name
+    i = 2
+    while name in used:
+        name = f"{base} ({i})"
+        i += 1
+    used.add(name)
+    return name
+
+
+def build_appeals_xlsx_bundle(claims):
+    """Gera o(s) Excel da Cainiao agrupados por mês de dedução.
+
+    - 1 mês  → devolve (bytes_xlsx, "<DSP> <mês>.xlsx", content_type_xlsx).
+    - N meses → devolve (bytes_zip, "recursos_<N>_meses.zip", "application/zip"),
+      com um xlsx por mês lá dentro (regra Cainiao: 1 ficheiro por mês).
+    """
+    XLSX_CT = (
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    groups = group_claims_by_deduction_month(claims)
+    if len(groups) <= 1:
+        content, fname = build_appeals_xlsx(claims)
+        return content, f"{fname}.xlsx", XLSX_CT
+
+    import zipfile
+    buf = io.BytesIO()
+    used = set()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        for _y, _m, grp in groups:
+            gcontent, gname = build_appeals_xlsx(grp)
+            z.writestr(_dedup_name(f"{gname}.xlsx", used), gcontent)
+    buf.seek(0)
+    return buf.getvalue(), f"recursos_{len(groups)}_meses.zip", "application/zip"
+
+
 def build_appeals_xlsx(claims):
     """Gera o xlsx com as colunas oficiais da Cainiao. Devolve (bytes, filename)."""
     import openpyxl

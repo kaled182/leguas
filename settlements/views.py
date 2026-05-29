@@ -1083,6 +1083,18 @@ def appeals_inbox(request):
                 f"estornados — {est['removed']} directos, {est['credited']} via crédito.",
             )
             return redirect("appeals-inbox")
+        if action == "reopen":
+            from .services_appeals import reopen_appeal
+            n = 0
+            for c in DriverClaim.objects.filter(
+                id__in=ids, status__in=("REJECTED", "APPROVED")
+            ):
+                reopen_appeal(c, request.user)
+                n += 1
+            messages.success(
+                request, f"{n} recurso(s) reaberto(s) — voltaram a Aguardando envio."
+            )
+            return redirect("appeals-inbox")
         messages.error(request, "Ação inválida.")
         return redirect("appeals-inbox")
 
@@ -1110,9 +1122,26 @@ def appeals_inbox(request):
     total_resolved = aprovados + negados
     taxa = round(aprovados / total_resolved * 100, 1) if total_resolved else None
 
+    # Recursos fechados = tiveram contexto de recurso e já estão resolvidos
+    from django.db.models import Q
+    appeal_ctx = (
+        Q(partner_response__in=("APPROVED", "DENIED"))
+        | ~Q(justification="")
+        | Q(appeal_sent_at__isnull=False)
+        | Q(appeal_batch__isnull=False)
+    )
+    closed_qs = base.filter(
+        appeal_ctx, status__in=("REJECTED", "APPROVED")
+    ).order_by("-reviewed_at", "-updated_at")
+    fechados_count = closed_qs.count()
+    show_fechados = request.GET.get("show") == "fechados"
+    fechados = list(closed_qs[:200]) if show_fechados else []
+
     return render(request, "settlements/appeals_inbox.html", {
         "aguardando": aguardando,
         "em_analise": em_analise,
+        "fechados": fechados,
+        "show_fechados": show_fechados,
         "kpis": {
             "aguardando": len(aguardando),
             "em_analise": len(em_analise),
@@ -1121,6 +1150,7 @@ def appeals_inbox(request):
             "taxa_aprovacao": taxa,
             "aprovados": aprovados,
             "negados": negados,
+            "fechados": fechados_count,
         },
     })
 
@@ -1189,7 +1219,6 @@ def _appeals_pdf_response(ids):
             ["LP No.", lp or "—"],
             ["Motorista", claim.driver.nome_completo if claim.driver else "—"],
             ["Tipo", claim.get_claim_type_display()],
-            ["Valor", f"EUR {claim.amount}"],
             ["Data", claim.occurred_at.strftime("%d/%m/%Y") if claim.occurred_at else "—"],
             ["Cliente", cc.nome_cliente if cc else "—"],
             ["Morada", (f"{cc.morada} {cc.codigo_postal} {cc.cidade}") if cc else "—"],

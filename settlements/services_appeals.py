@@ -87,6 +87,27 @@ def partner_approved(claim, user, notes=""):
 
 
 @transaction.atomic
+def reopen_appeal(claim, user=None):
+    """Reabre um recurso fechado → volta a APPEALED (aguardando envio).
+
+    Para o caso de se ter fechado um recurso sem enviar o e-mail. Limpa os
+    campos de envio/quarentena. NÃO mexe na pré-fatura (o estorno só acontece
+    ao reenviar ao parceiro).
+    """
+    claim.status = "APPEALED"
+    claim.partner_response = ""
+    claim.appeal_sent_at = None
+    claim.quarantine_until = None
+    claim.appeal_batch = None
+    claim.save(update_fields=[
+        "status", "partner_response", "appeal_sent_at",
+        "quarantine_until", "appeal_batch", "updated_at",
+    ])
+    log.info("Recurso do claim #%s reaberto (volta a APPEALED)", claim.id)
+    return claim
+
+
+@transaction.atomic
 def partner_denied(claim, user, notes=""):
     """Parceiro NEGOU o recurso — re-aplica o desconto na PF aberta."""
     from .services_claims_in_pf import reapply_claim

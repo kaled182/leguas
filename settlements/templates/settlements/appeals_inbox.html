@@ -19,7 +19,7 @@
   </div>
 
   <!-- KPIs -->
-  <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+  <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
     <div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200/50 dark:border-gray-700/50">
       <p class="text-xs uppercase font-bold text-gray-500">Aguardando envio</p>
       <p class="text-2xl font-extrabold text-gray-900 dark:text-white mt-1">{{ kpis.aguardando }}</p>
@@ -41,6 +41,12 @@
       <p class="text-2xl font-extrabold text-emerald-700 dark:text-emerald-300 mt-1">{% if kpis.taxa_aprovacao is not None %}{{ kpis.taxa_aprovacao }}%{% else %}—{% endif %}</p>
       <p class="text-[10px] text-emerald-600 mt-0.5">{{ kpis.aprovados }} aceites · {{ kpis.negados }} negados</p>
     </div>
+    <a href="?show=fechados#fechados"
+       class="bg-gray-100 dark:bg-gray-700/40 rounded-xl p-4 border-2 transition-all hover:shadow-md {% if show_fechados %}border-indigo-400{% else %}border-transparent{% endif %}">
+      <p class="text-xs uppercase font-bold text-gray-600 dark:text-gray-300 flex items-center gap-1">Fechados <i data-lucide="archive" class="w-3.5 h-3.5"></i></p>
+      <p class="text-2xl font-extrabold text-gray-700 dark:text-gray-200 mt-1">{{ kpis.fechados }}</p>
+      <p class="text-[10px] text-gray-400 mt-0.5">clicar para listar</p>
+    </a>
   </div>
 
   <!-- ░░ Aguardando envio ░░ -->
@@ -172,6 +178,59 @@
     <div class="p-8 text-center text-gray-400 text-sm">Nada em análise do parceiro.</div>
     {% endif %}
   </div>
+
+  <!-- ░░ Recursos fechados (só quando pedido) ░░ -->
+  {% if show_fechados %}
+  <div id="fechados" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
+    <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+      <h2 class="font-semibold text-gray-700 dark:text-gray-200 flex items-center gap-2">
+        <i data-lucide="archive" class="w-4 h-4 text-gray-400"></i>
+        Recursos fechados
+        <span class="bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded-full text-xs">{{ fechados|length }}</span>
+      </h2>
+      <a href="{% url 'appeals-inbox' %}" class="text-xs text-indigo-600 hover:underline">← voltar</a>
+    </div>
+    {% if fechados %}
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-gray-50 dark:bg-gray-700/50 text-xs text-gray-500 dark:text-gray-400 uppercase">
+          <tr>
+            <th class="px-4 py-2 text-left">Waybill / LP</th>
+            <th class="px-4 py-2 text-left">Motorista</th>
+            <th class="px-4 py-2 text-left">Resultado</th>
+            <th class="px-4 py-2 text-left">Parceiro</th>
+            <th class="px-4 py-2"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+          {% for c in fechados %}
+          <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+            <td class="px-4 py-2 font-mono text-xs">{{ c.waybill_number|default:"—" }}</td>
+            <td class="px-4 py-2">{{ c.driver.nome_completo }}</td>
+            <td class="px-4 py-2">
+              <span class="px-2 py-0.5 rounded-full text-xs font-semibold {% if c.status == 'REJECTED' %}bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400{% else %}bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-400{% endif %}">{{ c.get_status_display }}</span>
+            </td>
+            <td class="px-4 py-2 text-xs text-gray-500">{{ c.get_partner_response_display|default:"—" }}</td>
+            <td class="px-4 py-2 text-right">
+              <a href="{% url 'claim-detail' c.id %}" class="text-xs text-indigo-600 hover:underline">abrir</a>
+              <form method="post" action="{% url 'appeals-inbox' %}" class="inline ml-2"
+                    onsubmit="return confirm('Reabrir este recurso? Volta para Aguardando envio.');">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="reopen">
+                <input type="hidden" name="claim_ids" value="{{ c.id }}">
+                <button type="submit" class="text-xs text-amber-600 dark:text-amber-400 hover:underline">Reabrir</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="p-8 text-center text-gray-400 text-sm">Nenhum recurso fechado.</div>
+    {% endif %}
+  </div>
+  {% endif %}
 </div>
 
 <script>

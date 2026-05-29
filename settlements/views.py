@@ -1190,23 +1190,46 @@ def _appeals_pdf_response(ids):
         motivo = claim.justification or (cc.descricao if cc else "") or claim.description
         elems.append(Paragraph("<b>Motivo / Justificação:</b> " + (motivo or "—"), body))
         elems.append(Spacer(1, 0.3 * cm))
+
+        # PROVA DO RECURSO (a foto que comprova a entrega ao cliente), NÃO o
+        # print que vai para a notificação do motorista:
+        #  - claim.evidence_file: prova anexada ao abrir o pedido de recurso;
+        #  - anexos da reclamação EXCEPTO o tipo RECLAMACAO (esse é o print de
+        #    notificação enviado ao motorista). Mantém RESPOSTA_DRIVER/POD/FOTO.
+        proofs = []  # (path, caption)
+        if claim.evidence_file:
+            try:
+                proofs.append((claim.evidence_file.path, "Prova anexada ao recurso"))
+            except Exception:
+                pass
         if cc:
-            for att in cc.attachments.all():
+            for att in cc.attachments.exclude(tipo="RECLAMACAO"):
                 try:
-                    p = att.ficheiro.path
+                    proofs.append(
+                        (att.ficheiro.path, att.descricao or att.get_tipo_display())
+                    )
                 except Exception:
                     continue
-                if os.path.splitext(p)[1].lower() in IMG_EXTS and os.path.exists(p):
-                    try:
-                        from PIL import Image as PILImage
-                        with PILImage.open(p) as im:
-                            ow, oh = im.size
-                        ratio = min((16 * cm) / ow, (12 * cm) / oh, 1.0)
-                        elems.append(Image(p, width=ow * ratio, height=oh * ratio))
-                        elems.append(Paragraph(att.descricao or att.get_tipo_display(), small))
-                        elems.append(Spacer(1, 0.2 * cm))
-                    except Exception:
-                        pass
+
+        shown = 0
+        for path, caption in proofs:
+            if os.path.splitext(path)[1].lower() in IMG_EXTS and os.path.exists(path):
+                try:
+                    from PIL import Image as PILImage
+                    with PILImage.open(path) as im:
+                        ow, oh = im.size
+                    ratio = min((16 * cm) / ow, (12 * cm) / oh, 1.0)
+                    elems.append(Image(path, width=ow * ratio, height=oh * ratio))
+                    elems.append(Paragraph(caption, small))
+                    elems.append(Spacer(1, 0.2 * cm))
+                    shown += 1
+                except Exception:
+                    pass
+        if shown == 0:
+            elems.append(Paragraph(
+                "<i>Sem prova de imagem anexada ao recurso (verificar evidência do claim).</i>",
+                small,
+            ))
 
     doc.build(elems)
     buf.seek(0)

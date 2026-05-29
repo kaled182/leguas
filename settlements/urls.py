@@ -96,6 +96,7 @@ urlpatterns = [
     path("settlements/", views.settlement_list, name="settlement-list"),
     # Claims
     path("claims/", views.claim_list, name="claim-list"),
+    path("claims/appeals/", views.claim_list, name="claim-appeals"),
     path("claims/<int:claim_id>/", views.claim_detail, name="claim-detail"),
     path(
         "claims/<int:claim_id>/update/",

@@ -2471,7 +2471,63 @@ def _empresa_to_dict(e):
 # ============================================================================
 
 
-def _complaint_to_dict(c):
+def _hubs_for_complaints():
+    """HUBs Cainiao para o filtro do painel de reclamações."""
+    from settlements.models import CainiaoHub
+    return CainiaoHub.objects.prefetch_related("cp4_codes").order_by("name")
+
+
+def _apply_hub_filter(qs, hub_id):
+    """Filtra reclamações por HUB via os CP4 do hub (não há FK directa).
+
+    Segue o padrão de core/views.py: cada CP4 do hub gera um
+    codigo_postal__startswith. Se o hub não existir ou não tiver CP4,
+    devolve o queryset inalterado.
+    """
+    if not hub_id:
+        return qs
+    from settlements.models import CainiaoHub
+    from django.db.models import Q
+    hub = CainiaoHub.objects.prefetch_related("cp4_codes").filter(id=hub_id).first()
+    if not hub:
+        return qs
+    cp4s = list(hub.cp4_codes.values_list("cp4", flat=True))
+    if not cp4s:
+        return qs
+    q = Q()
+    for cp4 in cp4s:
+        q |= Q(codigo_postal__startswith=cp4)
+    return qs.filter(q)
+
+
+def _complaint_sla(c, now=None):
+    """Estado de SLA de uma reclamação: 'ok' | 'atencao' | 'atrasado'.
+
+    Usa o deadline quando existe; caso contrário recorre à idade do ticket
+    (>48h atrasado, >24h atenção) apenas para reclamações ainda em aberto.
+    """
+    from django.utils import timezone
+    from datetime import timedelta
+    if now is None:
+        now = timezone.now()
+    aberto = c.status in ("ABERTO", "NOTIFICADO")
+    if c.deadline:
+        if aberto and c.deadline < now:
+            return "atrasado"
+        if aberto and c.deadline <= now + timedelta(hours=24):
+            return "atencao"
+        return "ok"
+    # Sem deadline — usar idade do ticket, só enquanto em aberto
+    if aberto:
+        idade = now - c.created_at
+        if idade > timedelta(hours=48):
+            return "atrasado"
+        if idade > timedelta(hours=24):
+            return "atencao"
+    return "ok"
+
+
+def _complaint_to_dict(c, now=None):
     return {
         "id": c.id,
         "numero_pacote": c.numero_pacote,
@@ -2498,6 +2554,8 @@ def _complaint_to_dict(c):
         "created_at": c.created_at.strftime("%d/%m/%Y %H:%M"),
         "driver_id": c.driver.id if c.driver else None,
         "driver_nome": c.driver.nome_completo if c.driver else "",
+        "telefone_driver": (c.driver.telefone or "") if c.driver else "",
+        "sla_estado": _complaint_sla(c, now),
         "whatsapp_text": c.whatsapp_text(),
         "attachments": [
             {
@@ -2515,102 +2573,111 @@ def _complaint_to_dict(c):
 
 @login_required
 def admin_complaints_dashboard(request):
-    """Painel global de reclamações de clientes."""
+    """Painel global de reclamações de clientes (Kanban)."""
     from .models import CustomerComplaint
-    from django.db.models import Count, Q
-    from django.utils import timezone
 
-    now = timezone.now()
+    return render(request, "drivers_app/admin_complaints.html", {
+        "hubs": _hubs_for_complaints(),
+        "tipo_choices": CustomerComplaint.TIPO_CHOICES,
+        "status_choices": CustomerComplaint.STATUS_CHOICES,
+    })
 
-    # KPI counts
-    qs_all = CustomerComplaint.objects.all()
-    kpis = {
-        "abertas":      qs_all.filter(status="ABERTO").count(),
-        "notificadas":  qs_all.filter(status="NOTIFICADO").count(),
-        "respondidas":  qs_all.filter(status="RESPONDIDO").count(),
-        "fechadas":     qs_all.filter(status="FECHADO").count(),
-        "sem_resposta": qs_all.filter(
-            deadline__lt=now,
-            status__in=("ABERTO", "NOTIFICADO"),
-        ).count(),
-        "total":        qs_all.count(),
-    }
-    return render(request, "drivers_app/admin_complaints.html", {"kpis": kpis})
+
+# Colunas do Kanban (CANCELADO fica fora — visível só por filtro explícito)
+_KANBAN_COLUMNS = ["ABERTO", "NOTIFICADO", "RESPONDIDO", "FECHADO"]
+_FECHADO_LIMIT = 50  # mostrar apenas os fechados mais recentes
 
 
 @login_required
 def admin_complaints_list_api(request):
-    """API JSON para o painel: lista filtrada + stats agregadas."""
+    """API JSON para o Kanban: cards agrupados por coluna + KPIs."""
     from .models import CustomerComplaint
-    from django.db.models import Count, Q
+    from django.db.models import (
+        Count, Avg, F, ExpressionWrapper, DurationField,
+    )
     from django.utils import timezone
 
     now = timezone.now()
     qs = CustomerComplaint.objects.select_related("driver").prefetch_related("attachments")
 
     # ── Filtros ────────────────────────────────────────────────────────────
-    status_f = request.GET.get("status", "")
-    driver_f = request.GET.get("driver", "")
-    cp4_f    = request.GET.get("cp4", "")
+    status_f  = (request.GET.get("status") or "").strip().upper()
+    driver_f  = request.GET.get("driver", "")
+    cp4_f     = request.GET.get("cp4", "")
+    tipo_f    = (request.GET.get("tipo") or "").strip().upper()
+    hub_f     = request.GET.get("hub", "")
     date_from = request.GET.get("date_from", "")
     date_to   = request.GET.get("date_to", "")
     overdue_f = request.GET.get("overdue", "")
+    incluir_cancelados = request.GET.get("incluir_cancelados", "") == "1"
 
-    if status_f:
-        qs = qs.filter(status=status_f)
     if driver_f:
         qs = qs.filter(driver_id=driver_f)
     if cp4_f:
         qs = qs.filter(codigo_postal__startswith=cp4_f)
+    if tipo_f:
+        qs = qs.filter(tipo=tipo_f)
     if date_from:
         qs = qs.filter(created_at__date__gte=date_from)
     if date_to:
         qs = qs.filter(created_at__date__lte=date_to)
     if overdue_f == "1":
         qs = qs.filter(deadline__lt=now, status__in=("ABERTO", "NOTIFICADO"))
+    qs = _apply_hub_filter(qs, hub_f)
 
-    # ── Stats agregadas ────────────────────────────────────────────────────
-    # Por dia (últimos 30)
-    from django.db.models.functions import TruncDate
-    by_day = (
-        qs.annotate(day=TruncDate("created_at"))
-        .values("day")
-        .annotate(total=Count("id"))
-        .order_by("-day")[:30]
-    )
-    # Por motorista (top 20)
-    by_driver = (
+    # Excluir cancelados por defeito (salvo filtro explícito de status ou toggle)
+    if status_f == "CANCELADO":
+        qs = qs.filter(status="CANCELADO")
+    elif not incluir_cancelados:
+        qs = qs.exclude(status="CANCELADO")
+
+    # ── KPIs (sobre o queryset filtrado) ───────────────────────────────────
+    media = qs.filter(data_resposta__isnull=False).aggregate(
+        avg=Avg(ExpressionWrapper(
+            F("data_resposta") - F("created_at"), output_field=DurationField(),
+        ))
+    )["avg"]
+    media_dias = round(media.total_seconds() / 86400, 1) if media else 0
+
+    nao_respondidos = qs.filter(status__in=("ABERTO", "NOTIFICADO")).count()
+
+    top = (
         qs.values("driver__id", "driver__nome_completo")
         .annotate(total=Count("id"))
-        .order_by("-total")[:20]
-    )
-    # Por CP4
-    by_cp4 = (
-        qs.values("codigo_postal")
-        .annotate(total=Count("id"))
-        .order_by("-total")[:20]
+        .order_by("-total")
+        .first()
     )
 
-    # ── Lista paginada (50 por página) ─────────────────────────────────────
-    from django.core.paginator import Paginator
-    page_num = int(request.GET.get("page", 1))
-    paginator = Paginator(qs.order_by("-created_at"), 50)
-    page_obj = paginator.get_page(page_num)
+    kpis = {
+        "media_dias_resposta": media_dias,
+        "nao_respondidos": nao_respondidos,
+        "top_driver_id": top["driver__id"] if top else None,
+        "top_driver_nome": top["driver__nome_completo"] if top else "—",
+        "top_driver_total": top["total"] if top else 0,
+        "total": qs.count(),
+    }
+
+    # ── Cards agrupados por coluna ─────────────────────────────────────────
+    columns = {}
+    counts = {}
+    for col in _KANBAN_COLUMNS:
+        col_qs = qs.filter(status=col).order_by("-created_at")
+        counts[col] = col_qs.count()
+        if col == "FECHADO":
+            col_qs = col_qs[:_FECHADO_LIMIT]
+        columns[col] = [_complaint_to_dict(c, now) for c in col_qs]
+
+    # Coluna de cancelados só quando o filtro o pede
+    if status_f == "CANCELADO" or incluir_cancelados:
+        canc_qs = qs.filter(status="CANCELADO").order_by("-created_at")
+        counts["CANCELADO"] = canc_qs.count()
+        columns["CANCELADO"] = [_complaint_to_dict(c, now) for c in canc_qs[:_FECHADO_LIMIT]]
 
     return JsonResponse({
-        "complaints": [_complaint_to_dict(c) for c in page_obj],
-        "pagination": {
-            "page":      page_obj.number,
-            "num_pages": paginator.num_pages,
-            "count":     paginator.count,
-            "has_next":  page_obj.has_next(),
-            "has_prev":  page_obj.has_previous(),
-        },
-        "stats": {
-            "by_day":    [{"day": str(r["day"]), "total": r["total"]} for r in by_day],
-            "by_driver": [{"id": r["driver__id"], "nome": r["driver__nome_completo"], "total": r["total"]} for r in by_driver],
-            "by_cp4":    [{"cp4": (r["codigo_postal"] or "")[:4], "total": r["total"]} for r in by_cp4],
-        },
+        "columns": columns,
+        "counts": counts,
+        "kpis": kpis,
+        "fechado_limit": _FECHADO_LIMIT,
     })
 
 
@@ -2929,8 +2996,11 @@ def driver_complaint_update(request, complaint_id):
         now = timezone.now()
         if novo_status == "NOTIFICADO" and not complaint.data_notificacao:
             complaint.data_notificacao = now
-        elif novo_status == "RESPONDIDO" and not complaint.data_resposta:
-            complaint.data_resposta = now
+        elif novo_status == "RESPONDIDO":
+            if not complaint.data_resposta:
+                complaint.data_resposta = now
+            # NÃO auto-fechar: RESPONDIDO é um estado próprio (coluna Kanban).
+            # O fecho passa a ser um passo manual (RESPONDIDO → FECHADO).
         elif novo_status == "FECHADO" and not complaint.data_fecho:
             complaint.data_fecho = now
 
@@ -2975,6 +3045,48 @@ def driver_complaint_update(request, complaint_id):
             )
 
     return JsonResponse({"success": True, "complaint": _complaint_to_dict(complaint)})
+
+
+@login_required
+@require_http_methods(["POST"])
+def driver_complaint_notify_whatsapp(request, complaint_id):
+    """Envia uma mensagem WhatsApp ao motorista da reclamação (com confirmação).
+
+    A mensagem editada pelo operador chega em `mensagem`; por defeito usa-se
+    o texto padrão de notificação da reclamação. Falhas devolvem erro amigável
+    sem rebentar o fluxo do Kanban.
+    """
+    from .models import CustomerComplaint
+    complaint = get_object_or_404(CustomerComplaint, id=complaint_id)
+
+    if request.content_type and "application/json" in request.content_type:
+        try:
+            data = json.loads(request.body)
+        except (json.JSONDecodeError, ValueError):
+            data = request.POST.dict()
+    else:
+        data = request.POST.dict()
+
+    mensagem = (data.get("mensagem") or "").strip() or complaint.whatsapp_text()
+
+    telefone = (complaint.driver.telefone or "").strip() if complaint.driver else ""
+    if not telefone:
+        return JsonResponse(
+            {"success": False, "error": "O motorista não tem telefone registado."},
+            status=400,
+        )
+
+    try:
+        from system_config.whatsapp_helper import WhatsAppWPPConnectAPI
+        api = WhatsAppWPPConnectAPI.from_config()
+        api.send_text(telefone, mensagem)
+    except Exception as exc:  # noqa: BLE001 — erro amigável, não rebenta o Kanban
+        return JsonResponse(
+            {"success": False, "error": f"Falha ao enviar WhatsApp: {exc}"},
+            status=502,
+        )
+
+    return JsonResponse({"success": True})
 
 
 @login_required

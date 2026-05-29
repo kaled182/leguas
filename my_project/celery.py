@@ -94,6 +94,14 @@ app.conf.beat_schedule = {
         'options': {'expires': 3600},
     },
 
+    # Reclamações de clientes: quando o driver não responde até ao
+    # deadline, cria/aprova o DriverClaim e fecha o chamado.
+    'auto-close-expired-complaints': {
+        'task': 'drivers_app.auto_close_expired_complaints',
+        'schedule': crontab(hour=7, minute=5),
+        'options': {'expires': 3600},
+    },
+
     # Relatório semanal de Pacotes Not Arrived — sextas às 18h
     'not-arrived-weekly-report': {
         'task': 'settlements.send_not_arrived_weekly_report',

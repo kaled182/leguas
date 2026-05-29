@@ -1019,6 +1019,27 @@ def claim_detail(request, claim_id):
         elif action == "reject" and claim.status in ("PENDING", "APPEALED"):
             claim.reject(request.user, notes)
             messages.success(request, f"Reclamação #{claim.id} rejeitada.")
+        elif action == "send_appeal" and claim.status in ("APPEALED", "APPROVED"):
+            from .services_appeals import send_appeals_to_partner
+            _, summary = send_appeals_to_partner([claim.id], request.user)
+            messages.success(
+                request,
+                f"Recurso #{claim.id} enviado ao parceiro e estornado "
+                f"(quarentena 60 dias).",
+            )
+        elif action == "partner_approved" and claim.status == "QUARANTINE":
+            from .services_appeals import partner_approved
+            partner_approved(claim, request.user, notes)
+            messages.success(
+                request, f"Recurso #{claim.id} ACEITE — estorno permanente."
+            )
+        elif action == "partner_denied" and claim.status == "QUARANTINE":
+            from .services_appeals import partner_denied
+            partner_denied(claim, request.user, notes)
+            messages.success(
+                request,
+                f"Recurso #{claim.id} NEGADO — desconto re-aplicado na PF.",
+            )
         else:
             messages.error(request, "Ação inválida ou status incompatível.")
 
@@ -1029,6 +1050,169 @@ def claim_detail(request, claim_id):
     }
 
     return render(request, "settlements/claim_detail.html", context)
+
+
+@login_required
+def appeals_inbox(request):
+    """Central de Recursos — caixa de entrada de disputas com o parceiro.
+
+    GET: secções 'Aguardando envio' (APPEALED) e 'Em análise parceiro'
+    (QUARANTINE, com countdown de 60 dias) + KPIs.
+    POST: ação em massa 'send_partner' (estorna + quarentena) ou 'pdf'.
+    """
+    from decimal import Decimal
+    from django.contrib import messages
+    from django.shortcuts import redirect
+    from .models import DriverClaim
+
+    if request.method == "POST":
+        action = request.POST.get("action")
+        ids = request.POST.getlist("claim_ids")
+        if not ids:
+            messages.error(request, "Nenhum recurso selecionado.")
+            return redirect("appeals-inbox")
+        if action == "pdf":
+            return _appeals_pdf_response(ids)
+        if action == "send_partner":
+            from .services_appeals import send_appeals_to_partner
+            batch, summary = send_appeals_to_partner(ids, request.user)
+            est = summary["estorno"]
+            messages.success(
+                request,
+                f"{summary['sent']} recurso(s) enviados (lote #{batch.id}) e "
+                f"estornados — {est['removed']} directos, {est['credited']} via crédito.",
+            )
+            return redirect("appeals-inbox")
+        messages.error(request, "Ação inválida.")
+        return redirect("appeals-inbox")
+
+    today = timezone.now().date()
+    base = DriverClaim.objects.select_related(
+        "driver", "customer_complaint", "appeal_batch"
+    )
+    aguardando = list(base.filter(status="APPEALED").order_by("created_at"))
+    em_analise_qs = base.filter(status="QUARANTINE").order_by("quarantine_until")
+
+    em_analise = []
+    vencidos = 0
+    total_quarentena = Decimal("0")
+    for c in em_analise_qs:
+        dias = (c.quarantine_until - today).days if c.quarantine_until else None
+        vencido = dias is not None and dias < 0
+        if vencido:
+            vencidos += 1
+        total_quarentena += c.amount
+        em_analise.append({"c": c, "dias": dias, "vencido": vencido})
+
+    resolved = base.filter(partner_response__in=("APPROVED", "DENIED"))
+    aprovados = resolved.filter(partner_response="APPROVED").count()
+    negados = resolved.filter(partner_response="DENIED").count()
+    total_resolved = aprovados + negados
+    taxa = round(aprovados / total_resolved * 100, 1) if total_resolved else None
+
+    return render(request, "settlements/appeals_inbox.html", {
+        "aguardando": aguardando,
+        "em_analise": em_analise,
+        "kpis": {
+            "aguardando": len(aguardando),
+            "em_analise": len(em_analise),
+            "vencidos": vencidos,
+            "total_quarentena": total_quarentena,
+            "taxa_aprovacao": taxa,
+            "aprovados": aprovados,
+            "negados": negados,
+        },
+    })
+
+
+def _appeals_pdf_response(ids):
+    """Gera um PDF (ReportLab) com 1 secção por recurso, incluindo as imagens
+    de prova dos anexos da reclamação ligada. Para enviar ao parceiro."""
+    import io
+    import os
+    from django.http import HttpResponse
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+    from reportlab.lib.units import cm
+    from reportlab.platypus import (
+        HRFlowable, Image, PageBreak, Paragraph, SimpleDocTemplate, Spacer,
+        Table, TableStyle,
+    )
+    from .models import DriverClaim
+
+    claims = list(
+        DriverClaim.objects.select_related("driver", "customer_complaint")
+        .filter(id__in=list(ids))
+        .order_by("waybill_number")
+    )
+
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buf, pagesize=A4, topMargin=1.5 * cm, bottomMargin=1.5 * cm,
+        leftMargin=1.8 * cm, rightMargin=1.8 * cm,
+    )
+    styles = getSampleStyleSheet()
+    h2 = ParagraphStyle("h2", parent=styles["Heading2"], fontSize=13)
+    small = ParagraphStyle("s", parent=styles["Normal"], fontSize=8, textColor=colors.grey)
+    body = styles["Normal"]
+    IMG_EXTS = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp"}
+
+    elems = [
+        Paragraph("Recursos / Disputas — Léguas Franzinas", styles["Title"]),
+        Paragraph(f"{len(claims)} recurso(s) — provas anexadas", small),
+        Spacer(1, 0.4 * cm),
+    ]
+    for i, claim in enumerate(claims):
+        if i:
+            elems.append(PageBreak())
+        elems.append(Paragraph(f"Waybill / LP: {claim.waybill_number or '—'}", h2))
+        elems.append(HRFlowable(width="100%", color=colors.lightgrey))
+        elems.append(Spacer(1, 0.2 * cm))
+        cc = claim.customer_complaint
+        rows = [
+            ["Motorista", claim.driver.nome_completo if claim.driver else "—"],
+            ["Tipo", claim.get_claim_type_display()],
+            ["Valor", f"EUR {claim.amount}"],
+            ["Data", claim.occurred_at.strftime("%d/%m/%Y") if claim.occurred_at else "—"],
+            ["Cliente", cc.nome_cliente if cc else "—"],
+            ["Morada", (f"{cc.morada} {cc.codigo_postal} {cc.cidade}") if cc else "—"],
+        ]
+        t = Table(rows, colWidths=[3.5 * cm, 12 * cm])
+        t.setStyle(TableStyle([
+            ("FONTSIZE", (0, 0), (-1, -1), 9),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("TEXTCOLOR", (0, 0), (0, -1), colors.grey),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+        ]))
+        elems.append(t)
+        elems.append(Spacer(1, 0.2 * cm))
+        motivo = claim.justification or (cc.descricao if cc else "") or claim.description
+        elems.append(Paragraph("<b>Motivo / Justificação:</b> " + (motivo or "—"), body))
+        elems.append(Spacer(1, 0.3 * cm))
+        if cc:
+            for att in cc.attachments.all():
+                try:
+                    p = att.ficheiro.path
+                except Exception:
+                    continue
+                if os.path.splitext(p)[1].lower() in IMG_EXTS and os.path.exists(p):
+                    try:
+                        from PIL import Image as PILImage
+                        with PILImage.open(p) as im:
+                            ow, oh = im.size
+                        ratio = min((16 * cm) / ow, (12 * cm) / oh, 1.0)
+                        elems.append(Image(p, width=ow * ratio, height=oh * ratio))
+                        elems.append(Paragraph(att.descricao or att.get_tipo_display(), small))
+                        elems.append(Spacer(1, 0.2 * cm))
+                    except Exception:
+                        pass
+
+    doc.build(elems)
+    buf.seek(0)
+    resp = HttpResponse(buf.getvalue(), content_type="application/pdf")
+    resp["Content-Disposition"] = 'attachment; filename="recursos.pdf"'
+    return resp
 
 
 # ============================================================================

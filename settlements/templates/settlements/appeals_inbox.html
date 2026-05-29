@@ -1,0 +1,180 @@
+{% extends 'settlements/base.html' %}
+
+{% block title %}Central de Recursos{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-6" x-data="{ sel: [] }">
+
+  <!-- Header -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-5 fade-in">
+    <div class="flex items-center gap-3">
+      <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
+        <i data-lucide="shield" class="w-6 h-6 text-white"></i>
+      </div>
+      <div>
+        <h1 class="text-xl font-bold text-gray-900 dark:text-white">Central de Recursos</h1>
+        <p class="text-sm text-gray-500 dark:text-gray-400">Disputas com o parceiro — junta provas, gera PDF e acompanha a quarentena de 60 dias</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+    <div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200/50 dark:border-gray-700/50">
+      <p class="text-xs uppercase font-bold text-gray-500">Aguardando envio</p>
+      <p class="text-2xl font-extrabold text-gray-900 dark:text-white mt-1">{{ kpis.aguardando }}</p>
+    </div>
+    <div class="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 border border-blue-200/50 dark:border-blue-700/30">
+      <p class="text-xs uppercase font-bold text-blue-700 dark:text-blue-300">Em análise (parceiro)</p>
+      <p class="text-2xl font-extrabold text-blue-700 dark:text-blue-300 mt-1">{{ kpis.em_analise }}</p>
+    </div>
+    <div class="bg-rose-50 dark:bg-rose-900/20 rounded-xl p-4 border border-rose-200/50 dark:border-rose-700/30">
+      <p class="text-xs uppercase font-bold text-rose-700 dark:text-rose-300">Prazo vencido</p>
+      <p class="text-2xl font-extrabold text-rose-700 dark:text-rose-300 mt-1">{{ kpis.vencidos }}</p>
+    </div>
+    <div class="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 border border-amber-200/50 dark:border-amber-700/30">
+      <p class="text-xs uppercase font-bold text-amber-700 dark:text-amber-300">Em quarentena</p>
+      <p class="text-2xl font-extrabold text-amber-700 dark:text-amber-300 mt-1">€{{ kpis.total_quarentena|floatformat:2 }}</p>
+    </div>
+    <div class="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-4 border border-emerald-200/50 dark:border-emerald-700/30">
+      <p class="text-xs uppercase font-bold text-emerald-700 dark:text-emerald-300">Taxa aprovação</p>
+      <p class="text-2xl font-extrabold text-emerald-700 dark:text-emerald-300 mt-1">{% if kpis.taxa_aprovacao is not None %}{{ kpis.taxa_aprovacao }}%{% else %}—{% endif %}</p>
+      <p class="text-[10px] text-emerald-600 mt-0.5">{{ kpis.aprovados }} aceites · {{ kpis.negados }} negados</p>
+    </div>
+  </div>
+
+  <!-- ░░ Aguardando envio ░░ -->
+  <form method="post" action="{% url 'appeals-inbox' %}">
+    {% csrf_token %}
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
+      <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between gap-3 flex-wrap">
+        <h2 class="font-semibold text-gray-700 dark:text-gray-200 flex items-center gap-2">
+          <i data-lucide="inbox" class="w-4 h-4 text-gray-400"></i>
+          Aguardando envio ao parceiro
+          <span class="bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded-full text-xs">{{ aguardando|length }}</span>
+        </h2>
+        <div class="flex items-center gap-2">
+          <span class="text-xs text-gray-400" x-text="sel.length + ' selecionado(s)'"></span>
+          <button type="submit" name="action" value="pdf" :disabled="sel.length===0"
+                  class="px-3 py-1.5 text-sm rounded-lg bg-red-600 hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed text-white inline-flex items-center gap-1.5">
+            <i data-lucide="file-down" class="w-4 h-4"></i> Gerar PDF
+          </button>
+          <button type="submit" name="action" value="send_partner" :disabled="sel.length===0"
+                  onclick="return confirm('Marcar os recursos selecionados como ENVIADOS ao parceiro? Isto estorna o valor ao motorista e arranca a quarentena de 60 dias.');"
+                  class="px-3 py-1.5 text-sm rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white inline-flex items-center gap-1.5">
+            <i data-lucide="send" class="w-4 h-4"></i> Marcar como enviado
+          </button>
+        </div>
+      </div>
+
+      {% if aguardando %}
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-gray-50 dark:bg-gray-700/50 text-xs text-gray-500 dark:text-gray-400 uppercase">
+            <tr>
+              <th class="px-4 py-2 text-left w-8">
+                <input type="checkbox" @change="sel = $event.target.checked ? Array.from(document.querySelectorAll('.chk')).map(c=>c.value) : []"
+                       class="rounded border-gray-300 text-blue-600">
+              </th>
+              <th class="px-4 py-2 text-left">Waybill / LP</th>
+              <th class="px-4 py-2 text-left">Motorista</th>
+              <th class="px-4 py-2 text-left">Tipo</th>
+              <th class="px-4 py-2 text-right">Valor</th>
+              <th class="px-4 py-2 text-left">Chamado</th>
+              <th class="px-4 py-2"></th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+            {% for c in aguardando %}
+            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+              <td class="px-4 py-2">
+                <input type="checkbox" class="chk rounded border-gray-300 text-blue-600" name="claim_ids" value="{{ c.id }}" x-model="sel">
+              </td>
+              <td class="px-4 py-2 font-mono text-xs">{{ c.waybill_number|default:"—" }}</td>
+              <td class="px-4 py-2">{{ c.driver.nome_completo }}</td>
+              <td class="px-4 py-2 text-gray-500">{{ c.get_claim_type_display }}</td>
+              <td class="px-4 py-2 text-right font-semibold">€{{ c.amount|floatformat:2 }}</td>
+              <td class="px-4 py-2">
+                {% if c.customer_complaint_id %}<span class="text-xs text-violet-600">#{{ c.customer_complaint_id }}</span>{% else %}<span class="text-gray-300">—</span>{% endif %}
+              </td>
+              <td class="px-4 py-2 text-right">
+                <a href="{% url 'claim-detail' c.id %}" class="text-xs text-indigo-600 hover:underline">abrir</a>
+                {% if c.waybill_number %}· <a href="{% url 'package-360' c.waybill_number %}" class="text-xs text-orange-600 hover:underline">360º</a>{% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="p-10 text-center text-gray-400">
+        <i data-lucide="check-circle" class="w-10 h-10 mx-auto mb-2 text-emerald-400"></i>
+        <p class="text-sm">Nenhum recurso a aguardar envio.</p>
+      </div>
+      {% endif %}
+    </div>
+  </form>
+
+  <!-- ░░ Em análise parceiro ░░ -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
+    <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-700">
+      <h2 class="font-semibold text-gray-700 dark:text-gray-200 flex items-center gap-2">
+        <i data-lucide="clock" class="w-4 h-4 text-blue-400"></i>
+        Em análise do parceiro (quarentena 60 dias)
+        <span class="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full text-xs">{{ em_analise|length }}</span>
+      </h2>
+    </div>
+    {% if em_analise %}
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-gray-50 dark:bg-gray-700/50 text-xs text-gray-500 dark:text-gray-400 uppercase">
+          <tr>
+            <th class="px-4 py-2 text-left">Waybill / LP</th>
+            <th class="px-4 py-2 text-left">Motorista</th>
+            <th class="px-4 py-2 text-right">Valor</th>
+            <th class="px-4 py-2 text-left">Enviado</th>
+            <th class="px-4 py-2 text-left">Prazo</th>
+            <th class="px-4 py-2"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+          {% for it in em_analise %}
+          <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 {% if it.vencido %}bg-rose-50/50 dark:bg-rose-900/10{% endif %}">
+            <td class="px-4 py-2 font-mono text-xs">{{ it.c.waybill_number|default:"—" }}</td>
+            <td class="px-4 py-2">{{ it.c.driver.nome_completo }}</td>
+            <td class="px-4 py-2 text-right font-semibold">€{{ it.c.amount|floatformat:2 }}</td>
+            <td class="px-4 py-2 text-xs text-gray-500">{{ it.c.appeal_sent_at|date:"d/m/Y"|default:"—" }}</td>
+            <td class="px-4 py-2">
+              {% if it.dias is None %}
+                <span class="text-gray-400 text-xs">—</span>
+              {% elif it.vencido %}
+                <span class="px-2 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400">VENCIDO há {{ it.dias|stringformat:"d"|cut:"-" }}d</span>
+              {% elif it.dias <= 3 %}
+                <span class="px-2 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400">{{ it.dias }}d</span>
+              {% elif it.dias <= 7 %}
+                <span class="px-2 py-0.5 rounded-full text-xs font-bold bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400">{{ it.dias }}d</span>
+              {% elif it.dias <= 15 %}
+                <span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">{{ it.dias }}d</span>
+              {% else %}
+                <span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">{{ it.dias }}d</span>
+              {% endif %}
+            </td>
+            <td class="px-4 py-2 text-right">
+              <a href="{% url 'claim-detail' it.c.id %}" class="text-xs text-indigo-600 hover:underline">resolver</a>
+              {% if it.c.waybill_number %}· <a href="{% url 'package-360' it.c.waybill_number %}" class="text-xs text-orange-600 hover:underline">360º</a>{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="p-8 text-center text-gray-400 text-sm">Nada em análise do parceiro.</div>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => { if (window.lucide) lucide.createIcons(); });
+</script>
+{% endblock %}

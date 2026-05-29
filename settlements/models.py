@@ -772,6 +772,13 @@ class DriverClaim(models.Model):
         ("APPROVED", "Aprovado"),
         ("REJECTED", "Rejeitado"),
         ("APPEALED", "Em Recurso"),
+        ("QUARANTINE", "Em Quarentena"),
+    ]
+
+    PARTNER_RESPONSE_CHOICES = [
+        ("PENDING", "Aguardando parceiro"),
+        ("APPROVED", "Recurso aceite (parceiro)"),
+        ("DENIED", "Recurso negado (parceiro)"),
     ]
 
     # Relacionamentos
@@ -900,6 +907,29 @@ class DriverClaim(models.Model):
         help_text="Criado pelo processo de auto-detecção (task Celery).",
     )
 
+    # === RECURSO / QUARENTENA (disputa com parceiro) ====================
+    appeal_batch = models.ForeignKey(
+        "settlements.AppealBatch",
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="claims",
+        verbose_name="Lote de Recurso",
+        help_text="Lote em que o recurso foi enviado ao parceiro (PDF).",
+    )
+    appeal_sent_at = models.DateTimeField(
+        "Recurso enviado ao parceiro em", null=True, blank=True,
+        help_text="Quando o lote do recurso foi marcado como enviado.",
+    )
+    quarantine_until = models.DateField(
+        "Quarentena até", null=True, blank=True, db_index=True,
+        help_text="Prazo de 60 dias para resposta do parceiro.",
+    )
+    partner_response = models.CharField(
+        "Resposta do Parceiro", max_length=20,
+        choices=PARTNER_RESPONSE_CHOICES, blank=True, default="",
+        db_index=True,
+    )
+
     # Auditoria
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -976,6 +1006,40 @@ class DriverClaim(models.Model):
         self.status = "APPEALED"
         self.justification = justification
         self.save()
+
+
+class AppealBatch(models.Model):
+    """Lote de recursos enviados ao parceiro (ex: Cainiao).
+
+    Agrupa vários DriverClaim em recurso para gerar um PDF de provas e
+    registar a data de envio (arranca o relógio de quarentena de 60 dias).
+    """
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(
+        "auth.User", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="appeal_batches",
+    )
+    partner = models.ForeignKey(
+        "core.Partner", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="appeal_batches", verbose_name="Parceiro",
+    )
+    sent_at = models.DateTimeField(
+        "Enviado ao parceiro em", null=True, blank=True,
+    )
+    notes = models.TextField("Notas", blank=True)
+
+    class Meta:
+        verbose_name = "Lote de Recursos"
+        verbose_name_plural = "Lotes de Recursos"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"Lote #{self.pk} ({self.claims.count()} recursos)"
+
+    @property
+    def total_amount(self):
+        return sum((c.amount for c in self.claims.all()), Decimal("0"))
 
 
 # ============================================================================

@@ -1139,13 +1139,26 @@ def _appeals_pdf_response(ids):
         HRFlowable, Image, PageBreak, Paragraph, SimpleDocTemplate, Spacer,
         Table, TableStyle,
     )
-    from .models import DriverClaim
+    from .models import CainiaoOperationTask, DriverClaim
 
     claims = list(
         DriverClaim.objects.select_related("driver", "customer_complaint")
         .filter(id__in=list(ids))
         .order_by("waybill_number")
     )
+
+    # LP (serial) por waybill — vem do CainiaoOperationTask
+    waybills = [c.waybill_number for c in claims if c.waybill_number]
+    lp_by_waybill = {}
+    if waybills:
+        for wb, lp in (
+            CainiaoOperationTask.objects
+            .filter(waybill_number__in=waybills)
+            .exclude(lp_number="")
+            .order_by("waybill_number", "-task_date")
+            .values_list("waybill_number", "lp_number")
+        ):
+            lp_by_waybill.setdefault(wb, lp)  # primeiro = mais recente
 
     buf = io.BytesIO()
     doc = SimpleDocTemplate(
@@ -1166,11 +1179,14 @@ def _appeals_pdf_response(ids):
     for i, claim in enumerate(claims):
         if i:
             elems.append(PageBreak())
-        elems.append(Paragraph(f"Waybill / LP: {claim.waybill_number or '—'}", h2))
+        lp = lp_by_waybill.get(claim.waybill_number, "")
+        elems.append(Paragraph(f"Waybill: {claim.waybill_number or '—'}", h2))
         elems.append(HRFlowable(width="100%", color=colors.lightgrey))
         elems.append(Spacer(1, 0.2 * cm))
         cc = claim.customer_complaint
         rows = [
+            ["Waybill No.", claim.waybill_number or "—"],
+            ["LP No.", lp or "—"],
             ["Motorista", claim.driver.nome_completo if claim.driver else "—"],
             ["Tipo", claim.get_claim_type_display()],
             ["Valor", f"EUR {claim.amount}"],

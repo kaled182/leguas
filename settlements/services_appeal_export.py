@@ -33,36 +33,28 @@ XLSX_HEADERS = [
 
 
 def suggest_appeal_reason(claim):
-    """Sugere um dos 12 motivos oficiais a partir do tipo do claim/reclamação."""
+    """Sugere um dos 12 motivos oficiais para um pacote em recurso.
+
+    Padrão Cainiao para recursos: o recurso serve quase sempre para PROVAR a
+    entrega → por defeito 'Cliente ha recibido'. Só se desvia desse padrão em
+    casos claramente diferentes (item faltando, pacote danificado/perda).
+    """
     R_FALTA = "El cliente reclama faltan artículos/productos incorrectos"
     R_ROBO = "Casos de robo/penalización/pérdida/paquete dañado"
     R_RECIBIDO = "Cliente ha recibido"
-    R_URGENTE = (
-        "El cliente se llama por entrega urgente/cambio de dirección/error de "
-        "dirección que provoca un error de entrega/el cliente no está en casa, etc."
-    )
 
     cc = getattr(claim, "customer_complaint", None)
     tipo = (cc.tipo if cc else "") or ""
     ct = claim.claim_type or ""
 
-    by_tipo = {
-        "ITEM_FALTANDO": R_FALTA,
-        "PACOTE_DANIFICADO": R_ROBO,
-        "ENTREGA_FALSA": R_RECIBIDO,
-        "ENTREGA_ATRASADA": R_URGENTE,
-    }
-    if tipo in by_tipo:
-        return by_tipo[tipo]
+    # Exceções claras ao padrão de recurso
+    if tipo == "ITEM_FALTANDO":
+        return R_FALTA
+    if tipo == "PACOTE_DANIFICADO" or ct in ("ORDER_LOSS", "ORDER_DAMAGE"):
+        return R_ROBO
 
-    by_claim_type = {
-        "FAKE_DELIVERY": R_RECIBIDO,
-        "ORDER_LOSS": R_ROBO,
-        "ORDER_DAMAGE": R_ROBO,
-        "CUSTOMER_COMPLAINT": R_RECIBIDO,
-        "LATE_DELIVERY": R_URGENTE,
-    }
-    return by_claim_type.get(ct, "")
+    # Padrão para pacotes em recurso: provar que o cliente recebeu
+    return R_RECIBIDO
 
 
 def claim_proof_names(claim):

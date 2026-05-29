@@ -736,16 +736,14 @@ class CustomerComplaint(models.Model):
         )
 
     def whatsapp_text(self):
-        """Gera o texto padrão para notificação ao motorista via WhatsApp."""
+        """Texto (cliente-facing) que o motorista envia ao cliente a pedir
+        confirmação da entrega."""
         return (
-            f"Segue reclamação, por favor ligar para o cliente e pedir SMS ou "
-            f"mensagem via WhatsApp confirmando a entrega do pacote "
-            f"{self.numero_pacote} para que possamos fechar o ticket.\n\n"
-            f"Segue endereço e contato do cliente.\n\n"
-            f"Zip Code/City:\n{self.codigo_postal} /{self.cidade}\n"
-            f"Address:\n{self.morada}\n\n"
-            f"{self.nome_cliente}\n\n"
-            f"{self.telefone_cliente}"
+            "Olá! 📦 Aqui é a equipa de entregas da Léguas Franzinas.\n\n"
+            f"O nosso motorista registou a entrega da encomenda nº "
+            f"{self.numero_pacote}. Conseguia apenas confirmar-nos com um "
+            "\"Sim\" se já a tem consigo em segurança?\n\n"
+            "Muito obrigado pela ajuda e um excelente dia!"
         )
 
 

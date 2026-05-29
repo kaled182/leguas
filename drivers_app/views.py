@@ -3102,6 +3102,62 @@ def driver_complaint_notify_whatsapp(request, complaint_id):
 
 @login_required
 @require_http_methods(["POST"])
+def driver_complaint_mark_lost(request, complaint_id):
+    """Marca a reclamação como perdida: cria claim de perda (ORDER_LOSS),
+    aprova-o (entra na PF) e fecha o ticket. Idempotente — não duplica claim."""
+    from .models import CustomerComplaint
+    from settlements.models import DriverClaim
+    from .tasks import DEFAULT_AUTO_CLAIM_AMOUNT
+
+    complaint = get_object_or_404(CustomerComplaint, id=complaint_id)
+    now = timezone.now()
+
+    existing = complaint.driver_claims.first()
+    if existing:
+        if complaint.status != "FECHADO":
+            complaint.status = "FECHADO"
+            complaint.data_fecho = complaint.data_fecho or now
+            complaint.save(update_fields=["status", "data_fecho", "updated_at"])
+        return JsonResponse({
+            "success": True, "already": True, "claim_id": existing.id,
+            "complaint": _complaint_to_dict(complaint),
+        })
+
+    occurred = complaint.data_entrega or complaint.created_at
+    description = (
+        f"[PERDIDO] Reclamação #{complaint.id} marcada como perdida pelo operador.\n"
+        f"Cliente: {complaint.nome_cliente or '—'} ({complaint.telefone_cliente or '—'})\n"
+        f"Pacote: {complaint.numero_pacote}\n"
+        f"Relato: {(complaint.descricao or '')[:1500]}"
+    )[:2000]
+
+    claim = DriverClaim.objects.create(
+        driver=complaint.driver,
+        customer_complaint=complaint,
+        claim_type="ORDER_LOSS",
+        amount=DEFAULT_AUTO_CLAIM_AMOUNT,
+        description=description,
+        occurred_at=occurred,
+        waybill_number=complaint.numero_pacote or "",
+        status="PENDING",
+        created_by=request.user,
+    )
+    claim.approve(user=request.user, notes="Marcado como perdido pelo operador.")
+
+    complaint.status = "FECHADO"
+    complaint.data_fecho = now
+    if not complaint.resposta_driver:
+        complaint.resposta_driver = "[Perdido] Marcado como perdido — claim de perda aplicado."
+    complaint.save(update_fields=["status", "data_fecho", "resposta_driver", "updated_at"])
+
+    return JsonResponse({
+        "success": True, "claim_id": claim.id,
+        "complaint": _complaint_to_dict(complaint),
+    })
+
+
+@login_required
+@require_http_methods(["POST"])
 def driver_complaint_add_attachment(request, complaint_id):
     """Adiciona um ficheiro a uma reclamação."""
     from .models import CustomerComplaint, CustomerComplaintAttachment

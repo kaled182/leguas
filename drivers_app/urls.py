@@ -309,6 +309,11 @@ urlpatterns = [
         name="driver-complaint-notify-whatsapp",
     ),
     path(
+        "api/complaints/item/<int:complaint_id>/mark-lost/",
+        views.driver_complaint_mark_lost,
+        name="driver-complaint-mark-lost",
+    ),
+    path(
         "api/complaints/item/<int:complaint_id>/delete/",
         views.driver_complaint_delete,
         name="driver-complaint-delete",

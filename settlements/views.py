@@ -1112,7 +1112,16 @@ def appeals_inbox(request):
         messages.error(request, "Ação inválida.")
         return redirect("appeals-inbox")
 
-    from .services_appeal_export import suggest_appeal_reason
+    from decimal import Decimal as _D
+    from .services_appeal_export import (
+        suggest_appeal_reason, group_claims_by_deduction_month,
+    )
+
+    MONTHS_PT = {
+        0: "Sem mês de dedução", 1: "Janeiro", 2: "Fevereiro", 3: "Março",
+        4: "Abril", 5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto",
+        9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro",
+    }
 
     today = timezone.now().date()
     base = DriverClaim.objects.select_related(
@@ -1121,6 +1130,17 @@ def appeals_inbox(request):
     aguardando = list(base.filter(status="APPEALED").order_by("created_at"))
     for c in aguardando:
         c.row_reason = c.appeal_reason or suggest_appeal_reason(c)
+
+    # Agrupar 'aguardando' por mês de dedução (regra Cainiao: 1 ficheiro/mês)
+    aguardando_groups = []
+    for y, m, grp in group_claims_by_deduction_month(aguardando):
+        label = f"{MONTHS_PT.get(m, m)} {y}" if m else MONTHS_PT[0]
+        aguardando_groups.append({
+            "label": label,
+            "count": len(grp),
+            "total": sum((c.amount for c in grp), _D("0")),
+            "claims": grp,
+        })
     em_analise_qs = base.filter(status="QUARANTINE").order_by("quarantine_until")
 
     em_analise = []
@@ -1157,6 +1177,7 @@ def appeals_inbox(request):
 
     return render(request, "settlements/appeals_inbox.html", {
         "aguardando": aguardando,
+        "aguardando_groups": aguardando_groups,
         "em_analise": em_analise,
         "fechados": fechados,
         "show_fechados": show_fechados,

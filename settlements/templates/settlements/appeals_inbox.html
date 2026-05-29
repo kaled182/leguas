@@ -83,53 +83,69 @@
         </div>
       </div>
 
-      {% if aguardando %}
-      <div class="overflow-x-auto">
-        <table class="w-full text-sm">
-          <thead class="bg-gray-50 dark:bg-gray-700/50 text-xs text-gray-500 dark:text-gray-400 uppercase">
-            <tr>
-              <th class="px-4 py-2 text-left w-8">
-                <input type="checkbox" @change="sel = $event.target.checked ? Array.from(document.querySelectorAll('.chk')).map(c=>c.value) : []"
-                       class="rounded border-gray-300 text-blue-600">
-              </th>
-              <th class="px-4 py-2 text-left">Waybill / LP</th>
-              <th class="px-4 py-2 text-left">Motorista</th>
-              <th class="px-4 py-2 text-left">Motivo (Cainiao)</th>
-              <th class="px-4 py-2 text-right">Valor</th>
-              <th class="px-4 py-2 text-left">Chamado</th>
-              <th class="px-4 py-2"></th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-            {% for c in aguardando %}
-            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
-              <td class="px-4 py-2">
-                <input type="checkbox" class="chk rounded border-gray-300 text-blue-600" name="claim_ids" value="{{ c.id }}" x-model="sel">
-              </td>
-              <td class="px-4 py-2 font-mono text-xs">{{ c.waybill_number|default:"—" }}</td>
-              <td class="px-4 py-2">{{ c.driver.nome_completo }}</td>
-              <td class="px-4 py-2">
-                <select @change="saveReason({{ c.id }}, $event.target.value)"
-                        class="w-56 px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-                  <option value="">— escolher —</option>
-                  {% for value, label in reason_choices %}
-                  <option value="{{ value }}" {% if c.row_reason == value %}selected{% endif %}>{{ label|truncatechars:60 }}</option>
-                  {% endfor %}
-                </select>
-              </td>
-              <td class="px-4 py-2 text-right font-semibold">€{{ c.amount|floatformat:2 }}</td>
-              <td class="px-4 py-2">
-                {% if c.customer_complaint_id %}<span class="text-xs text-violet-600">#{{ c.customer_complaint_id }}</span>{% else %}<span class="text-gray-300">—</span>{% endif %}
-              </td>
-              <td class="px-4 py-2 text-right">
-                <a href="{% url 'claim-detail' c.id %}" class="text-xs text-indigo-600 hover:underline">abrir</a>
-                {% if c.waybill_number %}· <a href="{% url 'package-360' c.waybill_number %}" class="text-xs text-orange-600 hover:underline">360º</a>{% endif %}
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
+      {% if aguardando_groups %}
+        {% for g in aguardando_groups %}
+        <div x-data="{ open: true }" class="border-t border-gray-100 dark:border-gray-700">
+          <!-- Cabeçalho do mês (colapsável) -->
+          <div class="px-5 py-2.5 bg-gray-50 dark:bg-gray-700/40 flex items-center justify-between cursor-pointer select-none"
+               @click="open = !open">
+            <div class="flex items-center gap-2">
+              <input type="checkbox" @click.stop
+                     @change="toggleGroup($event.target.checked, [{% for c in g.claims %}'{{ c.id }}'{% if not forloop.last %},{% endif %}{% endfor %}])"
+                     class="rounded border-gray-300 text-blue-600" title="Selecionar este mês">
+              <i data-lucide="chevron-down" class="w-4 h-4 text-gray-400 transition-transform" :class="open ? '' : '-rotate-90'"></i>
+              <i data-lucide="calendar" class="w-4 h-4 text-blue-400"></i>
+              <span class="font-semibold text-sm text-gray-700 dark:text-gray-200">{{ g.label }}</span>
+              <span class="bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-200 px-2 py-0.5 rounded-full text-xs">{{ g.count }}</span>
+            </div>
+            <span class="text-xs text-gray-400">€{{ g.total|floatformat:2 }}</span>
+          </div>
+          <!-- Pacotes do mês -->
+          <div x-show="open" class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead class="bg-white dark:bg-gray-800 text-[10px] text-gray-400 uppercase">
+                <tr>
+                  <th class="px-4 py-1.5 text-left w-8"></th>
+                  <th class="px-4 py-1.5 text-left">Waybill / LP</th>
+                  <th class="px-4 py-1.5 text-left">Motorista</th>
+                  <th class="px-4 py-1.5 text-left">Motivo (Cainiao)</th>
+                  <th class="px-4 py-1.5 text-right">Valor</th>
+                  <th class="px-4 py-1.5 text-left">Chamado</th>
+                  <th class="px-4 py-1.5"></th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                {% for c in g.claims %}
+                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                  <td class="px-4 py-2">
+                    <input type="checkbox" class="chk rounded border-gray-300 text-blue-600" name="claim_ids" value="{{ c.id }}" x-model="sel">
+                  </td>
+                  <td class="px-4 py-2 font-mono text-xs">{{ c.waybill_number|default:"—" }}</td>
+                  <td class="px-4 py-2">{{ c.driver.nome_completo }}</td>
+                  <td class="px-4 py-2">
+                    <select @change="saveReason({{ c.id }}, $event.target.value)"
+                            class="w-56 px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                      <option value="">— escolher —</option>
+                      {% for value, label in reason_choices %}
+                      <option value="{{ value }}" {% if c.row_reason == value %}selected{% endif %}>{{ label|truncatechars:60 }}</option>
+                      {% endfor %}
+                    </select>
+                  </td>
+                  <td class="px-4 py-2 text-right font-semibold">€{{ c.amount|floatformat:2 }}</td>
+                  <td class="px-4 py-2">
+                    {% if c.customer_complaint_id %}<span class="text-xs text-violet-600">#{{ c.customer_complaint_id }}</span>{% else %}<span class="text-gray-300">—</span>{% endif %}
+                  </td>
+                  <td class="px-4 py-2 text-right">
+                    <a href="{% url 'claim-detail' c.id %}" class="text-xs text-indigo-600 hover:underline">abrir</a>
+                    {% if c.waybill_number %}· <a href="{% url 'package-360' c.waybill_number %}" class="text-xs text-orange-600 hover:underline">360º</a>{% endif %}
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        {% endfor %}
       {% else %}
       <div class="p-10 text-center text-gray-400">
         <i data-lucide="check-circle" class="w-10 h-10 mx-auto mb-2 text-emerald-400"></i>
@@ -259,6 +275,11 @@
     return {
       sel: [],
       lang: 'es',
+      toggleGroup(checked, ids) {
+        ids = ids.map(String);
+        if (checked) { this.sel = [...new Set([...this.sel, ...ids])]; }
+        else { this.sel = this.sel.filter(x => !ids.includes(x)); }
+      },
       async saveReason(claimId, reason) {
         const fd = new FormData();
         fd.append('reason', reason);

@@ -194,12 +194,7 @@
       <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-4">
         <div class="flex items-center justify-between mb-1">
           <span class="font-mono text-xs font-bold text-rose-600 dark:text-rose-400">claim #{{ cl.id }}</span>
-          <span class="px-2 py-0.5 rounded-full text-xs font-semibold
-                {% if cl.status == 'PENDING' %}bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400
-                {% elif cl.status == 'APPROVED' %}bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-400
-                {% elif cl.status == 'REJECTED' %}bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400
-                {% elif cl.status == 'APPEALED' %}bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400
-                {% else %}bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300{% endif %}">{{ cl.get_status_display }}</span>
+          <span class="px-2 py-0.5 rounded-full text-xs font-semibold {{ cl.situacao.classes }}">{{ cl.situacao.label }}</span>
         </div>
         <p class="text-lg font-bold text-gray-900 dark:text-white">€{{ cl.amount|floatformat:2 }}</p>
         <p class="text-xs text-gray-500">{{ cl.get_claim_type_display }} · {{ cl.created_at|date:"d/m/Y" }}</p>

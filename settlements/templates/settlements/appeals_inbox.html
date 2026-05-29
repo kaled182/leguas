@@ -245,7 +245,7 @@
             <td class="px-4 py-2 font-mono text-xs">{{ c.waybill_number|default:"—" }}</td>
             <td class="px-4 py-2">{{ c.driver.nome_completo }}</td>
             <td class="px-4 py-2">
-              <span class="px-2 py-0.5 rounded-full text-xs font-semibold {% if c.status == 'REJECTED' %}bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400{% else %}bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-400{% endif %}">{{ c.get_status_display }}</span>
+              <span class="px-2 py-0.5 rounded-full text-xs font-semibold {{ c.situacao.classes }}">{{ c.situacao.label }}</span>
             </td>
             <td class="px-4 py-2 text-xs text-gray-500">{{ c.get_partner_response_display|default:"—" }}</td>
             <td class="px-4 py-2 text-right">

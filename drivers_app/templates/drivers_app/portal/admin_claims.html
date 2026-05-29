@@ -45,15 +45,7 @@
           <div class="flex items-center gap-2 flex-wrap">
             <span class="font-mono text-xs text-gray-500">#{{ claim.id }}</span>
             <span class="font-semibold text-gray-900 dark:text-white">{{ claim.get_claim_type_display }}</span>
-            {% if claim.status == 'PENDING' %}
-              <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">Pendente</span>
-            {% elif claim.status == 'APPROVED' %}
-              <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-400">Aprovada</span>
-            {% elif claim.status == 'APPEALED' %}
-              <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">Em Recurso</span>
-            {% elif claim.status == 'REJECTED' %}
-              <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400">Rejeitada</span>
-            {% endif %}
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold {{ claim.situacao.classes }}">{{ claim.situacao.label }}</span>
             <span class="text-xs text-gray-500">{{ claim.occurred_at|date:"d/m/Y H:i" }}</span>
           </div>
           {% if claim.waybill_number %}

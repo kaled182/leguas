@@ -89,12 +89,8 @@
               -€{{ c.amount|floatformat:2 }}
             </td>
             <td class="px-4 py-2 text-center">
-              <span class="px-2 py-0.5 text-[11px] rounded-full font-semibold
-                {% if c.status == 'PENDING' %}bg-amber-100 text-amber-700{% endif %}
-                {% if c.status == 'APPROVED' %}bg-rose-100 text-rose-700{% endif %}
-                {% if c.status == 'REJECTED' %}bg-gray-200 text-gray-500{% endif %}
-                {% if c.status == 'APPEALED' %}bg-blue-100 text-blue-700{% endif %}">
-                {{ c.get_status_display }}
+              <span class="px-2 py-0.5 text-[11px] rounded-full font-semibold {{ c.situacao.classes }}">
+                {{ c.situacao.label }}
               </span>
             </td>
           </tr>

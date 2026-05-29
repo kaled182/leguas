@@ -995,6 +995,63 @@ class DriverClaim(models.Model):
     def __str__(self):
         return f"{self.get_claim_type_display()} - {self.driver.nome_completo} - €{self.amount}"
 
+    @property
+    def had_appeal(self):
+        """True se o claim passou por recurso (tem contexto de disputa)."""
+        return bool(
+            self.justification or self.partner_response
+            or self.appeal_sent_at or self.appeal_batch_id
+        )
+
+    @property
+    def driver_paga(self):
+        """O motorista paga este desconto? (APPROVED = sim)."""
+        return self.status == "APPROVED"
+
+    @property
+    def situacao(self):
+        """Estado orientado ao desconto/recurso (fonte única de verdade para a
+        UI). Devolve dict com label, icon e classes Tailwind do badge.
+
+        Regra: APPROVED = desconto aplicado (motorista PAGA → vermelho);
+        REJECTED = desconto cancelado (motorista NÃO paga → verde). Em claims
+        que passaram por recurso, mostra "Recurso aceite/rejeitado".
+        """
+        st = self.status
+        if st == "PENDING":
+            return {
+                "label": "Pendente", "icon": "clock", "tone": "pending",
+                "classes": "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
+            }
+        if st == "APPEALED":
+            return {
+                "label": "Em recurso", "icon": "rotate-ccw", "tone": "info",
+                "classes": "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
+            }
+        if st == "QUARANTINE":
+            return {
+                "label": "Em quarentena", "icon": "clock", "tone": "info",
+                "classes": "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400",
+            }
+        if st == "REJECTED":
+            return {
+                "label": "Recurso aceite" if self.had_appeal else "Sem desconto",
+                "icon": "shield-check", "tone": "good",
+                "classes": "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400",
+            }
+        if st == "APPROVED":
+            return {
+                "label": "Recurso rejeitado" if self.had_appeal else "Desconto aplicado",
+                "icon": "shield-x" if self.had_appeal else "check-circle",
+                "tone": "bad",
+                "classes": "bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-400",
+            }
+        return {
+            "label": self.get_status_display(), "icon": "help-circle",
+            "tone": "info",
+            "classes": "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300",
+        }
+
     def approve(self, user, notes=""):
         """Aprova o claim e auto-inclui em PFs em CALCULADO/APROVADO
         do mesmo driver no período.

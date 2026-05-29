@@ -25,25 +25,44 @@
     </button>
   </div>
 
-  <!-- ── KPI Cards ─────────────────────────────────────────────────────── -->
-  <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-    <template x-for="card in kpiCards" :key="card.key">
-      <button @click="filterByStatus(card.key)"
-              :class="[
-                'rounded-xl p-4 text-left border-2 transition-all hover:shadow-md',
-                filters.status === card.key || (card.key === 'sem_resposta' && filters.overdue === '1')
-                  ? 'ring-2 ring-offset-2 ' + card.ringClass
-                  : 'border-transparent',
-                card.bgClass,
-              ]">
-        <div class="flex items-center justify-between mb-1">
-          <span class="text-xs font-semibold" :class="card.labelClass" x-text="card.label"></span>
-          <i :data-lucide="card.icon" class="w-4 h-4" :class="card.iconClass"></i>
-        </div>
-        <div class="text-2xl font-bold" :class="card.valueClass"
-             x-text="kpis[card.key] ?? '—'"></div>
-      </button>
-    </template>
+  <!-- ── KPI Cards (monitoramento) ─────────────────────────────────────── -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    <!-- Média p/ resposta -->
+    <div class="rounded-xl p-4 border-2 border-transparent bg-indigo-50 dark:bg-indigo-900/20">
+      <div class="flex items-center justify-between mb-1">
+        <span class="text-xs font-semibold text-indigo-600 dark:text-indigo-400">Média p/ Resposta</span>
+        <i data-lucide="timer" class="w-4 h-4 text-indigo-400"></i>
+      </div>
+      <div class="text-2xl font-bold text-indigo-700 dark:text-indigo-300">
+        <span x-text="kpis.media_dias_resposta ?? '—'"></span>
+        <span class="text-sm font-normal text-indigo-400">dias</span>
+      </div>
+    </div>
+    <!-- Não respondidos -->
+    <div class="rounded-xl p-4 border-2 border-transparent bg-red-50 dark:bg-red-900/20">
+      <div class="flex items-center justify-between mb-1">
+        <span class="text-xs font-semibold text-red-600 dark:text-red-400">Tickets Não Respondidos</span>
+        <i data-lucide="clock" class="w-4 h-4 text-red-400"></i>
+      </div>
+      <div class="text-2xl font-bold text-red-700 dark:text-red-300" x-text="kpis.nao_respondidos ?? '—'"></div>
+    </div>
+    <!-- Top driver -->
+    <div class="rounded-xl p-4 border-2 border-transparent bg-orange-50 dark:bg-orange-900/20">
+      <div class="flex items-center justify-between mb-1">
+        <span class="text-xs font-semibold text-orange-600 dark:text-orange-400">TOP Driver (mais chamados)</span>
+        <i data-lucide="user-x" class="w-4 h-4 text-orange-400"></i>
+      </div>
+      <div class="text-base font-bold text-orange-700 dark:text-orange-300 truncate" x-text="kpis.top_driver_nome || '—'"></div>
+      <div class="text-xs text-orange-400"><span x-text="kpis.top_driver_total ?? 0"></span> tickets</div>
+    </div>
+    <!-- Total -->
+    <div class="rounded-xl p-4 border-2 border-transparent bg-gray-50 dark:bg-gray-700/40">
+      <div class="flex items-center justify-between mb-1">
+        <span class="text-xs font-semibold text-gray-600 dark:text-gray-400">Total (filtrado)</span>
+        <i data-lucide="layers" class="w-4 h-4 text-gray-400"></i>
+      </div>
+      <div class="text-2xl font-bold text-gray-700 dark:text-gray-200" x-text="kpis.total ?? '—'"></div>
+    </div>
   </div>
 
   <!-- ── Filter bar ────────────────────────────────────────────────────── -->
@@ -67,37 +86,52 @@
         </div>
       </div>
     </div>
-    <!-- Status -->
+    <!-- HUB -->
     <div>
-      <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Status</label>
-      <select x-model="filters.status" @change="loadComplaints(1)"
+      <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">HUB</label>
+      <select x-model="filters.hub" @change="loadComplaints()"
+              class="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+        <option value="">Todos os HUBs</option>
+        {% for hub in hubs %}
+        <option value="{{ hub.id }}">{{ hub.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <!-- Tipo (tag) -->
+    <div>
+      <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Tipo</label>
+      <select x-model="filters.tipo" @change="loadComplaints()"
               class="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
         <option value="">Todos</option>
-        <option value="ABERTO">Aberto</option>
-        <option value="NOTIFICADO">Notificado</option>
-        <option value="RESPONDIDO">Respondido</option>
-        <option value="FECHADO">Fechado</option>
-        <option value="CANCELADO">Cancelado</option>
+        {% for value, label in tipo_choices %}
+        <option value="{{ value }}">{{ label }}</option>
+        {% endfor %}
       </select>
     </div>
     <!-- CP4 -->
     <div>
       <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">CP4</label>
-      <input type="text" x-model="filters.cp4" @input.debounce.400ms="loadComplaints(1)"
+      <input type="text" x-model="filters.cp4" @input.debounce.400ms="loadComplaints()"
              placeholder="Ex: 3885" maxlength="4"
              class="w-24 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
     </div>
     <!-- Date range -->
     <div>
       <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">De</label>
-      <input type="date" x-model="filters.date_from" @change="loadComplaints(1)"
+      <input type="date" x-model="filters.date_from" @change="loadComplaints()"
              class="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
     </div>
     <div>
       <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Até</label>
-      <input type="date" x-model="filters.date_to" @change="loadComplaints(1)"
+      <input type="date" x-model="filters.date_to" @change="loadComplaints()"
              class="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
     </div>
+    <!-- Mostrar cancelados -->
+    <label class="flex items-center gap-1.5 text-xs font-semibold text-gray-500 dark:text-gray-400 cursor-pointer select-none pb-2">
+      <input type="checkbox" x-model="filters.incluir_cancelados" @change="loadComplaints()"
+             class="rounded border-gray-300 text-orange-600 focus:ring-orange-500">
+      Mostrar cancelados
+    </label>
     <!-- Clear -->
     <button @click="clearFilters()"
             class="px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-1">
@@ -105,85 +139,8 @@
     </button>
   </div>
 
-  <!-- ── Stats accordion ──────────────────────────────────────────────── -->
-  <div class="mb-4" x-data="{showStats: false}">
-    <button @click="showStats = !showStats"
-            class="flex items-center gap-2 text-sm font-semibold text-indigo-600 dark:text-indigo-400 hover:underline mb-2">
-      <i :data-lucide="showStats ? 'chevron-up' : 'bar-chart-2'" class="w-4 h-4"></i>
-      <span x-text="showStats ? 'Ocultar relatórios' : 'Ver relatórios agregados'"></span>
-    </button>
-    <div x-show="showStats" x-cloak
-         class="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <!-- Por dia -->
-      <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-        <h3 class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-1">
-          <i data-lucide="calendar" class="w-3.5 h-3.5"></i> Por Dia (últimos 30)
-        </h3>
-        <div class="space-y-1.5 max-h-48 overflow-y-auto">
-          <template x-if="stats.by_day.length === 0">
-            <p class="text-xs text-gray-400">Sem dados</p>
-          </template>
-          <template x-for="r in stats.by_day" :key="r.day">
-            <div class="flex items-center gap-2">
-              <span class="text-xs text-gray-500 dark:text-gray-400 w-24 flex-shrink-0" x-text="r.day"></span>
-              <div class="flex-1 bg-gray-100 dark:bg-gray-700 rounded-full h-2">
-                <div class="bg-orange-400 h-2 rounded-full"
-                     :style="'width:' + Math.round((r.total / (stats.by_day[0]?.total || 1)) * 100) + '%'"></div>
-              </div>
-              <span class="text-xs font-semibold text-gray-700 dark:text-gray-300 w-6 text-right" x-text="r.total"></span>
-            </div>
-          </template>
-        </div>
-      </div>
-      <!-- Por motorista -->
-      <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-        <h3 class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-1">
-          <i data-lucide="user" class="w-3.5 h-3.5"></i> Por Motorista (top 20)
-        </h3>
-        <div class="space-y-1.5 max-h-48 overflow-y-auto">
-          <template x-if="stats.by_driver.length === 0">
-            <p class="text-xs text-gray-400">Sem dados</p>
-          </template>
-          <template x-for="r in stats.by_driver" :key="r.id">
-            <button @click="selectDriverFilterById(r.id, r.nome)"
-                    class="w-full flex items-center gap-2 hover:bg-orange-50 dark:hover:bg-orange-900/10 rounded px-1 py-0.5 text-left">
-              <span class="text-xs text-gray-700 dark:text-gray-300 flex-1 truncate" x-text="r.nome"></span>
-              <div class="w-16 bg-gray-100 dark:bg-gray-700 rounded-full h-2">
-                <div class="bg-indigo-400 h-2 rounded-full"
-                     :style="'width:' + Math.round((r.total / (stats.by_driver[0]?.total || 1)) * 100) + '%'"></div>
-              </div>
-              <span class="text-xs font-semibold text-gray-700 dark:text-gray-300 w-5 text-right" x-text="r.total"></span>
-            </button>
-          </template>
-        </div>
-      </div>
-      <!-- Por CP4 -->
-      <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-        <h3 class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-1">
-          <i data-lucide="map-pin" class="w-3.5 h-3.5"></i> Por CP4 (top 20)
-        </h3>
-        <div class="space-y-1.5 max-h-48 overflow-y-auto">
-          <template x-if="stats.by_cp4.length === 0">
-            <p class="text-xs text-gray-400">Sem dados</p>
-          </template>
-          <template x-for="r in stats.by_cp4" :key="r.cp4">
-            <button @click="filters.cp4 = r.cp4; loadComplaints(1)"
-                    class="w-full flex items-center gap-2 hover:bg-orange-50 dark:hover:bg-orange-900/10 rounded px-1 py-0.5 text-left">
-              <span class="font-mono text-xs font-bold text-orange-600 dark:text-orange-400 w-10" x-text="r.cp4"></span>
-              <div class="flex-1 bg-gray-100 dark:bg-gray-700 rounded-full h-2">
-                <div class="bg-emerald-400 h-2 rounded-full"
-                     :style="'width:' + Math.round((r.total / (stats.by_cp4[0]?.total || 1)) * 100) + '%'"></div>
-              </div>
-              <span class="text-xs font-semibold text-gray-700 dark:text-gray-300 w-5 text-right" x-text="r.total"></span>
-            </button>
-          </template>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── Table ─────────────────────────────────────────────────────────── -->
-  <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+  <!-- ── Kanban board ──────────────────────────────────────────────────── -->
+  <div>
     <!-- Loading -->
     <div x-show="loading" class="flex items-center justify-center py-16">
       <svg class="animate-spin w-8 h-8 text-orange-500" fill="none" viewBox="0 0 24 24">
@@ -192,116 +149,59 @@
       </svg>
     </div>
 
-    <div x-show="!loading">
-      <!-- Result count -->
-      <div class="px-4 py-2.5 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
-        <span class="text-sm text-gray-500 dark:text-gray-400">
-          <span class="font-semibold text-gray-900 dark:text-white" x-text="pagination.count"></span> reclamações
-        </span>
-        <!-- Pagination -->
-        <div class="flex items-center gap-1">
-          <button @click="loadComplaints(pagination.page - 1)" :disabled="!pagination.has_prev"
-                  class="px-2 py-1 text-xs rounded disabled:opacity-40 disabled:cursor-not-allowed bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 transition-colors">
-            <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>
-          </button>
-          <span class="text-xs text-gray-500 px-2"
-                x-text="'Pág. ' + pagination.page + ' / ' + pagination.num_pages"></span>
-          <button @click="loadComplaints(pagination.page + 1)" :disabled="!pagination.has_next"
-                  class="px-2 py-1 text-xs rounded disabled:opacity-40 disabled:cursor-not-allowed bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 transition-colors">
-            <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
-          </button>
-        </div>
-      </div>
-
-      <!-- Empty -->
-      <template x-if="complaints.length === 0">
-        <div class="text-center py-16 text-gray-400">
-          <i data-lucide="inbox" class="w-12 h-12 mx-auto mb-3"></i>
-          <p class="text-sm">Nenhuma reclamação encontrada com os filtros actuais.</p>
+    <!-- Board -->
+    <div x-show="!loading" class="flex flex-col lg:flex-row gap-4 items-stretch">
+      <template x-for="col in columnDefs" :key="col.key">
+        <div class="flex-1 min-w-[240px] bg-gray-50 dark:bg-gray-800/60 rounded-xl border border-gray-200 dark:border-gray-700 flex flex-col"
+             :class="dragOverCol === col.key ? 'ring-2 ring-orange-400' : ''"
+             @dragover.prevent="dragOverCol = col.key"
+             @dragleave="dragOverCol === col.key && (dragOverCol = '')"
+             @drop="dragOverCol = ''; onDrop(col.key)">
+          <!-- Column header -->
+          <div class="px-3 py-2.5 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between sticky top-0">
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full" :class="col.dot"></span>
+              <h2 class="font-semibold text-sm text-gray-700 dark:text-gray-200" x-text="col.label"></h2>
+            </div>
+            <span class="bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded-full text-xs font-semibold"
+                  x-text="counts[col.key] ?? 0"></span>
+          </div>
+          <!-- Cards -->
+          <div class="flex-1 overflow-y-auto p-2 space-y-2 min-h-[120px] max-h-[calc(100vh-320px)]">
+            <template x-for="c in (columns[col.key] || [])" :key="c.id">
+              <div draggable="true"
+                   @dragstart="onDragStart(c, col.key)"
+                   @dragend="dragCard = null; dragFrom = ''; dragOverCol = ''"
+                   @click="openEditModal(c)"
+                   class="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-sm border-l-4 hover:shadow-md transition cursor-pointer"
+                   :class="slaBorderClass(c.sla_estado)">
+                <div class="flex items-center justify-between mb-1">
+                  <span class="font-mono text-xs font-bold text-orange-600 dark:text-orange-400" x-text="'#' + c.id"></span>
+                  <span class="text-[10px] text-gray-400" x-text="c.created_at"></span>
+                </div>
+                <div class="text-sm font-medium text-gray-800 dark:text-gray-100 truncate" x-text="c.driver_nome || '—'"></div>
+                <div class="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                  <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold" :class="tipoBadgeClass(c.tipo)" x-text="c.tipo_display"></span>
+                  <span class="font-mono text-[10px] text-gray-400" x-text="(c.codigo_postal || '').substring(0,4)"></span>
+                  <template x-if="c.sla_estado === 'atrasado'">
+                    <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">ATRASADO</span>
+                  </template>
+                </div>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1.5 line-clamp-2" x-text="c.descricao"></p>
+                <div class="text-[10px] text-gray-400 mt-1 font-mono truncate" x-text="c.numero_pacote"></div>
+              </div>
+            </template>
+            <div x-show="(columns[col.key] || []).length === 0" class="text-center text-gray-400 text-xs py-6">
+              Sem tickets
+            </div>
+            <template x-if="col.key === 'FECHADO' && (counts.FECHADO || 0) > (columns.FECHADO || []).length">
+              <div class="text-center text-[10px] text-gray-400 pt-1" x-text="'A mostrar últimos ' + (columns.FECHADO || []).length + ' de ' + counts.FECHADO + ' fechados'"></div>
+            </template>
+          </div>
         </div>
       </template>
-
-      <!-- Table -->
-      <div x-show="complaints.length > 0" class="overflow-x-auto">
-        <table class="w-full text-sm">
-          <thead class="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700">
-            <tr>
-              <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">#</th>
-              <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Pacote</th>
-              <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Motorista</th>
-              <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tipo</th>
-              <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
-              <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Entrega</th>
-              <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Deadline</th>
-              <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">CP4</th>
-              <th class="px-4 py-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Ações</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-            <template x-for="c in complaints" :key="c.id">
-              <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors"
-                  :class="{'bg-red-50/50 dark:bg-red-900/10': isOverdue(c)}">
-                <td class="px-4 py-3">
-                  <span class="font-mono text-xs font-bold text-orange-600 dark:text-orange-400" x-text="'#' + c.id"></span>
-                </td>
-                <td class="px-4 py-3">
-                  <span class="font-mono text-xs text-gray-700 dark:text-gray-300 max-w-[160px] truncate block" x-text="c.numero_pacote"></span>
-                </td>
-                <td class="px-4 py-3">
-                  <span class="text-sm font-medium text-gray-900 dark:text-white" x-text="c.driver_nome"></span>
-                </td>
-                <td class="px-4 py-3">
-                  <span class="text-xs text-gray-500 dark:text-gray-400" x-text="c.tipo_display"></span>
-                </td>
-                <td class="px-4 py-3">
-                  <span class="px-2 py-0.5 rounded-full text-xs font-semibold"
-                        :class="statusClass(c.status)"
-                        x-text="c.status_display"></span>
-                  <template x-if="isOverdue(c)">
-                    <span class="ml-1 px-1.5 py-0.5 rounded text-xs font-bold bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">ATRASADO</span>
-                  </template>
-                </td>
-                <td class="px-4 py-3 text-xs text-gray-500 dark:text-gray-400" x-text="c.data_entrega_display || '—'"></td>
-                <td class="px-4 py-3">
-                  <span class="text-xs" :class="isOverdue(c) ? 'text-red-600 dark:text-red-400 font-semibold' : 'text-gray-400'"
-                        x-text="c.deadline_display || '—'"></span>
-                </td>
-                <td class="px-4 py-3">
-                  <span class="font-mono text-xs text-gray-500 dark:text-gray-400"
-                        x-text="(c.codigo_postal || '').substring(0, 4)"></span>
-                </td>
-                <td class="px-4 py-3">
-                  <div class="flex items-center justify-center gap-1">
-                    <!-- Ver / Editar (abre modal) -->
-                    <button @click="openEditModal(c)"
-                            class="p-1.5 rounded-lg text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors" title="Ver / Editar">
-                      <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
-                    </button>
-                    <!-- PDF -->
-                    <a :href="'/driversapp/complaints/' + c.id + '/pdf/'" target="_blank"
-                       class="p-1.5 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" title="PDF">
-                      <i data-lucide="file-down" class="w-3.5 h-3.5"></i>
-                    </a>
-                    <!-- Ir para motorista -->
-                    <a :href="'/driversapp/admin/ativos/?open=' + c.driver_id + '&tab=reclamacoes'"
-                       class="p-1.5 rounded-lg text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors" title="Ver Motorista">
-                      <i data-lucide="user" class="w-3.5 h-3.5"></i>
-                    </a>
-                    <!-- Excluir -->
-                    <template x-if="c.status === 'ABERTO' || c.status === 'CANCELADO'">
-                      <button @click="deleteComplaint(c)"
-                              class="p-1.5 rounded-lg text-gray-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-500 transition-colors" title="Excluir">
-                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                      </button>
-                    </template>
-                  </div>
-                </td>
-              </tr>
-            </template>
-          </tbody>
-        </table>
-      </div>
     </div>
+
   </div>
 
   <!-- ════════════════════════════════════════════════════════════════════
@@ -764,6 +664,52 @@
     </div>
   </div>
 
+  <!-- ════════════════════════════════════════════════════════════════════
+       MODAL: Confirmação de notificação WhatsApp
+       ════════════════════════════════════════════════════════════════════ -->
+  <div x-show="showWAModal" x-cloak
+       class="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg mx-4 border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col">
+      <div class="bg-gradient-to-r from-green-500 to-emerald-600 px-6 py-4 flex items-center justify-between flex-shrink-0">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center">
+            <i data-lucide="message-circle" class="w-5 h-5 text-white"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-white">Notificar motorista por WhatsApp</h3>
+            <p class="text-xs text-green-100" x-text="(waComplaint?.driver_nome || '') + (waComplaint?.telefone_driver ? ' · ' + waComplaint.telefone_driver : '')"></p>
+          </div>
+        </div>
+        <button @click="skipWhatsApp()" class="text-white/70 hover:text-white hover:bg-white/20 rounded-lg p-1.5">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <div class="px-6 py-5 space-y-3">
+        <template x-if="!waComplaint?.telefone_driver">
+          <div class="text-xs bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 rounded-lg px-3 py-2 flex items-center gap-2">
+            <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+            Este motorista não tem telefone registado — o envio vai falhar.
+          </div>
+        </template>
+        <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400">Mensagem (editável)</label>
+        <textarea x-model="waText" rows="8"
+                  class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 resize-none"></textarea>
+        <p class="text-[11px] text-gray-400">O status do ticket já foi actualizado. Pode enviar a mensagem ou saltar.</p>
+      </div>
+      <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex gap-2 justify-end flex-shrink-0">
+        <button @click="skipWhatsApp()"
+                class="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors">
+          Saltar envio
+        </button>
+        <button @click="sendWhatsApp()" :disabled="waSending || !waComplaint?.telefone_driver"
+                class="px-5 py-2 bg-green-600 hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg text-sm font-semibold transition-colors flex items-center gap-2">
+          <i data-lucide="send" class="w-4 h-4"></i>
+          <span x-text="waSending ? 'A enviar…' : 'Enviar WhatsApp'"></span>
+        </button>
+      </div>
+    </div>
+  </div>
+
 </div>
 {% endblock %}
 
@@ -779,15 +725,31 @@ function complaintsPanel() {
   const POST = () => ({ method: 'POST', headers: { 'X-CSRFToken': csrf() } });
 
   return {
-    // State
+    // State (Kanban)
     loading: false,
-    complaints: [],
-    pagination: { page: 1, num_pages: 1, count: 0, has_next: false, has_prev: false },
-    kpis: {{ kpis|safe }},
-    stats: { by_day: [], by_driver: [], by_cp4: [] },
+    columns: {},
+    counts: {},
+    kpis: {},
+    columnDefs: [
+      { key: 'ABERTO',     label: 'Pendentes',   dot: 'bg-blue-500' },
+      { key: 'NOTIFICADO', label: 'Notificados', dot: 'bg-yellow-500' },
+      { key: 'RESPONDIDO', label: 'Respondidos', dot: 'bg-purple-500' },
+      { key: 'FECHADO',    label: 'Fechados',    dot: 'bg-emerald-500' },
+    ],
+
+    // Drag & drop
+    dragCard: null,
+    dragFrom: '',
+    dragOverCol: '',
+
+    // WhatsApp confirmation modal
+    showWAModal: false,
+    waComplaint: null,
+    waText: '',
+    waSending: false,
 
     // Filters
-    filters: { status: '', driver: '', cp4: '', date_from: '', date_to: '', overdue: '' },
+    filters: { hub: '', tipo: '', driver: '', cp4: '', date_from: '', date_to: '', incluir_cancelados: false },
     driverSearch: '',
     driverSuggestions: [],
 
@@ -816,56 +778,49 @@ function complaintsPanel() {
     editRespostaText: '',
     editRespostaFiles: [],
 
-    kpiCards: [
-      { key: 'abertas',      label: 'Abertas',       icon: 'alert-circle',   bgClass: 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700',     labelClass: 'text-blue-600 dark:text-blue-400',    iconClass: 'text-blue-400',   valueClass: 'text-blue-700 dark:text-blue-300',   ringClass: 'ring-blue-400' },
-      { key: 'notificadas',  label: 'Notificadas',   icon: 'bell',           bgClass: 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-700', labelClass: 'text-yellow-600 dark:text-yellow-400', iconClass: 'text-yellow-400', valueClass: 'text-yellow-700 dark:text-yellow-300', ringClass: 'ring-yellow-400' },
-      { key: 'respondidas',  label: 'Respondidas',   icon: 'message-square', bgClass: 'bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-700', labelClass: 'text-purple-600 dark:text-purple-400', iconClass: 'text-purple-400', valueClass: 'text-purple-700 dark:text-purple-300', ringClass: 'ring-purple-400' },
-      { key: 'fechadas',     label: 'Fechadas',      icon: 'check-circle',   bgClass: 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-700', labelClass: 'text-emerald-600 dark:text-emerald-400', iconClass: 'text-emerald-400', valueClass: 'text-emerald-700 dark:text-emerald-300', ringClass: 'ring-emerald-400' },
-      { key: 'sem_resposta', label: 'Sem Resposta',  icon: 'clock',          bgClass: 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-700',         labelClass: 'text-red-600 dark:text-red-400',      iconClass: 'text-red-400',    valueClass: 'text-red-700 dark:text-red-300',     ringClass: 'ring-red-400' },
-    ],
-
     async init() {
-      await this.loadComplaints(1);
+      await this.loadComplaints();
       this.$nextTick(() => lucide.createIcons());
     },
 
-    async loadComplaints(page) {
+    async loadComplaints() {
       this.loading = true;
       const p = this.filters;
       const params = new URLSearchParams({
-        page:      page || 1,
-        status:    p.status,
+        hub:       p.hub,
+        tipo:      p.tipo,
         driver:    p.driver,
         cp4:       p.cp4,
         date_from: p.date_from,
         date_to:   p.date_to,
-        overdue:   p.overdue,
+        incluir_cancelados: p.incluir_cancelados ? '1' : '',
       });
       const resp = await fetch('/driversapp/api/admin/reclamacoes/list/?' + params);
       const data = await resp.json();
-      this.complaints = data.complaints;
-      this.pagination = data.pagination;
-      this.stats      = data.stats;
+      this.columns = data.columns || {};
+      this.counts  = data.counts  || {};
+      this.kpis    = data.kpis    || {};
+      // Coluna de cancelados só aparece quando pedida
+      const base = ['ABERTO', 'NOTIFICADO', 'RESPONDIDO', 'FECHADO'];
+      const defs = [
+        { key: 'ABERTO',     label: 'Pendentes',   dot: 'bg-blue-500' },
+        { key: 'NOTIFICADO', label: 'Notificados', dot: 'bg-yellow-500' },
+        { key: 'RESPONDIDO', label: 'Respondidos', dot: 'bg-purple-500' },
+        { key: 'FECHADO',    label: 'Fechados',    dot: 'bg-emerald-500' },
+      ];
+      if (p.incluir_cancelados) {
+        defs.push({ key: 'CANCELADO', label: 'Cancelados', dot: 'bg-gray-400' });
+      }
+      this.columnDefs = defs;
       this.loading = false;
       this.$nextTick(() => lucide.createIcons());
     },
 
-    filterByStatus(key) {
-      if (key === 'sem_resposta') {
-        this.filters.overdue = this.filters.overdue === '1' ? '' : '1';
-        this.filters.status = '';
-      } else {
-        this.filters.status = this.filters.status === key ? '' : key;
-        this.filters.overdue = '';
-      }
-      this.loadComplaints(1);
-    },
-
     clearFilters() {
-      this.filters = { status: '', driver: '', cp4: '', date_from: '', date_to: '', overdue: '' };
+      this.filters = { hub: '', tipo: '', driver: '', cp4: '', date_from: '', date_to: '', incluir_cancelados: false };
       this.driverSearch = '';
       this.driverSuggestions = [];
-      this.loadComplaints(1);
+      this.loadComplaints();
     },
 
     async searchDriversFilter() {
@@ -879,14 +834,7 @@ function complaintsPanel() {
       this.filters.driver = d.id;
       this.driverSearch = d.nome;
       this.driverSuggestions = [];
-      this.loadComplaints(1);
-    },
-
-    selectDriverFilterById(id, nome) {
-      this.filters.driver = id;
-      this.driverSearch = nome;
-      this.driverSuggestions = [];
-      this.loadComplaints(1);
+      this.loadComplaints();
     },
 
     // ── New complaint modal ───────────────────────────────────────────────
@@ -1171,9 +1119,7 @@ function complaintsPanel() {
       if (data.success) {
         this.showNewModal = false;
         this.newAttachmentsList = [];
-        this.kpis.abertas = (this.kpis.abertas || 0) + 1;
-        this.kpis.total   = (this.kpis.total   || 0) + 1;
-        await this.loadComplaints(1);
+        await this.loadComplaints();
       } else {
         alert(data.error || 'Erro ao criar reclamação.');
       }
@@ -1188,19 +1134,55 @@ function complaintsPanel() {
       this.$nextTick(() => lucide.createIcons());
     },
 
-    async changeStatus(c, newStatus) {
-      const resp = await fetch('/driversapp/api/complaints/item/' + c.id + '/update/', POST_JSON({ status: newStatus }));
+    // Actualiza status; devolve a reclamação actualizada ou null em erro.
+    async updateStatus(id, newStatus) {
+      const resp = await fetch('/driversapp/api/complaints/item/' + id + '/update/', POST_JSON({ status: newStatus }));
       const data = await resp.json();
-      if (data.success) {
-        // Update both the editComplaint and the row in the table
-        Object.assign(c, data.complaint);
-        this.editComplaint = { ...data.complaint };
-        this.kpis = { ...this.kpis };  // trigger reactivity
-        await this.loadComplaints(this.pagination.page);
-        this.$nextTick(() => lucide.createIcons());
-      } else {
+      if (!data.success) {
         alert(data.error || 'Erro ao actualizar status.');
+        return null;
       }
+      return data.complaint;
+    },
+
+    // Botões do modal de edição
+    async changeStatus(c, newStatus) {
+      const updated = await this.updateStatus(c.id, newStatus);
+      if (!updated) return;
+      this.editComplaint = { ...updated };
+      await this.loadComplaints();
+      this.openWhatsAppModal(updated);
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    // ── Drag & drop ───────────────────────────────────────────────────────
+    onDragStart(c, fromCol) {
+      this.dragCard = c;
+      this.dragFrom = fromCol;
+    },
+
+    async onDrop(toCol) {
+      const c = this.dragCard;
+      const from = this.dragFrom;
+      this.dragCard = null;
+      this.dragFrom = '';
+      if (!c || !toCol || from === toCol) return;
+
+      // Optimistic move
+      this.columns[from] = (this.columns[from] || []).filter(x => x.id !== c.id);
+      this.counts[from]  = Math.max(0, (this.counts[from] || 1) - 1);
+      const moved = { ...c, status: toCol };
+      this.columns[toCol] = [moved, ...(this.columns[toCol] || [])];
+      this.counts[toCol]  = (this.counts[toCol] || 0) + 1;
+
+      const updated = await this.updateStatus(c.id, toCol);
+      if (!updated) {
+        // transição inválida/erro → repor estado real do servidor
+        await this.loadComplaints();
+        return;
+      }
+      await this.loadComplaints();
+      this.openWhatsAppModal(updated);
     },
 
     async deleteComplaint(c) {
@@ -1208,9 +1190,47 @@ function complaintsPanel() {
       const resp = await fetch('/driversapp/api/complaints/item/' + c.id + '/delete/', POST());
       const data = await resp.json();
       if (data.success) {
-        await this.loadComplaints(this.pagination.page);
+        this.showEditModal = false;
+        await this.loadComplaints();
       } else {
         alert(data.error || 'Erro ao eliminar.');
+      }
+    },
+
+    // ── WhatsApp (notificação com confirmação) ─────────────────────────────
+    openWhatsAppModal(c) {
+      if (!c) return;
+      this.waComplaint = c;
+      this.waText = c.whatsapp_text || '';
+      this.showWAModal = true;
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    skipWhatsApp() {
+      this.showWAModal = false;
+      this.waComplaint = null;
+      this.waText = '';
+    },
+
+    async sendWhatsApp() {
+      if (!this.waComplaint) return;
+      this.waSending = true;
+      try {
+        const resp = await fetch(
+          '/driversapp/api/complaints/item/' + this.waComplaint.id + '/notificar-whatsapp/',
+          POST_JSON({ mensagem: this.waText }),
+        );
+        const data = await resp.json();
+        if (data.success) {
+          this.skipWhatsApp();
+          alert('Mensagem enviada por WhatsApp.');
+        } else {
+          alert(data.error || 'Falha ao enviar WhatsApp.');
+        }
+      } catch (e) {
+        alert('Erro de rede ao enviar WhatsApp.');
+      } finally {
+        this.waSending = false;
       }
     },
 
@@ -1244,9 +1264,7 @@ function complaintsPanel() {
         this.editComplaint = { ...data.complaint };
         this.editRespostaText = data.complaint.resposta_driver || '';
         this.editRespostaFiles = [];
-        // Update row in table
-        const idx = this.complaints.findIndex(x => x.id === c.id);
-        if (idx !== -1) this.complaints[idx] = { ...data.complaint };
+        await this.loadComplaints();
         this.$nextTick(() => lucide.createIcons());
       } else {
         alert(data.error || 'Erro ao guardar resposta.');
@@ -1268,6 +1286,24 @@ function complaintsPanel() {
     isOverdue(c) {
       if (!c || !c.deadline || ['FECHADO','CANCELADO','RESPONDIDO'].includes(c.status)) return false;
       return new Date(c.deadline.split('/').reverse().join('-')) < new Date();
+    },
+
+    slaBorderClass(estado) {
+      return {
+        'atrasado': 'border-red-500',
+        'atencao':  'border-yellow-400',
+        'ok':       'border-emerald-400',
+      }[estado] || 'border-gray-300';
+    },
+
+    tipoBadgeClass(tipo) {
+      return {
+        'ENTREGA_FALSA':     'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+        'ITEM_FALTANDO':     'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+        'PACOTE_DANIFICADO': 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
+        'ENTREGA_ATRASADA':  'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+        'OUTRO':             'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
+      }[tipo] || 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300';
     },
 
     statusClass(status) {

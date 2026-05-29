@@ -407,6 +407,70 @@ def driver_logins(request, driver_id):
     })
 
 
+@admin_required
+@require_http_methods(["GET"])
+def driver_login_transfer_preview(request, driver_id, mapping_id):
+    """Pré-visualização da transferência de um login para outro motorista."""
+    from django.http import JsonResponse
+    from settlements.models import DriverCourierMapping
+    from .services_login_transfer import preview_login_transfer
+
+    driver = get_object_or_404(DriverProfile, pk=driver_id)
+    mapping = get_object_or_404(
+        DriverCourierMapping, pk=mapping_id, driver=driver
+    )
+    target_id = request.GET.get("target_id")
+    if not target_id:
+        return JsonResponse(
+            {"success": False, "error": "Selecione o motorista destino."},
+            status=400,
+        )
+    target = get_object_or_404(DriverProfile, pk=target_id)
+    if target.pk == driver.pk:
+        return JsonResponse(
+            {"success": False, "error": "Destino igual à origem."}, status=400
+        )
+    counts = preview_login_transfer(mapping, target)
+    return JsonResponse({
+        "success": True,
+        "counts": counts,
+        "target": {"id": target.id, "nome": target.nome_completo},
+        "login": {"partner": mapping.partner.name, "courier_id": mapping.courier_id},
+    })
+
+
+@admin_required
+@require_http_methods(["POST"])
+def driver_login_transfer(request, driver_id, mapping_id):
+    """Executa a transferência do login para o motorista destino."""
+    from django.http import JsonResponse
+    from settlements.models import DriverCourierMapping
+    from .services_login_transfer import transfer_login
+
+    driver = get_object_or_404(DriverProfile, pk=driver_id)
+    mapping = get_object_or_404(
+        DriverCourierMapping, pk=mapping_id, driver=driver
+    )
+    target_id = request.POST.get("target_id")
+    if not target_id:
+        return JsonResponse(
+            {"success": False, "error": "target_id é obrigatório."}, status=400
+        )
+    target = get_object_or_404(DriverProfile, pk=target_id)
+    try:
+        counts = transfer_login(
+            mapping, target, user=request.user,
+            notes=(request.POST.get("notes") or "").strip(),
+        )
+    except ValueError as e:
+        return JsonResponse({"success": False, "error": str(e)}, status=400)
+    return JsonResponse({
+        "success": True,
+        "counts": counts,
+        "redirect_to": f"/driversapp/portal/{target.id}/logins/",
+    })
+
+
 # ─── FINANCEIRO (Conta-Corrente + Relatório de Entregas) ────────────
 
 @admin_required

@@ -3891,6 +3891,8 @@ from .portal_admin_views import (
     driver_claim_appeal,
     driver_complaint_apply_claim,
     driver_logins,
+    driver_login_transfer_preview,
+    driver_login_transfer,
     driver_financeiro,
     driver_pre_invoice_detail,
 )

@@ -662,6 +662,10 @@ def claim_list(request):
     """Lista e criação de claims de motoristas"""
     from drivers_app.models import DriverProfile
 
+    is_appeals_area = (
+        getattr(request.resolver_match, "url_name", "") == "claim-appeals"
+    )
+
     # POST: criar novo claim
     if request.method == "POST":
         driver_id = request.POST.get("driver_id")
@@ -706,12 +710,36 @@ def claim_list(request):
             from django.shortcuts import redirect
             return redirect("claim-list")
 
-    claims = DriverClaim.objects.select_related(
-        "driver", "settlement", "order", "vehicle_incident"
+    base_claims = DriverClaim.objects.select_related(
+        "driver", "settlement", "order", "vehicle_incident",
+        "customer_complaint",
     ).all()
 
+    kpis_qs = base_claims
+    now = timezone.now()
+    claim_kpis = {
+        "total": kpis_qs.count(),
+        "pending": kpis_qs.filter(status="PENDING").count(),
+        "approved": kpis_qs.filter(status="APPROVED").count(),
+        "rejected": kpis_qs.filter(status="REJECTED").count(),
+        "appealed": kpis_qs.filter(status="APPEALED").count(),
+        "linked_complaints": kpis_qs.filter(customer_complaint__isnull=False).count(),
+        "overdue_complaints": kpis_qs.filter(
+            customer_complaint__deadline__lt=now,
+            customer_complaint__status__in=("ABERTO", "NOTIFICADO"),
+        ).count(),
+    }
+    claim_kpis["pending_amount"] = (
+        kpis_qs.filter(status="PENDING").aggregate(s=Sum("amount"))["s"] or 0
+    )
+    claim_kpis["approved_amount"] = (
+        kpis_qs.filter(status="APPROVED").aggregate(s=Sum("amount"))["s"] or 0
+    )
+
+    claims = base_claims
+
     # Filtros
-    status = request.GET.get("status")
+    status = "APPEALED" if is_appeals_area else request.GET.get("status")
     if status:
         claims = claims.filter(status=status)
 
@@ -750,6 +778,8 @@ def claim_list(request):
         "status_choices": DriverClaim.STATUS_CHOICES,
         "type_choices": DriverClaim.CLAIM_TYPES,
         "drivers": drivers,
+        "claim_kpis": claim_kpis,
+        "is_appeals_area": is_appeals_area,
     }
 
     return render(request, "settlements/claim_list_v2.html", context)
@@ -883,6 +913,18 @@ def claim_detail(request, claim_id):
         if action == "approve" and claim.status == "PENDING":
             claim.approve(request.user, notes)
             messages.success(request, f"Reclamação #{claim.id} aprovada.")
+        elif action == "accept_appeal" and claim.status == "APPEALED":
+            claim.reject(request.user, notes or "Recurso aceite.")
+            messages.success(
+                request,
+                f"Recurso aceite. Reclamação #{claim.id} rejeitada.",
+            )
+        elif action == "reject_appeal" and claim.status == "APPEALED":
+            claim.approve(request.user, notes or "Recurso rejeitado.")
+            messages.success(
+                request,
+                f"Recurso rejeitado. Reclamação #{claim.id} aprovada.",
+            )
         elif action == "reject" and claim.status in ("PENDING", "APPEALED"):
             claim.reject(request.user, notes)
             messages.success(request, f"Reclamação #{claim.id} rejeitada.")

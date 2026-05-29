@@ -19,7 +19,7 @@ def auto_close_expired_complaints():
     """Cenário 3 — fecha reclamações com deadline expirada.
 
     Critério:
-      - status ∈ {ABERTO, NOTIFICADO}
+      - status = NOTIFICADO
       - deadline NÃO nulo e < agora
       - sem resposta_driver
       - sem DriverClaim já associado (idempotente)
@@ -39,7 +39,7 @@ def auto_close_expired_complaints():
     now = timezone.now()
     qs = (
         CustomerComplaint.objects
-        .filter(status__in=("ABERTO", "NOTIFICADO"))
+        .filter(status="NOTIFICADO")
         .filter(deadline__isnull=False, deadline__lt=now)
         .filter(Q(resposta_driver__isnull=True) | Q(resposta_driver=""))
         .exclude(driver_claims__isnull=False)

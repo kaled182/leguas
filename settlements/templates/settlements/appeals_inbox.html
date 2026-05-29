@@ -3,7 +3,7 @@
 {% block title %}Central de Recursos{% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto space-y-6" x-data="{ sel: [] }">
+<div class="max-w-7xl mx-auto space-y-6" x-data="recursosManager()">
 
   <!-- Header -->
   <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-5 fade-in">
@@ -59,11 +59,21 @@
           Aguardando envio ao parceiro
           <span class="bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded-full text-xs">{{ aguardando|length }}</span>
         </h2>
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2 flex-wrap">
           <span class="text-xs text-gray-400" x-text="sel.length + ' selecionado(s)'"></span>
+          <input type="hidden" name="lang" :value="lang">
+          <select x-model="lang" title="Idioma do PDF de provas"
+                  class="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+            <option value="es">🇪🇸 ES</option>
+            <option value="pt">🇵🇹 PT</option>
+          </select>
+          <button type="submit" name="action" value="xlsx" :disabled="sel.length===0"
+                  class="px-3 py-1.5 text-sm rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed text-white inline-flex items-center gap-1.5">
+            <i data-lucide="sheet" class="w-4 h-4"></i> Excel (Cainiao)
+          </button>
           <button type="submit" name="action" value="pdf" :disabled="sel.length===0"
                   class="px-3 py-1.5 text-sm rounded-lg bg-red-600 hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed text-white inline-flex items-center gap-1.5">
-            <i data-lucide="file-down" class="w-4 h-4"></i> Gerar PDF
+            <i data-lucide="file-down" class="w-4 h-4"></i> PDF provas
           </button>
           <button type="submit" name="action" value="send_partner" :disabled="sel.length===0"
                   onclick="return confirm('Marcar os recursos selecionados como ENVIADOS ao parceiro? Isto estorna o valor ao motorista e arranca a quarentena de 60 dias.');"
@@ -84,7 +94,7 @@
               </th>
               <th class="px-4 py-2 text-left">Waybill / LP</th>
               <th class="px-4 py-2 text-left">Motorista</th>
-              <th class="px-4 py-2 text-left">Tipo</th>
+              <th class="px-4 py-2 text-left">Motivo (Cainiao)</th>
               <th class="px-4 py-2 text-right">Valor</th>
               <th class="px-4 py-2 text-left">Chamado</th>
               <th class="px-4 py-2"></th>
@@ -98,7 +108,15 @@
               </td>
               <td class="px-4 py-2 font-mono text-xs">{{ c.waybill_number|default:"—" }}</td>
               <td class="px-4 py-2">{{ c.driver.nome_completo }}</td>
-              <td class="px-4 py-2 text-gray-500">{{ c.get_claim_type_display }}</td>
+              <td class="px-4 py-2">
+                <select @change="saveReason({{ c.id }}, $event.target.value)"
+                        class="w-56 px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                  <option value="">— escolher —</option>
+                  {% for value, label in reason_choices %}
+                  <option value="{{ value }}" {% if c.row_reason == value %}selected{% endif %}>{{ label|truncatechars:60 }}</option>
+                  {% endfor %}
+                </select>
+              </td>
               <td class="px-4 py-2 text-right font-semibold">€{{ c.amount|floatformat:2 }}</td>
               <td class="px-4 py-2">
                 {% if c.customer_complaint_id %}<span class="text-xs text-violet-600">#{{ c.customer_complaint_id }}</span>{% else %}<span class="text-gray-300">—</span>{% endif %}
@@ -235,5 +253,23 @@
 
 <script>
   document.addEventListener('DOMContentLoaded', () => { if (window.lucide) lucide.createIcons(); });
+
+  function recursosManager() {
+    const csrf = () => document.querySelector('[name=csrfmiddlewaretoken]').value;
+    return {
+      sel: [],
+      lang: 'es',
+      async saveReason(claimId, reason) {
+        const fd = new FormData();
+        fd.append('reason', reason);
+        try {
+          await fetch(`/settlements/recursos/${claimId}/motivo/`, {
+            method: 'POST', headers: { 'X-CSRFToken': csrf() },
+            body: fd, credentials: 'same-origin',
+          });
+        } catch (e) { /* silencioso — guarda na próxima geração */ }
+      },
+    };
+  }
 </script>
 {% endblock %}

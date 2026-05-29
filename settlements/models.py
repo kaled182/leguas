@@ -781,6 +781,32 @@ class DriverClaim(models.Model):
         ("DENIED", "Recurso negado (parceiro)"),
     ]
 
+    # Os 12 motivos OFICIAIS da Cainiao — devem ir LITERAIS, sem alterar.
+    APPEAL_REASON_CHOICES = [
+        ("El cliente reclama faltan artículos/productos incorrectos",
+         "El cliente reclama faltan artículos/productos incorrectos"),
+        ("El cliente no hay reclamacion", "El cliente no hay reclamacion"),
+        ("Casos de robo/penalización/pérdida/paquete dañado",
+         "Casos de robo/penalización/pérdida/paquete dañado"),
+        ("Cliente ha recibido", "Cliente ha recibido"),
+        ("Cliente reclama por equivocacion", "Cliente reclama por equivocacion"),
+        ("El paquete se entrega en PUDO/ Punto de recogida/city box/mail box/Tercero",
+         "El paquete se entrega en PUDO/ Punto de recogida/city box/mail box/Tercero"),
+        ("El paquete no se ha recogido", "El paquete no se ha recogido"),
+        ("Este no es nuestro paquete de entrega/Este no es nuestro conductor",
+         "Este no es nuestro paquete de entrega/Este no es nuestro conductor"),
+        ("Fuera de la zona de entrega/Paquete en almacén",
+         "Fuera de la zona de entrega/Paquete en almacén"),
+        ("La penalización duplicado", "La penalización duplicado"),
+        ("El cliente se llama por entrega urgente/cambio de dirección/error de "
+         "dirección que provoca un error de entrega/el cliente no está en casa, etc.",
+         "El cliente se llama por entrega urgente/cambio de dirección/error de "
+         "dirección que provoca un error de entrega/el cliente no está en casa, etc."),
+        ("No ha recibido ninguna reclamación", "No ha recibido ninguna reclamación"),
+    ]
+
+    PENALTY_CONFIRM_CHOICES = [("N", "N"), ("Y", "Y")]
+
     # Relacionamentos
     driver = models.ForeignKey(
         "drivers_app.DriverProfile",
@@ -928,6 +954,21 @@ class DriverClaim(models.Model):
         "Resposta do Parceiro", max_length=20,
         choices=PARTNER_RESPONSE_CHOICES, blank=True, default="",
         db_index=True,
+    )
+
+    # === Campos do formulário oficial de recurso Cainiao ================
+    appeal_reason = models.CharField(
+        "Motivo da Reclamação (Cainiao)", max_length=255,
+        choices=APPEAL_REASON_CHOICES, blank=True, default="",
+        help_text="Um dos 12 motivos oficiais da Cainiao (literal).",
+    )
+    penalty_confirmed = models.CharField(
+        "Confirmação da Penalização", max_length=1,
+        choices=PENALTY_CONFIRM_CHOICES, default="N",
+        help_text="Y/N — se o DSP confirma a penalização (no recurso = N).",
+    )
+    dsp_observation = models.TextField(
+        "Observação do DSP", blank=True, default="",
     )
 
     # Auditoria

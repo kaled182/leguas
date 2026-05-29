@@ -99,8 +99,12 @@ urlpatterns = [
     # Claims
     path("claims/", views.claim_list, name="claim-list"),
     path("claims/appeals/", views.claim_list, name="claim-appeals"),
-    # Central de Recursos (disputas com parceiro: quarentena + PDF em lote)
+    # Central de Recursos (disputas com parceiro: quarentena + PDF/Excel)
     path("recursos/", views.appeals_inbox, name="appeals-inbox"),
+    path(
+        "recursos/<int:claim_id>/motivo/",
+        views.appeals_set_reason, name="appeals-set-reason",
+    ),
     path("claims/<int:claim_id>/", views.claim_detail, name="claim-detail"),
     path(
         "claims/<int:claim_id>/update/",

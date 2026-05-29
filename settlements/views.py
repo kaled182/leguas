@@ -1072,7 +1072,21 @@ def appeals_inbox(request):
             messages.error(request, "Nenhum recurso selecionado.")
             return redirect("appeals-inbox")
         if action == "pdf":
-            return _appeals_pdf_response(ids)
+            return _appeals_pdf_response(ids, lang=request.POST.get("lang", "es"))
+        if action == "xlsx":
+            from .services_appeal_export import build_appeals_xlsx
+            claims = list(
+                DriverClaim.objects
+                .select_related("driver", "customer_complaint")
+                .filter(id__in=ids)
+            )
+            content, fname = build_appeals_xlsx(claims)
+            resp = HttpResponse(
+                content,
+                content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+            resp["Content-Disposition"] = f'attachment; filename="{fname}.xlsx"'
+            return resp
         if action == "send_partner":
             from .services_appeals import send_appeals_to_partner
             batch, summary = send_appeals_to_partner(ids, request.user)
@@ -1098,11 +1112,15 @@ def appeals_inbox(request):
         messages.error(request, "Ação inválida.")
         return redirect("appeals-inbox")
 
+    from .services_appeal_export import suggest_appeal_reason
+
     today = timezone.now().date()
     base = DriverClaim.objects.select_related(
         "driver", "customer_complaint", "appeal_batch"
     )
     aguardando = list(base.filter(status="APPEALED").order_by("created_at"))
+    for c in aguardando:
+        c.row_reason = c.appeal_reason or suggest_appeal_reason(c)
     em_analise_qs = base.filter(status="QUARANTINE").order_by("quarantine_until")
 
     em_analise = []
@@ -1142,6 +1160,7 @@ def appeals_inbox(request):
         "em_analise": em_analise,
         "fechados": fechados,
         "show_fechados": show_fechados,
+        "reason_choices": DriverClaim.APPEAL_REASON_CHOICES,
         "kpis": {
             "aguardando": len(aguardando),
             "em_analise": len(em_analise),
@@ -1155,9 +1174,23 @@ def appeals_inbox(request):
     })
 
 
-def _appeals_pdf_response(ids):
+@login_required
+@require_http_methods(["POST"])
+def appeals_set_reason(request, claim_id):
+    """Grava o motivo da reclamação (1 dos 12) escolhido para um recurso."""
+    claim = get_object_or_404(DriverClaim, id=claim_id)
+    reason = (request.POST.get("reason") or "").strip()
+    valid = {v for v, _ in DriverClaim.APPEAL_REASON_CHOICES}
+    if reason and reason not in valid:
+        return JsonResponse({"success": False, "error": "Motivo inválido."}, status=400)
+    claim.appeal_reason = reason
+    claim.save(update_fields=["appeal_reason", "updated_at"])
+    return JsonResponse({"success": True})
+
+
+def _appeals_pdf_response(ids, lang="es"):
     """Gera um PDF (ReportLab) com 1 secção por recurso, incluindo as imagens
-    de prova dos anexos da reclamação ligada. Para enviar ao parceiro."""
+    de prova do recurso. Para enviar ao parceiro. lang: 'es' (default) ou 'pt'."""
     import io
     import os
     from django.http import HttpResponse
@@ -1201,9 +1234,33 @@ def _appeals_pdf_response(ids):
     body = styles["Normal"]
     IMG_EXTS = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp"}
 
+    LABELS = {
+        "es": {
+            "title": "Recursos / Disputas — Léguas Franzinas",
+            "sub": "recurso(s) — pruebas adjuntas",
+            "wb": "Número de seguimiento", "lp": "Número de LP",
+            "driver": "Conductor", "tipo": "Tipo", "date": "Fecha",
+            "client": "Cliente", "addr": "Dirección",
+            "reason": "Motivo / Justificación",
+            "proof": "Prueba adjunta al recurso",
+            "noproof": "Sin prueba de imagen adjunta al recurso.",
+        },
+        "pt": {
+            "title": "Recursos / Disputas — Léguas Franzinas",
+            "sub": "recurso(s) — provas anexadas",
+            "wb": "Waybill No.", "lp": "LP No.",
+            "driver": "Motorista", "tipo": "Tipo", "date": "Data",
+            "client": "Cliente", "addr": "Morada",
+            "reason": "Motivo / Justificação",
+            "proof": "Prova anexada ao recurso",
+            "noproof": "Sem prova de imagem anexada ao recurso.",
+        },
+    }
+    L = LABELS["pt"] if lang == "pt" else LABELS["es"]
+
     elems = [
-        Paragraph("Recursos / Disputas — Léguas Franzinas", styles["Title"]),
-        Paragraph(f"{len(claims)} recurso(s) — provas anexadas", small),
+        Paragraph(L["title"], styles["Title"]),
+        Paragraph(f"{len(claims)} {L['sub']}", small),
         Spacer(1, 0.4 * cm),
     ]
     for i, claim in enumerate(claims):
@@ -1215,13 +1272,13 @@ def _appeals_pdf_response(ids):
         elems.append(Spacer(1, 0.2 * cm))
         cc = claim.customer_complaint
         rows = [
-            ["Waybill No.", claim.waybill_number or "—"],
-            ["LP No.", lp or "—"],
-            ["Motorista", claim.driver.nome_completo if claim.driver else "—"],
-            ["Tipo", claim.get_claim_type_display()],
-            ["Data", claim.occurred_at.strftime("%d/%m/%Y") if claim.occurred_at else "—"],
-            ["Cliente", cc.nome_cliente if cc else "—"],
-            ["Morada", (f"{cc.morada} {cc.codigo_postal} {cc.cidade}") if cc else "—"],
+            [L["wb"], claim.waybill_number or "—"],
+            [L["lp"], lp or "—"],
+            [L["driver"], claim.driver.nome_completo if claim.driver else "—"],
+            [L["tipo"], claim.appeal_reason or claim.get_claim_type_display()],
+            [L["date"], claim.occurred_at.strftime("%d/%m/%Y") if claim.occurred_at else "—"],
+            [L["client"], cc.nome_cliente if cc else "—"],
+            [L["addr"], (f"{cc.morada} {cc.codigo_postal} {cc.cidade}") if cc else "—"],
         ]
         t = Table(rows, colWidths=[3.5 * cm, 12 * cm])
         t.setStyle(TableStyle([
@@ -1233,7 +1290,7 @@ def _appeals_pdf_response(ids):
         elems.append(t)
         elems.append(Spacer(1, 0.2 * cm))
         motivo = claim.justification or (cc.descricao if cc else "") or claim.description
-        elems.append(Paragraph("<b>Motivo / Justificação:</b> " + (motivo or "—"), body))
+        elems.append(Paragraph(f"<b>{L['reason']}:</b> " + (motivo or "—"), body))
         elems.append(Spacer(1, 0.3 * cm))
 
         # PROVA DO RECURSO (a foto que comprova a entrega ao cliente), NÃO o
@@ -1244,7 +1301,7 @@ def _appeals_pdf_response(ids):
         proofs = []  # (path, caption)
         if claim.evidence_file:
             try:
-                proofs.append((claim.evidence_file.path, "Prova anexada ao recurso"))
+                proofs.append((claim.evidence_file.path, L["proof"]))
             except Exception:
                 pass
         if cc:
@@ -1271,15 +1328,14 @@ def _appeals_pdf_response(ids):
                 except Exception:
                     pass
         if shown == 0:
-            elems.append(Paragraph(
-                "<i>Sem prova de imagem anexada ao recurso (verificar evidência do claim).</i>",
-                small,
-            ))
+            elems.append(Paragraph(f"<i>{L['noproof']}</i>", small))
 
     doc.build(elems)
     buf.seek(0)
+    from .services_appeal_export import batch_filename
+    fname = batch_filename(claims)
     resp = HttpResponse(buf.getvalue(), content_type="application/pdf")
-    resp["Content-Disposition"] = 'attachment; filename="recursos.pdf"'
+    resp["Content-Disposition"] = f'attachment; filename="{fname}.pdf"'
     return resp
 
 

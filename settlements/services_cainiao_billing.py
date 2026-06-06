@@ -295,17 +295,45 @@ def _resolve_task(waybill: str):
 
 def _resolve_driver(staff_id: str, task, cid_to_driver,
                     cname_to_driver):
-    """Resolve driver por staff_id (cache) ou via courier da task."""
-    if staff_id and staff_id in cid_to_driver:
-        return cid_to_driver[staff_id]
-    if task is not None:
-        if task.courier_id_cainiao and task.courier_id_cainiao in cid_to_driver:
-            return cid_to_driver[task.courier_id_cainiao]
-        if task.courier_name:
-            key = task.courier_name.strip().lower()
+    """Resolve o driver RESPONSÁVEL pelo pacote.
+
+    Regra de negócio (crítica): o responsável é SEMPRE quem fez o
+    DELIVERY. Por isso, se a task ligada está Delivered, o courier dessa
+    task tem prioridade ABSOLUTA sobre o staff_id da planilha — este
+    último pode refletir um assignment anterior ou cancelado (driver que
+    NÃO entregou) e não deve ser usado para atribuir a perda/desconto.
+
+    Ordem:
+      1. task Delivered → courier da task (courier_id, depois nome).
+      2. staff_id da planilha (fallback quando não há Delivered, ou o
+         courier do Delivered não está mapeado a um DriverProfile).
+      3. courier de qualquer task (não-Delivered) como último recurso.
+    """
+    def _from_task(t):
+        if t is None:
+            return None
+        cid = getattr(t, "courier_id_cainiao", "")
+        if cid and cid in cid_to_driver:
+            return cid_to_driver[cid]
+        cname = getattr(t, "courier_name", "")
+        if cname:
+            key = cname.strip().lower()
             if key in cname_to_driver:
                 return cname_to_driver[key]
-    return None
+        return None
+
+    is_delivered = (
+        task is not None
+        and getattr(task, "task_status", "") == "Delivered"
+    )
+    if is_delivered:
+        d = _from_task(task)
+        if d:
+            return d  # quem entregou — prioridade absoluta
+
+    if staff_id and staff_id in cid_to_driver:
+        return cid_to_driver[staff_id]
+    return _from_task(task)
 
 
 # ─────────────────────────────────────────────────────────────────────

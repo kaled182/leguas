@@ -246,53 +246,69 @@ def cainiao_billing_detail(request, import_id):
         )
         claim_lines = list(qs)
 
-        # ── Detecção de reclamações/descontos já existentes por waybill ──
-        # Evita abrir um desconto duplicado: marca cada linha com a
-        # reclamação aberta e/ou o desconto já existente sobre o waybill.
-        waybills = [
-            ln.waybill_number for ln in claim_lines if ln.waybill_number
-        ]
-        comp_map = {}
-        if waybills:
-            comps = (
-                CustomerComplaint.objects
-                .filter(numero_pacote__in=waybills)
-                .exclude(status="CANCELADO")
-                .order_by("-created_at")
-                .only("id", "numero_pacote", "status")
-            )
-            # Prioriza reclamações ainda abertas sobre as fechadas.
+        # ── Detecção de reclamações/descontos já existentes ──────────────
+        # Cruza por TODOS os waybills candidatos de cada linha: o LP da
+        # fatura + o waybill CNPRT e o LP da task ligada. Inclui também os
+        # que JÁ EXISTIRAM (rejeitados/fechados) — com a data — para o
+        # operador saber o histórico antes de abrir um novo.
+        line_cands = {ln.id: _candidate_waybills(ln) for ln in claim_lines}
+        all_wbs = list({
+            (w or "").strip().upper(): w
+            for cands in line_cands.values() for w in cands
+        }.values())
+
+        comp_map, claim_map = {}, {}
+        if all_wbs:
             _open = ("ABERTO", "NOTIFICADO", "RESPONDIDO")
-            for c in comps:
+            for c in (
+                CustomerComplaint.objects
+                .filter(numero_pacote__in=all_wbs)
+                .only("id", "numero_pacote", "status", "created_at")
+            ):
                 k = (c.numero_pacote or "").strip().upper()
                 cur = comp_map.get(k)
-                if cur is None or (
-                    c.status in _open and cur.status not in _open
-                ):
+                better = (
+                    cur is None
+                    or (c.status in _open and cur.status not in _open)
+                    or (
+                        (c.status in _open) == (cur.status in _open)
+                        and c.created_at > cur.created_at
+                    )
+                )
+                if better:
                     comp_map[k] = c
-
-        claim_map = {}
-        if waybills:
-            ex_claims = (
+            for cl in (
                 DriverClaim.objects
-                .filter(waybill_number__in=waybills)
-                .exclude(status="REJECTED")
-                .order_by("created_at")
-                .only("id", "waybill_number", "status", "amount")
-            )
-            for cl in ex_claims:
+                .filter(waybill_number__in=all_wbs)
+                .only("id", "waybill_number", "status", "created_at", "amount")
+            ):
                 k = (cl.waybill_number or "").strip().upper()
-                claim_map.setdefault(k, cl)
+                cur = claim_map.get(k)
+                act, cur_act = (
+                    cl.status != "REJECTED",
+                    (cur.status != "REJECTED") if cur else False,
+                )
+                better = (
+                    cur is None
+                    or (act and not cur_act)
+                    or (act == cur_act and cl.created_at > cur.created_at)
+                )
+                if better:
+                    claim_map[k] = cl
 
         n_with_existing = 0
         for ln in claim_lines:
-            k = (ln.waybill_number or "").strip().upper()
-            ln.existing_complaint = comp_map.get(k)
-            other = claim_map.get(k)
-            ln.existing_claim = (
-                other if other and other.id != ln.claim_id else None
-            )
-            if not ln.claim_id and (ln.existing_complaint or ln.existing_claim):
+            comp = clm = None
+            for w in line_cands[ln.id]:
+                k = (w or "").strip().upper()
+                if comp is None:
+                    comp = comp_map.get(k)
+                cand = claim_map.get(k)
+                if clm is None and cand and cand.id != ln.claim_id:
+                    clm = cand
+            ln.existing_complaint = comp
+            ln.existing_claim = clm
+            if not ln.claim_id and (comp or clm):
                 n_with_existing += 1
 
         # Drivers activos para o select (compactos)
@@ -332,6 +348,34 @@ def Q_claim():
     return Q(fee_type="compensacion")
 
 
+def _candidate_waybills(line):
+    """Waybills candidatos de uma linha de compensación para cruzar com
+    reclamações/descontos.
+
+    A linha da fatura Cainiao traz o nº LP (ex.: LP880...), mas as
+    reclamações/descontos podem ter sido abertos com o waybill CNPRT
+    (task.waybill_number). A task ligada tem ambos — por isso cruzamos
+    pelo conjunto {line.waybill_number, task.waybill_number,
+    task.lp_number}.
+    """
+    cands = []
+    if line.waybill_number:
+        cands.append(line.waybill_number)
+    t = line.task
+    if t:
+        if getattr(t, "waybill_number", ""):
+            cands.append(t.waybill_number)
+        if getattr(t, "lp_number", ""):
+            cands.append(t.lp_number)
+    seen, out = set(), []
+    for c in cands:
+        k = (c or "").strip().upper()
+        if k and k not in seen:
+            seen.add(k)
+            out.append(c)
+    return out
+
+
 @login_required
 @require_http_methods(["POST"])
 def cainiao_billing_assign_claim(request, import_id, line_id):
@@ -364,8 +408,16 @@ def cainiao_billing_assign_claim(request, import_id, line_id):
             ),
         }, status=400)
 
-    # Anti-duplicação: já existe desconto activo sobre este waybill?
-    dup = DriverClaim.active_claim_for_waybill(line.waybill_number)
+    # Anti-duplicação: já existe desconto activo sobre qualquer waybill
+    # candidato (LP da linha ou CNPRT/LP da task ligada)?
+    _cands = _candidate_waybills(line)
+    dup = (
+        DriverClaim.objects
+        .filter(waybill_number__in=_cands)
+        .exclude(status="REJECTED")
+        .order_by("created_at")
+        .first()
+    ) if _cands else None
     if dup:
         return JsonResponse({
             "success": False,
@@ -456,8 +508,12 @@ def cainiao_billing_assign_claims_bulk(request, import_id):
     with transaction.atomic():
         for line in qs:
             # Anti-duplicação: não criar desconto se já existe um activo
-            # sobre o mesmo waybill (evita duplo desconto).
-            if DriverClaim.active_claim_for_waybill(line.waybill_number):
+            # sobre qualquer waybill candidato (LP/CNPRT) — evita duplo
+            # desconto.
+            _cands = _candidate_waybills(line)
+            if _cands and DriverClaim.objects.filter(
+                waybill_number__in=_cands,
+            ).exclude(status="REJECTED").exists():
                 skipped_dup += 1
                 continue
             description = (

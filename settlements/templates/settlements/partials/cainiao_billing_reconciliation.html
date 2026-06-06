@@ -42,6 +42,74 @@
   </div>
   {% endif %}
 
+  {# ── PUDO ──────────────────────────────────────────────────────── #}
+  {% if pudo and pudo.enabled %}
+  <div class="bg-white dark:bg-gray-800 rounded-xl border border-violet-200 dark:border-violet-700/40 overflow-hidden">
+    <div class="px-4 py-3 bg-violet-50 dark:bg-violet-900/20 border-b border-violet-200 dark:border-violet-700/40 flex items-center gap-2">
+      <i data-lucide="map-pin" class="w-5 h-5 text-violet-600 dark:text-violet-400"></i>
+      <h3 class="font-bold text-violet-700 dark:text-violet-300">Entregas PUDO</h3>
+      <span class="text-[11px] text-violet-600/70 dark:text-violet-400/70">Pickup &amp; Drop-Off — fórmula 1ª + adicionais por PUDO/dia</span>
+    </div>
+
+    {# mini-KPIs PUDO #}
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 p-4">
+      <div class="bg-violet-50 dark:bg-violet-900/10 rounded-lg p-3 border border-violet-200 dark:border-violet-700/30">
+        <div class="text-[10px] uppercase tracking-wider text-violet-700 dark:text-violet-300">Total PUDO Entregue</div>
+        <div class="text-2xl font-extrabold text-violet-700 dark:text-violet-300 mt-1">{{ pudo.total_packages }}</div>
+        <div class="text-[10px] text-violet-600/70 mt-0.5">≈ € {{ pudo.total_amount|floatformat:2 }} · {{ pudo.n_drivers }} motorista{{ pudo.n_drivers|pluralize }}</div>
+      </div>
+      <div class="bg-rose-50 dark:bg-rose-900/10 rounded-lg p-3 border border-rose-200 dark:border-rose-700/30">
+        <div class="text-[10px] uppercase tracking-wider text-rose-700 dark:text-rose-300">PUDO Entregues s/ Pagamento</div>
+        <div class="text-2xl font-extrabold text-rose-700 dark:text-rose-300 mt-1">{{ pudo.unpaid.n }}</div>
+        <div class="text-[10px] text-rose-600/70 mt-0.5">valor estimado ≈ € {{ pudo.unpaid.amount|floatformat:2 }}</div>
+      </div>
+      <div class="bg-amber-50 dark:bg-amber-900/10 rounded-lg p-3 border border-amber-200 dark:border-amber-700/30">
+        <div class="text-[10px] uppercase tracking-wider text-amber-700 dark:text-amber-300">Suspeitas Fake Delivery</div>
+        {% if pudo.suspects %}
+          <div class="text-2xl font-extrabold text-amber-700 dark:text-amber-300 mt-1">{{ pudo.suspects.stats.n_final }}</div>
+          <div class="text-[10px] text-amber-600/70 mt-0.5">
+            dist &gt; {{ pudo.suspects.stats.tolerance_m }}m ·
+            <a href="{% url 'pudo-fake-delivery-suspects' %}" class="underline hover:text-amber-800">ver detalhes</a>
+          </div>
+        {% else %}
+          <div class="text-sm text-amber-600/70 mt-2">—</div>
+        {% endif %}
+      </div>
+    </div>
+
+    {# PUDO por motorista #}
+    {% if pudo.drivers %}
+    <div class="overflow-x-auto border-t border-gray-100 dark:border-gray-700">
+      <table class="w-full text-xs">
+        <thead class="bg-gray-50 dark:bg-gray-900/40">
+          <tr>
+            <th class="px-3 py-2 text-left font-semibold text-gray-600 dark:text-gray-400 uppercase">Motorista</th>
+            <th class="px-3 py-2 text-left font-semibold text-gray-600 dark:text-gray-400 uppercase">Courier ID</th>
+            <th class="px-3 py-2 text-right font-semibold text-gray-600 dark:text-gray-400 uppercase">Pacotes PUDO</th>
+            <th class="px-3 py-2 text-right font-semibold text-gray-600 dark:text-gray-400 uppercase">PUDOs distintos</th>
+            <th class="px-3 py-2 text-right font-semibold text-gray-600 dark:text-gray-400 uppercase">Valor €</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+          {% for d in pudo.drivers %}
+          <tr class="hover:bg-violet-50/50 dark:hover:bg-violet-900/10">
+            <td class="px-3 py-1.5 text-gray-900 dark:text-white">{{ d.name }}</td>
+            <td class="px-3 py-1.5 font-mono text-[10px] text-gray-500">{{ d.courier_id }}</td>
+            <td class="px-3 py-1.5 text-right font-semibold text-violet-700 dark:text-violet-300">{{ d.n_packages }}</td>
+            <td class="px-3 py-1.5 text-right text-gray-500">{{ d.n_pudos }}</td>
+            <td class="px-3 py-1.5 text-right font-bold text-emerald-600 dark:text-emerald-400">{{ d.amount|floatformat:2 }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% if pudo.n_drivers > 50 %}
+      <div class="px-3 py-2 text-[10px] text-gray-400 text-center">A mostrar os 50 motoristas com mais pacotes PUDO (de {{ pudo.n_drivers }}).</div>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
   {# Matemática completa em distinct waybills #}
   {% if recon_math %}
   <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">

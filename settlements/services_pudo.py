@@ -346,6 +346,100 @@ def pudo_breakdown_for_driver(driver, date_from, date_to, partner=None):
     }
 
 
+def pudo_invoice_summary(partner, date_from, date_to, unpaid_tasks=None):
+    """Resumo PUDO para a tab Reconciliação da pré-fatura Cainiao.
+
+    Devolve dict com 3 blocos:
+      - drivers: PUDO Delivered no período agrupado por motorista
+        (n_packages, n_pudos distintos, valor pela fórmula 1ª+adicionais
+        aplicada por (dia, PUDO)).
+      - unpaid: dos `unpaid_tasks` (entregues s/ pagamento da Cainiao),
+        quantos são PUDO e o valor estimado.
+      - suspects: stats de suspeitas de fake delivery (distância geo).
+
+    Defensivo: nunca levanta — cada bloco é independente.
+    """
+    from .models import CainiaoOperationTask
+
+    enabled = bool(partner and getattr(partner, "pudo_enabled", False))
+    out = {
+        "enabled": enabled,
+        "drivers": [],
+        "n_drivers": 0,
+        "total_packages": 0,
+        "total_amount": Decimal("0.00"),
+        "unpaid": {"n": 0, "amount": Decimal("0.00")},
+        "suspects": None,
+    }
+    if not enabled:
+        return out
+
+    def _amount_by_day_pudo(tasks):
+        groups = defaultdict(list)
+        for t in tasks:
+            groups[(t.task_date, pudo_key(t) or ("solo", t.id))].append(t)
+        amt = Decimal("0.00")
+        for v in groups.values():
+            amt += compute_pudo_payment(len(v), partner)
+        return amt, len(groups)
+
+    # ── Bloco 1: PUDO por motorista ──────────────────────────────────
+    pudo_qs = CainiaoOperationTask.objects.filter(
+        delivery_type__iexact="PUDO", task_status="Delivered",
+        task_date__range=(date_from, date_to),
+    ).only(
+        "id", "waybill_number", "task_date", "receiver_latitude",
+        "receiver_longitude", "zip_code", "detailed_address",
+        "courier_id_cainiao", "courier_name", "destination_city",
+    )
+    by_courier = defaultdict(list)
+    courier_names = {}
+    for t in pudo_qs:
+        key = t.courier_id_cainiao or t.courier_name or "—"
+        by_courier[key].append(t)
+        if t.courier_name:
+            courier_names.setdefault(key, t.courier_name)
+    drivers = []
+    for key, tasks in by_courier.items():
+        amt, n_pudos = _amount_by_day_pudo(tasks)
+        drivers.append({
+            "courier_id": key,
+            "name": courier_names.get(key, key),
+            "n_packages": len(tasks),
+            "n_pudos": n_pudos,
+            "amount": amt,
+        })
+        out["total_packages"] += len(tasks)
+        out["total_amount"] += amt
+    drivers.sort(key=lambda d: -d["n_packages"])
+    out["n_drivers"] = len(drivers)
+    out["drivers"] = drivers[:50]
+
+    # ── Bloco 2: PUDO dentro de "Entregues s/ Pagamento" ─────────────
+    if unpaid_tasks is not None:
+        pudo_unpaid = [
+            t for t in unpaid_tasks
+            if (getattr(t, "delivery_type", "") or "").upper().strip()
+            == "PUDO"
+        ]
+        amt, _ = _amount_by_day_pudo(pudo_unpaid)
+        out["unpaid"] = {"n": len(pudo_unpaid), "amount": amt}
+
+    # ── Bloco 3: suspeitas de fake delivery ──────────────────────────
+    try:
+        suspects, stats = find_fake_delivery_suspects(
+            date_from, date_to, partner,
+        )
+        out["suspects"] = {
+            "stats": stats,
+            "top": suspects[:5],
+        }
+    except Exception:  # noqa: BLE001 — bloco independente
+        out["suspects"] = None
+
+    return out
+
+
 def compute_pudo_total_for_driver(pudo_tasks, partner):
     """Calcula o total de pagamento para uma lista de tasks PUDO de
     um driver, agrupando por PUDO e aplicando a fórmula.

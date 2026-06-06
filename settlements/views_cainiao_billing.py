@@ -177,6 +177,24 @@ def cainiao_billing_detail(request, import_id):
         diagnosis = diagnose_delivered_no_billing(session)
         recon_math = reconciliation_math(session)
         by_driver = delivered_no_billing_by_driver(session)
+
+        # Resumo PUDO (por motorista, não-pagos, suspeitas fake delivery).
+        # Defensivo: nunca rebenta a página de reconciliação.
+        pudo = None
+        try:
+            from .services_pudo import pudo_invoice_summary
+            partner = (
+                session.partner_invoice.partner
+                if session.partner_invoice_id else None
+            )
+            pudo = pudo_invoice_summary(
+                partner, session.period_from, session.period_to,
+                unpaid_tasks=recon["delivered_no_billing"],
+            )
+        except Exception:
+            log.exception("pudo_invoice_summary falhou")
+            pudo = None
+        ctx["pudo"] = pudo
         # Paginar as duas listas grandes
         from django.core.paginator import Paginator as P
         ctx.update({

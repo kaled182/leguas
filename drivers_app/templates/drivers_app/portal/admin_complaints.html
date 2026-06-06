@@ -251,6 +251,12 @@
                 </button>
               {% endif %}
 
+              {% if c.status == 'FECHADO' or c.status == 'CANCELADO' %}
+                <button type="button" @click="changeStatus({{ c.id }}, 'ABERTO')" class="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold inline-flex items-center gap-1">
+                  <i data-lucide="rotate-ccw" class="w-3 h-3"></i> Reabrir
+                </button>
+              {% endif %}
+
               <a href="{% url 'drivers_app:driver-complaint-pdf' c.id %}" target="_blank"
                  class="px-2.5 py-1 bg-violet-600 hover:bg-violet-700 text-white rounded font-semibold inline-flex items-center gap-1">
                 <i data-lucide="file-text" class="w-3 h-3"></i> PDF

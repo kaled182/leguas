@@ -55,10 +55,12 @@
         {% for line in lines_page %}
         <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 {% if line.fee_type == 'compensacion' %}bg-rose-50/50 dark:bg-rose-900/10{% elif line.is_special_price %}bg-amber-50/50 dark:bg-amber-900/10{% endif %}">
           <td class="px-2 py-1.5">
-            {% if line.fee_type == 'envio fee' %}
+            {% if line.fee_type == 'compensacion' %}
+              <span class="text-rose-700 font-semibold">claim</span>
+            {% elif line.fee_type == 'envio fee' %}
               <span class="text-emerald-700 font-semibold">envio</span>
             {% else %}
-              <span class="text-rose-700 font-semibold">claim</span>
+              <span class="text-amber-600 font-semibold" title="fee_type bruto do XLSX">{{ line.fee_type|default:'—' }}</span>
             {% endif %}
           </td>
           <td class="px-2 py-1.5 text-gray-700 dark:text-gray-300 whitespace-nowrap">{{ line.biz_time|date:"d/m H:i" }}</td>

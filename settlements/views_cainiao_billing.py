@@ -92,6 +92,10 @@ def cainiao_billing_detail(request, import_id):
         id=import_id,
     )
 
+    # Auto-cura: os contadores cached (KPIs do topo) podem estar
+    # obsoletos/zerados apesar de existirem linhas. Recompõe da verdade.
+    session.recompute_counters()
+
     active_tab = request.GET.get("tab", "summary")
     ctx = {"session": session, "active_tab": active_tab}
 
@@ -215,13 +219,64 @@ def cainiao_billing_detail(request, import_id):
 
     # ── Tab: Claims ──────────────────────────────────────────────────
     elif active_tab == "claims":
-        from drivers_app.models import DriverProfile
+        from drivers_app.models import DriverProfile, CustomerComplaint
         from .models import DriverClaim
         qs = (
             session.lines.filter(fee_type="compensacion")
             .select_related("driver", "task", "claim")
             .order_by("-biz_time")
         )
+        claim_lines = list(qs)
+
+        # ── Detecção de reclamações/descontos já existentes por waybill ──
+        # Evita abrir um desconto duplicado: marca cada linha com a
+        # reclamação aberta e/ou o desconto já existente sobre o waybill.
+        waybills = [
+            ln.waybill_number for ln in claim_lines if ln.waybill_number
+        ]
+        comp_map = {}
+        if waybills:
+            comps = (
+                CustomerComplaint.objects
+                .filter(numero_pacote__in=waybills)
+                .exclude(status="CANCELADO")
+                .order_by("-created_at")
+                .only("id", "numero_pacote", "status")
+            )
+            # Prioriza reclamações ainda abertas sobre as fechadas.
+            _open = ("ABERTO", "NOTIFICADO", "RESPONDIDO")
+            for c in comps:
+                k = (c.numero_pacote or "").strip().upper()
+                cur = comp_map.get(k)
+                if cur is None or (
+                    c.status in _open and cur.status not in _open
+                ):
+                    comp_map[k] = c
+
+        claim_map = {}
+        if waybills:
+            ex_claims = (
+                DriverClaim.objects
+                .filter(waybill_number__in=waybills)
+                .exclude(status="REJECTED")
+                .order_by("created_at")
+                .only("id", "waybill_number", "status", "amount")
+            )
+            for cl in ex_claims:
+                k = (cl.waybill_number or "").strip().upper()
+                claim_map.setdefault(k, cl)
+
+        n_with_existing = 0
+        for ln in claim_lines:
+            k = (ln.waybill_number or "").strip().upper()
+            ln.existing_complaint = comp_map.get(k)
+            other = claim_map.get(k)
+            ln.existing_claim = (
+                other if other and other.id != ln.claim_id else None
+            )
+            if not ln.claim_id and (ln.existing_complaint or ln.existing_claim):
+                n_with_existing += 1
+
         # Drivers activos para o select (compactos)
         drivers_options = list(
             DriverProfile.objects
@@ -230,7 +285,7 @@ def cainiao_billing_detail(request, import_id):
             .order_by("nome_completo")
         )
         ctx.update({
-            "claim_lines": list(qs),
+            "claim_lines": claim_lines,
             "claims_total_value": qs.aggregate(
                 s=Coalesce(Sum("amount"), Decimal("0")),
             )["s"],
@@ -239,6 +294,7 @@ def cainiao_billing_detail(request, import_id):
             "claims_with_suggestion": qs.filter(
                 claim__isnull=True, driver__isnull=False,
             ).count(),
+            "claims_with_existing": n_with_existing,
             "drivers_options": drivers_options,
             "claim_types": DriverClaim.CLAIM_TYPES,
         })
@@ -289,6 +345,20 @@ def cainiao_billing_assign_claim(request, import_id, line_id):
                 "associado."
             ),
         }, status=400)
+
+    # Anti-duplicação: já existe desconto activo sobre este waybill?
+    dup = DriverClaim.active_claim_for_waybill(line.waybill_number)
+    if dup:
+        return JsonResponse({
+            "success": False,
+            "error": (
+                f"Já existe um desconto (#{dup.id} · "
+                f"{dup.get_status_display()}) sobre o waybill "
+                f"{line.waybill_number}. Não é possível criar um "
+                f"desconto duplicado sobre o mesmo pacote."
+            ),
+            "duplicate_claim_id": dup.id,
+        }, status=409)
 
     driver_id = request.POST.get("driver_id")
     if not driver_id:
@@ -364,8 +434,14 @@ def cainiao_billing_assign_claims_bulk(request, import_id):
     ).select_related("driver", "task")
 
     created = 0
+    skipped_dup = 0
     with transaction.atomic():
         for line in qs:
+            # Anti-duplicação: não criar desconto se já existe um activo
+            # sobre o mesmo waybill (evita duplo desconto).
+            if DriverClaim.active_claim_for_waybill(line.waybill_number):
+                skipped_dup += 1
+                continue
             description = (
                 f"Cainiao Billing #{session.id} "
                 f"({line.cainiao_billing_id}). "
@@ -396,12 +472,16 @@ def cainiao_billing_assign_claims_bulk(request, import_id):
         fee_type="compensacion", claim__isnull=True, driver__isnull=True,
     ).count()
 
+    dup_msg = (
+        f" {skipped_dup} ignorados (já tinham desconto no waybill)."
+        if skipped_dup else ""
+    )
     if created:
         messages.success(
             request,
             f"{created} DriverClaim criados. "
             f"{skipped_no_driver} ignorados (sem driver sugerido — "
-            "atribua manualmente).",
+            f"atribua manualmente).{dup_msg}",
         )
     else:
         messages.warning(
@@ -907,6 +987,7 @@ def cainiao_billing_reresolve(request, import_id):
     session = get_object_or_404(CainiaoBillingImport, id=import_id)
     try:
         result = reresolve_matching(session)
+        session.recompute_counters()
     except Exception as e:
         log.exception("reresolve_matching falhou")
         messages.error(request, f"Erro ao reprocessar matching: {e}")

@@ -4539,6 +4539,53 @@ class CainiaoBillingImport(models.Model):
     def total_amount(self):
         return self.total_envio + self.total_compensacion
 
+    def recompute_counters(self, save=True):
+        """Recalcula os contadores cached a partir das linhas reais.
+
+        Os campos total_* são preenchidos no import, mas podem ficar
+        obsoletos (ex.: re-import parcial, versões antigas) e aparecer a
+        zero apesar de existirem linhas. Este método recompõe-os a partir
+        da verdade (as CainiaoBillingLine). Só grava se algo mudou.
+        """
+        from django.db.models import Sum, Count, Q
+        from decimal import Decimal
+
+        agg = self.lines.aggregate(
+            total=Count("id"),
+            envio=Sum("amount", filter=Q(fee_type="envio fee")),
+            comp=Sum("amount", filter=Q(fee_type="compensacion")),
+        )
+        new_total = agg["total"] or 0
+        new_envio = (agg["envio"] or Decimal("0")).quantize(Decimal("0.01"))
+        new_comp = (agg["comp"] or Decimal("0")).quantize(Decimal("0.01"))
+        new_billing = (
+            self.lines.exclude(cainiao_billing_id="")
+            .values("cainiao_billing_id").distinct().count()
+        )
+        new_staff = (
+            self.lines.exclude(staff_id="")
+            .values("staff_id").distinct().count()
+        )
+
+        changed = (
+            self.total_lines != new_total
+            or self.total_envio != new_envio
+            or self.total_compensacion != new_comp
+            or self.n_billing_ids != new_billing
+            or self.n_staff_ids != new_staff
+        )
+        self.total_lines = new_total
+        self.total_envio = new_envio
+        self.total_compensacion = new_comp
+        self.n_billing_ids = new_billing
+        self.n_staff_ids = new_staff
+        if save and changed:
+            self.save(update_fields=[
+                "total_lines", "total_envio", "total_compensacion",
+                "n_billing_ids", "n_staff_ids",
+            ])
+        return changed
+
 
 class CainiaoBillingLine(models.Model):
     """Uma linha do XLSX Cainiao — 1 envio fee ou 1 compensación.

@@ -24,6 +24,13 @@
         <div class="text-xl font-extrabold text-gray-700 dark:text-gray-300">{{ claims_unassigned|add:"-"|add:claims_with_suggestion }}</div>
         <div class="text-[10px] text-gray-500">requerem atribuição manual</div>
       </div>
+      {% if claims_with_existing %}
+      <div class="bg-orange-50 dark:bg-orange-900/20 rounded-lg px-4 py-2 border border-orange-300 dark:border-orange-700/40">
+        <div class="text-[10px] uppercase text-orange-700 dark:text-orange-300">Já têm reclamação/desconto</div>
+        <div class="text-xl font-extrabold text-orange-700 dark:text-orange-300">{{ claims_with_existing }}</div>
+        <div class="text-[10px] text-orange-700/70">não abrir duplicado</div>
+      </div>
+      {% endif %}
     </div>
 
     <div class="flex items-center gap-2">
@@ -69,6 +76,21 @@
               <span class="block text-[9px] text-gray-400 mt-0.5">task: {{ line.task.task_date|date:"d/m" }} · {{ line.task.task_status }}</span>
             {% else %}
               <span class="block text-[9px] text-rose-400 mt-0.5">sem task local</span>
+            {% endif %}
+            {% if line.existing_claim %}
+              <a href="/settlements/claims/{{ line.existing_claim.id }}/" target="_blank"
+                 class="mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-300 text-[9px] font-bold font-sans"
+                 title="Já existe um desconto sobre este waybill — não abrir duplicado">
+                <i data-lucide="circle-dollar-sign" class="w-2.5 h-2.5"></i>
+                Já tem desconto #{{ line.existing_claim.id }} · {{ line.existing_claim.get_status_display }}
+              </a>
+            {% endif %}
+            {% if line.existing_complaint %}
+              <span class="mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300 text-[9px] font-bold font-sans"
+                    title="Já existe uma reclamação de cliente para este pacote">
+                <i data-lucide="alert-octagon" class="w-2.5 h-2.5"></i>
+                Reclamação #{{ line.existing_complaint.id }} · {{ line.existing_complaint.get_status_display }}
+              </span>
             {% endif %}
           </td>
           <td class="px-3 py-2 text-gray-600 dark:text-gray-400 max-w-[260px]">

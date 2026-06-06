@@ -263,7 +263,11 @@ def cainiao_billing_detail(request, import_id):
             for c in (
                 CustomerComplaint.objects
                 .filter(numero_pacote__in=all_wbs)
-                .only("id", "numero_pacote", "status", "created_at")
+                .select_related("driver")
+                .only(
+                    "id", "numero_pacote", "status", "created_at",
+                    "driver__nome_completo", "driver__apelido",
+                )
             ):
                 k = (c.numero_pacote or "").strip().upper()
                 cur = comp_map.get(k)
@@ -280,7 +284,11 @@ def cainiao_billing_detail(request, import_id):
             for cl in (
                 DriverClaim.objects
                 .filter(waybill_number__in=all_wbs)
-                .only("id", "waybill_number", "status", "created_at", "amount")
+                .select_related("driver")
+                .only(
+                    "id", "waybill_number", "status", "created_at", "amount",
+                    "driver__nome_completo", "driver__apelido",
+                )
             ):
                 k = (cl.waybill_number or "").strip().upper()
                 cur = claim_map.get(k)
@@ -308,7 +316,19 @@ def cainiao_billing_detail(request, import_id):
                     clm = cand
             ln.existing_complaint = comp
             ln.existing_claim = clm
-            if not ln.claim_id and (comp or clm):
+            # Bloqueado para criação: desconto activo (não rejeitado) OU
+            # ticket não cancelado já existe sobre o pacote.
+            active_claim = bool(clm and clm.status != "REJECTED")
+            open_ticket = bool(comp and comp.status != "CANCELADO")
+            ln.blocked = (not ln.claim_id) and (active_claim or open_ticket)
+            # Driver identificado: o do desconto/ticket existente, senão o
+            # sugerido pela task.
+            ln.locked_driver = (
+                (clm.driver if clm and clm.driver_id else None)
+                or (comp.driver if comp and comp.driver_id else None)
+                or ln.driver
+            )
+            if ln.blocked:
                 n_with_existing += 1
 
         # Drivers activos para o select (compactos)
@@ -430,6 +450,27 @@ def cainiao_billing_assign_claim(request, import_id, line_id):
             "duplicate_claim_id": dup.id,
         }, status=409)
 
+    # Também bloqueia se já existe um ticket (reclamação) não cancelado.
+    if _cands:
+        from drivers_app.models import CustomerComplaint
+        tk = (
+            CustomerComplaint.objects
+            .filter(numero_pacote__in=_cands)
+            .exclude(status="CANCELADO")
+            .order_by("-created_at")
+            .first()
+        )
+        if tk:
+            return JsonResponse({
+                "success": False,
+                "error": (
+                    f"Já existe um ticket (#{tk.id} · "
+                    f"{tk.get_status_display()}) para este pacote. "
+                    f"Trate pelo ticket — não criar desconto duplicado."
+                ),
+                "existing_complaint_id": tk.id,
+            }, status=409)
+
     driver_id = request.POST.get("driver_id")
     if not driver_id:
         return JsonResponse({
@@ -490,6 +531,7 @@ def cainiao_billing_assign_claims_bulk(request, import_id):
     from .models import (
         CainiaoBillingImport, DriverClaim,
     )
+    from drivers_app.models import CustomerComplaint
     from django.db import transaction
 
     session = get_object_or_404(CainiaoBillingImport, id=import_id)
@@ -511,9 +553,14 @@ def cainiao_billing_assign_claims_bulk(request, import_id):
             # sobre qualquer waybill candidato (LP/CNPRT) — evita duplo
             # desconto.
             _cands = _candidate_waybills(line)
-            if _cands and DriverClaim.objects.filter(
-                waybill_number__in=_cands,
-            ).exclude(status="REJECTED").exists():
+            if _cands and (
+                DriverClaim.objects.filter(
+                    waybill_number__in=_cands,
+                ).exclude(status="REJECTED").exists()
+                or CustomerComplaint.objects.filter(
+                    numero_pacote__in=_cands,
+                ).exclude(status="CANCELADO").exists()
+            ):
                 skipped_dup += 1
                 continue
             description = (

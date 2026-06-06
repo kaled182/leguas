@@ -114,6 +114,24 @@
                 #{{ line.claim_id }}
               </a>
             </td>
+          {% elif line.blocked %}
+            {# Já existe ticket/desconto — driver travado, sem criar #}
+            <td class="px-3 py-2">
+              <div class="flex items-center gap-2">
+                <i data-lucide="lock" class="w-4 h-4 text-gray-400 flex-shrink-0"></i>
+                <div>
+                  <div class="font-semibold text-gray-900 dark:text-white">{{ line.locked_driver.nome_completo|default:"—" }}</div>
+                  <div class="text-[10px] text-gray-500">identificado · travado</div>
+                </div>
+              </div>
+            </td>
+            <td class="px-3 py-2 text-center">
+              <span class="px-2 py-1 bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded text-[10px] font-semibold inline-flex items-center gap-1 cursor-not-allowed"
+                    title="Já existe ticket/desconto sobre este pacote">
+                <i data-lucide="ban" class="w-3 h-3"></i>
+                Bloqueado
+              </span>
+            </td>
           {% else %}
             <td class="px-3 py-2">
               <form method="post" action="{% url 'cainiao-billing-assign-claim' session.id line.id %}"

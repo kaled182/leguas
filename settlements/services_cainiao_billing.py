@@ -244,6 +244,45 @@ def _norm_name(s):
     return " ".join(str(s).replace("_", " ").lower().split())
 
 
+def _name_variants(s):
+    """Variantes de um nome para casar courier_name ↔ apelido/nome.
+
+    Inclui a versão normalizada e a versão sem o sufixo de empresa " lf"
+    (o courier_name Cainiao traz "_LF" mas o nome_completo do driver não).
+    """
+    base = _norm_name(s)
+    if not base:
+        return set()
+    out = {base}
+    if base.endswith(" lf"):
+        stripped = base[:-3].strip()
+        if stripped:
+            out.add(stripped)
+    return out
+
+
+def _canon_fee(raw):
+    """Canoniza o fee_type para os valores oficiais.
+
+    O XLSX Cainiao pode trazer "Compensación"/"Envío fee" (maiúsculas e
+    acentos); o MySQL casa em filtros (ci/ai) mas comparações exatas em
+    Python falham. Devolve sempre "compensacion" ou "envio fee" (ou o
+    valor original em minúsculas se for desconhecido).
+    """
+    s = (raw or "").strip().lower()
+    if not s:
+        return ""
+    s2 = (
+        s.replace("ó", "o").replace("í", "i").replace("á", "a")
+        .replace("é", "e").replace("ú", "u").replace("ñ", "n")
+    )
+    if "compens" in s2:
+        return "compensacion"
+    if "envio" in s2:
+        return "envio fee"
+    return s
+
+
 def _build_resolution_caches():
     """Constrói caches em memória para evitar 30k queries no import.
 
@@ -258,8 +297,7 @@ def _build_resolution_caches():
     cname_to_driver = {}
 
     def _add_name(name, d):
-        k = _norm_name(name)
-        if k:
+        for k in _name_variants(name):
             cname_to_driver.setdefault(k, d)
 
     drivers = DriverProfile.objects.all()
@@ -333,9 +371,9 @@ def _resolve_driver(staff_id: str, task, cid_to_driver,
         cid = getattr(t, "courier_id_cainiao", "")
         if cid and cid in cid_to_driver:
             return cid_to_driver[cid]
-        key = _norm_name(getattr(t, "courier_name", ""))
-        if key and key in cname_to_driver:
-            return cname_to_driver[key]
+        for key in _name_variants(getattr(t, "courier_name", "")):
+            if key in cname_to_driver:
+                return cname_to_driver[key]
         return None
 
     is_delivered = (
@@ -348,7 +386,7 @@ def _resolve_driver(staff_id: str, task, cid_to_driver,
             return d  # quem entregou — prioridade absoluta
         # Delivered mas courier não mapeado: para claims, não atribuir ao
         # staff_id (assigned) — só o deliverer conta.
-        if fee_type == "compensacion":
+        if _canon_fee(fee_type) == "compensacion":
             return None
 
     if staff_id and staff_id in cid_to_driver:
@@ -470,13 +508,14 @@ def import_cainiao_billing(file_obj, file_name: str, user=None):
             objs = []
             for r in chunk:
                 task = tasks_by_wb.get(r["waybill_number"])
+                fee_canon = _canon_fee(r["fee_type"])
                 driver = _resolve_driver(
                     r["staff_id"], task, cid_to_driver, cname_to_driver,
-                    fee_type=r["fee_type"],
+                    fee_type=fee_canon,
                 )
                 objs.append(CainiaoBillingLine(
                     import_session=session,
-                    fee_type=r["fee_type"],
+                    fee_type=fee_canon,
                     biz_time=r["biz_time"],
                     amount=r["amount"],
                     moneda=r["moneda"],
@@ -491,10 +530,10 @@ def import_cainiao_billing(file_obj, file_name: str, user=None):
                     driver=driver,
                 ))
 
-                if r["fee_type"] == "envio fee":
+                if fee_canon == "envio fee":
                     n_envio += 1
                     total_envio += r["amount"]
-                elif r["fee_type"] == "compensacion":
+                elif fee_canon == "compensacion":
                     n_compensacion += 1
                     total_comp += r["amount"]
                 if r["cainiao_billing_id"]:
@@ -612,7 +651,8 @@ def reresolve_matching(session):
             return
         with transaction.atomic():
             CainiaoBillingLine.objects.bulk_update(
-                lines_to_update, fields=["task_id", "driver_id"],
+                lines_to_update,
+                fields=["task_id", "driver_id", "fee_type"],
             )
 
     # Pré-buscar tasks em batch para todo o conjunto (1 query única
@@ -642,16 +682,20 @@ def reresolve_matching(session):
     for line in qs.iterator(chunk_size=chunk_size):
         old_task = line.task_id
         old_driver = line.driver_id
+        old_fee = line.fee_type
+        new_fee = _canon_fee(line.fee_type)
         task = tasks_by_wb.get(line.waybill_number)
         driver = _resolve_driver(
             line.staff_id, task, cid_to_driver, cname_to_driver,
-            fee_type=line.fee_type,
+            fee_type=new_fee,
         )
         new_task = task.id if task else None
         new_driver = driver.id if driver else None
-        if new_task != old_task or new_driver != old_driver:
+        if (new_task != old_task or new_driver != old_driver
+                or new_fee != old_fee):
             line.task_id = new_task
             line.driver_id = new_driver
+            line.fee_type = new_fee
             chunk.append(line)
             if new_task and not old_task:
                 n_resolved_task += 1

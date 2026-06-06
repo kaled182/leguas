@@ -414,7 +414,8 @@ def cainiao_billing_assign_claim(request, import_id, line_id):
     line = get_object_or_404(
         CainiaoBillingLine, id=line_id, import_session=session,
     )
-    if line.fee_type != "compensacion":
+    from .services_cainiao_billing import _canon_fee
+    if _canon_fee(line.fee_type) != "compensacion":
         return JsonResponse({
             "success": False,
             "error": "Esta linha não é uma compensación.",

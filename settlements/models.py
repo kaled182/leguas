@@ -995,6 +995,33 @@ class DriverClaim(models.Model):
     def __str__(self):
         return f"{self.get_claim_type_display()} - {self.driver.nome_completo} - €{self.amount}"
 
+    @staticmethod
+    def normalize_waybill(raw):
+        """Normaliza o waybill para comparação (trim + maiúsculas)."""
+        return (raw or "").strip().upper()
+
+    @classmethod
+    def active_claim_for_waybill(cls, waybill, exclude_complaint_id=None,
+                                 exclude_pk=None):
+        """Devolve o DriverClaim 'activo' já existente para o mesmo waybill
+        (qualquer estado excepto REJECTED), ou None.
+
+        Serve para impedir aplicar o desconto duas vezes sobre o mesmo
+        pacote: PENDING/APPROVED/APPEALED/QUARANTINE contam como desconto
+        já aplicado; só REJECTED liberta o waybill para novo desconto.
+        """
+        wb = cls.normalize_waybill(waybill)
+        if not wb:
+            return None
+        qs = (cls.objects
+              .filter(waybill_number__iexact=wb)
+              .exclude(status="REJECTED"))
+        if exclude_complaint_id is not None:
+            qs = qs.exclude(customer_complaint_id=exclude_complaint_id)
+        if exclude_pk is not None:
+            qs = qs.exclude(pk=exclude_pk)
+        return qs.order_by("created_at").first()
+
     @property
     def had_appeal(self):
         """True se o claim passou por recurso (tem contexto de disputa)."""

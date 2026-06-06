@@ -2931,6 +2931,28 @@ def driver_complaint_create(request, driver_id):
         if not (data.get(field) or "").strip():
             return JsonResponse({"success": False, "error": f"Campo obrigatório: {field}"}, status=400)
 
+    numero_pacote = data["numero_pacote"].strip()
+
+    # Regra: não aceitar duas reclamações do MESMO pacote no MESMO dia.
+    today = timezone.localdate()
+    dup_complaint = (
+        CustomerComplaint.objects
+        .filter(numero_pacote__iexact=numero_pacote, created_at__date=today)
+        .exclude(status="CANCELADO")
+        .order_by("created_at")
+        .first()
+    )
+    if dup_complaint:
+        return JsonResponse({
+            "success": False,
+            "error": (
+                f"Já existe uma reclamação para o pacote {numero_pacote} "
+                f"hoje (#{dup_complaint.id}). Não é permitido abrir duas "
+                f"reclamações do mesmo pacote no mesmo dia."
+            ),
+            "duplicate_complaint_id": dup_complaint.id,
+        }, status=409)
+
     # Parse datetime fields
     from django.utils.dateparse import parse_datetime
 
@@ -2943,7 +2965,7 @@ def driver_complaint_create(request, driver_id):
 
     complaint = CustomerComplaint.objects.create(
         driver=driver,
-        numero_pacote=data["numero_pacote"].strip(),
+        numero_pacote=numero_pacote,
         tipo=data.get("tipo", "ENTREGA_FALSA"),
         descricao=data["descricao"].strip(),
         nome_cliente=data["nome_cliente"].strip(),
@@ -3122,6 +3144,21 @@ def driver_complaint_mark_lost(request, complaint_id):
             "success": True, "already": True, "claim_id": existing.id,
             "complaint": _complaint_to_dict(complaint),
         })
+
+    # Regra: não aplicar o desconto duas vezes sobre o mesmo waybill.
+    dup = DriverClaim.active_claim_for_waybill(
+        complaint.numero_pacote, exclude_complaint_id=complaint.id,
+    )
+    if dup:
+        return JsonResponse({
+            "success": False,
+            "error": (
+                f"Já existe um desconto (#{dup.id} · {dup.get_status_display()}) "
+                f"sobre o pacote {complaint.numero_pacote}. Não é possível "
+                f"aplicar o desconto duas vezes ao mesmo waybill."
+            ),
+            "duplicate_claim_id": dup.id,
+        }, status=409)
 
     occurred = complaint.data_entrega or complaint.created_at
     description = (

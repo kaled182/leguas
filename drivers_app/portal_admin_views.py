@@ -677,6 +677,22 @@ def driver_complaint_apply_claim(request, driver_id, complaint_id):
             "drivers_app:driver_complaints", driver_id=driver.id,
         )
 
+    # Regra: não aplicar o desconto duas vezes sobre o mesmo waybill.
+    dup = DriverClaim.active_claim_for_waybill(
+        complaint.numero_pacote, exclude_complaint_id=complaint.id,
+    )
+    if dup:
+        messages.error(
+            request,
+            f"Já existe o desconto #{dup.id} "
+            f"({dup.get_status_display()}) sobre o pacote "
+            f"{complaint.numero_pacote}. Não é possível descontar o "
+            f"mesmo waybill duas vezes.",
+        )
+        return redirect(
+            "drivers_app:driver_complaints", driver_id=driver.id,
+        )
+
     # Mapear tipo da reclamação → claim_type
     type_map = {
         "ENTREGA_FALSA": "CUSTOMER_COMPLAINT",

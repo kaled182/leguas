@@ -55,9 +55,35 @@ def auto_close_expired_complaints():
     }
 
     processed = 0
+    skipped_dup = 0
     errors = []
     for complaint in qs:
         try:
+            # Regra: não aplicar o desconto duas vezes sobre o mesmo
+            # waybill. Se já existe um desconto activo no pacote, fechar a
+            # reclamação sem criar novo claim.
+            dup = DriverClaim.active_claim_for_waybill(
+                complaint.numero_pacote, exclude_complaint_id=complaint.id,
+            )
+            if dup:
+                complaint.status = "FECHADO"
+                complaint.data_fecho = now
+                if not complaint.resposta_driver:
+                    complaint.resposta_driver = (
+                        f"[Auto] Sem resposta no prazo — desconto já "
+                        f"aplicado neste pacote (#{dup.id})."
+                    )
+                complaint.save(update_fields=[
+                    "status", "data_fecho", "resposta_driver", "updated_at",
+                ])
+                skipped_dup += 1
+                logger.info(
+                    "[auto_close_complaints] Reclamação #%s fechada SEM "
+                    "novo claim — desconto #%s já existe no waybill %s.",
+                    complaint.id, dup.id, complaint.numero_pacote,
+                )
+                continue
+
             claim_type = type_map.get(
                 complaint.tipo, "CUSTOMER_COMPLAINT",
             )
@@ -117,6 +143,7 @@ def auto_close_expired_complaints():
 
     result = {
         "processed": processed,
+        "skipped_dup": skipped_dup,
         "errors": errors,
         "ran_at": now.isoformat(),
     }

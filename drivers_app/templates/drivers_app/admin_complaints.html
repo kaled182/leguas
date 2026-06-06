@@ -548,59 +548,171 @@
               <i data-lucide="package-x" class="w-3 h-3"></i> Marcar como perdido
             </button>
           </template>
+          <button @click="editMode ? cancelEdit() : startEdit()"
+                  class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold ml-auto"
+                  :class="editMode ? 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300' : 'bg-indigo-600 hover:bg-indigo-700 text-white'">
+            <i data-lucide="pencil" class="w-3 h-3"></i>
+            <span x-text="editMode ? 'Cancelar edição' : 'Editar dados'"></span>
+          </button>
         </div>
 
-        <!-- Info table -->
-        <div class="grid grid-cols-2 gap-3 text-sm">
-          <div class="space-y-1.5">
-            <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Pacote</div>
-            <div class="font-mono text-xs text-gray-700 dark:text-gray-300" x-text="editComplaint?.numero_pacote"></div>
-            <div class="text-xs text-gray-500" x-text="editComplaint?.tipo_display"></div>
-            <div x-show="editComplaint?.data_entrega_display" class="text-xs text-gray-500">
-              Entrega: <span class="font-medium" x-text="editComplaint?.data_entrega_display"></span>
+        <!-- Info table (read-only) -->
+        <div x-show="!editMode" class="space-y-4">
+          <div class="grid grid-cols-2 gap-3 text-sm">
+            <div class="space-y-1.5">
+              <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Pacote</div>
+              <div class="font-mono text-xs text-gray-700 dark:text-gray-300" x-text="editComplaint?.numero_pacote"></div>
+              <div class="text-xs text-gray-500" x-text="editComplaint?.tipo_display"></div>
+              <div x-show="editComplaint?.data_entrega_display" class="text-xs text-gray-500">
+                Entrega: <span class="font-medium" x-text="editComplaint?.data_entrega_display"></span>
+              </div>
+              <div x-show="editComplaint?.deadline_display" class="text-xs" :class="isOverdue(editComplaint) ? 'text-red-600 font-semibold' : 'text-gray-500'">
+                Deadline: <span x-text="editComplaint?.deadline_display"></span>
+              </div>
             </div>
-            <div x-show="editComplaint?.deadline_display" class="text-xs" :class="isOverdue(editComplaint) ? 'text-red-600 font-semibold' : 'text-gray-500'">
-              Deadline: <span x-text="editComplaint?.deadline_display"></span>
+            <div class="space-y-1.5">
+              <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Cliente</div>
+              <div class="font-medium text-gray-900 dark:text-white" x-text="editComplaint?.nome_cliente"></div>
+              <div class="text-xs text-gray-500 flex items-center gap-1">
+                <i data-lucide="phone" class="w-3 h-3 text-green-500"></i>
+                <span x-text="editComplaint?.telefone_cliente"></span>
+              </div>
+              <div class="text-xs text-gray-400" x-text="editComplaint?.morada"></div>
+              <div class="text-xs text-gray-400" x-text="editComplaint?.codigo_postal + ' ' + editComplaint?.cidade"></div>
             </div>
           </div>
-          <div class="space-y-1.5">
-            <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Cliente</div>
-            <div class="font-medium text-gray-900 dark:text-white" x-text="editComplaint?.nome_cliente"></div>
-            <div class="text-xs text-gray-500 flex items-center gap-1">
-              <i data-lucide="phone" class="w-3 h-3 text-green-500"></i>
-              <span x-text="editComplaint?.telefone_cliente"></span>
-            </div>
-            <div class="text-xs text-gray-400" x-text="editComplaint?.morada"></div>
-            <div class="text-xs text-gray-400" x-text="editComplaint?.codigo_postal + ' ' + editComplaint?.cidade"></div>
+
+          <!-- Relato -->
+          <div>
+            <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Relato</div>
+            <p class="text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700/50 rounded-lg px-3 py-2"
+               x-text="editComplaint?.descricao"></p>
           </div>
         </div>
 
-        <!-- Relato -->
+        <!-- Formulário de edição completa -->
+        <div x-show="editMode" x-cloak class="space-y-3 bg-indigo-50 dark:bg-indigo-900/10 rounded-xl p-4 border border-indigo-200 dark:border-indigo-700/40">
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-[11px] font-semibold text-gray-600 dark:text-gray-400 mb-1">Nº Pacote / Tracking</label>
+              <input type="text" x-model="editForm.numero_pacote"
+                     class="w-full px-3 py-2 text-sm font-mono border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500">
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-gray-600 dark:text-gray-400 mb-1">Tipo</label>
+              <select x-model="editForm.tipo"
+                      class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500">
+                <option value="ENTREGA_FALSA">Entrega Falsa</option>
+                <option value="ITEM_FALTANDO">Item Faltando</option>
+                <option value="PACOTE_DANIFICADO">Pacote Danificado</option>
+                <option value="ENTREGA_ATRASADA">Entrega Atrasada</option>
+                <option value="OUTRO">Outro</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label class="block text-[11px] font-semibold text-gray-600 dark:text-gray-400 mb-1">Relato do Cliente</label>
+            <textarea x-model="editForm.descricao" rows="3"
+                      class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 resize-none"></textarea>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-[11px] font-semibold text-gray-600 dark:text-gray-400 mb-1">Nome do Cliente</label>
+              <input type="text" x-model="editForm.nome_cliente"
+                     class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500">
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-gray-600 dark:text-gray-400 mb-1">Telefone</label>
+              <input type="text" x-model="editForm.telefone_cliente"
+                     class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500">
+            </div>
+            <div class="col-span-2">
+              <label class="block text-[11px] font-semibold text-gray-600 dark:text-gray-400 mb-1">Email</label>
+              <input type="email" x-model="editForm.email_cliente"
+                     class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500">
+            </div>
+          </div>
+          <div class="grid grid-cols-3 gap-3">
+            <div class="col-span-3">
+              <label class="block text-[11px] font-semibold text-gray-600 dark:text-gray-400 mb-1">Morada</label>
+              <input type="text" x-model="editForm.morada"
+                     class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500">
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-gray-600 dark:text-gray-400 mb-1">Código Postal</label>
+              <input type="text" x-model="editForm.codigo_postal"
+                     class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500">
+            </div>
+            <div class="col-span-2">
+              <label class="block text-[11px] font-semibold text-gray-600 dark:text-gray-400 mb-1">Cidade</label>
+              <input type="text" x-model="editForm.cidade"
+                     class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500">
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-[11px] font-semibold text-gray-600 dark:text-gray-400 mb-1">Data/Hora da Entrega</label>
+              <input type="datetime-local" x-model="editForm.data_entrega"
+                     class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500">
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-gray-600 dark:text-gray-400 mb-1">Deadline</label>
+              <input type="datetime-local" x-model="editForm.deadline"
+                     class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500">
+            </div>
+          </div>
+          <div>
+            <label class="block text-[11px] font-semibold text-gray-600 dark:text-gray-400 mb-1">Notas Internas</label>
+            <input type="text" x-model="editForm.notas"
+                   class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500">
+          </div>
+          <div class="flex justify-end gap-2 pt-1">
+            <button @click="cancelEdit()" class="px-4 py-2 text-sm bg-gray-200 dark:bg-gray-700 rounded-lg font-medium text-gray-700 dark:text-gray-300">Cancelar</button>
+            <button @click="saveEditFields()" :disabled="savingEdit"
+                    class="px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-lg font-semibold inline-flex items-center gap-2">
+              <i data-lucide="save" class="w-4 h-4"></i>
+              <span x-text="savingEdit ? 'A guardar…' : 'Guardar alterações'"></span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Anexos existentes (com pré-visualização + gestão) -->
         <div>
-          <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Relato</div>
-          <p class="text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700/50 rounded-lg px-3 py-2"
-             x-text="editComplaint?.descricao"></p>
-        </div>
-
-        <!-- Anexos existentes (com pré-visualização) -->
-        <div x-show="editComplaint?.attachments?.filter(a => a.tipo !== 'RESPOSTA_DRIVER').length > 0">
-          <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Anexos</div>
+          <div class="flex items-center justify-between mb-2">
+            <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Anexos</div>
+            <input type="file" multiple accept="image/*,application/pdf"
+                   x-ref="complaintAttachFile"
+                   @change="addComplaintAttachments($event)"
+                   class="hidden">
+            <button type="button" @click="$refs.complaintAttachFile.click()"
+                    class="inline-flex items-center gap-1 px-2.5 py-1 text-xs bg-violet-600 hover:bg-violet-700 text-white rounded-lg font-semibold">
+              <i data-lucide="plus" class="w-3 h-3"></i> Adicionar anexo(s)
+            </button>
+          </div>
           <div class="flex flex-wrap gap-3">
             <template x-for="att in (editComplaint?.attachments || []).filter(a => a.tipo !== 'RESPOSTA_DRIVER')" :key="att.id">
-              <a :href="att.url" target="_blank" :title="att.descricao || att.filename"
-                 class="block rounded-lg border border-gray-200 dark:border-gray-600 overflow-hidden hover:shadow-md transition bg-gray-50 dark:bg-gray-700">
-                <template x-if="isImage(att.filename)">
-                  <img :src="att.url" loading="lazy"
-                       class="w-28 h-28 object-cover" :alt="att.filename">
-                </template>
-                <template x-if="!isImage(att.filename)">
-                  <div class="w-28 h-28 flex flex-col items-center justify-center text-gray-400 gap-1 p-2">
-                    <i data-lucide="file-text" class="w-7 h-7"></i>
-                    <span class="text-[10px] text-center truncate w-full" x-text="att.filename"></span>
-                  </div>
-                </template>
-              </a>
+              <div class="relative group">
+                <a :href="att.url" target="_blank" :title="att.descricao || att.filename"
+                   class="block rounded-lg border border-gray-200 dark:border-gray-600 overflow-hidden hover:shadow-md transition bg-gray-50 dark:bg-gray-700">
+                  <template x-if="isImage(att.filename)">
+                    <img :src="att.url" loading="lazy"
+                         class="w-28 h-28 object-cover" :alt="att.filename">
+                  </template>
+                  <template x-if="!isImage(att.filename)">
+                    <div class="w-28 h-28 flex flex-col items-center justify-center text-gray-400 gap-1 p-2">
+                      <i data-lucide="file-text" class="w-7 h-7"></i>
+                      <span class="text-[10px] text-center truncate w-full" x-text="att.filename"></span>
+                    </div>
+                  </template>
+                </a>
+                <button @click.prevent="deleteAttachment(att)" title="Apagar anexo"
+                        class="absolute top-1 right-1 w-6 h-6 flex items-center justify-center bg-rose-600 hover:bg-rose-700 text-white rounded-full shadow opacity-90">
+                  <i data-lucide="trash-2" class="w-3 h-3"></i>
+                </button>
+              </div>
             </template>
+            <p x-show="(editComplaint?.attachments || []).filter(a => a.tipo !== 'RESPOSTA_DRIVER').length === 0"
+               class="text-xs text-gray-400 italic">Nenhum anexo nesta reclamação.</p>
           </div>
         </div>
 
@@ -686,10 +798,18 @@
         </div>
       </div>
       <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex gap-2 justify-between flex-shrink-0">
-        <a :href="editComplaint ? '/driversapp/admin/ativos/?open=' + editComplaint.driver_id + '&tab=reclamacoes' : '#'"
-           class="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors flex items-center gap-1.5">
-          <i data-lucide="user" class="w-4 h-4"></i> Ver Motorista
-        </a>
+        <div class="flex gap-2">
+          <a :href="editComplaint ? '/driversapp/admin/ativos/?open=' + editComplaint.driver_id + '&tab=reclamacoes' : '#'"
+             class="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors flex items-center gap-1.5">
+            <i data-lucide="user" class="w-4 h-4"></i> Ver Motorista
+          </a>
+          <template x-if="editComplaint && ['ABERTO','CANCELADO'].includes(editComplaint.status)">
+            <button @click="deleteComplaint(editComplaint)"
+                    class="px-4 py-2 bg-rose-100 dark:bg-rose-900/20 text-rose-700 dark:text-rose-400 rounded-lg text-sm font-medium hover:bg-rose-200 transition-colors flex items-center gap-1.5">
+              <i data-lucide="trash-2" class="w-4 h-4"></i> Apagar
+            </button>
+          </template>
+        </div>
         <div class="flex gap-2">
           <a :href="editComplaint && editComplaint.numero_pacote ? '/settlements/pacote/' + encodeURIComponent(editComplaint.numero_pacote) + '/' : '#'" target="_blank"
              class="px-4 py-2 bg-orange-100 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400 rounded-lg text-sm font-medium hover:bg-orange-200 transition-colors flex items-center gap-1.5">
@@ -821,6 +941,9 @@ function complaintsPanel() {
     editComplaint: null,
     editRespostaText: '',
     editRespostaFiles: [],
+    editMode: false,
+    editForm: {},
+    savingEdit: false,
 
     async init() {
       await this.loadComplaints();
@@ -1175,7 +1298,88 @@ function complaintsPanel() {
       this.editComplaint = { ...c };
       this.editRespostaText = c.resposta_driver || '';
       this.editRespostaFiles = [];
+      this.editMode = false;
+      this.editForm = {};
       this.showEditModal = true;
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    // ── Edição completa dos dados da reclamação ───────────────────────────
+    startEdit() {
+      const c = this.editComplaint || {};
+      this.editForm = {
+        numero_pacote: c.numero_pacote || '',
+        tipo: c.tipo || 'ENTREGA_FALSA',
+        descricao: c.descricao || '',
+        nome_cliente: c.nome_cliente || '',
+        telefone_cliente: c.telefone_cliente || '',
+        email_cliente: c.email_cliente || '',
+        morada: c.morada || '',
+        codigo_postal: c.codigo_postal || '',
+        cidade: c.cidade || '',
+        data_entrega: c.data_entrega || '',
+        deadline: c.deadline || '',
+        notas: c.notas || '',
+      };
+      this.editMode = true;
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    cancelEdit() { this.editMode = false; },
+
+    async saveEditFields() {
+      const c = this.editComplaint;
+      if (!c) return;
+      this.savingEdit = true;
+      try {
+        const resp = await fetch('/driversapp/api/complaints/item/' + c.id + '/update/', POST_JSON(this.editForm));
+        const data = await resp.json();
+        if (data.success) {
+          this.editComplaint = { ...data.complaint };
+          this.editRespostaText = data.complaint.resposta_driver || '';
+          this.editMode = false;
+          await this.loadComplaints();
+          this.$nextTick(() => lucide.createIcons());
+        } else {
+          alert(data.error || 'Erro ao guardar alterações.');
+        }
+      } finally {
+        this.savingEdit = false;
+      }
+    },
+
+    async deleteAttachment(att) {
+      if (!confirm('Apagar este anexo? Esta acção não pode ser desfeita.')) return;
+      const resp = await fetch('/driversapp/api/complaints/attachment/' + att.id + '/delete/', POST());
+      const data = await resp.json();
+      if (data.success) {
+        this.editComplaint.attachments = (this.editComplaint.attachments || []).filter(a => a.id !== att.id);
+        this.$nextTick(() => lucide.createIcons());
+      } else {
+        alert(data.error || 'Erro ao remover anexo.');
+      }
+    },
+
+    async addComplaintAttachments(event) {
+      const files = Array.from(event.target.files || []);
+      event.target.value = '';
+      const c = this.editComplaint;
+      if (!c || !files.length) return;
+      for (const f of files) {
+        const fd = new FormData();
+        fd.append('ficheiro', f);
+        fd.append('tipo', 'RECLAMACAO');
+        const resp = await fetch('/driversapp/api/complaints/item/' + c.id + '/attachment/add/', {
+          method: 'POST', headers: { 'X-CSRFToken': csrf() }, body: fd,
+        });
+        const data = await resp.json();
+        if (data.success && data.attachment) {
+          this.editComplaint.attachments = [...(this.editComplaint.attachments || []), data.attachment];
+        } else {
+          alert(data.error || 'Erro ao anexar ficheiro.');
+          break;
+        }
+      }
       this.$nextTick(() => lucide.createIcons());
     },
 

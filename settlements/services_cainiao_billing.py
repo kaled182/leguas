@@ -232,12 +232,24 @@ def _to_datetime(val):
 #  Resolução de FKs (driver / task)
 # ─────────────────────────────────────────────────────────────────────
 
+def _norm_name(s):
+    """Normaliza um nome de courier para comparação robusta.
+
+    O `apelido` do DriverProfile usa underscores (Marcelo_Javier_Lucero_LF)
+    mas o `courier_name` da Cainiao usa espaços (Marcelo Javier Lucero_LF).
+    Normalizamos ambos: minúsculas, underscores→espaços, colapsa espaços.
+    """
+    if not s:
+        return ""
+    return " ".join(str(s).replace("_", " ").lower().split())
+
+
 def _build_resolution_caches():
     """Constrói caches em memória para evitar 30k queries no import.
 
     Retorna:
       cid_to_driver:   {courier_id: DriverProfile}
-      cname_to_driver: {courier_name_lower: DriverProfile}
+      cname_to_driver: {nome_normalizado: DriverProfile}
     """
     from drivers_app.models import DriverProfile
     from .models import DriverCourierMapping
@@ -245,26 +257,29 @@ def _build_resolution_caches():
     cid_to_driver = {}
     cname_to_driver = {}
 
+    def _add_name(name, d):
+        k = _norm_name(name)
+        if k:
+            cname_to_driver.setdefault(k, d)
+
     drivers = DriverProfile.objects.all()
     for d in drivers:
         if d.courier_id_cainiao:
             cid_to_driver[d.courier_id_cainiao] = d
-        if d.apelido:
-            cname_to_driver[d.apelido.strip().lower()] = d
+        # Indexa por apelido E nome_completo, ambos normalizados.
+        _add_name(d.apelido, d)
+        _add_name(getattr(d, "nome_completo", ""), d)
 
-    for m in DriverCourierMapping.objects.select_related("driver"):
+    drivers_by_id = {d.id: d for d in drivers}
+    for m in DriverCourierMapping.objects.all():
         if not m.driver_id:
             continue
+        d = drivers_by_id.get(m.driver_id)
+        if not d:
+            continue
         if m.courier_id and m.courier_id not in cid_to_driver:
-            d = drivers.filter(id=m.driver_id).first()
-            if d:
-                cid_to_driver[m.courier_id] = d
-        if m.courier_name:
-            key = m.courier_name.strip().lower()
-            if key not in cname_to_driver:
-                d = drivers.filter(id=m.driver_id).first()
-                if d:
-                    cname_to_driver[key] = d
+            cid_to_driver[m.courier_id] = d
+        _add_name(m.courier_name, d)
 
     return cid_to_driver, cname_to_driver
 
@@ -294,19 +309,22 @@ def _resolve_task(waybill: str):
 
 
 def _resolve_driver(staff_id: str, task, cid_to_driver,
-                    cname_to_driver):
+                    cname_to_driver, fee_type="envio fee"):
     """Resolve o driver RESPONSÁVEL pelo pacote.
 
     Regra de negócio (crítica): o responsável é SEMPRE quem fez o
-    DELIVERY. Por isso, se a task ligada está Delivered, o courier dessa
-    task tem prioridade ABSOLUTA sobre o staff_id da planilha — este
-    último pode refletir um assignment anterior ou cancelado (driver que
-    NÃO entregou) e não deve ser usado para atribuir a perda/desconto.
+    DELIVERY. Se a task ligada está Delivered, o courier dessa task tem
+    prioridade ABSOLUTA sobre o staff_id da planilha — este pode refletir
+    um assignment anterior/cancelado (driver que NÃO entregou).
+
+    Para COMPENSACIÓN (claim/perda): se há Delivered mas o courier não
+    resolve a um DriverProfile, NÃO se cai no staff_id (evita atribuir a
+    perda a quem não entregou) — fica por resolver (escolha manual).
 
     Ordem:
-      1. task Delivered → courier da task (courier_id, depois nome).
-      2. staff_id da planilha (fallback quando não há Delivered, ou o
-         courier do Delivered não está mapeado a um DriverProfile).
+      1. task Delivered → courier da task (courier_id, depois nome
+         normalizado).
+      2. staff_id da planilha (envio fee, ou quando não há Delivered).
       3. courier de qualquer task (não-Delivered) como último recurso.
     """
     def _from_task(t):
@@ -315,11 +333,9 @@ def _resolve_driver(staff_id: str, task, cid_to_driver,
         cid = getattr(t, "courier_id_cainiao", "")
         if cid and cid in cid_to_driver:
             return cid_to_driver[cid]
-        cname = getattr(t, "courier_name", "")
-        if cname:
-            key = cname.strip().lower()
-            if key in cname_to_driver:
-                return cname_to_driver[key]
+        key = _norm_name(getattr(t, "courier_name", ""))
+        if key and key in cname_to_driver:
+            return cname_to_driver[key]
         return None
 
     is_delivered = (
@@ -330,6 +346,10 @@ def _resolve_driver(staff_id: str, task, cid_to_driver,
         d = _from_task(task)
         if d:
             return d  # quem entregou — prioridade absoluta
+        # Delivered mas courier não mapeado: para claims, não atribuir ao
+        # staff_id (assigned) — só o deliverer conta.
+        if fee_type == "compensacion":
+            return None
 
     if staff_id and staff_id in cid_to_driver:
         return cid_to_driver[staff_id]
@@ -452,6 +472,7 @@ def import_cainiao_billing(file_obj, file_name: str, user=None):
                 task = tasks_by_wb.get(r["waybill_number"])
                 driver = _resolve_driver(
                     r["staff_id"], task, cid_to_driver, cname_to_driver,
+                    fee_type=r["fee_type"],
                 )
                 objs.append(CainiaoBillingLine(
                     import_session=session,
@@ -577,6 +598,7 @@ def reresolve_matching(session):
 
     qs = session.lines.all().only(
         "id", "waybill_number", "staff_id", "task_id", "driver_id",
+        "fee_type",
     )
     total = qs.count()
     n_resolved_task = 0
@@ -623,6 +645,7 @@ def reresolve_matching(session):
         task = tasks_by_wb.get(line.waybill_number)
         driver = _resolve_driver(
             line.staff_id, task, cid_to_driver, cname_to_driver,
+            fee_type=line.fee_type,
         )
         new_task = task.id if task else None
         new_driver = driver.id if driver else None

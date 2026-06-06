@@ -191,7 +191,27 @@
                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ claim.situacao.classes }}">{{ claim.situacao.label }}</span>
               </td>
               <td class="px-3 py-3 whitespace-nowrap text-right text-sm font-medium">
-                <div class="inline-flex items-center gap-3">
+                <div class="inline-flex items-center gap-2">
+                  {% if claim.status == 'PENDING' %}
+                    <form method="post" action="{% url 'claim-detail' claim.id %}" class="inline"
+                          onsubmit="return confirm('Aprovar desconto #{{ claim.id }} (€{{ claim.amount }})? Vai entrar na PF do motorista.');">
+                      {% csrf_token %}
+                      <input type="hidden" name="action" value="approve">
+                      <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                      <button type="submit" class="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-semibold inline-flex items-center gap-1" title="Aprovar">
+                        <i data-lucide="check" class="w-3.5 h-3.5"></i> Aprovar
+                      </button>
+                    </form>
+                    <form method="post" action="{% url 'claim-detail' claim.id %}" class="inline"
+                          onsubmit="return confirm('Rejeitar desconto #{{ claim.id }}? O motorista não paga.');">
+                      {% csrf_token %}
+                      <input type="hidden" name="action" value="reject">
+                      <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                      <button type="submit" class="px-2 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded text-xs font-semibold inline-flex items-center gap-1" title="Rejeitar">
+                        <i data-lucide="x" class="w-3.5 h-3.5"></i> Rejeitar
+                      </button>
+                    </form>
+                  {% endif %}
                   <a href="{% url 'claim-detail' claim.id %}" class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300">Detalhes</a>
                   <form method="post" action="{% url 'claim-delete' claim.id %}" class="inline"
                         onsubmit="return confirm('Apagar reclamação #{{ claim.id }} ({{ claim.driver.nome_completo }}, €{{ claim.amount }})?\n\nEsta acção não pode ser desfeita.');">

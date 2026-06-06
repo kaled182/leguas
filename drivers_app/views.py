@@ -3014,10 +3014,10 @@ def driver_complaint_update(request, complaint_id):
     novo_status = (data.get("status") or "").strip().upper()
     if novo_status and novo_status != complaint.status:
         TRANSICOES = {
-            "ABERTO":     ["NOTIFICADO", "CANCELADO"],
-            "NOTIFICADO": ["RESPONDIDO", "CANCELADO", "ABERTO"],
-            "RESPONDIDO": ["FECHADO", "NOTIFICADO"],
-            "FECHADO":    [],
+            "ABERTO":     ["NOTIFICADO", "RESPONDIDO", "FECHADO", "CANCELADO"],
+            "NOTIFICADO": ["RESPONDIDO", "FECHADO", "CANCELADO", "ABERTO"],
+            "RESPONDIDO": ["FECHADO", "NOTIFICADO", "CANCELADO", "ABERTO"],
+            "FECHADO":    ["ABERTO"],
             "CANCELADO":  ["ABERTO"],
         }
         if novo_status not in TRANSICOES.get(complaint.status, []):

@@ -989,6 +989,7 @@ def claim_detail(request, claim_id):
     """Detalhes de um claim, com ações de aprovação/rejeição"""
     from django.contrib import messages
     from django.shortcuts import redirect
+    from django.utils.http import url_has_allowed_host_and_scheme
 
     claim = get_object_or_404(
         DriverClaim.objects.select_related(
@@ -1043,6 +1044,14 @@ def claim_detail(request, claim_id):
         else:
             messages.error(request, "Ação inválida ou status incompatível.")
 
+        # Permite voltar à origem (ex.: lista de claims com filtros) quando
+        # a ação foi disparada de fora da página de detalhe.
+        next_url = request.POST.get("next", "")
+        if next_url and url_has_allowed_host_and_scheme(
+            next_url, allowed_hosts={request.get_host()},
+            require_https=request.is_secure(),
+        ):
+            return redirect(next_url)
         return redirect("claim-detail", claim_id=claim.id)
 
     from .services_appeals import whatsapp_message_for_claim

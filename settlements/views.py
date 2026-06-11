@@ -5133,7 +5133,7 @@ def _empresa_lote_compute(empresa, date_from, date_to):
     from core.finance import resolve_driver_price
     from .models import (
         BonusBlackoutDate, CainiaoOperationTask, DriverClaim, DriverPreInvoice,
-        Holiday, PreInvoiceBonus,
+        Holiday, PreInvoiceBonus, WaybillAttributionOverride,
     )
 
     blocked_dates = BonusBlackoutDate.dates_in_range(date_from, date_to)
@@ -5208,12 +5208,14 @@ def _empresa_lote_compute(empresa, date_from, date_to):
 
         # Iterar por login: cada login conta as entregas que NÃO foram
         # já vistas em logins anteriores (evita dupla contagem quando
-        # cid/cname se sobrepõem).
+        # cid/cname se sobrepõem). O bónus é calculado no fim, sobre o
+        # conjunto final já com transferências aplicadas — idêntico à
+        # geração efectiva (empresa_fleet_invoice_generate).
         n_delivered = 0
         bonus_days = 0
         bonus_amount = Decimal("0")
         login_breakdown = []
-        seen_task_ids = set()
+        native_ids = set()
 
         for ln in logins:
             cid = ln["courier_id"]
@@ -5225,24 +5227,82 @@ def _empresa_lote_compute(empresa, date_from, date_to):
                 login_q |= Q(courier_name=cname)
             if not login_q:
                 continue
-            qs_login = base_qs.filter(login_q)
-            if seen_task_ids:
-                qs_login = qs_login.exclude(id__in=seen_task_ids)
+            qs_login = base_qs.filter(login_q).exclude(id__in=native_ids)
             ids_this = list(qs_login.values_list("id", flat=True))
             if not ids_this:
                 continue
-            seen_task_ids.update(ids_this)
-            n_login = len(ids_this)
-            n_delivered += n_login
+            native_ids.update(ids_this)
+            login_breakdown.append({
+                "label": cname or cid,
+                "courier_id": cid,
+                "courier_name": cname,
+                "source": ln["source"],
+                "deliveries": len(ids_this),
+                "bonus_days": 0,
+                "bonus_amount": "0.00",
+            })
 
-            # Bónus por dia DESTE login (regra: por login, não agregado)
+        # Aplicar transferências de atribuição (WaybillAttributionOverride):
+        #   outgoing → waybills deste driver atribuídos a OUTRO: remover.
+        #   incoming → waybills atribuídos a ESTE driver: adicionar.
+        outgoing_wbs = set(
+            WaybillAttributionOverride.objects.filter(
+                task_date__range=(date_from, date_to),
+            ).exclude(attributed_to_driver=d)
+            .values_list("waybill_number", flat=True),
+        )
+        incoming_wbs = list(
+            WaybillAttributionOverride.objects.filter(
+                attributed_to_driver=d,
+                task_date__range=(date_from, date_to),
+            ).values_list("waybill_number", flat=True),
+        )
+        n_outgoing = 0
+        n_incoming = 0
+        if outgoing_wbs and native_ids:
+            out_ids = set(
+                CainiaoOperationTask.objects.filter(
+                    id__in=native_ids, waybill_number__in=outgoing_wbs,
+                ).values_list("id", flat=True)
+            )
+            n_outgoing = len(out_ids)
+            native_ids -= out_ids
+        if incoming_wbs:
+            inc_ids = set(
+                base_qs.filter(
+                    waybill_number__in=incoming_wbs,
+                ).values_list("id", flat=True)
+            )
+            n_incoming = len(inc_ids)
+            native_ids.update(inc_ids)
+
+        if n_outgoing:
+            login_breakdown.append({
+                "label": "↓ Transferidas (saída)",
+                "courier_id": "", "courier_name": "",
+                "source": "transferência",
+                "deliveries": -n_outgoing,
+                "bonus_days": 0, "bonus_amount": "0.00",
+            })
+        if n_incoming:
+            login_breakdown.append({
+                "label": "↑ Transferidas (entrada)",
+                "courier_id": "", "courier_name": "",
+                "source": "transferência",
+                "deliveries": n_incoming,
+                "bonus_days": 0, "bonus_amount": "0.00",
+            })
+
+        final_ids = native_ids
+        n_delivered = len(final_ids)
+
+        # Bónus por dia sobre o conjunto final combinado.
+        if final_ids:
             by_day = list(
-                CainiaoOperationTask.objects.filter(id__in=ids_this)
+                CainiaoOperationTask.objects.filter(id__in=final_ids)
                 .values("task_date").annotate(n=Count("id"))
                 .order_by("task_date")
             )
-            login_bonus = Decimal("0")
-            login_bonus_days = 0
             for row in by_day:
                 day = row["task_date"]
                 n = row["n"]
@@ -5253,23 +5313,11 @@ def _empresa_lote_compute(empresa, date_from, date_to):
                 if day in blocked_dates:
                     continue
                 if n >= PreInvoiceBonus.LIMIAR_60:
-                    login_bonus += PreInvoiceBonus.BONUS_50
-                    login_bonus_days += 1
+                    bonus_amount += PreInvoiceBonus.BONUS_50
+                    bonus_days += 1
                 elif n >= PreInvoiceBonus.LIMIAR_30:
-                    login_bonus += PreInvoiceBonus.BONUS_30
-                    login_bonus_days += 1
-            bonus_amount += login_bonus
-            bonus_days += login_bonus_days
-
-            login_breakdown.append({
-                "label": cname or cid,
-                "courier_id": cid,
-                "courier_name": cname,
-                "source": ln["source"],
-                "deliveries": n_login,
-                "bonus_days": login_bonus_days,
-                "bonus_amount": f"{login_bonus:.2f}",
-            })
+                    bonus_amount += PreInvoiceBonus.BONUS_30
+                    bonus_days += 1
 
         base = price * n_delivered
 
@@ -5388,6 +5436,7 @@ def empresa_lote_emit(request, empresa_id):
         BonusBlackoutDate, CainiaoOperationTask, FleetInvoice,
         FleetInvoiceDriverLine, FleetInvoiceBonusDay, FleetInvoiceClaim,
         Holiday, PreInvoiceBonus, DriverClaim,
+        WaybillAttributionOverride,
     )
     from core.models import Partner
     from core.finance import resolve_driver_price, resolve_partner_price
@@ -5496,13 +5545,11 @@ def empresa_lote_emit(request, empresa_id):
             task_status="Delivered",
         )
 
-        # Iterar por login: cada login conta entregas próprias e gera os
-        # seus próprios bónus (≥30/≥60 entregas em domingo/feriado).
-        # Evita dupla-contagem via seen_task_ids.
-        n_delivered = 0
-        bonus_days_detail = []
-        bonus_amount = Decimal("0")
-        seen_task_ids = set()
+        # Conjunto nativo de tasks (entregas com login deste driver).
+        # Iteramos os logins só para acumular ids (dedup via set) e as
+        # identidades courier; o bónus é calculado depois sobre o conjunto
+        # final combinado, já com transferências aplicadas.
+        native_ids = set()
         all_ids = set()
         all_names = set()
         for ln in logins:
@@ -5519,17 +5566,51 @@ def empresa_lote_emit(request, empresa_id):
                 login_q |= Q(courier_name=cname)
             if not login_q:
                 continue
-            qs_login = base_qs.filter(login_q)
-            if seen_task_ids:
-                qs_login = qs_login.exclude(id__in=seen_task_ids)
-            ids_this = list(qs_login.values_list("id", flat=True))
-            if not ids_this:
-                continue
-            seen_task_ids.update(ids_this)
-            n_delivered += len(ids_this)
+            native_ids.update(
+                base_qs.filter(login_q).values_list("id", flat=True)
+            )
 
+        # Aplicar transferências de atribuição (WaybillAttributionOverride),
+        # coerente com a PF individual e com o drawer do dashboard:
+        #   outgoing → waybills deste driver atribuídos a OUTRO: remover.
+        #   incoming → waybills atribuídos a ESTE driver (qualquer courier
+        #              original): adicionar, mesmo que o login original não
+        #              seja dele. (Era o bug: faltavam na pré-fatura da frota.)
+        outgoing_wbs = set(
+            WaybillAttributionOverride.objects.filter(
+                task_date__range=(date_from, date_to),
+            ).exclude(attributed_to_driver=d)
+            .values_list("waybill_number", flat=True),
+        )
+        incoming_wbs = list(
+            WaybillAttributionOverride.objects.filter(
+                attributed_to_driver=d,
+                task_date__range=(date_from, date_to),
+            ).values_list("waybill_number", flat=True),
+        )
+        if outgoing_wbs and native_ids:
+            native_ids -= set(
+                CainiaoOperationTask.objects.filter(
+                    id__in=native_ids, waybill_number__in=outgoing_wbs,
+                ).values_list("id", flat=True)
+            )
+        if incoming_wbs:
+            native_ids.update(
+                base_qs.filter(
+                    waybill_number__in=incoming_wbs,
+                ).values_list("id", flat=True)
+            )
+
+        final_ids = native_ids
+        n_delivered = len(final_ids)
+
+        # Bónus por dia (≥30/≥60 entregas em domingo/feriado), calculado uma
+        # só vez sobre o conjunto final (todos os logins + transferências).
+        bonus_days_detail = []
+        bonus_amount = Decimal("0")
+        if final_ids:
             by_day = list(
-                CainiaoOperationTask.objects.filter(id__in=ids_this)
+                CainiaoOperationTask.objects.filter(id__in=final_ids)
                 .values("task_date").annotate(n=Count("id"))
                 .order_by("task_date")
             )
@@ -5555,7 +5636,6 @@ def empresa_lote_emit(request, empresa_id):
                     "deliveries": n,
                     "bonus": b,
                     "feriado_nome": h.name if h else "",
-                    "login": cname or cid,  # contexto: qual login gerou
                 })
 
         if n_delivered == 0:

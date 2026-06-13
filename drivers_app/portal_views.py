@@ -267,10 +267,24 @@ def driver_portal(request, driver_id):
     courier_ids, courier_names = _driver_courier_keys(driver)
     has_keys = bool(courier_ids or courier_names)
 
-    # ─── Histórico 30 dias com flags domingo/feriado ───
+    # ─── Histórico 30 dias com flags domingo/feriado (janela navegável) ───
+    # A janela do gráfico termina em chart_end (default hoje) e cobre 30 dias.
+    # Permite recuar/avançar para escolher dias antigos e transferir pacotes.
+    from datetime import datetime as _dt
+    chart_end = today
+    _ce_raw = (request.GET.get("chart_end") or "").strip()
+    if _ce_raw:
+        try:
+            chart_end = _dt.strptime(_ce_raw, "%Y-%m-%d").date()
+        except ValueError:
+            chart_end = today
+    if chart_end > today:
+        chart_end = today
+    chart_start = chart_end - timedelta(days=29)
+
     history_30d = []
     for i in range(30):
-        d = today - timedelta(days=29 - i)
+        d = chart_start + timedelta(days=i)
         k = _kpi_for_period(driver, d, d)
         h = Holiday.get_holiday(d)
         history_30d.append({
@@ -283,6 +297,11 @@ def driver_portal(request, driver_id):
             "is_holiday": bool(h),
             "holiday_name": h.name if h else "",
         })
+
+    # Âncoras de navegação do gráfico
+    chart_prev_end = chart_start - timedelta(days=1)  # janela anterior
+    chart_next_end = min(chart_end + timedelta(days=30), today)
+    chart_has_next = chart_end < today
 
     # ─── Heatmap anual de actividade ───
     heatmap_days = []
@@ -397,6 +416,11 @@ def driver_portal(request, driver_id):
         "kpis_month": kpis_month,
         "kpis_year": kpis_year,
         "history_30d": history_30d,
+        "chart_start": chart_start,
+        "chart_end": chart_end,
+        "chart_prev_end": chart_prev_end,
+        "chart_next_end": chart_next_end,
+        "chart_has_next": chart_has_next,
         "ranking": ranking,
         "last_pf": last_pf,
         "contracts_pending": contracts_pending,

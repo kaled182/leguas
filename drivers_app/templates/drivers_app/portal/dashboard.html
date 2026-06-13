@@ -177,12 +177,34 @@
 {# Drawer + modais para ver/transferir/editar preço de waybills do dia. #}
 <div class="bg-white dark:bg-gray-800 rounded-2xl p-5 border border-gray-200/50 dark:border-gray-700/50 shadow-sm mb-4"
      x-data="portalDayDrawer({{ driver.id }})">
-  <div class="flex items-center gap-2 mb-4 flex-wrap">
+  <div class="flex items-center gap-2 mb-1 flex-wrap">
     <i data-lucide="trending-up" class="w-5 h-5 text-indigo-500"></i>
-    <h2 class="font-bold text-gray-900 dark:text-white">Últimos 30 dias</h2>
-    <span class="text-xs text-gray-500 ml-2">Domingos e feriados destacados (com bonificação)</span>
-    <span class="text-[10px] text-indigo-500 ml-auto">clica numa barra para ver/transferir entregas</span>
+    <h2 class="font-bold text-gray-900 dark:text-white">30 dias</h2>
+    <span class="text-xs text-gray-500">{{ chart_start|date:"d/m/Y" }} → {{ chart_end|date:"d/m/Y" }}</span>
+
+    {# Navegação de período: recuar/avançar 30 dias ou saltar para uma data #}
+    <div class="ml-auto flex items-center gap-1.5">
+      <a href="?chart_end={{ chart_prev_end|date:'Y-m-d' }}" title="30 dias anteriores"
+         class="px-2 py-1 rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 inline-flex items-center">
+        <i data-lucide="chevron-left" class="w-4 h-4"></i>
+      </a>
+      <form method="get" class="inline-flex items-center">
+        <input type="date" name="chart_end" value="{{ chart_end|date:'Y-m-d' }}"
+               max="{{ today|date:'Y-m-d' }}" onchange="this.form.submit()"
+               title="Mostrar os 30 dias até esta data"
+               class="px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-xs">
+      </form>
+      {% if chart_has_next %}
+      <a href="?chart_end={{ chart_next_end|date:'Y-m-d' }}" title="30 dias seguintes"
+         class="px-2 py-1 rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 inline-flex items-center">
+        <i data-lucide="chevron-right" class="w-4 h-4"></i>
+      </a>
+      <a href="?" title="Voltar a hoje"
+         class="px-2.5 py-1 rounded bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-200 text-xs font-semibold">Hoje</a>
+      {% endif %}
+    </div>
   </div>
+  <p class="text-[10px] text-indigo-500 mb-3">Domingos e feriados destacados · clica numa barra para ver/transferir entregas</p>
 
   <div class="flex items-end justify-between gap-1 h-40 overflow-x-auto">
     {% for d in history_30d %}
@@ -238,9 +260,23 @@
       {% if request.user.is_staff or request.user.is_superuser %}
       <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2 flex-wrap bg-gray-50 dark:bg-gray-900/40">
         <button @click="toggleAllSelected()" class="px-2 py-1 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 rounded text-xs">
-          <span x-show="drawer.selected.length < drawer.rows.length">Seleccionar todos</span>
-          <span x-show="drawer.selected.length === drawer.rows.length && drawer.rows.length > 0">Desmarcar todos</span>
+          <span x-show="!allVisibleSelected()">Seleccionar <span x-text="drawer.cp4Filter ? 'CP4 '+drawer.cp4Filter : 'todos'"></span></span>
+          <span x-show="allVisibleSelected()">Desmarcar</span>
         </button>
+        {# Filtro por CP4 — selecciona só pacotes de um código postal #}
+        <div class="inline-flex items-center gap-1">
+          <i data-lucide="filter" class="w-3.5 h-3.5 text-gray-400"></i>
+          <select x-model="drawer.cp4Filter"
+                  class="px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-xs">
+            <option value="">Todos os CP4</option>
+            <template x-for="cp in cp4Options()" :key="cp">
+              <option :value="cp" x-text="cp"></option>
+            </template>
+          </select>
+          <span x-show="drawer.cp4Filter" class="text-[11px] text-gray-500">
+            <span x-text="visibleRows().length"></span>/<span x-text="drawer.rows.length"></span>
+          </span>
+        </div>
         <button @click="openTransferModal()" :disabled="drawer.selected.length === 0"
                 class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded text-xs font-semibold flex items-center gap-1.5">
           <i data-lucide="users" class="w-3.5 h-3.5"></i>
@@ -268,7 +304,7 @@
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100 dark:divide-gray-700/50">
-            <template x-for="r in drawer.rows" :key="r.waybill">
+            <template x-for="r in visibleRows()" :key="r.waybill">
               <tr :class="r.direction === 'incoming' ? 'bg-emerald-50 dark:bg-emerald-900/15' : (r.direction === 'outgoing' ? 'bg-amber-50 dark:bg-amber-900/15' : 'hover:bg-gray-50 dark:hover:bg-gray-700/30')">
                 {% if request.user.is_staff or request.user.is_superuser %}
                 <td class="px-3 py-2">
@@ -421,7 +457,7 @@ function portalDayDrawer(driverId) {
                   || document.querySelector('meta[name=csrf-token]')?.content || '';
   const POST = () => ({ method: 'POST', headers: { 'X-CSRFToken': csrf() } });
   return {
-    drawer: { open: false, loading: false, date: '', dateLabel: '', rows: [], selected: [], nSelf: 0, nIncoming: 0, nOutgoing: 0 },
+    drawer: { open: false, loading: false, date: '', dateLabel: '', rows: [], selected: [], nSelf: 0, nIncoming: 0, nOutgoing: 0, cp4Filter: '' },
     transferModal: { open: false, submitting: false, driverQuery: '', drivers: [], targetId: null, targetName: '', reason: '' },
     priceModal: { open: false, submitting: false, price: '', reason: '' },
 
@@ -430,6 +466,7 @@ function portalDayDrawer(driverId) {
       this.drawer.dateLabel = label || date;
       this.drawer.rows = [];
       this.drawer.selected = [];
+      this.drawer.cp4Filter = '';
       this.drawer.loading = true;
       this.drawer.open = true;
       try {
@@ -451,9 +488,31 @@ function portalDayDrawer(driverId) {
       const i = this.drawer.selected.indexOf(wb);
       if (i >= 0) this.drawer.selected.splice(i, 1); else this.drawer.selected.push(wb);
     },
+    cp4Options() {
+      const s = new Set();
+      this.drawer.rows.forEach(r => { if (r.zip) s.add(r.zip); });
+      return Array.from(s).sort();
+    },
+    visibleRows() {
+      if (!this.drawer.cp4Filter) return this.drawer.rows;
+      return this.drawer.rows.filter(r => r.zip === this.drawer.cp4Filter);
+    },
+    allVisibleSelected() {
+      const vis = this.visibleRows();
+      return vis.length > 0 && vis.every(r => this.drawer.selected.includes(r.waybill));
+    },
     toggleAllSelected() {
-      if (this.drawer.selected.length === this.drawer.rows.length) this.drawer.selected = [];
-      else this.drawer.selected = this.drawer.rows.map(r => r.waybill);
+      // Opera sobre as linhas visíveis (respeita o filtro CP4):
+      // se todas as visíveis já estão seleccionadas, desmarca-as; senão
+      // adiciona todas as visíveis à selecção.
+      const vis = this.visibleRows().map(r => r.waybill);
+      if (vis.length > 0 && vis.every(w => this.drawer.selected.includes(w))) {
+        this.drawer.selected = this.drawer.selected.filter(w => !vis.includes(w));
+      } else {
+        const set = new Set(this.drawer.selected);
+        vis.forEach(w => set.add(w));
+        this.drawer.selected = Array.from(set);
+      }
     },
     async openTransferModal() {
       if (this.drawer.selected.length === 0) return;

@@ -488,14 +488,19 @@ function portalDayDrawer(driverId) {
       const i = this.drawer.selected.indexOf(wb);
       if (i >= 0) this.drawer.selected.splice(i, 1); else this.drawer.selected.push(wb);
     },
+    cp4Of(r) {
+      // CP4 = só os 4 primeiros dígitos do código postal (ex.: "4910-010" -> "4910").
+      const z = (r.zip || '').replace(/[^0-9]/g, '');
+      return z.substring(0, 4);
+    },
     cp4Options() {
       const s = new Set();
-      this.drawer.rows.forEach(r => { if (r.zip) s.add(r.zip); });
+      this.drawer.rows.forEach(r => { const c = this.cp4Of(r); if (c) s.add(c); });
       return Array.from(s).sort();
     },
     visibleRows() {
       if (!this.drawer.cp4Filter) return this.drawer.rows;
-      return this.drawer.rows.filter(r => r.zip === this.drawer.cp4Filter);
+      return this.drawer.rows.filter(r => this.cp4Of(r) === this.drawer.cp4Filter);
     },
     allVisibleSelected() {
       const vis = this.visibleRows();

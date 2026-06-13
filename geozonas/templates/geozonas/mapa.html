@@ -41,18 +41,10 @@
         </label>
         <button id="btn-ingest" class="px-3 py-1 rounded bg-emerald-600 hover:bg-emerald-700 text-white text-sm">Importar</button>
       </div>
-      <p class="text-xs text-gray-400 mt-1">Corre em segundo plano (Celery).</p>
+      <p class="text-xs text-gray-400 mt-1">Corre em segundo plano (Celery). Podes importar vários.</p>
 
-      <!-- Progresso da importação -->
-      <div id="ingest-progress" class="hidden mt-2">
-        <div class="flex justify-between text-xs text-gray-600 dark:text-gray-300 mb-1">
-          <span id="ingest-label">A iniciar…</span>
-          <span id="ingest-pct">0%</span>
-        </div>
-        <div class="w-full h-2 rounded bg-gray-200 dark:bg-gray-700 overflow-hidden">
-          <div id="ingest-bar" class="h-full bg-emerald-500 transition-all duration-300" style="width:0%"></div>
-        </div>
-      </div>
+      <!-- Barras de progresso (uma por importação) -->
+      <div id="ingest-jobs" class="mt-2 space-y-2"></div>
     </div>
 
     <!-- Carregar pontos -->
@@ -100,6 +92,7 @@ const URL_SEL = "{% url 'geozonas:api-selecionar' %}";
 const URL_ZONA = "{% url 'geozonas:api-criar-zona' %}";
 const URL_INGEST = "{% url 'geozonas:api-ingest' %}";
 const URL_INGEST_STATUS = "{% url 'geozonas:api-job-status' %}";
+const URL_JOBS_ACTIVE = "{% url 'geozonas:api-jobs-active' %}";
 
 document.addEventListener('DOMContentLoaded', function () {
   const map = L.map('map').setView([{{ map_center.0|unlocalize }}, {{ map_center.1|unlocalize }}], {{ map_zoom }});
@@ -178,50 +171,70 @@ document.addEventListener('DOMContentLoaded', function () {
   document.getElementById('btn-load').addEventListener('click', () =>
     carregarPontos(document.getElementById('sel-cp4').value));
 
-  // Progresso da importação
-  const progBox = document.getElementById('ingest-progress');
-  const progBar = document.getElementById('ingest-bar');
-  const progPct = document.getElementById('ingest-pct');
-  const progLabel = document.getElementById('ingest-label');
-  let pollTimer = null;
+  // ── Progresso de importações (várias em simultâneo, 1 barra por CP4) ──
+  const jobsBox = document.getElementById('ingest-jobs');
+  const barras = {};  // jobId -> { row, bar, pct, label, timer }
 
-  function mostrarProgresso(pct, label, cor) {
-    progBox.classList.remove('hidden');
-    progBar.style.width = pct + '%';
-    progBar.className = 'h-full transition-all duration-300 ' + (cor || 'bg-emerald-500');
-    progPct.textContent = pct + '%';
-    progLabel.textContent = label;
+  function corStatus(s) {
+    if (s === 'ERRO') return 'bg-red-500';
+    if (s === 'CONCLUIDO') return 'bg-blue-500';
+    return 'bg-emerald-500';
+  }
+
+  function criarBarra(jobId, cp4) {
+    if (barras[jobId]) return barras[jobId];
+    const row = document.createElement('div');
+    row.innerHTML =
+      '<div class="flex justify-between text-xs text-gray-600 dark:text-gray-300 mb-0.5">'
+      + `<span class="font-semibold">CP ${cp4}</span><span class="gz-pct">0%</span></div>`
+      + '<div class="w-full h-2 rounded bg-gray-200 dark:bg-gray-700 overflow-hidden">'
+      + '<div class="gz-bar h-full bg-emerald-500 transition-all duration-300" style="width:0%"></div></div>'
+      + '<div class="gz-label text-xs text-gray-400 mt-0.5">em fila…</div>';
+    jobsBox.appendChild(row);
+    const obj = {
+      row: row,
+      bar: row.querySelector('.gz-bar'),
+      pct: row.querySelector('.gz-pct'),
+      label: row.querySelector('.gz-label'),
+      timer: null,
+    };
+    barras[jobId] = obj;
+    return obj;
+  }
+
+  function atualizarBarra(obj, j) {
+    obj.bar.style.width = j.percent + '%';
+    obj.bar.className = 'gz-bar h-full transition-all duration-300 ' + corStatus(j.status);
+    obj.pct.textContent = j.percent + '%';
+    let label = '';
+    if (j.status === 'A_CORRER') {
+      label = j.coords_total
+        ? `coordenadas ${j.coords_feitas}/${j.coords_total}`
+        : `${j.processados}/${j.total} CPs`;
+    } else if (j.status === 'CONCLUIDO') {
+      label = `concluído (${j.total} CPs`
+        + (j.coords_total ? `, ${j.coords_feitas} c/ GPS` : '')
+        + (j.coords_falhadas ? `, ${j.coords_falhadas} falhas` : '') + ')';
+    } else if (j.status === 'ERRO') {
+      label = '⚠ ' + (j.erro || 'erro');
+    } else {
+      label = 'em fila…';
+    }
+    obj.label.textContent = (j.concelho ? j.concelho + ': ' : '') + label;
+    obj.label.className = 'gz-label text-xs mt-0.5 '
+      + (j.status === 'ERRO' ? 'text-red-500 font-medium' : 'text-gray-400');
   }
 
   function acompanharJob(jobId, cp4) {
-    if (pollTimer) clearInterval(pollTimer);
-    pollTimer = setInterval(() => {
+    const obj = criarBarra(jobId, cp4);
+    if (obj.timer) clearInterval(obj.timer);
+    obj.timer = setInterval(() => {
       fetch(`${URL_INGEST_STATUS}?id=${jobId}`).then(r => r.json()).then(j => {
-        if (j.erro && j.status !== 'ERRO' && !j.status) {
-          clearInterval(pollTimer); mostrarProgresso(0, 'Job não encontrado', 'bg-red-500'); return;
-        }
-        let label = j.concelho ? `${j.concelho}: ` : '';
-        if (j.status === 'A_CORRER') {
-          label += j.coords_total
-            ? `coordenadas ${j.coords_feitas}/${j.coords_total}`
-            : `${j.processados}/${j.total} CPs`;
-        } else if (j.status === 'CONCLUIDO') {
-          label += `concluído (${j.total} CPs`
-            + (j.coords_total ? `, ${j.coords_feitas} c/ GPS` : '') + ')';
-        } else if (j.status === 'ERRO') {
-          label = 'Erro: ' + (j.erro || 'desconhecido');
-        } else {
-          label += 'em fila…';
-        }
-        const cor = j.status === 'ERRO' ? 'bg-red-500'
-          : (j.status === 'CONCLUIDO' ? 'bg-blue-500' : 'bg-emerald-500');
-        mostrarProgresso(j.percent, label, cor);
-
+        if (!j.status) { clearInterval(obj.timer); return; }
+        atualizarBarra(obj, j);
         if (j.status === 'CONCLUIDO' || j.status === 'ERRO') {
-          clearInterval(pollTimer);
-          document.getElementById('btn-ingest').disabled = false;
+          clearInterval(obj.timer);
           if (j.status === 'CONCLUIDO') {
-            // Adiciona o CP4 ao seletor se ainda não existe e carrega os pontos
             const sel = document.getElementById('sel-cp4');
             if (![...sel.options].some(o => o.value === cp4)) {
               sel.add(new Option(cp4, cp4));
@@ -229,29 +242,37 @@ document.addEventListener('DOMContentLoaded', function () {
             sel.value = cp4;
             carregarPontos(cp4);
           }
+          // Remove a barra passado algum tempo (erros ficam mais tempo visíveis)
+          setTimeout(() => {
+            obj.row.remove();
+            delete barras[jobId];
+          }, j.status === 'ERRO' ? 15000 : 7000);
         }
       }).catch(() => {});
     }, 1500);
+    return obj;
   }
 
   document.getElementById('btn-ingest').addEventListener('click', function () {
-    const cp4 = document.getElementById('ingest-cp4').value.trim();
+    const inp = document.getElementById('ingest-cp4');
+    const cp4 = inp.value.trim();
     const coords = document.getElementById('ingest-coords').checked;
     if (!/^\d{4}$/.test(cp4)) { alert('CP4 deve ter 4 dígitos.'); return; }
-    this.disabled = true;
-    mostrarProgresso(0, 'A enviar…', 'bg-emerald-500');
     post(URL_INGEST, { cp4: cp4, coords: coords }).then(res => {
       if (res.ok && res.job_id) {
+        criarBarra(res.job_id, cp4);
         acompanharJob(res.job_id, cp4);
+        inp.value = '';
       } else {
-        this.disabled = false;
-        mostrarProgresso(0, 'Erro: ' + (res.erro || 'falhou'), 'bg-red-500');
+        alert('Erro: ' + (res.erro || 'falhou'));
       }
-    }).catch(() => {
-      this.disabled = false;
-      mostrarProgresso(0, 'Erro de rede', 'bg-red-500');
-    });
+    }).catch(() => alert('Erro de rede ao iniciar a importação.'));
   });
+
+  // Reata barras de importações que já estavam a decorrer (após refresh)
+  fetch(URL_JOBS_ACTIVE).then(r => r.json()).then(d => {
+    (d.jobs || []).forEach(j => acompanharJob(j.id, j.cp4));
+  }).catch(() => {});
 
   document.getElementById('btn-zona').addEventListener('click', function () {
     if (!ultimaGeometria) return;

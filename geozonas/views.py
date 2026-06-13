@@ -189,6 +189,23 @@ def api_ingest(request):
 
 @login_required
 @require_GET
+def api_jobs_active(request):
+    """Lista importações ainda a decorrer (para reatar as barras no load)."""
+    jobs = IngestJob.objects.filter(
+        status__in=["PENDENTE", "A_CORRER"]
+    ).order_by("-created_at")[:20]
+    return JsonResponse(
+        {
+            "jobs": [
+                {"id": j.id, "cp4": j.cp4, "status": j.status, "percent": j.percent}
+                for j in jobs
+            ]
+        }
+    )
+
+
+@login_required
+@require_GET
 def api_job_status(request):
     """Estado/progresso de uma importação (polling pela UI)."""
     job_id = request.GET.get("id")

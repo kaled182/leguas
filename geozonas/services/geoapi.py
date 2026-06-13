@@ -20,6 +20,10 @@ class GeoAPIError(Exception):
     """Erro ao comunicar com a GeoAPI."""
 
 
+class GeoAPIRateLimitError(GeoAPIError):
+    """Limite de pedidos da GeoAPI atingido (HTTP 429)."""
+
+
 class GeoAPIClient:
     def __init__(self, api_key=None, timeout=20):
         self.api_key = api_key or getattr(settings, "GEOAPI_TOKEN", None)
@@ -48,11 +52,16 @@ class GeoAPIClient:
             if resp.status_code == 404:
                 return None
             if resp.status_code == 429:
-                espera = 10 * (2 ** tentativa)
-                if tentativa < max_retries - 1:
-                    time.sleep(espera)
+                # Uma tentativa curta para um pico transitório; se persistir,
+                # falha rápido com mensagem clara (provável limite da chave).
+                if tentativa < 1:
+                    time.sleep(3)
                     continue
-                raise GeoAPIError(f"429 persistente em {path}")
+                raise GeoAPIRateLimitError(
+                    "Limite da GeoAPI atingido (HTTP 429). O uso da chave pode "
+                    "ter excedido o limite diário/horário — tenta novamente "
+                    "mais tarde."
+                )
             raise GeoAPIError(f"HTTP {resp.status_code} em {path}")
 
         return None

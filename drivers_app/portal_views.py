@@ -123,7 +123,24 @@ def _driver_base_queryset(driver, date_from, date_to):
     )
 
     courier_ids, courier_names = _driver_courier_keys(driver)
+
+    # Incoming = waybills transferidos PARA este driver. Calculado primeiro
+    # porque um driver que só RECEBE transferências (sem login Cainiao
+    # próprio) também tem de os ver e ser pago por eles.
+    incoming = list(
+        WaybillAttributionOverride.objects.filter(
+            attributed_to_driver=driver,
+            task_date__range=(date_from, date_to),
+        ).values_list("waybill_number", flat=True),
+    )
+
     if not courier_ids and not courier_names:
+        # Sem login próprio: só os pacotes recebidos por transferência.
+        if incoming:
+            return CainiaoOperationTask.objects.filter(
+                waybill_number__in=incoming,
+                task_date__range=(date_from, date_to),
+            )
         return CainiaoOperationTask.objects.none()
 
     qs = CainiaoOperationTask.objects.filter(
@@ -152,12 +169,6 @@ def _driver_base_queryset(driver, date_from, date_to):
             task_date__range=(date_from, date_to),
         ).exclude(attributed_to_driver=driver)
         .values_list("waybill_number", flat=True),
-    )
-    incoming = list(
-        WaybillAttributionOverride.objects.filter(
-            attributed_to_driver=driver,
-            task_date__range=(date_from, date_to),
-        ).values_list("waybill_number", flat=True),
     )
     if outgoing:
         qs = qs.exclude(waybill_number__in=outgoing)

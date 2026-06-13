@@ -1956,7 +1956,15 @@ def driver_pre_invoice_create(request, driver_id):
         for m in driver.courier_mappings.filter(partner=cainiao_partner):
             _add_login(m.courier_id, m.courier_name, "mapping")
 
-        if logins:
+        # Um driver pode não ter login próprio mas RECEBER transferências —
+        # nesse caso ainda há que processar os pacotes recebidos na PF.
+        from .models import WaybillAttributionOverride as _WAO
+        _tem_incoming = _WAO.objects.filter(
+            attributed_to_driver=driver,
+            task_date__range=(periodo_inicio, periodo_fim),
+        ).exists()
+
+        if logins or _tem_incoming:
             from core.finance import resolve_driver_price
             price, _src = resolve_driver_price(driver, cainiao_partner)
 

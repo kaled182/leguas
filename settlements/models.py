@@ -1239,6 +1239,13 @@ class DriverPreInvoice(models.Model):
         default=Decimal("0.00"),
         help_text="Soma das entregas PUDO (fórmula 1ª + adicionais).",
     )
+    total_extras = models.DecimalField(
+        "Total Serviços Extra (€)",
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        help_text="Soma de lançamentos a crédito (arrasto, serviços extra).",
+    )
     ajuste_manual = models.DecimalField(
         "Ajuste Manual (€)",
         max_digits=12,
@@ -1452,6 +1459,9 @@ class DriverPreInvoice(models.Model):
         self.total_pudo = sum(
             p.valor for p in self.pudos.all()
         )
+        self.total_extras = sum(
+            e.valor for e in self.extras.all()
+        )
         self.total_pacotes_perdidos = sum(
             p.valor_com_iva for p in self.pacotes_perdidos.all()
         )
@@ -1478,6 +1488,7 @@ class DriverPreInvoice(models.Model):
             self.base_entregas
             + self.total_bonus
             + self.total_pudo
+            + self.total_extras
             + self.ajuste_manual
         )
         self.total_a_receber = (
@@ -1701,6 +1712,61 @@ class PreInvoicePudo(models.Model):
 
     def __str__(self):
         return f"PUDO {self.data} — {self.n_pacotes} pacotes — €{self.valor}"
+
+
+class PreInvoiceExtra(models.Model):
+    """
+    Lançamento manual a CRÉDITO numa pré-fatura — serviço extra do
+    motorista que não é entrega (arrasto, transporte, ajuda, etc.).
+    Soma ao total a receber.
+    """
+
+    TIPO_CHOICES = [
+        ("ARRASTO", "Arrasto"),
+        ("SERVICO_EXTRA", "Serviço Extra"),
+        ("AJUDA", "Ajuda / Apoio"),
+        ("AJUSTE", "Ajuste / Crédito"),
+        ("OUTRO", "Outro"),
+    ]
+
+    pre_invoice = models.ForeignKey(
+        DriverPreInvoice,
+        on_delete=models.CASCADE,
+        related_name="extras",
+        verbose_name="Pré-Fatura",
+    )
+
+    data = models.DateField("Data")
+    tipo = models.CharField(
+        "Tipo", max_length=20, choices=TIPO_CHOICES, default="SERVICO_EXTRA",
+    )
+    descricao = models.CharField("Descrição", max_length=300, blank=True)
+    valor = models.DecimalField(
+        "Valor (€)",
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        validators=[MinValueValidator(0)],
+        help_text="Valor a creditar ao motorista (positivo).",
+    )
+
+    api_source = models.CharField(max_length=50, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(
+        "auth.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_pre_invoice_extras",
+    )
+
+    class Meta:
+        verbose_name = "Serviço Extra"
+        verbose_name_plural = "Serviços Extra"
+        ordering = ["data"]
+
+    def __str__(self):
+        return f"{self.get_tipo_display()} {self.data} — €{self.valor}"
 
 
 class PreInvoiceLostPackage(models.Model):

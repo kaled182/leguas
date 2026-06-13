@@ -542,6 +542,7 @@ def driver_pre_invoice_detail(request, driver_id, pre_invoice_id):
     bonus = pf.bonificacoes.all().order_by("-data") if hasattr(pf, "bonificacoes") else []
     advances = pf.adiantamentos.all().order_by("-data") if hasattr(pf, "adiantamentos") else []
     lost_packages = pf.pacotes_perdidos.all().order_by("-data") if hasattr(pf, "pacotes_perdidos") else []
+    extras = pf.extras.all().order_by("-data") if hasattr(pf, "extras") else []
 
     # ─── Entregas PUDO ───
     # Linhas guardadas na PF (só existem se a PF foi emitida com PUDO ativo).
@@ -592,6 +593,7 @@ def driver_pre_invoice_detail(request, driver_id, pre_invoice_id):
         "bonus": bonus,
         "advances": advances,
         "lost_packages": lost_packages,
+        "extras": extras,
         "pudos": pudos,
         "pudo_computed": pudo_computed,
         "pudo_in_total": pudo_in_total,

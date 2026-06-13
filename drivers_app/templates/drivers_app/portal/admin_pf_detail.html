@@ -52,6 +52,13 @@
     {% endif %}
   </div>
   {% endif %}
+  {% if extras %}
+  <div class="bg-sky-50 dark:bg-sky-900/20 rounded-xl p-4 border border-sky-200/50 dark:border-sky-700/30">
+    <p class="text-xs uppercase font-bold text-sky-700 dark:text-sky-300">Serviços Extra</p>
+    <p class="text-xs text-sky-700 dark:text-sky-400 mt-0.5">{{ extras|length }} lançamento{{ extras|length|pluralize:"s" }}</p>
+    <p class="text-2xl font-extrabold text-sky-700 dark:text-sky-300 mt-1">+ € {{ pf.total_extras|default:"0.00"|floatformat:2 }}</p>
+  </div>
+  {% endif %}
   <div class="bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl p-4 text-white shadow">
     {% if pf.driver.vat_regime == 'normal' %}
       <p class="text-xs uppercase font-bold text-emerald-100">Total c/ IVA</p>
@@ -259,6 +266,35 @@
     </div>
     {% empty %}
     <p class="px-5 py-6 text-center text-sm text-gray-500 italic">Sem bonificações.</p>
+    {% endfor %}
+  </div>
+</div>
+
+{# ─── Serviços Extra (créditos manuais) ─── #}
+<div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden mb-4">
+  <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
+    <i data-lucide="plus-circle" class="w-5 h-5 text-sky-500"></i>
+    <h3 class="font-bold text-gray-900 dark:text-white">Serviços Extra</h3>
+    <span class="text-xs text-gray-500">({{ extras|length }} · €{{ pf.total_extras|default:"0.00"|floatformat:2 }})</span>
+    <button onclick="addExtra()"
+            class="ml-auto px-3 py-1.5 text-xs bg-sky-600 hover:bg-sky-700 text-white rounded-lg font-medium inline-flex items-center gap-1.5">
+      <i data-lucide="plus" class="w-3.5 h-3.5"></i> Adicionar
+    </button>
+  </div>
+  <div class="divide-y divide-gray-100 dark:divide-gray-700">
+    {% for e in extras %}
+    <div class="px-5 py-3 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-700/30">
+      <span class="font-mono text-sm font-bold text-gray-900 dark:text-white w-24">{{ e.data|date:"d/m/Y" }}</span>
+      <span class="px-2 py-0.5 rounded text-xs font-semibold bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300 w-32 text-center">{{ e.get_tipo_display }}</span>
+      <span class="text-sm text-gray-700 dark:text-gray-300 flex-1 truncate">{{ e.descricao|default:"—" }}</span>
+      <span class="ml-auto font-bold text-sky-600">+ € {{ e.valor|floatformat:2 }}</span>
+      <button onclick="deleteExtra({{ e.id }})"
+              class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-600 dark:text-gray-400 hover:text-rose-600">
+        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+      </button>
+    </div>
+    {% empty %}
+    <p class="px-5 py-6 text-center text-sm text-gray-500 italic">Sem serviços extra. Usa "Adicionar" para lançar um arrasto ou outro crédito.</p>
     {% endfor %}
   </div>
 </div>
@@ -654,6 +690,31 @@ async function deleteBonus(id) {
   if (!ok) return;
   const d = await _post(`/settlements/pre-invoices/${PF_ID}/bonus/${id}/delete/`);
   if (d.success) { window.toast({type:'success', message:'Bónus eliminado.'}); setTimeout(()=>location.reload(), 600); }
+  else window.toast({type:'error', message: d.error || 'Erro'});
+}
+
+// ─── Serviços Extra ───
+async function addExtra() {
+  const tipo = await window.promptModal({title:'Tipo', default:'ARRASTO', message:'ARRASTO, SERVICO_EXTRA, AJUDA, AJUSTE ou OUTRO'});
+  if (!tipo) return;
+  const desc = await window.promptModal({title:'Descrição', default:'', message:'Ex.: Arrasto de pacotes para outro hub'});
+  const data = await window.promptModal({title:'Data (YYYY-MM-DD)', default: new Date().toISOString().slice(0,10)});
+  if (!data) return;
+  const valor = await window.promptModal({title:'Valor € (crédito)', default:'10.00'});
+  if (!valor) return;
+  const d = await _post(`/settlements/pre-invoices/${PF_ID}/extra/add/`, {
+    data, tipo: tipo.toUpperCase(), descricao: desc || '',
+    valor: parseFloat(valor),
+  });
+  if (d.success) { window.toast({type:'success', message:'Serviço extra adicionado.'}); setTimeout(()=>location.reload(), 600); }
+  else window.toast({type:'error', message: d.error || 'Erro'});
+}
+
+async function deleteExtra(id) {
+  const ok = await window.confirmModal({type:'danger', title:'Eliminar serviço extra?'});
+  if (!ok) return;
+  const d = await _post(`/settlements/pre-invoices/extra/${id}/delete/`);
+  if (d.success) { window.toast({type:'success', message:'Eliminado.'}); setTimeout(()=>location.reload(), 600); }
   else window.toast({type:'error', message: d.error || 'Erro'});
 }
 

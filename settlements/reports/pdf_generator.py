@@ -1037,6 +1037,69 @@ class PDFGenerator:
             elements.append(pudo_table)
             elements.append(Spacer(1, 0.5 * cm))
 
+        # ── Serviços Extra (créditos manuais, se existirem) ───────────────
+        extras = list(pre_invoice.extras.all())
+        if extras:
+            elements.append(section_header(
+                "SERVIÇOS EXTRA", colors.HexColor("#0284C7")))
+            elements.append(Spacer(1, 0.1 * cm))
+
+            ex_desc_style = ParagraphStyle(
+                "EXdesc", parent=self.styles["Normal"],
+                fontSize=8, leading=10, alignment=TA_LEFT,
+                fontName="Helvetica",
+            )
+            ex_col_widths = [2.5 * cm, 3.5 * cm, 7.5 * cm, 3.0 * cm]
+
+            ex_header = Table(
+                [[
+                    Paragraph("Data", section_style),
+                    Paragraph("Tipo", section_style),
+                    Paragraph("Descrição", section_style),
+                    Paragraph("Valor (€)", section_style),
+                ]],
+                colWidths=ex_col_widths,
+            )
+            ex_header.setStyle(TableStyle([
+                ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#0284C7")),
+                ("TOPPADDING", (0, 0), (-1, -1), 5),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+            ]))
+            elements.append(ex_header)
+
+            def _esc_ex(txt):
+                return (txt or "—").replace("&", "&amp;").replace(
+                    "<", "&lt;").replace(">", "&gt;")
+
+            ex_rows = [
+                [e.data.strftime("%d/%m/%Y") if e.data else "—",
+                 Paragraph(_esc_ex(e.get_tipo_display()), ex_desc_style),
+                 Paragraph(_esc_ex(e.descricao), ex_desc_style),
+                 f"+€{float(e.valor):.2f}"]
+                for e in extras
+            ]
+            ex_rows.append([
+                "", "", "Total", f"+€{float(pre_invoice.total_extras):.2f}",
+            ])
+            ex_table = Table(ex_rows, colWidths=ex_col_widths)
+            ex_table.setStyle(TableStyle([
+                ("ROWBACKGROUNDS", (0, 0), (-2, -1), [colors.white, light_gray]),
+                ("BACKGROUND", (0, -1), (-1, -1), colors.HexColor("#E0F2FE")),
+                ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold"),
+                ("TEXTCOLOR", (0, -1), (-1, -1), colors.HexColor("#075985")),
+                ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#E5E7EB")),
+                ("FONTSIZE", (0, 0), (-1, -1), 8),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("ALIGN", (0, 0), (0, -1), "CENTER"),
+                ("ALIGN", (3, 0), (-1, -1), "RIGHT"),
+                ("TOPPADDING", (0, 0), (-1, -1), 5),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+                ("LEFTPADDING", (0, 0), (-1, -1), 6),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+            ]))
+            elements.append(ex_table)
+            elements.append(Spacer(1, 0.5 * cm))
+
         # ── Pacotes Perdidos (apenas se existirem) ────────────────────────
         perdidos = list(pre_invoice.pacotes_perdidos.all())
         if perdidos:
@@ -1291,6 +1354,16 @@ class PDFGenerator:
                 "Entregas PUDO", f"€{float(pre_invoice.total_pudo):.2f}",
                 "Fórmula PUDO (1ª + adicionais)",
             ])
+        # Linha de Serviços Extra (créditos manuais) se houver valor.
+        has_extras = bool(
+            pre_invoice.total_extras and pre_invoice.total_extras > 0
+        )
+        if has_extras:
+            idx_extra = 3 if has_pudo else 2
+            resumo_rows.insert(idx_extra, [
+                "Serviços Extra", f"€{float(pre_invoice.total_extras):.2f}",
+                "Lançamentos a crédito (arrasto, etc.)",
+            ])
         # Adicionar linha de comissões apenas se existirem
         if total_comissoes > 0:
             resumo_rows.append(
@@ -1298,8 +1371,8 @@ class PDFGenerator:
                  "Bónus por motoristas indicados"]
             )
 
-        # Índice da linha "Subtotal Bruto" (desloca +1 se houver PUDO)
-        subtotal_idx = 4 if has_pudo else 3
+        # Índice da linha "Subtotal Bruto" (desloca +1 por cada secção extra)
+        subtotal_idx = 3 + (1 if has_pudo else 0) + (1 if has_extras else 0)
         comissoes_idx = len(resumo_rows) - 1 if total_comissoes > 0 else None
 
         # ── IVA (Regime Normal) e Retenção IRS ──────────────────────────────

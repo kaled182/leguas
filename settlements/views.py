@@ -2374,6 +2374,54 @@ def pre_invoice_delete_bonus(request, bonus_id):
 
 @login_required
 @require_http_methods(["POST"])
+def pre_invoice_add_extra(request, pre_invoice_id):
+    """Adiciona um lançamento a crédito (serviço extra: arrasto, etc.)."""
+    import json
+    from decimal import Decimal, InvalidOperation
+    from .models import PreInvoiceExtra
+    pf = get_object_or_404(DriverPreInvoice, id=pre_invoice_id)
+
+    try:
+        body = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        body = request.POST.dict()
+
+    try:
+        valor = Decimal(str(body.get("valor", "0") or "0"))
+    except (InvalidOperation, TypeError):
+        valor = Decimal("0.00")
+    if valor <= 0:
+        return JsonResponse(
+            {"success": False, "error": "Valor tem de ser positivo."},
+            status=400,
+        )
+
+    extra = PreInvoiceExtra.objects.create(
+        pre_invoice=pf,
+        data=body.get("data") or pf.periodo_fim,
+        tipo=(body.get("tipo") or "SERVICO_EXTRA").upper(),
+        descricao=(body.get("descricao") or "")[:300],
+        valor=valor,
+        created_by=request.user if request.user.is_authenticated else None,
+    )
+    pf.recalcular()
+    return JsonResponse({"success": True, "id": extra.id})
+
+
+@login_required
+@require_http_methods(["POST"])
+def pre_invoice_delete_extra(request, extra_id):
+    """Remove um lançamento a crédito (serviço extra)."""
+    from .models import PreInvoiceExtra
+    extra = get_object_or_404(PreInvoiceExtra, id=extra_id)
+    pf = extra.pre_invoice
+    extra.delete()
+    pf.recalcular()
+    return JsonResponse({"success": True})
+
+
+@login_required
+@require_http_methods(["POST"])
 def pre_invoice_add_lost_package(request, pre_invoice_id):
     """Adiciona um pacote perdido."""
     import json

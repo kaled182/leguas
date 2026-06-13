@@ -603,6 +603,16 @@ urlpatterns = [
         name="pre-invoice-bonus-delete",
     ),
     path(
+        "pre-invoices/<int:pre_invoice_id>/extra/add/",
+        views.pre_invoice_add_extra,
+        name="pre-invoice-extra-add",
+    ),
+    path(
+        "pre-invoices/extra/<int:extra_id>/delete/",
+        views.pre_invoice_delete_extra,
+        name="pre-invoice-extra-delete",
+    ),
+    path(
         "pre-invoices/<int:pre_invoice_id>/pacote-perdido/add/",
         views.pre_invoice_add_lost_package,
         name="pre-invoice-lost-add",

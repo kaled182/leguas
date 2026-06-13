@@ -970,6 +970,73 @@ class PDFGenerator:
             elements.append(bon_table)
             elements.append(Spacer(1, 0.5 * cm))
 
+        # ── Entregas PUDO (apenas se existirem) ───────────────────────────
+        pudos = list(pre_invoice.pudos.all())
+        if pudos:
+            elements.append(section_header(
+                "ENTREGAS PUDO", colors.HexColor("#7C3AED")))
+            elements.append(Spacer(1, 0.1 * cm))
+
+            pudo_addr_style = ParagraphStyle(
+                "PUDOaddr", parent=self.styles["Normal"],
+                fontSize=8, leading=10, alignment=TA_LEFT,
+                fontName="Helvetica",
+            )
+            # Data 2.5 · Morada 8.5 · Qtd 2.5 · Valor 3.0 ≈ 16.5 cm
+            pudo_col_widths = [2.5 * cm, 8.5 * cm, 2.5 * cm, 3.0 * cm]
+
+            pudo_header = Table(
+                [[
+                    Paragraph("Data", section_style),
+                    Paragraph("Morada / PUDO", section_style),
+                    Paragraph("Qtd.", section_style),
+                    Paragraph("Valor (€)", section_style),
+                ]],
+                colWidths=pudo_col_widths,
+            )
+            pudo_header.setStyle(TableStyle([
+                ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#7C3AED")),
+                ("TOPPADDING", (0, 0), (-1, -1), 5),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+            ]))
+            elements.append(pudo_header)
+
+            def _esc_pudo(txt):
+                return (txt or "—").replace("&", "&amp;").replace(
+                    "<", "&lt;").replace(">", "&gt;")
+
+            pudo_rows = []
+            for p in pudos:
+                morada = p.morada or p.zip_code or "—"
+                pudo_rows.append([
+                    p.data.strftime("%d/%m/%Y") if p.data else "—",
+                    Paragraph(_esc_pudo(morada), pudo_addr_style),
+                    str(p.n_pacotes),
+                    f"€{float(p.valor):.2f}",
+                ])
+            pudo_rows.append([
+                "", "", "Total",
+                f"€{float(pre_invoice.total_pudo):.2f}",
+            ])
+            pudo_table = Table(pudo_rows, colWidths=pudo_col_widths)
+            pudo_table.setStyle(TableStyle([
+                ("ROWBACKGROUNDS", (0, 0), (-2, -1), [colors.white, light_gray]),
+                ("BACKGROUND", (0, -1), (-1, -1), colors.HexColor("#EDE9FE")),
+                ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold"),
+                ("TEXTCOLOR", (0, -1), (-1, -1), colors.HexColor("#5B21B6")),
+                ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#E5E7EB")),
+                ("FONTSIZE", (0, 0), (-1, -1), 8),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("ALIGN", (0, 0), (0, -1), "CENTER"),  # Data
+                ("ALIGN", (2, 0), (-1, -1), "CENTER"),  # Qtd / Valor
+                ("TOPPADDING", (0, 0), (-1, -1), 5),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+                ("LEFTPADDING", (0, 0), (-1, -1), 6),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+            ]))
+            elements.append(pudo_table)
+            elements.append(Spacer(1, 0.5 * cm))
+
         # ── Pacotes Perdidos (apenas se existirem) ────────────────────────
         perdidos = list(pre_invoice.pacotes_perdidos.all())
         if perdidos:
@@ -1051,6 +1118,17 @@ class PDFGenerator:
                                            colors.HexColor("#B45309")))
             elements.append(Spacer(1, 0.1 * cm))
 
+            # Estilo da descrição com wrap (evita sobreposição ao Valor
+            # quando o texto é longo, ex.: "Caravela Combustíveis (...)").
+            adv_desc_style = ParagraphStyle(
+                "ADVdesc", parent=self.styles["Normal"],
+                fontSize=8, leading=10, alignment=TA_LEFT,
+                fontName="Helvetica",
+            )
+
+            # 4 colunas (total ≈ 16.5 cm). Descrição mais larga e com wrap.
+            adv_col_widths = [2.5 * cm, 3.5 * cm, 7.5 * cm, 3.0 * cm]
+
             adv_header = Table(
                 [[
                     Paragraph("Data", section_style),
@@ -1058,7 +1136,7 @@ class PDFGenerator:
                     Paragraph("Descrição", section_style),
                     Paragraph("Valor (€)", section_style),
                 ]],
-                colWidths=[3.5 * cm, 4 * cm, 5.5 * cm, 4 * cm],
+                colWidths=adv_col_widths,
             )
             adv_header.setStyle(TableStyle([
                 ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#D97706")),
@@ -1067,25 +1145,34 @@ class PDFGenerator:
             ]))
             elements.append(adv_header)
 
+            def _esc(txt):
+                return (txt or "—").replace("&", "&amp;").replace(
+                    "<", "&lt;").replace(">", "&gt;")
+
             adv_rows = [
                 [a.data.strftime("%d/%m/%Y") if a.data else "—",
-                 a.get_tipo_display(), a.descricao or "—",
+                 Paragraph(_esc(a.get_tipo_display()), adv_desc_style),
+                 Paragraph(_esc(a.descricao), adv_desc_style),
                  f"-€{float(a.valor):.2f}"]
                 for a in adiantamentos
             ]
             adv_rows.append(["", "", "Total",
                               f"-€{float(pre_invoice.total_adiantamentos):.2f}"])
-            adv_table = Table(adv_rows, colWidths=[3.5 * cm, 4 * cm, 5.5 * cm, 4 * cm])
+            adv_table = Table(adv_rows, colWidths=adv_col_widths)
             adv_table.setStyle(TableStyle([
                 ("ROWBACKGROUNDS", (0, 0), (-2, -1), [colors.white, light_gray]),
                 ("BACKGROUND", (0, -1), (-1, -1), colors.HexColor("#FEF3C7")),
                 ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold"),
                 ("TEXTCOLOR", (0, -1), (-1, -1), colors.HexColor("#92400E")),
                 ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#E5E7EB")),
-                ("ALIGN", (3, 0), (-1, -1), "CENTER"),
+                ("FONTSIZE", (0, 0), (-1, -1), 8),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("ALIGN", (0, 0), (0, -1), "CENTER"),  # Data
+                ("ALIGN", (3, 0), (-1, -1), "RIGHT"),  # Valor
                 ("TOPPADDING", (0, 0), (-1, -1), 5),
                 ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
                 ("LEFTPADDING", (0, 0), (-1, -1), 6),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 6),
             ]))
             elements.append(adv_table)
             elements.append(Spacer(1, 0.7 * cm))
@@ -1197,6 +1284,13 @@ class PDFGenerator:
             ["Adiantamentos / Combustível", f"-€{float(pre_invoice.total_adiantamentos):.2f}",
              "Deduzido automaticamente"],
         ]
+        # Linha de Entregas PUDO (logo após Bonificações) se houver valor.
+        has_pudo = bool(pre_invoice.total_pudo and pre_invoice.total_pudo > 0)
+        if has_pudo:
+            resumo_rows.insert(2, [
+                "Entregas PUDO", f"€{float(pre_invoice.total_pudo):.2f}",
+                "Fórmula PUDO (1ª + adicionais)",
+            ])
         # Adicionar linha de comissões apenas se existirem
         if total_comissoes > 0:
             resumo_rows.append(
@@ -1204,7 +1298,8 @@ class PDFGenerator:
                  "Bónus por motoristas indicados"]
             )
 
-        subtotal_idx = 3  # índice da linha "Subtotal Bruto"
+        # Índice da linha "Subtotal Bruto" (desloca +1 se houver PUDO)
+        subtotal_idx = 4 if has_pudo else 3
         comissoes_idx = len(resumo_rows) - 1 if total_comissoes > 0 else None
 
         # ── IVA (Regime Normal) e Retenção IRS ──────────────────────────────
@@ -1255,7 +1350,9 @@ class PDFGenerator:
             ("TOPPADDING", (0, 0), (-1, -1), 6),
             ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
             ("LEFTPADDING", (0, 0), (-1, -1), 6),
-            ("TEXTCOLOR", (1, 4), (1, 6), red),
+            # As 3 deduções (Penalizações, Pacotes Perdidos, Adiantamentos)
+            # vêm logo a seguir ao Subtotal Bruto — em vermelho.
+            ("TEXTCOLOR", (1, subtotal_idx + 1), (1, subtotal_idx + 3), red),
         ]
         if comissoes_idx is not None:
             ts.append(("TEXTCOLOR", (1, comissoes_idx), (1, comissoes_idx),

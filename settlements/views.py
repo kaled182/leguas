@@ -1850,7 +1850,7 @@ def driver_pre_invoice_create(request, driver_id):
     from drivers_app.models import DriverProfile
     from .models import (
         BonusBlackoutDate, CainiaoOperationTask, Holiday, PreInvoiceBonus,
-        PreInvoiceLine,
+        PreInvoiceLine, PreInvoicePudo,
     )
     from core.models import Partner
 
@@ -2017,6 +2017,7 @@ def driver_pre_invoice_create(request, driver_id):
                 rows_this = list(
                     qs_login.values(
                         "id", "waybill_number", "delivery_type",
+                        "task_date",
                         "receiver_latitude", "receiver_longitude",
                         "actual_latitude", "actual_longitude",
                         "zip_code", "detailed_address",
@@ -2130,6 +2131,7 @@ def driver_pre_invoice_create(request, driver_id):
                 rows_inc = list(
                     inc_qs.values(
                         "id", "waybill_number", "delivery_type",
+                        "task_date",
                         "receiver_latitude", "receiver_longitude",
                         "actual_latitude", "actual_longitude",
                         "zip_code", "detailed_address",
@@ -2231,43 +2233,44 @@ def driver_pre_invoice_create(request, driver_id):
                             ),
                         )
 
-            # ── PUDO: linha agregada por driver ────────────────────
-            # Aplica fórmula 1ª + (N-1) × adicional por PUDO distinto.
+            # ── PUDO: detalhe por (dia, PUDO) ──────────────────────
+            # Cada (dia, ponto PUDO) vira uma PreInvoicePudo, remunerada
+            # pela fórmula 1ª + (N-1) × adicional. Detalhado para ficar
+            # visível na PF e no PDF (dia, quantidade, valor).
             if pudo_active and pudo_tasks_global:
+                from collections import defaultdict as _pudo_dd
                 from settlements.services_pudo import (
-                    compute_pudo_total_for_driver,
+                    compute_pudo_payment, pudo_key,
                 )
-                pudo_total, n_pudos, _bd = compute_pudo_total_for_driver(
-                    pudo_tasks_global, cainiao_partner,
-                )
-                n_pudo_pkgs = len(pudo_tasks_global)
-                # Taxa "média" para o modelo (que multiplica
-                # total_pacotes × taxa). Guardamos em 4 decimais para
-                # preservar o total exacto.
-                avg_rate = (
-                    pudo_total / Decimal(n_pudo_pkgs)
-                    if n_pudo_pkgs else Decimal("0")
-                ).quantize(Decimal("0.0001"))
-                # Pequeno ajuste: garantir que pacotes × taxa = total
-                # (arredondamento). Se diferir, somamos a diferença.
-                line_pudo = PreInvoiceLine(
-                    pre_invoice=pf,
-                    parceiro=cainiao_partner,
-                    courier_id="(PUDO)",
-                    total_pacotes=n_pudo_pkgs,
-                    taxa_por_entrega=avg_rate,
-                    dsr_percentual=Decimal("0"),
-                    api_source="auto:pudo",
-                    observacoes=(
-                        f"PUDO: {n_pudo_pkgs} pacote{'s' if n_pudo_pkgs > 1 else ''} "
-                        f"em {n_pudos} PUDO{'s' if n_pudos > 1 else ''} distinto"
-                        f"{'s' if n_pudos > 1 else ''}. "
-                        f"1ª: €{cainiao_partner.pudo_first_delivery_price} · "
-                        f"adicional: €{cainiao_partner.pudo_additional_delivery_price} · "
-                        f"total: €{pudo_total:.2f}"
-                    )[:300],
-                )
-                line_pudo.calcular_e_salvar()
+                _first = cainiao_partner.pudo_first_delivery_price
+                _add = cainiao_partner.pudo_additional_delivery_price
+                grupos = _pudo_dd(list)
+                for t in pudo_tasks_global:
+                    k = pudo_key(t) or ("solo", t.id)
+                    grupos[(t.task_date, k)].append(t)
+                for (day, _k), tasks in sorted(
+                    grupos.items(), key=lambda kv: str(kv[0][0]),
+                ):
+                    n = len(tasks)
+                    amt = compute_pudo_payment(n, cainiao_partner)
+                    first_t = tasks[0]
+                    if n > 1:
+                        obs = (
+                            f"{n} pacotes · 1ª €{_first} + "
+                            f"{n - 1}×€{_add}"
+                        )
+                    else:
+                        obs = f"1 pacote · €{_first}"
+                    PreInvoicePudo.objects.create(
+                        pre_invoice=pf,
+                        data=day or periodo_fim,
+                        n_pacotes=n,
+                        valor=amt,
+                        morada=(first_t.detailed_address or "")[:300],
+                        zip_code=(first_t.zip_code or "")[:12],
+                        api_source="auto:pudo",
+                        observacoes=obs[:300],
+                    )
 
     pf.recalcular()
 

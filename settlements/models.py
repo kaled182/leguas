@@ -1232,6 +1232,13 @@ class DriverPreInvoice(models.Model):
         decimal_places=2,
         default=Decimal("0.00"),
     )
+    total_pudo = models.DecimalField(
+        "Total Entregas PUDO (€)",
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        help_text="Soma das entregas PUDO (fórmula 1ª + adicionais).",
+    )
     ajuste_manual = models.DecimalField(
         "Ajuste Manual (€)",
         max_digits=12,
@@ -1442,6 +1449,9 @@ class DriverPreInvoice(models.Model):
         self.total_bonus = sum(
             b.bonus_calculado for b in self.bonificacoes.all()
         )
+        self.total_pudo = sum(
+            p.valor for p in self.pudos.all()
+        )
         self.total_pacotes_perdidos = sum(
             p.valor_com_iva for p in self.pacotes_perdidos.all()
         )
@@ -1467,6 +1477,7 @@ class DriverPreInvoice(models.Model):
         self.subtotal_bruto = (
             self.base_entregas
             + self.total_bonus
+            + self.total_pudo
             + self.ajuste_manual
         )
         self.total_a_receber = (
@@ -1648,6 +1659,48 @@ class PreInvoiceBonus(models.Model):
         else:
             self.bonus_calculado = Decimal("0.00")
         super().save(*args, **kwargs)
+
+
+class PreInvoicePudo(models.Model):
+    """
+    Entregas PUDO de um dia/ponto PUDO dentro de uma pré-fatura.
+
+    Cada linha = um (dia, PUDO) com N pacotes, remunerado pela fórmula
+    1ª + (N-1) × adicional. Detalha o que o KPI "Entregas PUDO" mostra,
+    para ficar visível e auditável na pré-fatura e no PDF.
+    """
+
+    pre_invoice = models.ForeignKey(
+        DriverPreInvoice,
+        on_delete=models.CASCADE,
+        related_name="pudos",
+        verbose_name="Pré-Fatura",
+    )
+
+    data = models.DateField("Data")
+    n_pacotes = models.PositiveIntegerField("Nº Pacotes", default=0)
+    valor = models.DecimalField(
+        "Valor (€)",
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        validators=[MinValueValidator(0)],
+        help_text="1ª + (N-1) × adicional para este PUDO neste dia.",
+    )
+    morada = models.CharField("Morada / PUDO", max_length=300, blank=True)
+    zip_code = models.CharField("Código Postal", max_length=12, blank=True)
+
+    api_source = models.CharField(max_length=50, blank=True)
+    observacoes = models.CharField("Observações", max_length=300, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Entrega PUDO"
+        verbose_name_plural = "Entregas PUDO"
+        ordering = ["data"]
+
+    def __str__(self):
+        return f"PUDO {self.data} — {self.n_pacotes} pacotes — €{self.valor}"
 
 
 class PreInvoiceLostPackage(models.Model):

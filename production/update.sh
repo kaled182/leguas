@@ -29,15 +29,21 @@ if [ -d ../.git ]; then
 fi
 
 # ── 3. Rebuild imagem ────────────────────────────────────────────────
+# web faz o build da imagem leguas-web:production; celery_worker e
+# celery_beat partilham essa mesma imagem (instala novas deps como shapely).
 log "A reconstruir imagem…"
 docker compose build web
 
-# ── 4. Aplicar migrations e restart ──────────────────────────────────
+# ── 4. Aplicar migrations (já com a imagem nova) ─────────────────────
 log "A aplicar migrations…"
 docker compose run --rm web python manage.py migrate --noinput
 
+# ── 5. Recriar serviços de app com a imagem nova ─────────────────────
+# Sobe tudo e força a recriação de web + celery (worker/beat) para
+# garantirem o código/deps novos, SEM reiniciar db/redis.
 log "A reiniciar serviços…"
 docker compose up -d
+docker compose up -d --force-recreate --no-deps web celery_worker celery_beat
 
 log "A aguardar app ficar pronta…"
 for i in {1..30}; do

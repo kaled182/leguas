@@ -1,0 +1,194 @@
+{% extends 'settlements/base.html' %}
+{% load static %}
+{% load l10n %}
+
+{% block title %}Mapa de Códigos Postais{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<!-- Leaflet.draw -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css"/>
+<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+{% include 'system_config/_leaflet_tiles.html' %}
+<style>
+  #map { height: calc(100vh - 230px); min-height: 560px; border-radius: 12px;
+         box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+  .gz-card { background: var(--tw-bg, #fff); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="p-4">
+  <div class="mb-3">
+    <h1 class="text-2xl font-bold text-gray-800 dark:text-gray-100">Mapa de Códigos Postais</h1>
+    <p class="text-sm text-gray-500 dark:text-gray-400">
+      Cadastra uma área (prefixo CP4), carrega os pontos e desenha as zonas de entrega.
+    </p>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+    <!-- Cadastrar área -->
+    <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-3">
+      <h3 class="font-semibold text-gray-700 dark:text-gray-200 mb-2 text-sm">1. Cadastrar área (GeoAPI)</h3>
+      <div class="flex gap-2 items-center">
+        <input id="ingest-cp4" type="text" maxlength="4" placeholder="4990"
+          class="w-24 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100">
+        <label class="text-xs text-gray-600 dark:text-gray-300 flex items-center gap-1">
+          <input id="ingest-coords" type="checkbox" checked> coords
+        </label>
+        <button id="btn-ingest" class="px-3 py-1 rounded bg-emerald-600 hover:bg-emerald-700 text-white text-sm">Importar</button>
+      </div>
+      <p class="text-xs text-gray-400 mt-1">Corre em segundo plano (Celery).</p>
+    </div>
+
+    <!-- Carregar pontos -->
+    <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-3">
+      <h3 class="font-semibold text-gray-700 dark:text-gray-200 mb-2 text-sm">2. Carregar pontos</h3>
+      <div class="flex gap-2 items-center">
+        <select id="sel-cp4" class="px-2 py-1 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 text-sm">
+          <option value="">— todos —</option>
+          {% for cp4 in cp4s %}<option value="{{ cp4 }}">{{ cp4 }}</option>{% endfor %}
+        </select>
+        <button id="btn-load" class="px-3 py-1 rounded bg-indigo-600 hover:bg-indigo-700 text-white text-sm">Carregar</button>
+      </div>
+      <p id="load-info" class="text-xs text-gray-400 mt-1"></p>
+    </div>
+
+    <!-- Guardar zona -->
+    <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-3">
+      <h3 class="font-semibold text-gray-700 dark:text-gray-200 mb-2 text-sm">3. Guardar zona desenhada</h3>
+      <div class="flex gap-2 items-center">
+        <input id="zona-nome" type="text" placeholder="Zona A"
+          class="w-24 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 text-sm">
+        <input id="zona-cor" type="color" value="#2563eb" class="w-9 h-8 rounded border border-gray-300">
+        <button id="btn-zona" disabled class="px-3 py-1 rounded bg-gray-400 text-white text-sm">Guardar</button>
+      </div>
+      <p id="zona-info" class="text-xs text-gray-400 mt-1">Desenha um polígono primeiro.</p>
+    </div>
+  </div>
+
+  {% if nao_migrado %}
+  <div class="mb-3 rounded-lg border border-red-300 bg-red-50 dark:border-red-700 dark:bg-red-900/30 px-4 py-2 text-sm text-red-800 dark:text-red-200">
+    Tabelas ainda não migradas. Corre <code>migrate geozonas</code> no servidor.
+  </div>
+  {% endif %}
+
+  <div id="map"></div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ zonas_json|json_script:"zonas-data" }}
+<script>
+const CSRF = "{{ csrf_token }}";
+const URL_CPS = "{% url 'geozonas:api-cps' %}";
+const URL_SEL = "{% url 'geozonas:api-selecionar' %}";
+const URL_ZONA = "{% url 'geozonas:api-criar-zona' %}";
+const URL_INGEST = "{% url 'geozonas:api-ingest' %}";
+
+document.addEventListener('DOMContentLoaded', function () {
+  const map = L.map('map').setView([{{ map_center.0|unlocalize }}, {{ map_center.1|unlocalize }}], {{ map_zoom }});
+  window.addTileLayer(map, { maxZoom: 18 });
+
+  const pontosLayer = L.layerGroup().addTo(map);
+  const selecaoLayer = L.layerGroup().addTo(map);
+  const drawnItems = new L.FeatureGroup().addTo(map);
+  let ultimaGeometria = null;
+
+  // Controlo de desenho (polígono e retângulo)
+  map.addControl(new L.Control.Draw({
+    edit: { featureGroup: drawnItems, remove: true },
+    draw: { polygon: true, rectangle: true, polyline: false, circle: false,
+            marker: false, circlemarker: false }
+  }));
+
+  function post(url, body) {
+    return fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+      body: JSON.stringify(body)
+    }).then(r => r.json());
+  }
+
+  // Pontos dos CPs
+  function carregarPontos(cp4) {
+    const u = cp4 ? `${URL_CPS}?cp4=${encodeURIComponent(cp4)}` : URL_CPS;
+    document.getElementById('load-info').textContent = 'A carregar...';
+    fetch(u).then(r => r.json()).then(fc => {
+      pontosLayer.clearLayers();
+      const bounds = [];
+      fc.features.forEach(f => {
+        const [lng, lat] = f.geometry.coordinates;
+        L.circleMarker([lat, lng], { radius: 4, color: '#4f46e5', weight: 1, fillOpacity: 0.6 })
+          .bindPopup(`<b>${f.properties.cp}</b><br>${f.properties.localidade}<br>${f.properties.concelho}`)
+          .addTo(pontosLayer);
+        bounds.push([lat, lng]);
+      });
+      document.getElementById('load-info').textContent = `${fc.features.length} pontos.`;
+      if (bounds.length) map.fitBounds(bounds, { maxZoom: 14 });
+    });
+  }
+
+  // Zonas existentes
+  try {
+    const zonas = JSON.parse(document.getElementById('zonas-data').textContent || '[]');
+    zonas.forEach(z => {
+      if (z.poligono) L.geoJSON({ type: 'Feature', geometry: z.poligono },
+        { style: { color: z.cor, weight: 2, fillOpacity: 0.1 } })
+        .bindPopup(`<b>${z.nome}</b>`).addTo(map);
+    });
+  } catch (e) {}
+
+  // Desenho criado → seleciona CPs lá dentro
+  map.on(L.Draw.Event.CREATED, function (e) {
+    drawnItems.clearLayers();
+    drawnItems.addLayer(e.layer);
+    const geometry = e.layer.toGeoJSON().geometry;
+    ultimaGeometria = geometry;
+    const cp4 = document.getElementById('sel-cp4').value;
+    selecaoLayer.clearLayers();
+    post(URL_SEL, { geometry: geometry, cp4: cp4 || null }).then(res => {
+      (res.features || []).forEach(f => {
+        const [lng, lat] = f.geometry.coordinates;
+        L.circleMarker([lat, lng], { radius: 5, color: '#dc2626', weight: 2, fillOpacity: 0.9 })
+          .addTo(selecaoLayer);
+      });
+      const btn = document.getElementById('btn-zona');
+      btn.disabled = false; btn.className = 'px-3 py-1 rounded bg-blue-600 hover:bg-blue-700 text-white text-sm';
+      document.getElementById('zona-info').textContent = `${res.count} CPs nesta área.`;
+    });
+  });
+
+  // Botões
+  document.getElementById('btn-load').addEventListener('click', () =>
+    carregarPontos(document.getElementById('sel-cp4').value));
+
+  document.getElementById('btn-ingest').addEventListener('click', function () {
+    const cp4 = document.getElementById('ingest-cp4').value.trim();
+    const coords = document.getElementById('ingest-coords').checked;
+    if (!/^\d{4}$/.test(cp4)) { alert('CP4 deve ter 4 dígitos.'); return; }
+    post(URL_INGEST, { cp4: cp4, coords: coords }).then(res => {
+      alert(res.ok ? `Importação de ${res.queued} em fila. Recarrega daqui a pouco.` : `Erro: ${res.erro}`);
+    });
+  });
+
+  document.getElementById('btn-zona').addEventListener('click', function () {
+    if (!ultimaGeometria) return;
+    const nome = document.getElementById('zona-nome').value.trim();
+    const cor = document.getElementById('zona-cor').value;
+    if (!nome) { alert('Indica o nome da zona (ex.: Zona A).'); return; }
+    post(URL_ZONA, { nome: nome, cor: cor, geometry: ultimaGeometria }).then(res => {
+      if (res.ok) {
+        L.geoJSON({ type: 'Feature', geometry: ultimaGeometria },
+          { style: { color: res.cor, weight: 2, fillOpacity: 0.15 } })
+          .bindPopup(`<b>${res.nome}</b> (${res.count} CPs)`).addTo(map);
+        document.getElementById('zona-info').textContent = `"${res.nome}" guardada com ${res.count} CPs.`;
+      } else { alert(`Erro: ${res.erro}`); }
+    });
+  });
+});
+</script>
+{% endblock %}

@@ -56,6 +56,7 @@ geopy==2.4.1
 geographiclib==2.1
 folium==0.20.0
 branca==0.8.1
+shapely==2.0.6  # point-in-polygon p/ módulo geozonas (sem GDAL/GeoDjango)
 xyzservices==2025.4.0
 numpy==2.2.6
 

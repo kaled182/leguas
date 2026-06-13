@@ -1,0 +1,61 @@
+{% extends 'settlements/base.html' %}
+{% load static %}
+
+{% block title %}Catálogo de Códigos Postais{% endblock %}
+
+{% block content %}
+<div class="p-4 max-w-5xl mx-auto">
+  <div class="mb-4">
+    <h1 class="text-2xl font-bold text-gray-800 dark:text-gray-100">Catálogo de Códigos Postais</h1>
+    <p class="text-sm text-gray-500 dark:text-gray-400">
+      Insere um código postal (ex.: <code>4990-008</code>), um prefixo (<code>4990</code>) ou uma localidade.
+    </p>
+  </div>
+
+  <form method="get" class="flex gap-2 mb-6">
+    <input type="text" name="q" value="{{ q }}" autofocus placeholder="4990-008, 4990 ou Ponte de Lima"
+      class="flex-1 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+    <button type="submit"
+      class="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium">
+      Pesquisar
+    </button>
+  </form>
+
+  {% if q %}
+    {% if resultados %}
+      <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">{{ resultados|length }} resultado(s):</p>
+      <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+        <table class="min-w-full text-sm">
+          <thead class="bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300">
+            <tr>
+              <th class="px-4 py-2 text-left">Código Postal</th>
+              <th class="px-4 py-2 text-left">Designação Postal</th>
+              <th class="px-4 py-2 text-left">Localidade</th>
+              <th class="px-4 py-2 text-left">Concelho</th>
+              <th class="px-4 py-2 text-left">Coordenadas</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+            {% for cp in resultados %}
+              <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                <td class="px-4 py-2 font-medium text-gray-800 dark:text-gray-100">{{ cp.codigo_postal }}</td>
+                <td class="px-4 py-2 text-gray-600 dark:text-gray-300">{{ cp.designacao_postal }}</td>
+                <td class="px-4 py-2 text-gray-600 dark:text-gray-300">{{ cp.localidade.nome|default:"—" }}</td>
+                <td class="px-4 py-2 text-gray-600 dark:text-gray-300">{{ cp.concelho.nome|default:"—" }}</td>
+                <td class="px-4 py-2 text-gray-500 dark:text-gray-400">
+                  {% if cp.tem_coordenadas %}{{ cp.latitude }}, {{ cp.longitude }}{% else %}—{% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="rounded-lg border border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-900/30 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
+        Nada encontrado para "<strong>{{ q }}</strong>". Se o prefixo ainda não foi cadastrado,
+        importa-o no <a href="{% url 'geozonas:mapa' %}" class="underline">Mapa de Códigos Postais</a>.
+      </div>
+    {% endif %}
+  {% endif %}
+</div>
+{% endblock %}

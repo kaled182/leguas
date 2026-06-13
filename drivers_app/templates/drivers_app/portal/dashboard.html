@@ -308,7 +308,12 @@
               <tr :class="r.direction === 'incoming' ? 'bg-emerald-50 dark:bg-emerald-900/15' : (r.direction === 'outgoing' ? 'bg-amber-50 dark:bg-amber-900/15' : 'hover:bg-gray-50 dark:hover:bg-gray-700/30')">
                 {% if request.user.is_staff or request.user.is_superuser %}
                 <td class="px-3 py-2">
-                  <input type="checkbox" :checked="drawer.selected.includes(r.waybill)" @change="toggleSelected(r.waybill)">
+                  <template x-if="r.direction !== 'outgoing'">
+                    <input type="checkbox" :checked="drawer.selected.includes(r.waybill)" @change="toggleSelected(r.waybill)">
+                  </template>
+                  <template x-if="r.direction === 'outgoing'">
+                    <i data-lucide="lock" class="w-3.5 h-3.5 text-gray-400" title="Já transferida — não pode transferir de novo"></i>
+                  </template>
                 </td>
                 {% endif %}
                 <td class="px-3 py-2 font-mono text-xs">
@@ -485,6 +490,9 @@ function portalDayDrawer(driverId) {
       }
     },
     toggleSelected(wb) {
+      // Pacotes já transferidos (outgoing) não são seleccionáveis.
+      const row = this.drawer.rows.find(r => r.waybill === wb);
+      if (row && row.direction === 'outgoing') return;
       const i = this.drawer.selected.indexOf(wb);
       if (i >= 0) this.drawer.selected.splice(i, 1); else this.drawer.selected.push(wb);
     },
@@ -502,15 +510,20 @@ function portalDayDrawer(driverId) {
       if (!this.drawer.cp4Filter) return this.drawer.rows;
       return this.drawer.rows.filter(r => this.cp4Of(r) === this.drawer.cp4Filter);
     },
+    selectableRows() {
+      // Linhas visíveis que ainda podem ser transferidas (exclui as já
+      // transferidas — direction 'outgoing').
+      return this.visibleRows().filter(r => r.direction !== 'outgoing');
+    },
     allVisibleSelected() {
-      const vis = this.visibleRows();
+      const vis = this.selectableRows();
       return vis.length > 0 && vis.every(r => this.drawer.selected.includes(r.waybill));
     },
     toggleAllSelected() {
-      // Opera sobre as linhas visíveis (respeita o filtro CP4):
-      // se todas as visíveis já estão seleccionadas, desmarca-as; senão
-      // adiciona todas as visíveis à selecção.
-      const vis = this.visibleRows().map(r => r.waybill);
+      // Opera só sobre as linhas seleccionáveis visíveis (respeita o filtro
+      // CP4 e ignora as já transferidas): se todas já estão seleccionadas,
+      // desmarca-as; senão adiciona-as à selecção.
+      const vis = this.selectableRows().map(r => r.waybill);
       if (vis.length > 0 && vis.every(w => this.drawer.selected.includes(w))) {
         this.drawer.selected = this.drawer.selected.filter(w => !vis.includes(w));
       } else {

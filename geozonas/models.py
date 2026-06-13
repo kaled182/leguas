@@ -177,5 +177,57 @@ class ZonaGeo(models.Model):
         verbose_name_plural = "Zonas Geográficas"
         ordering = ["nome"]
 
+
+class IngestJob(models.Model):
+    """Acompanhamento do progresso de uma importação de prefixo CP4."""
+
+    STATUS_CHOICES = [
+        ("PENDENTE", "Pendente"),
+        ("A_CORRER", "A correr"),
+        ("CONCLUIDO", "Concluído"),
+        ("ERRO", "Erro"),
+    ]
+
+    cp4 = models.CharField("CP4", max_length=4, db_index=True)
+    com_coordenadas = models.BooleanField(default=False)
+    status = models.CharField(
+        max_length=10, choices=STATUS_CHOICES, default="PENDENTE", db_index=True
+    )
+    concelho = models.CharField(max_length=120, blank=True)
+
+    total = models.IntegerField("Total de CP3", default=0)
+    processados = models.IntegerField("CP3 catalogados", default=0)
+    coords_total = models.IntegerField(default=0)
+    coords_feitas = models.IntegerField(default=0)
+    coords_falhadas = models.IntegerField(default=0)
+
+    erro = models.TextField(blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Importação (Job)"
+        verbose_name_plural = "Importações (Jobs)"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.cp4} [{self.status}] {self.percent}%"
+
+    @property
+    def percent(self):
+        """Percentagem global: catálogo conta como 1ª metade, coords como 2ª."""
+        if self.status == "CONCLUIDO":
+            return 100
+        if self.status in ("PENDENTE",) or self.total == 0:
+            return 0
+        if not self.com_coordenadas:
+            return 100 if self.processados >= self.total else 50
+        # Com coordenadas: catálogo = 20%, coordenadas = 80%
+        base = 20 if self.processados >= self.total else 0
+        if self.coords_total:
+            base += int(80 * self.coords_feitas / self.coords_total)
+        return min(base, 99)
+
     def __str__(self):
         return self.nome

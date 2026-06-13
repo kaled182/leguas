@@ -8,7 +8,7 @@ from django.shortcuts import render
 from django.utils.text import slugify
 from django.views.decorators.http import require_GET, require_POST
 
-from .models import CodigoPostal, ZonaGeo
+from .models import CodigoPostal, IngestJob, ZonaGeo
 from .services.espacial import cps_dentro_poligono
 from .tasks import ingest_cp4_task
 
@@ -180,5 +180,33 @@ def api_ingest(request):
             {"ok": False, "erro": "CP4 inválido (4 dígitos)"}, status=400
         )
 
-    ingest_cp4_task.delay(cp4, com_coords)
-    return JsonResponse({"ok": True, "queued": cp4, "coords": com_coords})
+    job = IngestJob.objects.create(cp4=cp4, com_coordenadas=com_coords)
+    ingest_cp4_task.delay(cp4, com_coords, job_id=job.id)
+    return JsonResponse(
+        {"ok": True, "queued": cp4, "coords": com_coords, "job_id": job.id}
+    )
+
+
+@login_required
+@require_GET
+def api_job_status(request):
+    """Estado/progresso de uma importação (polling pela UI)."""
+    job_id = request.GET.get("id")
+    job = IngestJob.objects.filter(id=job_id).first()
+    if not job:
+        return JsonResponse({"erro": "Job não encontrado"}, status=404)
+    return JsonResponse(
+        {
+            "id": job.id,
+            "cp4": job.cp4,
+            "status": job.status,
+            "percent": job.percent,
+            "concelho": job.concelho,
+            "total": job.total,
+            "processados": job.processados,
+            "coords_total": job.coords_total,
+            "coords_feitas": job.coords_feitas,
+            "coords_falhadas": job.coords_falhadas,
+            "erro": job.erro,
+        }
+    )

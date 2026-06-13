@@ -20,6 +20,30 @@ _K_ARTERIA = "Artéria"
 _K_CP3 = "CP3"
 
 
+def _primeiro(valor):
+    """Normaliza um campo da GeoAPI que pode vir como str ou lista.
+
+    Um prefixo CP4 que abrange vários concelhos devolve `Concelho`/`Distrito`
+    como lista (ex.: ['Barcelos', 'Esposende']). Devolvemos o 1º como string.
+    """
+    if isinstance(valor, list):
+        return str(valor[0]).strip() if valor else ""
+    return str(valor or "").strip()
+
+
+def _get_concelho(nome, distrito, codigo_ine, cache):
+    """get_or_create de Concelho com cache local (evita queries repetidas)."""
+    if not nome:
+        return None
+    if nome not in cache:
+        obj, _ = Concelho.objects.update_or_create(
+            nome=nome,
+            defaults={"distrito": distrito, "codigo_ine": codigo_ine},
+        )
+        cache[nome] = obj
+    return cache[nome]
+
+
 def _mapa_cp3(dados):
     """A partir de `partes`, devolve {cp3: {'localidade', 'designacao', 'arterias'}}."""
     mapa = {}
@@ -40,7 +64,7 @@ def _mapa_cp3(dados):
     return mapa
 
 
-def ingest_cp4(cp4, com_coordenadas=False, delay_coords=0.3, client=None):
+def ingest_cp4(cp4, com_coordenadas=False, delay_coords=0.2, client=None, job=None):
     """
     Importa/atualiza todos os CPs do prefixo `cp4`.
 
@@ -49,6 +73,7 @@ def ingest_cp4(cp4, com_coordenadas=False, delay_coords=0.3, client=None):
         com_coordenadas: se True, faz um 2º passo por CP3 para obter o centroide GPS.
         delay_coords: pausa entre chamadas de detalhe (respeitar rate limit).
         client: GeoAPIClient (injetável para testes).
+        job: IngestJob opcional, atualizado com o progresso ao longo da ingestão.
 
     Returns:
         dict com estatísticas da ingestão.
@@ -58,23 +83,36 @@ def ingest_cp4(cp4, com_coordenadas=False, delay_coords=0.3, client=None):
 
     dados = client.consultar_cp4(cp4)
     if not dados:
+        if job:
+            job.status = "ERRO"
+            job.erro = "CP4 não encontrado na GeoAPI"
+            job.save(update_fields=["status", "erro", "updated_at"])
         return {"cp4": cp4, "ok": False, "erro": "CP4 não encontrado", "total": 0}
 
-    concelho_nome = str(dados.get("Concelho", "") or "").strip()
-    distrito = str(dados.get("Distrito", "") or "").strip()
-    codigo_ine = str(dados.get("codigoineMunicipio", "") or "").strip()
+    concelho_nome = _primeiro(dados.get("Concelho"))
+    distrito = _primeiro(dados.get("Distrito"))
+    codigo_ine = _primeiro(dados.get("codigoineMunicipio"))
 
-    concelho_obj = None
-    if concelho_nome:
-        concelho_obj, _ = Concelho.objects.update_or_create(
-            nome=concelho_nome,
-            defaults={"distrito": distrito, "codigo_ine": codigo_ine},
-        )
+    cache_concelhos = {}
+    concelho_obj = _get_concelho(
+        concelho_nome, distrito, codigo_ine, cache_concelhos
+    )
 
     mapa = _mapa_cp3(dados)
     lista_cp3 = [str(c).strip() for c in (dados.get("CP3") or []) if str(c).strip()]
     # Garante que CP3 presentes só em `partes` também entram
     lista_cp3 = sorted(set(lista_cp3) | set(mapa.keys()))
+
+    if job:
+        job.status = "A_CORRER"
+        job.concelho = concelho_nome
+        job.total = len(lista_cp3)
+        job.coords_total = len(lista_cp3) if com_coordenadas else 0
+        job.save(
+            update_fields=[
+                "status", "concelho", "total", "coords_total", "updated_at"
+            ]
+        )
 
     criados, atualizados = 0, 0
     cache_localidades = {}
@@ -106,6 +144,10 @@ def ingest_cp4(cp4, com_coordenadas=False, delay_coords=0.3, client=None):
             else:
                 atualizados += 1
 
+    if job:
+        job.processados = len(lista_cp3)
+        job.save(update_fields=["processados", "updated_at"])
+
     stats = {
         "cp4": cp4,
         "ok": True,
@@ -119,24 +161,73 @@ def ingest_cp4(cp4, com_coordenadas=False, delay_coords=0.3, client=None):
 
     if com_coordenadas:
         stats["com_coordenadas"] = _enriquecer_coordenadas(
-            cp4, lista_cp3, client, delay_coords
+            cp4, lista_cp3, client, delay_coords, cache_concelhos, job=job
         )
+
+    if job:
+        job.status = "CONCLUIDO"
+        job.save(update_fields=["status", "updated_at"])
 
     return stats
 
 
-def _enriquecer_coordenadas(cp4, lista_cp3, client, delay):
-    """2º passo: obtém centroide GPS de cada CP via /cp/{CP4-CP3}."""
-    atualizados = 0
+def _enriquecer_coordenadas(cp4, lista_cp3, client, delay, cache_concelhos, job=None):
+    """
+    2º passo: obtém centroide GPS de cada CP via /cp/{CP4-CP3}.
+
+    Também corrige o concelho de cada CP individualmente (importa quando um
+    prefixo CP4 abrange vários concelhos — o detalhe dá o concelho exato do CP3).
+
+    Resiliente: um erro numa chamada NÃO interrompe o resto — conta a falha
+    e continua. Atualiza o `job` periodicamente para acompanhamento na UI.
+    """
+    feitas, falhadas = 0, 0
+    total = len(lista_cp3)
+
     for i, cp3 in enumerate(lista_cp3):
-        detalhe = client.consultar_cp(f"{cp4}-{cp3}")
-        if detalhe:
-            centroide = detalhe.get("centroide") or detalhe.get("centroDeMassa")
-            if centroide and len(centroide) == 2:
-                CodigoPostal.objects.filter(cp4=cp4, cp3=cp3).update(
-                    latitude=centroide[0], longitude=centroide[1]
-                )
-                atualizados += 1
-        if i < len(lista_cp3) - 1:
+        try:
+            detalhe = client.consultar_cp(f"{cp4}-{cp3}")
+            if detalhe:
+                updates = {}
+                centroide = detalhe.get("centroide") or detalhe.get("centroDeMassa")
+                if centroide and len(centroide) == 2:
+                    updates["latitude"] = centroide[0]
+                    updates["longitude"] = centroide[1]
+
+                c_nome = _primeiro(detalhe.get("Concelho"))
+                if c_nome:
+                    concelho_obj = _get_concelho(
+                        c_nome,
+                        _primeiro(detalhe.get("Distrito")),
+                        _primeiro(detalhe.get("codigoineMunicipio")),
+                        cache_concelhos,
+                    )
+                    if concelho_obj:
+                        updates["concelho"] = concelho_obj
+
+                if updates:
+                    CodigoPostal.objects.filter(cp4=cp4, cp3=cp3).update(**updates)
+                    if "latitude" in updates:
+                        feitas += 1
+                    else:
+                        falhadas += 1
+                else:
+                    falhadas += 1
+            else:
+                falhadas += 1
+        except Exception:
+            # Não deixa um CP3 problemático matar a importação inteira.
+            falhadas += 1
+
+        # Atualiza o job a cada 5 CP3 (e no fim) para não martelar a BD.
+        if job and (i % 5 == 0 or i == total - 1):
+            job.coords_feitas = feitas
+            job.coords_falhadas = falhadas
+            job.save(
+                update_fields=["coords_feitas", "coords_falhadas", "updated_at"]
+            )
+
+        if i < total - 1:
             time.sleep(delay)
-    return atualizados
+
+    return feitas

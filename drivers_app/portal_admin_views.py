@@ -543,6 +543,24 @@ def driver_pre_invoice_detail(request, driver_id, pre_invoice_id):
     advances = pf.adiantamentos.all().order_by("-data") if hasattr(pf, "adiantamentos") else []
     lost_packages = pf.pacotes_perdidos.all().order_by("-data") if hasattr(pf, "pacotes_perdidos") else []
 
+    # ─── Entregas PUDO ───
+    # Linhas guardadas na PF (só existem se a PF foi emitida com PUDO ativo).
+    pudos = list(pf.pudos.all().order_by("-data")) if hasattr(pf, "pudos") else []
+    # Breakdown computado para o período (mesma fonte do KPI da página de
+    # Faturas) — mostra SEMPRE a info, mesmo que ainda não esteja no total.
+    try:
+        from settlements.services_pudo import pudo_breakdown_for_driver
+        pudo_computed = pudo_breakdown_for_driver(
+            driver, pf.periodo_inicio, pf.periodo_fim,
+        )
+    except Exception:
+        pudo_computed = {
+            "rows": [],
+            "totals": {"n_packages": 0, "n_pudo_days": 0, "amount": 0},
+        }
+    # Está realmente incluído no total da PF?
+    pudo_in_total = bool(pudos) or bool(pf.total_pudo and pf.total_pudo > 0)
+
     # ─── Comissões de Indicação (mesma lógica do recalcular()/PDF) ───
     # Conta entregas Delivered confirmadas do indicado no período.
     from decimal import Decimal as _D
@@ -574,6 +592,9 @@ def driver_pre_invoice_detail(request, driver_id, pre_invoice_id):
         "bonus": bonus,
         "advances": advances,
         "lost_packages": lost_packages,
+        "pudos": pudos,
+        "pudo_computed": pudo_computed,
+        "pudo_in_total": pudo_in_total,
         "indicacoes_detail": indicacoes_detail,
         "indicacoes_total": indicacoes_total,
         "partners": partners,

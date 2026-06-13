@@ -38,6 +38,20 @@
     <p class="text-xs text-rose-700 dark:text-rose-400 mt-0.5">{{ bonus|length }} bónus</p>
     <p class="text-2xl font-extrabold text-rose-700 dark:text-rose-300 mt-1">€ {{ pf.total_bonus|default:"0.00"|floatformat:2 }}</p>
   </div>
+  {% if pudos or pudo_computed.totals.n_packages %}
+  <div class="bg-violet-50 dark:bg-violet-900/20 rounded-xl p-4 border border-violet-200/50 dark:border-violet-700/30">
+    <p class="text-xs uppercase font-bold text-violet-700 dark:text-violet-300">Entregas PUDO</p>
+    <p class="text-xs text-violet-700 dark:text-violet-400 mt-0.5">
+      {% if pudo_in_total %}{{ pudos|length }} dia(s)/PUDO{% else %}{{ pudo_computed.totals.n_packages }} pacotes · {{ pudo_computed.totals.n_pudo_days }} PUDO/dias{% endif %}
+    </p>
+    <p class="text-2xl font-extrabold text-violet-700 dark:text-violet-300 mt-1">
+      + € {% if pudo_in_total %}{{ pf.total_pudo|floatformat:2 }}{% else %}{{ pudo_computed.totals.amount|floatformat:2 }}{% endif %}
+    </p>
+    {% if not pudo_in_total %}
+    <p class="text-[10px] text-amber-600 dark:text-amber-400 mt-1 italic">Ainda não incluído no total</p>
+    {% endif %}
+  </div>
+  {% endif %}
   <div class="bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl p-4 text-white shadow">
     {% if pf.driver.vat_regime == 'normal' %}
       <p class="text-xs uppercase font-bold text-emerald-100">Total c/ IVA</p>
@@ -250,31 +264,52 @@
 </div>
 
 {# ─── Entregas PUDO ─── #}
-{% with pudos=pf.pudos.all %}
-{% if pudos %}
+{% if pudos or pudo_computed.totals.n_packages %}
 <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden mb-4">
   <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
     <i data-lucide="package-check" class="w-5 h-5 text-violet-500"></i>
     <h3 class="font-bold text-gray-900 dark:text-white">Entregas PUDO</h3>
+    {% if pudo_in_total %}
     <span class="text-xs text-gray-500">({{ pudos|length }} dia(s)/PUDO · €{{ pf.total_pudo|default:"0.00"|floatformat:2 }})</span>
-    <span class="ml-auto text-[11px] text-gray-400 italic">Calculado do EPOD (1ª + adicionais)</span>
+    {% else %}
+    <span class="text-xs text-gray-500">({{ pudo_computed.totals.n_pudo_days }} dia(s)/PUDO · €{{ pudo_computed.totals.amount|floatformat:2 }})</span>
+    {% endif %}
+    <span class="ml-auto text-[11px] text-gray-400 italic">Fórmula 1ª + adicionais (EPOD)</span>
   </div>
+
+  {% if not pudo_in_total %}
+  <div class="px-5 py-2 bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200/50 dark:border-amber-700/30 text-xs text-amber-700 dark:text-amber-300 flex items-center gap-2">
+    <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+    <span>Valor <b>ainda não incluído</b> no total. Estes pacotes estão a ser pagos como entrega normal. Ative <b>PUDO</b> no parceiro CAINIAO e <b>re-emita</b> esta pré-fatura para aplicar a fórmula.</span>
+  </div>
+  {% endif %}
+
   <div class="divide-y divide-gray-100 dark:divide-gray-700">
-    {% for p in pudos %}
-    <div class="px-5 py-3 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-700/30">
-      <span class="font-mono text-sm font-bold text-gray-900 dark:text-white w-24">{{ p.data|date:"d/m/Y" }}</span>
-      <span class="px-2 py-0.5 rounded text-xs font-semibold bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 w-20 text-center">{{ p.n_pacotes }} pct</span>
-      <span class="text-sm text-gray-700 dark:text-gray-300 flex-1 truncate">{{ p.morada|default:p.zip_code|default:"—" }}</span>
-      {% if p.observacoes %}
-      <span class="text-xs italic text-gray-500 truncate hidden md:block">{{ p.observacoes }}</span>
-      {% endif %}
-      <span class="ml-auto font-bold text-violet-600">+ € {{ p.valor|floatformat:2 }}</span>
-    </div>
-    {% endfor %}
+    {% if pudos %}
+      {% for p in pudos %}
+      <div class="px-5 py-3 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-700/30">
+        <span class="font-mono text-sm font-bold text-gray-900 dark:text-white w-24">{{ p.data|date:"d/m/Y" }}</span>
+        <span class="px-2 py-0.5 rounded text-xs font-semibold bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 w-20 text-center">{{ p.n_pacotes }} pct</span>
+        <span class="text-sm text-gray-700 dark:text-gray-300 flex-1 truncate">{{ p.morada|default:p.zip_code|default:"—" }}</span>
+        {% if p.observacoes %}
+        <span class="text-xs italic text-gray-500 truncate hidden md:block">{{ p.observacoes }}</span>
+        {% endif %}
+        <span class="ml-auto font-bold text-violet-600">+ € {{ p.valor|floatformat:2 }}</span>
+      </div>
+      {% endfor %}
+    {% else %}
+      {% for r in pudo_computed.rows %}
+      <div class="px-5 py-3 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-700/30">
+        <span class="font-mono text-sm font-bold text-gray-900 dark:text-white w-24">{{ r.date|date:"d/m/Y" }}</span>
+        <span class="px-2 py-0.5 rounded text-xs font-semibold bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 w-20 text-center">{{ r.n_packages }} pct</span>
+        <span class="text-sm text-gray-700 dark:text-gray-300 flex-1 truncate">{{ r.address|default:r.zip_code|default:r.city|default:"—" }}</span>
+        <span class="ml-auto font-bold text-violet-600">+ € {{ r.amount|floatformat:2 }}</span>
+      </div>
+      {% endfor %}
+    {% endif %}
   </div>
 </div>
 {% endif %}
-{% endwith %}
 
 {# ─── Pacotes Perdidos ─── #}
 <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden mb-4">

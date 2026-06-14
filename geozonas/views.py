@@ -6,7 +6,9 @@ from django.db.utils import OperationalError, ProgrammingError
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.utils.text import slugify
-from django.views.decorators.http import require_GET, require_POST
+from django.views.decorators.http import (
+    require_GET, require_POST, require_http_methods,
+)
 
 from .models import CodigoPostal, IngestJob, ZonaGeo
 from .services.espacial import cps_dentro_poligono
@@ -230,6 +232,49 @@ def api_coords_faltam(request):
     return JsonResponse(
         {"ok": True, "queued": cp4, "faltam": faltam, "job_id": job.id}
     )
+
+
+def _mascarar(tok):
+    tok = (tok or "").strip()
+    if not tok:
+        return ""
+    return "…" + tok[-4:] if len(tok) > 4 else "••••"
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def api_geoapi_key(request):
+    """Ver/definir a chave da GeoAPI (só admin). Guardada encriptada no
+    SystemConfiguration. GET: estado mascarado. POST {key}: define/limpa."""
+    if not (request.user.is_staff or request.user.is_superuser):
+        return JsonResponse({"ok": False, "erro": "Sem permissão"}, status=403)
+
+    from django.conf import settings as dj_settings
+    from system_config.models import SystemConfiguration
+    cfg = SystemConfiguration.get_config()
+
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body or "{}")
+        except ValueError:
+            return JsonResponse({"ok": False, "erro": "JSON inválido"}, status=400)
+        cfg.geoapi_token = (data.get("key") or "").strip() or None
+        cfg.save()
+
+    tok = (cfg.geoapi_token or "").strip()
+    env_tok = (getattr(dj_settings, "GEOAPI_TOKEN", None) or "").strip()
+    if tok:
+        source, masked = "config", _mascarar(tok)
+    elif env_tok:
+        source, masked = "env", _mascarar(env_tok)
+    else:
+        source, masked = "none", ""
+    return JsonResponse({
+        "ok": True,
+        "definida": source != "none",
+        "source": source,
+        "masked": masked,
+    })
 
 
 @login_required

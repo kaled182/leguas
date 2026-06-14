@@ -90,6 +90,24 @@
     </div>
   </div>
 
+  {% if request.user.is_staff or request.user.is_superuser %}
+  <details class="mb-3 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2">
+    <summary class="text-sm font-semibold text-gray-700 dark:text-gray-200 cursor-pointer flex items-center gap-2">
+      <i data-lucide="key-round" class="w-4 h-4 text-indigo-500"></i>
+      Chave GeoAPI
+      <span id="key-status" class="ml-2 text-xs font-normal text-gray-400">a carregar…</span>
+    </summary>
+    <div class="mt-2 flex flex-wrap items-center gap-2">
+      <input id="key-input" type="password" placeholder="Cola aqui a chave GeoAPI"
+        class="flex-1 min-w-[220px] px-2 py-1 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 text-sm">
+      <button id="btn-key-save" class="px-3 py-1 rounded bg-indigo-600 hover:bg-indigo-700 text-white text-sm">Guardar</button>
+      <button id="btn-key-clear" class="px-3 py-1 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 text-sm">Limpar</button>
+      <span id="key-msg" class="text-xs text-gray-400"></span>
+    </div>
+    <p class="text-[11px] text-gray-400 mt-1">Guardada encriptada nas Configurações do Sistema. Se vazia, usa a do .env.</p>
+  </details>
+  {% endif %}
+
   {% if nao_migrado %}
   <div class="mb-3 rounded-lg border border-red-300 bg-red-50 dark:border-red-700 dark:bg-red-900/30 px-4 py-2 text-sm text-red-800 dark:text-red-200">
     Tabelas ainda não migradas. Corre <code>migrate geozonas</code> no servidor.
@@ -112,6 +130,7 @@ const URL_INGEST_STATUS = "{% url 'geozonas:api-job-status' %}";
 const URL_JOBS_ACTIVE = "{% url 'geozonas:api-jobs-active' %}";
 const URL_COORDS_FALTAM = "{% url 'geozonas:api-coords-faltam' %}";
 const URL_QUOTA = "{% url 'geozonas:api-quota' %}";
+const URL_GEOAPI_KEY = "{% url 'geozonas:api-geoapi-key' %}";
 
 document.addEventListener('DOMContentLoaded', function () {
   const map = L.map('map').setView([{{ map_center.0|unlocalize }}, {{ map_center.1|unlocalize }}], {{ map_zoom }});
@@ -362,6 +381,43 @@ document.addEventListener('DOMContentLoaded', function () {
   }
   document.getElementById('quota-refresh').addEventListener('click', () => carregarQuota(true));
   carregarQuota(false);
+
+  // ── Chave GeoAPI (só admin) ───────────────────────────────────────
+  const keyStatus = document.getElementById('key-status');
+  if (keyStatus) {
+    function renderKey(d) {
+      if (!d || !d.ok) { keyStatus.textContent = 'indisponível'; return; }
+      if (d.source === 'config') keyStatus.textContent = `definida (${d.masked}) · Configurações`;
+      else if (d.source === 'env') keyStatus.textContent = `a usar a do .env (${d.masked})`;
+      else keyStatus.textContent = 'não definida';
+    }
+    function carregarKey() {
+      fetch(URL_GEOAPI_KEY).then(r => r.json()).then(renderKey).catch(() => {
+        keyStatus.textContent = 'indisponível';
+      });
+    }
+    function guardarKey(valor) {
+      const msg = document.getElementById('key-msg');
+      msg.textContent = 'a guardar…';
+      post(URL_GEOAPI_KEY, { key: valor }).then(d => {
+        if (d.ok) {
+          msg.textContent = valor ? 'guardada ✓' : 'limpa ✓';
+          document.getElementById('key-input').value = '';
+          renderKey(d);
+          carregarQuota(true);  // valida a chave nova lendo a quota
+        } else { msg.textContent = 'erro: ' + (d.erro || 'falhou'); }
+      }).catch(() => { msg.textContent = 'erro de rede'; });
+    }
+    document.getElementById('btn-key-save').addEventListener('click', () => {
+      const v = document.getElementById('key-input').value.trim();
+      if (!v) { document.getElementById('key-msg').textContent = 'cola uma chave primeiro'; return; }
+      guardarKey(v);
+    });
+    document.getElementById('btn-key-clear').addEventListener('click', () => {
+      if (confirm('Limpar a chave guardada? Volta a usar a do .env.')) guardarKey('');
+    });
+    carregarKey();
+  }
 });
 </script>
 {% endblock %}

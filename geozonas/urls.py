@@ -16,4 +16,5 @@ urlpatterns = [
     path("api/ingest/status/", views.api_job_status, name="api-job-status"),
     path("api/ingest/active/", views.api_jobs_active, name="api-jobs-active"),
     path("api/quota/", views.api_quota, name="api-quota"),
+    path("api/geoapi-key/", views.api_geoapi_key, name="api-geoapi-key"),
 ]

@@ -80,6 +80,12 @@ class SystemConfiguration(models.Model):
     )
     esri_basemap = models.CharField("Basemap Esri", max_length=50, default="streets")
 
+    # GeoAPI.pt — catálogo de códigos postais / módulo GeoZonas
+    geoapi_token = EncryptedCharField(
+        "GeoAPI.pt Token", max_length=512, blank=True, null=True,
+        help_text="Chave da GeoAPI.pt usada pelo Mapa de Códigos Postais.",
+    )
+
     # Maps - Common Settings
     map_language = models.CharField("Idioma do Mapa", max_length=10, default="pt-PT")
     map_theme = models.CharField(

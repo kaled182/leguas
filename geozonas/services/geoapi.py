@@ -24,9 +24,22 @@ class GeoAPIRateLimitError(GeoAPIError):
     """Limite de pedidos da GeoAPI atingido (HTTP 429)."""
 
 
+def resolver_api_key():
+    """Resolve a chave da GeoAPI: 1) SystemConfiguration (editável na UI,
+    encriptada) → 2) settings.GEOAPI_TOKEN (.env)."""
+    try:
+        from system_config.models import SystemConfiguration
+        tok = (SystemConfiguration.get_config().geoapi_token or "").strip()
+        if tok:
+            return tok
+    except Exception:
+        pass
+    return getattr(settings, "GEOAPI_TOKEN", None)
+
+
 class GeoAPIClient:
     def __init__(self, api_key=None, timeout=20):
-        self.api_key = api_key or getattr(settings, "GEOAPI_TOKEN", None)
+        self.api_key = api_key or resolver_api_key()
         self.timeout = timeout
         self.session = requests.Session()
         if self.api_key:

@@ -201,9 +201,10 @@ document.addEventListener('DOMContentLoaded', function () {
       // Contornos (divisas) automáticos de cada CP4.
       (m.poligonos || []).forEach(p => {
         const lim = L.geoJSON({ type: 'Feature', geometry: p.geom }, {
+          interactive: false,  // visual only — não interceta cliques do desenho
           style: { color: '#dc2626', weight: 2.5, dashArray: '6 4',
                    fillColor: '#dc2626', fillOpacity: 0.06 }
-        }).bindTooltip('CP ' + p.cp4, { sticky: true }).addTo(limiteLayer);
+        }).addTo(limiteLayer);
         try { const b = lim.getBounds(); bounds.push([b.getNorth(), b.getWest()], [b.getSouth(), b.getEast()]); } catch (e) {}
       });
       document.getElementById('load-info').textContent =

@@ -136,6 +136,13 @@
   </div>
   {% endif %}
 
+  <!-- Barra de edição de forma da zona -->
+  <div id="edit-forma-bar" class="hidden mb-2 rounded-lg border border-indigo-300 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/30 px-3 py-2 flex items-center gap-3 flex-wrap">
+    <span class="text-sm text-indigo-800 dark:text-indigo-200">A editar a forma de <b id="edit-forma-nome"></b> — arrasta os vértices.</span>
+    <button id="btn-guardar-forma" class="ml-auto px-3 py-1 rounded bg-green-600 hover:bg-green-700 text-white text-sm">Guardar forma</button>
+    <button id="btn-cancelar-forma" class="px-3 py-1 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 text-sm">Cancelar</button>
+  </div>
+
   <div id="map"></div>
 </div>
 {% endblock %}
@@ -281,13 +288,18 @@ document.addEventListener('DOMContentLoaded', function () {
           const novo = prompt('Novo nome da zona:', z.nome);
           if (novo && novo.trim()) atualizarZona(z.id, novo.trim(), null);
         });
+        const forma = document.createElement('button');
+        forma.textContent = '✐'; forma.title = 'Editar forma (mover vértices)';
+        forma.className = 'px-1.5 text-gray-500 hover:text-indigo-600';
+        forma.addEventListener('click', () => editarFormaZona(z));
         const del = document.createElement('button');
         del.textContent = '🗑'; del.title = 'Apagar';
         del.className = 'px-1.5 text-gray-500 hover:text-rose-600';
         del.addEventListener('click', () => {
           if (confirm(`Apagar a zona "${z.nome}"?`)) apagarZona(z.id);
         });
-        row.appendChild(cor); row.appendChild(ren); row.appendChild(del);
+        row.appendChild(cor); row.appendChild(ren);
+        row.appendChild(forma); row.appendChild(del);
         lista.appendChild(row);
       });
     }).catch(() => {});
@@ -303,6 +315,53 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
   carregarZonas();
+
+  // ── Editar a FORMA de uma zona (mover vértices via Leaflet.draw) ──
+  let editandoZonaId = null;
+  function geometriaDeDrawnItems() {
+    const feats = drawnItems.toGeoJSON().features || [];
+    const polys = feats.map(f => f.geometry).filter(Boolean);
+    if (polys.length === 1 && polys[0].type === 'Polygon') return polys[0];
+    const coords = [];
+    polys.forEach(g => {
+      if (g.type === 'Polygon') coords.push(g.coordinates);
+      else if (g.type === 'MultiPolygon') (g.coordinates || []).forEach(c => coords.push(c));
+    });
+    return { type: 'MultiPolygon', coordinates: coords };
+  }
+  function editarFormaZona(z) {
+    if (!z.poligono) { alert('Esta zona não tem forma para editar.'); return; }
+    drawnItems.clearLayers();
+    selecaoLayer.clearLayers();
+    editandoZonaId = z.id;
+    const gj = L.geoJSON({ type: 'Feature', geometry: z.poligono });
+    gj.eachLayer(l => {
+      drawnItems.addLayer(l);
+      if (l.editing) l.editing.enable();
+    });
+    try { map.fitBounds(gj.getBounds(), { maxZoom: 15 }); } catch (e) {}
+    document.getElementById('edit-forma-nome').textContent = z.nome;
+    document.getElementById('edit-forma-bar').classList.remove('hidden');
+  }
+  function cancelarEdicaoForma() {
+    editandoZonaId = null;
+    drawnItems.clearLayers();
+    document.getElementById('edit-forma-bar').classList.add('hidden');
+  }
+  document.getElementById('btn-cancelar-forma').addEventListener('click', cancelarEdicaoForma);
+  document.getElementById('btn-guardar-forma').addEventListener('click', function () {
+    if (!editandoZonaId) return;
+    const geometry = geometriaDeDrawnItems();
+    this.disabled = true;
+    post(URL_ZONA_UPDATE, { id: editandoZonaId, geometry: geometry }).then(res => {
+      this.disabled = false;
+      if (res.ok) {
+        cancelarEdicaoForma();
+        carregarZonas();
+        alert(`Forma atualizada${res.count != null ? ' (' + res.count + ' CPs)' : ''}.`);
+      } else { alert('Erro: ' + (res.erro || 'falhou')); }
+    }).catch(() => { this.disabled = false; alert('Erro de rede.'); });
+  });
 
   // Desenho criado → seleciona CPs lá dentro
   map.on(L.Draw.Event.CREATED, function (e) {

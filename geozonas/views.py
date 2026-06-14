@@ -255,7 +255,7 @@ def api_zonas(request):
 @login_required
 @require_POST
 def api_zona_update(request):
-    """Renomeia / muda a cor de uma zona."""
+    """Renomeia / muda a cor / edita a FORMA (polígono) de uma zona."""
     try:
         data = json.loads(request.body or "{}")
     except ValueError:
@@ -269,9 +269,18 @@ def api_zona_update(request):
     cor = (data.get("cor") or "").strip()
     if cor:
         zona.cor = cor
-    zona.save(update_fields=["nome", "cor", "updated_at"])
+    geometry = data.get("geometry") or data.get("poligono")
+    count = None
+    if geometry:
+        zona.poligono = geometry
+        qs = CodigoPostal.objects.filter(
+            latitude__isnull=False, longitude__isnull=False
+        )
+        count = len(cps_dentro_poligono(geometry, qs))
+    zona.save()
     return JsonResponse(
-        {"ok": True, "id": zona.id, "nome": zona.nome, "cor": zona.cor}
+        {"ok": True, "id": zona.id, "nome": zona.nome, "cor": zona.cor,
+         "count": count}
     )
 
 

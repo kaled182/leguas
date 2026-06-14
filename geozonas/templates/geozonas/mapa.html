@@ -22,11 +22,25 @@
 
 {% block content %}
 <div class="p-4">
-  <div class="mb-3">
-    <h1 class="text-2xl font-bold text-gray-800 dark:text-gray-100">Mapa de Códigos Postais</h1>
-    <p class="text-sm text-gray-500 dark:text-gray-400">
-      Cadastra uma área (prefixo CP4), carrega os pontos e desenha as zonas de entrega.
-    </p>
+  <div class="mb-3 flex items-start justify-between gap-3 flex-wrap">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-800 dark:text-gray-100">Mapa de Códigos Postais</h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400">
+        Cadastra uma área (prefixo CP4), carrega os pontos e desenha as zonas de entrega.
+      </p>
+    </div>
+    {# Quota GeoAPI (cabeçalhos RateLimit-*) #}
+    <div id="quota-badge" class="text-xs rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2 bg-gray-50 dark:bg-gray-800/50">
+      <div class="flex items-center gap-2">
+        <i data-lucide="gauge" class="w-4 h-4 text-indigo-500"></i>
+        <span class="font-semibold text-gray-700 dark:text-gray-200">GeoAPI</span>
+        <button id="quota-refresh" title="Atualizar agora (1 pedido)"
+                class="text-indigo-500 hover:text-indigo-700">
+          <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+        </button>
+      </div>
+      <div id="quota-text" class="text-gray-500 dark:text-gray-400 mt-0.5">a carregar…</div>
+    </div>
   </div>
 
   <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
@@ -97,6 +111,7 @@ const URL_INGEST = "{% url 'geozonas:api-ingest' %}";
 const URL_INGEST_STATUS = "{% url 'geozonas:api-job-status' %}";
 const URL_JOBS_ACTIVE = "{% url 'geozonas:api-jobs-active' %}";
 const URL_COORDS_FALTAM = "{% url 'geozonas:api-coords-faltam' %}";
+const URL_QUOTA = "{% url 'geozonas:api-quota' %}";
 
 document.addEventListener('DOMContentLoaded', function () {
   const map = L.map('map').setView([{{ map_center.0|unlocalize }}, {{ map_center.1|unlocalize }}], {{ map_zoom }});
@@ -320,6 +335,33 @@ document.addEventListener('DOMContentLoaded', function () {
       } else { alert(`Erro: ${res.erro}`); }
     });
   });
+
+  // ── Quota GeoAPI ──────────────────────────────────────────────────
+  const quotaText = document.getElementById('quota-text');
+  function renderQuota(q) {
+    if (!q) { quotaText.textContent = 'sem dados (importa um CP4 ou atualiza)'; return; }
+    const lim = q.limit, rem = q.remaining;
+    let txt = (rem != null && lim != null) ? `${rem.toLocaleString('pt-PT')} / ${lim.toLocaleString('pt-PT')} restantes hoje`
+            : (rem != null ? `${rem} restantes` : '—');
+    if (q.reset_at) {
+      const ms = new Date(q.reset_at).getTime() - Date.now();
+      if (ms > 0) {
+        const h = Math.floor(ms / 3600000);
+        const m = Math.floor((ms % 3600000) / 60000);
+        txt += ` · reinicia em ${h}h${m.toString().padStart(2, '0')}`;
+      }
+    }
+    quotaText.textContent = txt;
+  }
+  function carregarQuota(refresh) {
+    if (refresh) quotaText.textContent = 'a atualizar…';
+    const u = refresh ? `${URL_QUOTA}?refresh=1` : URL_QUOTA;
+    fetch(u).then(r => r.json()).then(d => renderQuota(d.quota)).catch(() => {
+      quotaText.textContent = 'indisponível';
+    });
+  }
+  document.getElementById('quota-refresh').addEventListener('click', () => carregarQuota(true));
+  carregarQuota(false);
 });
 </script>
 {% endblock %}

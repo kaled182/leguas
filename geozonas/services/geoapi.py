@@ -44,6 +44,10 @@ class GeoAPIClient:
             except requests.RequestException as exc:
                 raise GeoAPIError(f"Falha de rede em {path}: {exc}") from exc
 
+            # A GeoAPI devolve a quota em cabeçalhos RateLimit-* em (quase)
+            # todas as respostas — guardamos sempre que vierem (custo zero).
+            _capturar_quota(resp.headers)
+
             if resp.status_code == 200:
                 try:
                     return resp.json()
@@ -79,3 +83,56 @@ class GeoAPIClient:
     def gps_reverso(self, lat, lon):
         """Geocodificação reversa: a partir de lat/lon devolve distrito/concelho/freguesia."""
         return self._get(f"gps/{lat},{lon}/base")
+
+    def atualizar_quota(self):
+        """Faz 1 chamada leve para refrescar a quota guardada. Devolve o dict."""
+        try:
+            # Detalhe pequeno (vs. bulk de 2MB) — 1 pedido, devolve RateLimit-*.
+            self.consultar_cp("4990-008")
+        except GeoAPIError:
+            pass
+        return get_quota()
+
+
+_QUOTA_CACHE_KEY = "geozonas:geoapi_quota"
+
+
+def _capturar_quota(headers):
+    """Guarda os cabeçalhos RateLimit-* da GeoAPI na cache (Redis partilhado)."""
+    try:
+        remaining = headers.get("RateLimit-Remaining")
+        if remaining is None:
+            return
+        from datetime import timedelta
+
+        from django.core.cache import cache
+        from django.utils import timezone
+
+        def _int(v):
+            v = str(v).strip()
+            return int(v) if v.lstrip("-").isdigit() else None
+
+        now = timezone.now()
+        reset_secs = _int(headers.get("RateLimit-Reset"))
+        data = {
+            "limit": _int(headers.get("RateLimit-Limit")),
+            "remaining": _int(remaining),
+            "reset_at": (
+                (now + timedelta(seconds=reset_secs)).isoformat()
+                if reset_secs is not None else None
+            ),
+            "captured_at": now.isoformat(),
+        }
+        cache.set(_QUOTA_CACHE_KEY, data, timeout=60 * 60 * 26)
+    except Exception:
+        # Nunca deixar a captura de quota afetar a chamada principal.
+        pass
+
+
+def get_quota():
+    """Devolve o último estado de quota guardado (ou None)."""
+    try:
+        from django.core.cache import cache
+        return cache.get(_QUOTA_CACHE_KEY)
+    except Exception:
+        return None

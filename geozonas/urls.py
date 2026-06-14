@@ -15,4 +15,5 @@ urlpatterns = [
     path("api/ingest/coords-faltam/", views.api_coords_faltam, name="api-coords-faltam"),
     path("api/ingest/status/", views.api_job_status, name="api-job-status"),
     path("api/ingest/active/", views.api_jobs_active, name="api-jobs-active"),
+    path("api/quota/", views.api_quota, name="api-quota"),
 ]

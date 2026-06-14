@@ -234,6 +234,25 @@ def api_coords_faltam(request):
 
 @login_required
 @require_GET
+def api_quota(request):
+    """Estado da quota da GeoAPI (cabeçalhos RateLimit-*).
+
+    Sem args: devolve o último valor guardado (custo zero). Com ?refresh=1
+    faz 1 chamada leve à GeoAPI para atualizar.
+    """
+    from .services.geoapi import GeoAPIClient, get_quota
+    if request.GET.get("refresh"):
+        quota = GeoAPIClient().atualizar_quota()
+    else:
+        quota = get_quota()
+    usados = None
+    if quota and quota.get("limit") is not None and quota.get("remaining") is not None:
+        usados = quota["limit"] - quota["remaining"]
+    return JsonResponse({"ok": True, "quota": quota, "usados": usados})
+
+
+@login_required
+@require_GET
 def api_jobs_active(request):
     """Lista importações ainda a decorrer (para reatar as barras no load)."""
     jobs = IngestJob.objects.filter(

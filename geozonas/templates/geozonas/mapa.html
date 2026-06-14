@@ -64,13 +64,27 @@
     <!-- Carregar pontos -->
     <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-3">
       <h3 class="font-semibold text-gray-700 dark:text-gray-200 mb-2 text-sm">2. Carregar pontos</h3>
-      <div class="flex gap-2 items-center">
+
+      <!-- Por HUB -->
+      <div class="flex flex-wrap gap-2 items-center">
+        <select id="sel-hub" class="px-2 py-1 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 text-sm">
+          <option value="">— HUB —</option>
+        </select>
+        <button id="btn-load-hub" class="px-3 py-1 rounded bg-indigo-600 hover:bg-indigo-700 text-white text-sm">Carregar HUB</button>
+        <button id="btn-zona-hub" class="hidden px-3 py-1 rounded bg-green-600 hover:bg-green-700 text-white text-sm">Criar zona do HUB</button>
+      </div>
+      <!-- Chips dos CP4 do HUB (multi-seleção) -->
+      <div id="hub-cp4s" class="hidden flex flex-wrap gap-1 mt-2"></div>
+
+      <!-- Por CP4 individual -->
+      <div class="flex gap-2 items-center mt-2 pt-2 border-t border-gray-100 dark:border-gray-700/50">
         <select id="sel-cp4" class="px-2 py-1 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 text-sm">
           <option value="">— todos —</option>
           {% for cp4 in cp4s %}<option value="{{ cp4 }}">{{ cp4 }}</option>{% endfor %}
         </select>
         <button id="btn-load" class="px-3 py-1 rounded bg-indigo-600 hover:bg-indigo-700 text-white text-sm">Carregar</button>
       </div>
+
       <p id="load-info" class="text-xs text-gray-400 mt-1"></p>
       <button id="btn-coords-faltam" class="hidden mt-1 px-2 py-1 rounded bg-amber-600 hover:bg-amber-700 text-white text-xs">
         Preencher GPS em falta
@@ -131,6 +145,8 @@ const URL_JOBS_ACTIVE = "{% url 'geozonas:api-jobs-active' %}";
 const URL_COORDS_FALTAM = "{% url 'geozonas:api-coords-faltam' %}";
 const URL_QUOTA = "{% url 'geozonas:api-quota' %}";
 const URL_GEOAPI_KEY = "{% url 'geozonas:api-geoapi-key' %}";
+const URL_HUBS = "{% url 'geozonas:api-hubs' %}";
+const URL_ZONA_HUB = "{% url 'geozonas:api-zona-from-hub' %}";
 
 document.addEventListener('DOMContentLoaded', function () {
   const map = L.map('map').setView([{{ map_center.0|unlocalize }}, {{ map_center.1|unlocalize }}], {{ map_zoom }});
@@ -159,9 +175,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // Pontos dos CPs
   let cp4Atual = '';
-  function carregarPontos(cp4) {
-    cp4Atual = cp4 || '';
-    const u = cp4 ? `${URL_CPS}?cp4=${encodeURIComponent(cp4)}` : URL_CPS;
+  // Carrega pontos por query (cp4=A / cp4=A&cp4=B / hub_id=N).
+  // opts.cp4 = CP4 único (ativa o botão "preencher GPS em falta").
+  function carregarPontosQuery(query, opts) {
+    opts = opts || {};
+    cp4Atual = opts.cp4 || '';
+    const u = query ? `${URL_CPS}?${query}` : URL_CPS;
     document.getElementById('load-info').textContent = 'A carregar...';
     const btnFaltam = document.getElementById('btn-coords-faltam');
     btnFaltam.classList.add('hidden');
@@ -177,21 +196,23 @@ document.addEventListener('DOMContentLoaded', function () {
         bounds.push([lat, lng]);
       });
       const m = fc.meta || {};
-      // Contorno (divisas) automático da área do CP4.
-      if (m.poligono) {
-        const lim = L.geoJSON({ type: 'Feature', geometry: m.poligono }, {
+      // Contornos (divisas) automáticos de cada CP4.
+      (m.poligonos || []).forEach(p => {
+        const lim = L.geoJSON({ type: 'Feature', geometry: p.geom }, {
           style: { color: '#dc2626', weight: 2.5, fill: false, dashArray: '6 4' }
-        }).addTo(limiteLayer);
-        try { lim.getBounds().getNorthEast() && lim.getBounds().getSouthWest() && bounds.push(...[lim.getBounds().getNorthEast(), lim.getBounds().getSouthWest()].map(p => [p.lat, p.lng])); } catch (e) {}
-      }
-      // Completude: pontos com GPS / total no catálogo.
+        }).bindTooltip('CP ' + p.cp4, { sticky: true }).addTo(limiteLayer);
+        try { const b = lim.getBounds(); bounds.push([b.getNorth(), b.getWest()], [b.getSouth(), b.getEast()]); } catch (e) {}
+      });
       document.getElementById('load-info').textContent =
         `${m.com_gps != null ? m.com_gps : fc.features.length}/${m.total != null ? m.total : fc.features.length} com GPS`
         + (m.sem_gps ? ` · ${m.sem_gps} em falta` : '');
-      // Mostra o botão de preencher só se houver CP4 selecionado e faltarem GPS.
-      if (cp4 && m.sem_gps > 0) btnFaltam.classList.remove('hidden');
+      // Botão "preencher GPS" só faz sentido para um CP4 único.
+      if (opts.cp4 && m.sem_gps > 0) btnFaltam.classList.remove('hidden');
       if (bounds.length) map.fitBounds(bounds, { maxZoom: 14 });
     });
+  }
+  function carregarPontos(cp4) {
+    carregarPontosQuery(cp4 ? `cp4=${encodeURIComponent(cp4)}` : '', { cp4: cp4 });
   }
 
   // Zonas existentes
@@ -227,6 +248,70 @@ document.addEventListener('DOMContentLoaded', function () {
   // Botões
   document.getElementById('btn-load').addEventListener('click', () =>
     carregarPontos(document.getElementById('sel-cp4').value));
+
+  // ── HUBs ──────────────────────────────────────────────────────────
+  let hubsData = [];
+  let hubAtual = null;
+  let hubCp4Sel = new Set();
+  const hubChipsBox = document.getElementById('hub-cp4s');
+
+  function carregarHubSel() {
+    const sel = [...hubCp4Sel];
+    const query = sel.map(c => 'cp4=' + encodeURIComponent(c)).join('&');
+    carregarPontosQuery(query, { cp4: sel.length === 1 ? sel[0] : '' });
+  }
+  function renderHubChips() {
+    if (!hubAtual) { hubChipsBox.classList.add('hidden'); hubChipsBox.innerHTML = ''; return; }
+    hubChipsBox.classList.remove('hidden');
+    hubChipsBox.innerHTML = '';
+    hubAtual.cp4s.forEach(c => {
+      const on = hubCp4Sel.has(c);
+      const b = document.createElement('button');
+      b.textContent = c;
+      b.className = 'px-2 py-0.5 rounded text-xs border ' + (on
+        ? 'bg-indigo-600 text-white border-indigo-600'
+        : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300 border-gray-300 dark:border-gray-600');
+      b.addEventListener('click', () => {
+        if (hubCp4Sel.has(c)) hubCp4Sel.delete(c); else hubCp4Sel.add(c);
+        if (hubCp4Sel.size === 0) hubAtual.cp4s.forEach(x => hubCp4Sel.add(x));
+        renderHubChips();
+        carregarHubSel();
+      });
+      hubChipsBox.appendChild(b);
+    });
+  }
+  document.getElementById('btn-load-hub').addEventListener('click', () => {
+    const id = document.getElementById('sel-hub').value;
+    hubAtual = hubsData.find(h => String(h.id) === String(id)) || null;
+    const zbtn = document.getElementById('btn-zona-hub');
+    if (!hubAtual) { hubChipsBox.classList.add('hidden'); zbtn.classList.add('hidden'); return; }
+    hubCp4Sel = new Set(hubAtual.cp4s);
+    renderHubChips();
+    zbtn.classList.remove('hidden');
+    carregarHubSel();
+  });
+  document.getElementById('btn-zona-hub').addEventListener('click', function () {
+    if (!hubAtual) return;
+    this.disabled = true;
+    post(URL_ZONA_HUB, { hub_id: hubAtual.id }).then(res => {
+      this.disabled = false;
+      if (res.ok) {
+        L.geoJSON({ type: 'Feature', geometry: res.poligono },
+          { style: { color: res.cor, weight: 2, fillOpacity: 0.15 } })
+          .bindPopup(`<b>${res.nome}</b> (${res.count} CPs)`).addTo(map);
+        let msg = `Zona "${res.nome}" criada com ${res.count} CPs.`;
+        if (res.cp4s_sem_contorno && res.cp4s_sem_contorno.length)
+          msg += `\nSem contorno (importa primeiro): ${res.cp4s_sem_contorno.join(', ')}.`;
+        alert(msg);
+      } else { alert('Erro: ' + (res.erro || 'falhou')); }
+    }).catch(() => { this.disabled = false; alert('Erro de rede.'); });
+  });
+  // Carrega a lista de HUBs no dropdown
+  fetch(URL_HUBS).then(r => r.json()).then(d => {
+    hubsData = d.hubs || [];
+    const sel = document.getElementById('sel-hub');
+    hubsData.forEach(h => sel.add(new Option(`${h.name} (${h.cp4s.length})`, h.id)));
+  }).catch(() => {});
 
   // Preencher GPS em falta (só vai buscar os CP3 sem coordenadas — poupa tokens)
   document.getElementById('btn-coords-faltam').addEventListener('click', function () {

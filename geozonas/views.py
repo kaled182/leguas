@@ -86,32 +86,42 @@ def catalogo(request):
 @require_GET
 def api_cps(request):
     """Pontos dos CPs (GeoJSON) para o mapa. Filtra por ?cp4=4990 se indicado."""
-    cp4 = request.GET.get("cp4")
+    # Aceita: ?cp4=A (single, retro-compat) · ?cp4=A&cp4=B (vários) · ?hub_id=N
+    cp4s = [c.strip() for c in request.GET.getlist("cp4") if c.strip()]
+    hub_id = request.GET.get("hub_id")
+    if hub_id:
+        from settlements.models import CainiaoHub
+        hub = CainiaoHub.objects.filter(id=hub_id).first()
+        if hub:
+            cp4s = hub.cp4_list()
+
     qs = CodigoPostal.objects.filter(
         latitude__isnull=False, longitude__isnull=False
     ).select_related("localidade", "concelho")
     base = CodigoPostal.objects.all()
-    if cp4:
-        qs = qs.filter(cp4=cp4)
-        base = base.filter(cp4=cp4)
-    features = [_feature(cp) for cp in qs[:8000]]
+    if cp4s:
+        qs = qs.filter(cp4__in=cp4s)
+        base = base.filter(cp4__in=cp4s)
+    features = [_feature(cp) for cp in qs[:12000]]
     # Completude: quantos CP3 existem no catálogo vs quantos já têm GPS.
     total_cp = base.count()
     com_gps = base.filter(latitude__isnull=False).count()
-    # Contorno (divisas) da área do CP4, se já importado.
-    poligono = None
-    if cp4:
-        area = AreaCP4.objects.filter(cp4=cp4).first()
-        poligono = area.poligono if area else None
+    # Contornos (divisas) de cada CP4 selecionado, se já importado.
+    poligonos = []
+    if cp4s:
+        for area in AreaCP4.objects.filter(cp4__in=cp4s):
+            if area.poligono:
+                poligonos.append({"cp4": area.cp4, "geom": area.poligono})
     return JsonResponse({
         "type": "FeatureCollection",
         "features": features,
         "meta": {
-            "cp4": cp4 or "",
+            "cp4": cp4s[0] if len(cp4s) == 1 else "",
+            "cp4s": cp4s,
             "total": total_cp,
             "com_gps": com_gps,
             "sem_gps": total_cp - com_gps,
-            "poligono": poligono,
+            "poligonos": poligonos,
         },
     })
 
@@ -184,6 +194,81 @@ def api_criar_zona(request):
             "count": len(dentro),
         }
     )
+
+
+@login_required
+@require_GET
+def api_hubs(request):
+    """Lista dos HUBs Cainiao e os respetivos CP4 (para filtrar o mapa)."""
+    from settlements.models import CainiaoHub
+    hubs = CainiaoHub.objects.prefetch_related("cp4_codes").order_by("name")
+    return JsonResponse({
+        "hubs": [
+            {"id": h.id, "name": h.name, "cp4s": h.cp4_list()}
+            for h in hubs
+        ]
+    })
+
+
+@login_required
+@require_POST
+def api_zona_from_hub(request):
+    """Cria/atualiza uma ZonaGeo a partir das divisas dos CP4 de um HUB."""
+    try:
+        data = json.loads(request.body or "{}")
+    except ValueError:
+        return JsonResponse({"ok": False, "erro": "JSON inválido"}, status=400)
+
+    from settlements.models import CainiaoHub
+    hub = CainiaoHub.objects.filter(id=data.get("hub_id")).first()
+    if not hub:
+        return JsonResponse({"ok": False, "erro": "HUB não encontrado"}, status=404)
+
+    cp4s = hub.cp4_list()
+    areas = list(AreaCP4.objects.filter(cp4__in=cp4s).exclude(poligono=None))
+    if not areas:
+        sem = ", ".join(cp4s) or "—"
+        return JsonResponse(
+            {"ok": False, "erro": (
+                "Nenhum CP4 deste HUB tem contorno importado ainda. "
+                f"Importa primeiro estes CP4: {sem}."
+            )}, status=400,
+        )
+
+    # MultiPolygon = união dos contornos (Polygon) de cada CP4 do HUB.
+    coords = []
+    for a in areas:
+        g = a.poligono or {}
+        if g.get("type") == "Polygon" and g.get("coordinates"):
+            coords.append(g["coordinates"])
+        elif g.get("type") == "MultiPolygon":
+            coords.extend(g.get("coordinates") or [])
+    multi = {"type": "MultiPolygon", "coordinates": coords}
+
+    nome = f"HUB {hub.name}"
+    codigo = slugify(f"hub-{hub.name}")[:40] or slugify(f"hub-{hub.id}")[:40]
+    cor = (data.get("cor") or "#16a34a").strip()
+    zona, criada = ZonaGeo.objects.update_or_create(
+        codigo=codigo,
+        defaults={"nome": nome, "cor": cor, "poligono": multi},
+    )
+
+    qs = CodigoPostal.objects.filter(
+        latitude__isnull=False, longitude__isnull=False, cp4__in=cp4s,
+    )
+    dentro = cps_dentro_poligono(multi, qs)
+    com_contorno = {a.cp4 for a in areas}
+    return JsonResponse({
+        "ok": True,
+        "id": zona.id,
+        "nome": nome,
+        "cor": zona.cor,
+        "criada": criada,
+        "count": len(dentro),
+        "cp4s": cp4s,
+        "cp4s_sem_contorno": [c for c in cp4s if c not in com_contorno],
+        "poligono": multi,
+    })
 
 
 @login_required

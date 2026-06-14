@@ -88,10 +88,24 @@ def api_cps(request):
     qs = CodigoPostal.objects.filter(
         latitude__isnull=False, longitude__isnull=False
     ).select_related("localidade", "concelho")
+    base = CodigoPostal.objects.all()
     if cp4:
         qs = qs.filter(cp4=cp4)
+        base = base.filter(cp4=cp4)
     features = [_feature(cp) for cp in qs[:8000]]
-    return JsonResponse({"type": "FeatureCollection", "features": features})
+    # Completude: quantos CP3 existem no catálogo vs quantos já têm GPS.
+    total_cp = base.count()
+    com_gps = base.filter(latitude__isnull=False).count()
+    return JsonResponse({
+        "type": "FeatureCollection",
+        "features": features,
+        "meta": {
+            "cp4": cp4 or "",
+            "total": total_cp,
+            "com_gps": com_gps,
+            "sem_gps": total_cp - com_gps,
+        },
+    })
 
 
 @login_required
@@ -184,6 +198,37 @@ def api_ingest(request):
     ingest_cp4_task.delay(cp4, com_coords, job_id=job.id)
     return JsonResponse(
         {"ok": True, "queued": cp4, "coords": com_coords, "job_id": job.id}
+    )
+
+
+@login_required
+@require_POST
+def api_coords_faltam(request):
+    """Vai buscar GPS só aos CP3 do CP4 que ainda não têm coordenadas."""
+    from .tasks import coords_faltam_task
+    try:
+        data = json.loads(request.body or "{}")
+    except ValueError:
+        return JsonResponse({"ok": False, "erro": "JSON inválido"}, status=400)
+
+    cp4 = (data.get("cp4") or "").strip()
+    if not (cp4.isdigit() and len(cp4) == 4):
+        return JsonResponse(
+            {"ok": False, "erro": "CP4 inválido (4 dígitos)"}, status=400
+        )
+
+    faltam = CodigoPostal.objects.filter(
+        cp4=cp4, latitude__isnull=True,
+    ).count()
+    if not faltam:
+        return JsonResponse(
+            {"ok": True, "nada_a_fazer": True, "cp4": cp4, "faltam": 0}
+        )
+
+    job = IngestJob.objects.create(cp4=cp4, com_coordenadas=True)
+    coords_faltam_task.delay(cp4, job_id=job.id)
+    return JsonResponse(
+        {"ok": True, "queued": cp4, "faltam": faltam, "job_id": job.id}
     )
 
 

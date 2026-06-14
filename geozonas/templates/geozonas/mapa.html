@@ -58,6 +58,9 @@
         <button id="btn-load" class="px-3 py-1 rounded bg-indigo-600 hover:bg-indigo-700 text-white text-sm">Carregar</button>
       </div>
       <p id="load-info" class="text-xs text-gray-400 mt-1"></p>
+      <button id="btn-coords-faltam" class="hidden mt-1 px-2 py-1 rounded bg-amber-600 hover:bg-amber-700 text-white text-xs">
+        Preencher GPS em falta
+      </button>
     </div>
 
     <!-- Guardar zona -->
@@ -93,6 +96,7 @@ const URL_ZONA = "{% url 'geozonas:api-criar-zona' %}";
 const URL_INGEST = "{% url 'geozonas:api-ingest' %}";
 const URL_INGEST_STATUS = "{% url 'geozonas:api-job-status' %}";
 const URL_JOBS_ACTIVE = "{% url 'geozonas:api-jobs-active' %}";
+const URL_COORDS_FALTAM = "{% url 'geozonas:api-coords-faltam' %}";
 
 document.addEventListener('DOMContentLoaded', function () {
   const map = L.map('map').setView([{{ map_center.0|unlocalize }}, {{ map_center.1|unlocalize }}], {{ map_zoom }});
@@ -119,9 +123,13 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   // Pontos dos CPs
+  let cp4Atual = '';
   function carregarPontos(cp4) {
+    cp4Atual = cp4 || '';
     const u = cp4 ? `${URL_CPS}?cp4=${encodeURIComponent(cp4)}` : URL_CPS;
     document.getElementById('load-info').textContent = 'A carregar...';
+    const btnFaltam = document.getElementById('btn-coords-faltam');
+    btnFaltam.classList.add('hidden');
     fetch(u).then(r => r.json()).then(fc => {
       pontosLayer.clearLayers();
       const bounds = [];
@@ -132,7 +140,13 @@ document.addEventListener('DOMContentLoaded', function () {
           .addTo(pontosLayer);
         bounds.push([lat, lng]);
       });
-      document.getElementById('load-info').textContent = `${fc.features.length} pontos.`;
+      const m = fc.meta || {};
+      // Completude: pontos com GPS / total no catálogo.
+      document.getElementById('load-info').textContent =
+        `${m.com_gps != null ? m.com_gps : fc.features.length}/${m.total != null ? m.total : fc.features.length} com GPS`
+        + (m.sem_gps ? ` · ${m.sem_gps} em falta` : '');
+      // Mostra o botão de preencher só se houver CP4 selecionado e faltarem GPS.
+      if (cp4 && m.sem_gps > 0) btnFaltam.classList.remove('hidden');
       if (bounds.length) map.fitBounds(bounds, { maxZoom: 14 });
     });
   }
@@ -170,6 +184,24 @@ document.addEventListener('DOMContentLoaded', function () {
   // Botões
   document.getElementById('btn-load').addEventListener('click', () =>
     carregarPontos(document.getElementById('sel-cp4').value));
+
+  // Preencher GPS em falta (só vai buscar os CP3 sem coordenadas — poupa tokens)
+  document.getElementById('btn-coords-faltam').addEventListener('click', function () {
+    const cp4 = cp4Atual;
+    if (!cp4) return;
+    this.disabled = true;
+    post(URL_COORDS_FALTAM, { cp4: cp4 }).then(res => {
+      this.disabled = false;
+      if (res.ok && res.job_id) {
+        criarBarra(res.job_id, cp4);
+        acompanharJob(res.job_id, cp4);
+      } else if (res.ok && res.nada_a_fazer) {
+        alert('Este CP4 já tem todas as coordenadas.');
+      } else {
+        alert('Erro: ' + (res.erro || 'falhou'));
+      }
+    }).catch(() => { this.disabled = false; alert('Erro de rede.'); });
+  });
 
   // ── Progresso de importações (várias em simultâneo, 1 barra por CP4) ──
   const jobsBox = document.getElementById('ingest-jobs');

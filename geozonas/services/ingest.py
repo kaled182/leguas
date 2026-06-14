@@ -62,16 +62,22 @@ def _mapa_cp3(dados):
     return mapa
 
 
-def ingest_cp4(cp4, com_coordenadas=False, delay_coords=0.2, client=None, job=None):
+def ingest_cp4(
+    cp4, com_coordenadas=False, delay_coords=0.2, client=None, job=None,
+    forcar_coords=False,
+):
     """
     Importa/atualiza todos os CPs do prefixo `cp4`.
 
     Args:
         cp4: prefixo de 4 dígitos (ex.: "4990").
         com_coordenadas: se True, faz um 2º passo por CP3 para obter o centroide GPS.
-        delay_coords: pausa entre chamadas de detalhe (respeitar rate limit).
+        delay_coords: (legado, ignorado — as chamadas são paralelas).
         client: GeoAPIClient (injetável para testes).
         job: IngestJob opcional, atualizado com o progresso ao longo da ingestão.
+        forcar_coords: se False (default), o passo de coordenadas só vai buscar
+            os CP3 que ainda NÃO têm GPS — poupa tokens ao re-importar. Se True,
+            re-busca todos.
 
     Returns:
         dict com estatísticas da ingestão.
@@ -105,7 +111,7 @@ def ingest_cp4(cp4, com_coordenadas=False, delay_coords=0.2, client=None, job=No
         job.status = "A_CORRER"
         job.concelho = concelho_nome
         job.total = len(lista_cp3)
-        job.coords_total = len(lista_cp3) if com_coordenadas else 0
+        job.coords_total = 0  # definido após saber quantos faltam
         job.save(
             update_fields=[
                 "status", "concelho", "total", "coords_total", "updated_at"
@@ -158,8 +164,21 @@ def ingest_cp4(cp4, com_coordenadas=False, delay_coords=0.2, client=None, job=No
     }
 
     if com_coordenadas:
+        if forcar_coords:
+            cp3_coords = lista_cp3
+        else:
+            # Só os CP3 que ainda não têm GPS — re-import não desperdiça tokens.
+            cp3_coords = list(
+                CodigoPostal.objects.filter(
+                    cp4=cp4, cp3__in=lista_cp3, latitude__isnull=True,
+                ).values_list("cp3", flat=True)
+            )
+        stats["coords_em_falta"] = len(cp3_coords)
+        if job:
+            job.coords_total = len(cp3_coords)
+            job.save(update_fields=["coords_total", "updated_at"])
         stats["com_coordenadas"] = _enriquecer_coordenadas(
-            cp4, lista_cp3, client, delay_coords, cache_concelhos, job=job
+            cp4, cp3_coords, client, delay_coords, cache_concelhos, job=job
         )
 
     if job:
@@ -167,6 +186,43 @@ def ingest_cp4(cp4, com_coordenadas=False, delay_coords=0.2, client=None, job=No
         job.save(update_fields=["status", "updated_at"])
 
     return stats
+
+
+def preencher_coordenadas_em_falta(cp4, client=None, job=None):
+    """
+    Vai buscar coordenadas SÓ aos CP3 do prefixo que ainda não têm GPS.
+
+    Não faz a chamada bulk /cp/{CP4} (poupa ainda mais tokens) — usa o que já
+    está no catálogo. Ideal para completar um CP4 já importado.
+    """
+    cp4 = str(cp4).strip()
+    client = client or GeoAPIClient()
+
+    faltam = list(
+        CodigoPostal.objects.filter(
+            cp4=cp4, latitude__isnull=True,
+        ).values_list("cp3", flat=True)
+    )
+    total = len(faltam)
+    if job:
+        job.status = "A_CORRER"
+        job.total = total
+        job.coords_total = total
+        job.save(update_fields=[
+            "status", "total", "coords_total", "updated_at",
+        ])
+
+    feitas = 0
+    if faltam:
+        feitas = _enriquecer_coordenadas(
+            cp4, faltam, client, 0, {}, job=job
+        )
+
+    if job:
+        job.status = "CONCLUIDO"
+        job.save(update_fields=["status", "updated_at"])
+
+    return {"cp4": cp4, "ok": True, "faltavam": total, "feitas": feitas}
 
 
 def _enriquecer_coordenadas(cp4, lista_cp3, client, delay, cache_concelhos, job=None):

@@ -6,10 +6,48 @@ localidade, designação postal e concelho. Opcionalmente, um segundo passo enri
 cada CP com coordenadas (centroide) via /cp/{CP4-CP3}.
 """
 
+from collections import defaultdict
+
 from django.db import transaction
 
 from ..models import AreaCP4, CodigoPostal, Concelho, Freguesia, Localidade
 from .geoapi import GeoAPIClient
+
+
+def atribuir_freguesias(cp4s):
+    """Atribui a cada CP (com GPS) a freguesia que o contém (point-in-polygon).
+    Permite mostrar no mapa só as freguesias que pertencem ao CP4."""
+    from shapely.geometry import Point, shape
+    cps = list(
+        CodigoPostal.objects.filter(
+            cp4__in=cp4s, latitude__isnull=False, longitude__isnull=False,
+        ).only("id", "latitude", "longitude", "concelho_id")
+    )
+    if not cps:
+        return 0
+    concelho_ids = {c.concelho_id for c in cps if c.concelho_id}
+    shapes = []
+    for f in Freguesia.objects.filter(
+        concelho_id__in=concelho_ids,
+    ).exclude(geojson__isnull=True):
+        try:
+            shapes.append((f.id, shape(f.geojson)))
+        except Exception:
+            continue
+    if not shapes:
+        return 0
+    por_freguesia = defaultdict(list)
+    for cp in cps:
+        pt = Point(float(cp.longitude), float(cp.latitude))
+        for fid, geom in shapes:
+            if geom.contains(pt):
+                por_freguesia[fid].append(cp.id)
+                break
+    n = 0
+    for fid, ids in por_freguesia.items():
+        CodigoPostal.objects.filter(id__in=ids).update(freguesia_id=fid)
+        n += len(ids)
+    return n
 
 # Chaves (com acentos) tal como vêm da GeoAPI
 _K_DESIGNACAO = "Designação Postal"
@@ -263,6 +301,11 @@ def ingest_cp4(
         stats["com_coordenadas"] = _enriquecer_coordenadas(
             cp4, cp3_coords, client, delay_coords, cache_concelhos, job=job
         )
+        # Liga cada CP à sua freguesia (point-in-polygon) — não-fatal.
+        try:
+            atribuir_freguesias([cp4])
+        except Exception:
+            pass
 
     if job:
         job.status = "CONCLUIDO"
@@ -300,6 +343,10 @@ def preencher_coordenadas_em_falta(cp4, client=None, job=None):
         feitas = _enriquecer_coordenadas(
             cp4, faltam, client, 0, {}, job=job
         )
+        try:
+            atribuir_freguesias([cp4])
+        except Exception:
+            pass
 
     if job:
         job.status = "CONCLUIDO"

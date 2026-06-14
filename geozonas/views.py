@@ -140,13 +140,15 @@ def api_freguesias(request):
         if hub:
             cp4s = hub.cp4_list()
 
-    concelho_ids = (
-        CodigoPostal.objects.filter(cp4__in=cp4s, concelho__isnull=False)
-        .values_list("concelho_id", flat=True).distinct()
+    # Só as freguesias que têm CPs deste(s) CP4 (atribuídas por point-in-polygon
+    # na importação) — não todas as do concelho.
+    freg_ids = (
+        CodigoPostal.objects.filter(cp4__in=cp4s, freguesia__isnull=False)
+        .values_list("freguesia_id", flat=True).distinct()
         if cp4s else []
     )
     fregs = (
-        Freguesia.objects.filter(concelho_id__in=list(concelho_ids))
+        Freguesia.objects.filter(id__in=list(freg_ids))
         .exclude(geojson__isnull=True)
         .select_related("concelho")
     )
@@ -232,6 +234,60 @@ def api_criar_zona(request):
             "count": len(dentro),
         }
     )
+
+
+@login_required
+@require_GET
+def api_zonas(request):
+    """Lista das zonas guardadas (com polígono) para listar/desenhar."""
+    zonas = ZonaGeo.objects.filter(is_active=True).order_by("nome")
+    return JsonResponse({
+        "zonas": [
+            {
+                "id": z.id, "nome": z.nome, "codigo": z.codigo,
+                "cor": z.cor, "poligono": z.poligono,
+            }
+            for z in zonas
+        ]
+    })
+
+
+@login_required
+@require_POST
+def api_zona_update(request):
+    """Renomeia / muda a cor de uma zona."""
+    try:
+        data = json.loads(request.body or "{}")
+    except ValueError:
+        return JsonResponse({"ok": False, "erro": "JSON inválido"}, status=400)
+    zona = ZonaGeo.objects.filter(id=data.get("id")).first()
+    if not zona:
+        return JsonResponse({"ok": False, "erro": "Zona não encontrada"}, status=404)
+    nome = (data.get("nome") or "").strip()
+    if nome:
+        zona.nome = nome
+    cor = (data.get("cor") or "").strip()
+    if cor:
+        zona.cor = cor
+    zona.save(update_fields=["nome", "cor", "updated_at"])
+    return JsonResponse(
+        {"ok": True, "id": zona.id, "nome": zona.nome, "cor": zona.cor}
+    )
+
+
+@login_required
+@require_POST
+def api_zona_delete(request):
+    """Apaga uma zona."""
+    try:
+        data = json.loads(request.body or "{}")
+    except ValueError:
+        return JsonResponse({"ok": False, "erro": "JSON inválido"}, status=400)
+    zona = ZonaGeo.objects.filter(id=data.get("id")).first()
+    if not zona:
+        return JsonResponse({"ok": False, "erro": "Zona não encontrada"}, status=404)
+    zona.delete()
+    return JsonResponse({"ok": True})
 
 
 @login_required

@@ -10,7 +10,7 @@ from django.views.decorators.http import (
     require_GET, require_POST, require_http_methods,
 )
 
-from .models import AreaCP4, CodigoPostal, IngestJob, ZonaGeo
+from .models import AreaCP4, CodigoPostal, Freguesia, IngestJob, ZonaGeo
 from .services.espacial import cps_dentro_poligono
 from .tasks import ingest_cp4_task
 
@@ -124,6 +124,44 @@ def api_cps(request):
             "poligonos": poligonos,
         },
     })
+
+
+@login_required
+@require_GET
+def api_freguesias(request):
+    """Fronteiras de freguesia (GeoJSON) dos concelhos que cobrem os CP4
+    indicados (?cp4=A&cp4=B) ou de um HUB (?hub_id=N). Linhas finas para
+    desenhar zonas detalhadas."""
+    cp4s = [c.strip() for c in request.GET.getlist("cp4") if c.strip()]
+    hub_id = request.GET.get("hub_id")
+    if hub_id:
+        from settlements.models import CainiaoHub
+        hub = CainiaoHub.objects.filter(id=hub_id).first()
+        if hub:
+            cp4s = hub.cp4_list()
+
+    concelho_ids = (
+        CodigoPostal.objects.filter(cp4__in=cp4s, concelho__isnull=False)
+        .values_list("concelho_id", flat=True).distinct()
+        if cp4s else []
+    )
+    fregs = (
+        Freguesia.objects.filter(concelho_id__in=list(concelho_ids))
+        .exclude(geojson__isnull=True)
+        .select_related("concelho")
+    )
+    features = [
+        {
+            "type": "Feature",
+            "properties": {
+                "nome": f.nome,
+                "concelho": f.concelho.nome if f.concelho else "",
+            },
+            "geometry": f.geojson,
+        }
+        for f in fregs
+    ]
+    return JsonResponse({"type": "FeatureCollection", "features": features})
 
 
 @login_required

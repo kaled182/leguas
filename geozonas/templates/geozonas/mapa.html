@@ -86,6 +86,9 @@
         <button id="btn-zona-cp4" class="hidden px-3 py-1 rounded bg-green-600 hover:bg-green-700 text-white text-sm">Criar zona deste CP4</button>
       </div>
 
+      <label class="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-300 mt-2">
+        <input id="chk-freguesias" type="checkbox"> Mostrar fronteiras de freguesia (zonas detalhadas)
+      </label>
       <p id="load-info" class="text-xs text-gray-400 mt-1"></p>
       <button id="btn-coords-faltam" class="hidden mt-1 px-2 py-1 rounded bg-amber-600 hover:bg-amber-700 text-white text-xs">
         Preencher GPS em falta
@@ -138,6 +141,7 @@
 <script>
 const CSRF = "{{ csrf_token }}";
 const URL_CPS = "{% url 'geozonas:api-cps' %}";
+const URL_FREGUESIAS = "{% url 'geozonas:api-freguesias' %}";
 const URL_SEL = "{% url 'geozonas:api-selecionar' %}";
 const URL_ZONA = "{% url 'geozonas:api-criar-zona' %}";
 const URL_INGEST = "{% url 'geozonas:api-ingest' %}";
@@ -157,6 +161,7 @@ document.addEventListener('DOMContentLoaded', function () {
   const pontosLayer = L.layerGroup().addTo(map);
   const selecaoLayer = L.layerGroup().addTo(map);
   const limiteLayer = L.layerGroup().addTo(map);  // contorno (divisas) do CP4
+  const freguesiaLayer = L.layerGroup().addTo(map);  // fronteiras de freguesia
   const drawnItems = new L.FeatureGroup().addTo(map);
   let ultimaGeometria = null;
 
@@ -177,11 +182,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // Pontos dos CPs
   let cp4Atual = '';
+  let queryAtual = '';
   // Carrega pontos por query (cp4=A / cp4=A&cp4=B / hub_id=N).
   // opts.cp4 = CP4 único (ativa o botão "preencher GPS em falta").
   function carregarPontosQuery(query, opts) {
     opts = opts || {};
     cp4Atual = opts.cp4 || '';
+    queryAtual = query || '';
     const u = query ? `${URL_CPS}?${query}` : URL_CPS;
     document.getElementById('load-info').textContent = 'A carregar...';
     const btnFaltam = document.getElementById('btn-coords-faltam');
@@ -214,10 +221,31 @@ document.addEventListener('DOMContentLoaded', function () {
       if (opts.cp4 && m.sem_gps > 0) btnFaltam.classList.remove('hidden');
       if (bounds.length) map.fitBounds(bounds, { maxZoom: 14 });
     });
+    // Fronteiras de freguesia (se o toggle estiver ativo).
+    if (document.getElementById('chk-freguesias').checked) carregarFreguesias();
   }
   function carregarPontos(cp4) {
     carregarPontosQuery(cp4 ? `cp4=${encodeURIComponent(cp4)}` : '', { cp4: cp4 });
   }
+  // Desenha as fronteiras de freguesia (linhas finas, não-interativas) para
+  // o âmbito atualmente carregado (queryAtual).
+  function carregarFreguesias() {
+    freguesiaLayer.clearLayers();
+    if (!document.getElementById('chk-freguesias').checked || !queryAtual) return;
+    fetch(`${URL_FREGUESIAS}?${queryAtual}`).then(r => r.json()).then(fc => {
+      (fc.features || []).forEach(f => {
+        L.geoJSON(f, {
+          interactive: false,  // não interceta o desenho
+          style: { color: '#2563eb', weight: 1, fillOpacity: 0,
+                   dashArray: '3 3' }
+        }).addTo(freguesiaLayer);
+      });
+    }).catch(() => {});
+  }
+  document.getElementById('chk-freguesias').addEventListener('change', () => {
+    if (document.getElementById('chk-freguesias').checked) carregarFreguesias();
+    else freguesiaLayer.clearLayers();
+  });
 
   // Zonas existentes
   try {

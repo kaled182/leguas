@@ -8,7 +8,7 @@ cada CP com coordenadas (centroide) via /cp/{CP4-CP3}.
 
 from django.db import transaction
 
-from ..models import AreaCP4, CodigoPostal, Concelho, Localidade
+from ..models import AreaCP4, CodigoPostal, Concelho, Freguesia, Localidade
 from .geoapi import GeoAPIClient
 
 # Chaves (com acentos) tal como vêm da GeoAPI
@@ -61,6 +61,39 @@ def _poligono_geojson(dados):
     if ring[0] != ring[-1]:
         ring.append(ring[0])  # fecha o anel
     return {"type": "Polygon", "coordinates": [ring]}
+
+
+def _ingest_freguesias(concelho_nome, client, forcar=False):
+    """Guarda as freguesias (com polígono GeoJSON) de um concelho. 1 chamada
+    à GeoAPI; salta se já existirem (poupa tokens) salvo `forcar`."""
+    concelho_nome = (concelho_nome or "").strip()
+    if not concelho_nome:
+        return 0
+    cobj, _ = Concelho.objects.get_or_create(nome=concelho_nome)
+    if not forcar and Freguesia.objects.filter(
+        concelho=cobj,
+    ).exclude(geojson__isnull=True).exists():
+        return 0
+    feats = client.consultar_freguesias(concelho_nome)
+    n = 0
+    for f in feats or []:
+        props = f.get("properties") or {}
+        nome = (
+            props.get("freguesia") or props.get("nome")
+            or props.get("Freguesia") or ""
+        ).strip()
+        if not nome:
+            continue
+        Freguesia.objects.update_or_create(
+            concelho=cobj,
+            nome=nome,
+            defaults={
+                "codigo_ine": (props.get("dtmnfr") or "")[:12],
+                "geojson": f.get("geometry"),
+            },
+        )
+        n += 1
+    return n
 
 
 def _mapa_cp3(dados):
@@ -139,6 +172,18 @@ def ingest_cp4(
             ),
         },
     )
+
+    # Freguesias (divisas finas) do(s) concelho(s) do CP4 — 1 chamada por
+    # concelho, saltada se já existirem (poupa tokens). Não-fatal.
+    concelhos_raw = dados.get("Concelho")
+    nomes_concelho = (
+        concelhos_raw if isinstance(concelhos_raw, list) else [concelhos_raw]
+    )
+    for cnome in {str(c).strip() for c in nomes_concelho if str(c).strip()}:
+        try:
+            _ingest_freguesias(cnome, client, forcar=forcar_coords)
+        except Exception:
+            pass
 
     mapa = _mapa_cp3(dados)
     lista_cp3 = [str(c).strip() for c in (dados.get("CP3") or []) if str(c).strip()]

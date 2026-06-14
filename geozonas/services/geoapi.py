@@ -97,6 +97,16 @@ class GeoAPIClient:
         """Geocodificação reversa: a partir de lat/lon devolve distrito/concelho/freguesia."""
         return self._get(f"gps/{lat},{lon}/base")
 
+    def consultar_freguesias(self, concelho):
+        """Freguesias de um concelho como lista de Features GeoJSON (com
+        geometria). 1 chamada. Devolve [] se nada."""
+        dados = self._get(f"municipio/{concelho}/freguesias")
+        if not dados:
+            return []
+        gj = dados.get("geojsons") or {}
+        feats = gj.get("freguesias")
+        return feats if isinstance(feats, list) else []
+
     def atualizar_quota(self):
         """Faz 1 chamada leve para refrescar a quota guardada. Devolve o dict."""
         try:

@@ -210,6 +210,67 @@ def api_hubs(request):
     })
 
 
+def _zona_de_cp4s(cp4s, nome, cor="#16a34a", codigo=None):
+    """Cria/atualiza uma ZonaGeo com o MultiPolygon das divisas dos `cp4s`.
+    Devolve um dict pronto para JsonResponse."""
+    cp4s = [str(c).strip() for c in (cp4s or []) if str(c).strip()]
+    if not cp4s:
+        return {"ok": False, "erro": "Indica pelo menos um CP4."}, 400
+
+    areas = list(AreaCP4.objects.filter(cp4__in=cp4s).exclude(poligono=None))
+    if not areas:
+        return {"ok": False, "erro": (
+            "Nenhum destes CP4 tem o contorno importado ainda. "
+            f"Importa primeiro: {', '.join(cp4s)}."
+        )}, 400
+
+    coords = []
+    for a in areas:
+        g = a.poligono or {}
+        if g.get("type") == "Polygon" and g.get("coordinates"):
+            coords.append(g["coordinates"])
+        elif g.get("type") == "MultiPolygon":
+            coords.extend(g.get("coordinates") or [])
+    multi = {"type": "MultiPolygon", "coordinates": coords}
+
+    nome = (nome or "").strip() or f"Zona {', '.join(cp4s)}"
+    codigo = (codigo or slugify(nome))[:40] or slugify(f"zona-{cp4s[0]}")[:40]
+    zona, criada = ZonaGeo.objects.update_or_create(
+        codigo=codigo,
+        defaults={"nome": nome, "cor": (cor or "#16a34a").strip(), "poligono": multi},
+    )
+    qs = CodigoPostal.objects.filter(
+        latitude__isnull=False, longitude__isnull=False, cp4__in=cp4s,
+    )
+    dentro = cps_dentro_poligono(multi, qs)
+    com_contorno = {a.cp4 for a in areas}
+    return {
+        "ok": True,
+        "id": zona.id,
+        "nome": zona.nome,
+        "cor": zona.cor,
+        "criada": criada,
+        "count": len(dentro),
+        "cp4s": cp4s,
+        "cp4s_sem_contorno": [c for c in cp4s if c not in com_contorno],
+        "poligono": multi,
+    }, 200
+
+
+@login_required
+@require_POST
+def api_zona_from_cp4s(request):
+    """Cria uma ZonaGeo a partir das divisas de um ou mais CP4."""
+    try:
+        data = json.loads(request.body or "{}")
+    except ValueError:
+        return JsonResponse({"ok": False, "erro": "JSON inválido"}, status=400)
+    payload, status = _zona_de_cp4s(
+        data.get("cp4s"), data.get("nome"), data.get("cor"),
+    )
+    return JsonResponse(payload, status=status)
+
+
 @login_required
 @require_POST
 def api_zona_from_hub(request):
@@ -224,51 +285,11 @@ def api_zona_from_hub(request):
     if not hub:
         return JsonResponse({"ok": False, "erro": "HUB não encontrado"}, status=404)
 
-    cp4s = hub.cp4_list()
-    areas = list(AreaCP4.objects.filter(cp4__in=cp4s).exclude(poligono=None))
-    if not areas:
-        sem = ", ".join(cp4s) or "—"
-        return JsonResponse(
-            {"ok": False, "erro": (
-                "Nenhum CP4 deste HUB tem contorno importado ainda. "
-                f"Importa primeiro estes CP4: {sem}."
-            )}, status=400,
-        )
-
-    # MultiPolygon = união dos contornos (Polygon) de cada CP4 do HUB.
-    coords = []
-    for a in areas:
-        g = a.poligono or {}
-        if g.get("type") == "Polygon" and g.get("coordinates"):
-            coords.append(g["coordinates"])
-        elif g.get("type") == "MultiPolygon":
-            coords.extend(g.get("coordinates") or [])
-    multi = {"type": "MultiPolygon", "coordinates": coords}
-
-    nome = f"HUB {hub.name}"
-    codigo = slugify(f"hub-{hub.name}")[:40] or slugify(f"hub-{hub.id}")[:40]
-    cor = (data.get("cor") or "#16a34a").strip()
-    zona, criada = ZonaGeo.objects.update_or_create(
-        codigo=codigo,
-        defaults={"nome": nome, "cor": cor, "poligono": multi},
+    payload, status = _zona_de_cp4s(
+        hub.cp4_list(), f"HUB {hub.name}", data.get("cor"),
+        codigo=slugify(f"hub-{hub.name}") or f"hub-{hub.id}",
     )
-
-    qs = CodigoPostal.objects.filter(
-        latitude__isnull=False, longitude__isnull=False, cp4__in=cp4s,
-    )
-    dentro = cps_dentro_poligono(multi, qs)
-    com_contorno = {a.cp4 for a in areas}
-    return JsonResponse({
-        "ok": True,
-        "id": zona.id,
-        "nome": nome,
-        "cor": zona.cor,
-        "criada": criada,
-        "count": len(dentro),
-        "cp4s": cp4s,
-        "cp4s_sem_contorno": [c for c in cp4s if c not in com_contorno],
-        "poligono": multi,
-    })
+    return JsonResponse(payload, status=status)
 
 
 @login_required

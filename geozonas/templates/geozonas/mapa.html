@@ -83,6 +83,7 @@
           {% for cp4 in cp4s %}<option value="{{ cp4 }}">{{ cp4 }}</option>{% endfor %}
         </select>
         <button id="btn-load" class="px-3 py-1 rounded bg-indigo-600 hover:bg-indigo-700 text-white text-sm">Carregar</button>
+        <button id="btn-zona-cp4" class="hidden px-3 py-1 rounded bg-green-600 hover:bg-green-700 text-white text-sm">Criar zona deste CP4</button>
       </div>
 
       <p id="load-info" class="text-xs text-gray-400 mt-1"></p>
@@ -147,6 +148,7 @@ const URL_QUOTA = "{% url 'geozonas:api-quota' %}";
 const URL_GEOAPI_KEY = "{% url 'geozonas:api-geoapi-key' %}";
 const URL_HUBS = "{% url 'geozonas:api-hubs' %}";
 const URL_ZONA_HUB = "{% url 'geozonas:api-zona-from-hub' %}";
+const URL_ZONA_CP4 = "{% url 'geozonas:api-zona-from-cp4s' %}";
 
 document.addEventListener('DOMContentLoaded', function () {
   const map = L.map('map').setView([{{ map_center.0|unlocalize }}, {{ map_center.1|unlocalize }}], {{ map_zoom }});
@@ -199,7 +201,8 @@ document.addEventListener('DOMContentLoaded', function () {
       // Contornos (divisas) automáticos de cada CP4.
       (m.poligonos || []).forEach(p => {
         const lim = L.geoJSON({ type: 'Feature', geometry: p.geom }, {
-          style: { color: '#dc2626', weight: 2.5, fill: false, dashArray: '6 4' }
+          style: { color: '#dc2626', weight: 2.5, dashArray: '6 4',
+                   fillColor: '#dc2626', fillOpacity: 0.06 }
         }).bindTooltip('CP ' + p.cp4, { sticky: true }).addTo(limiteLayer);
         try { const b = lim.getBounds(); bounds.push([b.getNorth(), b.getWest()], [b.getSouth(), b.getEast()]); } catch (e) {}
       });
@@ -246,8 +249,36 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 
   // Botões
+  const selCp4 = document.getElementById('sel-cp4');
+  const btnZonaCp4 = document.getElementById('btn-zona-cp4');
+  function refrescarBtnZonaCp4() {
+    if (selCp4.value) btnZonaCp4.classList.remove('hidden');
+    else btnZonaCp4.classList.add('hidden');
+  }
   document.getElementById('btn-load').addEventListener('click', () =>
-    carregarPontos(document.getElementById('sel-cp4').value));
+    carregarPontos(selCp4.value));
+  // Desenha automaticamente as divisas ao selecionar o CP4.
+  selCp4.addEventListener('change', () => {
+    refrescarBtnZonaCp4();
+    if (selCp4.value) carregarPontos(selCp4.value);
+  });
+  // Criar zona a partir das divisas do CP4 selecionado.
+  btnZonaCp4.addEventListener('click', function () {
+    const cp4 = selCp4.value;
+    if (!cp4) { alert('Seleciona um CP4 primeiro.'); return; }
+    const nome = prompt('Nome da zona:', 'Zona ' + cp4);
+    if (nome === null) return;
+    this.disabled = true;
+    post(URL_ZONA_CP4, { cp4s: [cp4], nome: nome }).then(res => {
+      this.disabled = false;
+      if (res.ok) {
+        L.geoJSON({ type: 'Feature', geometry: res.poligono },
+          { style: { color: res.cor, weight: 2, fillOpacity: 0.15 } })
+          .bindPopup(`<b>${res.nome}</b> (${res.count} CPs)`).addTo(map);
+        alert(`Zona "${res.nome}" criada com ${res.count} CPs.`);
+      } else { alert('Erro: ' + (res.erro || 'falhou')); }
+    }).catch(() => { this.disabled = false; alert('Erro de rede.'); });
+  });
 
   // ── HUBs ──────────────────────────────────────────────────────────
   let hubsData = [];

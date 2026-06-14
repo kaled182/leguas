@@ -178,6 +178,35 @@ class ZonaGeo(models.Model):
         ordering = ["nome"]
 
 
+class AreaCP4(models.Model):
+    """Contorno (divisas) da área de um prefixo CP4, vindo da GeoAPI.
+
+    O endpoint /cp/{CP4} devolve `poligono` (a fronteira da área do CP4).
+    Guardamo-lo como GeoJSON para desenhar automaticamente no mapa, por
+    cima do qual se definem as Zonas.
+    """
+
+    cp4 = models.CharField("CP4", max_length=4, unique=True, db_index=True)
+    concelho_nome = models.CharField("Concelho", max_length=160, blank=True)
+    distrito = models.CharField("Distrito", max_length=120, blank=True)
+    poligono = models.JSONField("Contorno (GeoJSON)", null=True, blank=True)
+    centro_lat = models.DecimalField(
+        max_digits=9, decimal_places=6, null=True, blank=True
+    )
+    centro_lng = models.DecimalField(
+        max_digits=9, decimal_places=6, null=True, blank=True
+    )
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Área CP4"
+        verbose_name_plural = "Áreas CP4"
+        ordering = ["cp4"]
+
+    def __str__(self):
+        return f"Área {self.cp4} ({self.concelho_nome})"
+
+
 class IngestJob(models.Model):
     """Acompanhamento do progresso de uma importação de prefixo CP4."""
 

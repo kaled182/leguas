@@ -10,7 +10,7 @@ from django.views.decorators.http import (
     require_GET, require_POST, require_http_methods,
 )
 
-from .models import CodigoPostal, IngestJob, ZonaGeo
+from .models import AreaCP4, CodigoPostal, IngestJob, ZonaGeo
 from .services.espacial import cps_dentro_poligono
 from .tasks import ingest_cp4_task
 
@@ -98,6 +98,11 @@ def api_cps(request):
     # Completude: quantos CP3 existem no catálogo vs quantos já têm GPS.
     total_cp = base.count()
     com_gps = base.filter(latitude__isnull=False).count()
+    # Contorno (divisas) da área do CP4, se já importado.
+    poligono = None
+    if cp4:
+        area = AreaCP4.objects.filter(cp4=cp4).first()
+        poligono = area.poligono if area else None
     return JsonResponse({
         "type": "FeatureCollection",
         "features": features,
@@ -106,6 +111,7 @@ def api_cps(request):
             "total": total_cp,
             "com_gps": com_gps,
             "sem_gps": total_cp - com_gps,
+            "poligono": poligono,
         },
     })
 

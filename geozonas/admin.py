@@ -1,6 +1,7 @@
 from django.contrib import admin
 
 from .models import (
+    AreaCP4,
     CodigoPostal,
     Concelho,
     Freguesia,
@@ -8,6 +9,16 @@ from .models import (
     Localidade,
     ZonaGeo,
 )
+
+
+@admin.register(AreaCP4)
+class AreaCP4Admin(admin.ModelAdmin):
+    list_display = ("cp4", "concelho_nome", "distrito", "tem_contorno", "atualizado_em")
+    search_fields = ("cp4", "concelho_nome")
+
+    @admin.display(boolean=True, description="Contorno")
+    def tem_contorno(self, obj):
+        return bool(obj.poligono)
 
 
 @admin.register(Concelho)

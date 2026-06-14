@@ -8,7 +8,7 @@ cada CP com coordenadas (centroide) via /cp/{CP4-CP3}.
 
 from django.db import transaction
 
-from ..models import CodigoPostal, Concelho, Localidade
+from ..models import AreaCP4, CodigoPostal, Concelho, Localidade
 from .geoapi import GeoAPIClient
 
 # Chaves (com acentos) tal como vêm da GeoAPI
@@ -40,6 +40,27 @@ def _get_concelho(nome, distrito, codigo_ine, cache):
         )
         cache[nome] = obj
     return cache[nome]
+
+
+def _poligono_geojson(dados):
+    """Converte o `poligono` da GeoAPI ([[lat,lng],...]) num GeoJSON Polygon
+    (coords [lng,lat], anel fechado). Devolve None se não houver/for inválido.
+    """
+    pol = dados.get("poligono")
+    if not isinstance(pol, list) or len(pol) < 3:
+        return None
+    ring = []
+    for p in pol:
+        if isinstance(p, (list, tuple)) and len(p) >= 2:
+            try:
+                ring.append([float(p[1]), float(p[0])])  # [lng, lat]
+            except (TypeError, ValueError):
+                continue
+    if len(ring) < 3:
+        return None
+    if ring[0] != ring[-1]:
+        ring.append(ring[0])  # fecha o anel
+    return {"type": "Polygon", "coordinates": [ring]}
 
 
 def _mapa_cp3(dados):
@@ -100,6 +121,23 @@ def ingest_cp4(
     cache_concelhos = {}
     concelho_obj = _get_concelho(
         concelho_nome, distrito, codigo_ine, cache_concelhos
+    )
+
+    # Guarda o contorno (divisas) da área do CP4 para desenhar no mapa.
+    centroide = dados.get("centroide") or dados.get("centroDeMassa")
+    AreaCP4.objects.update_or_create(
+        cp4=cp4,
+        defaults={
+            "concelho_nome": concelho_nome,
+            "distrito": distrito,
+            "poligono": _poligono_geojson(dados),
+            "centro_lat": (
+                centroide[0] if centroide and len(centroide) == 2 else None
+            ),
+            "centro_lng": (
+                centroide[1] if centroide and len(centroide) == 2 else None
+            ),
+        },
     )
 
     mapa = _mapa_cp3(dados)

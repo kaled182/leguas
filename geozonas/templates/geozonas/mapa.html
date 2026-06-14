@@ -138,6 +138,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   const pontosLayer = L.layerGroup().addTo(map);
   const selecaoLayer = L.layerGroup().addTo(map);
+  const limiteLayer = L.layerGroup().addTo(map);  // contorno (divisas) do CP4
   const drawnItems = new L.FeatureGroup().addTo(map);
   let ultimaGeometria = null;
 
@@ -166,6 +167,7 @@ document.addEventListener('DOMContentLoaded', function () {
     btnFaltam.classList.add('hidden');
     fetch(u).then(r => r.json()).then(fc => {
       pontosLayer.clearLayers();
+      limiteLayer.clearLayers();
       const bounds = [];
       fc.features.forEach(f => {
         const [lng, lat] = f.geometry.coordinates;
@@ -175,6 +177,13 @@ document.addEventListener('DOMContentLoaded', function () {
         bounds.push([lat, lng]);
       });
       const m = fc.meta || {};
+      // Contorno (divisas) automático da área do CP4.
+      if (m.poligono) {
+        const lim = L.geoJSON({ type: 'Feature', geometry: m.poligono }, {
+          style: { color: '#dc2626', weight: 2.5, fill: false, dashArray: '6 4' }
+        }).addTo(limiteLayer);
+        try { lim.getBounds().getNorthEast() && lim.getBounds().getSouthWest() && bounds.push(...[lim.getBounds().getNorthEast(), lim.getBounds().getSouthWest()].map(p => [p.lat, p.lng])); } catch (e) {}
+      }
       // Completude: pontos com GPS / total no catálogo.
       document.getElementById('load-info').textContent =
         `${m.com_gps != null ? m.com_gps : fc.features.length}/${m.total != null ? m.total : fc.features.length} com GPS`

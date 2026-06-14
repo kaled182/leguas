@@ -6,8 +6,6 @@ localidade, designação postal e concelho. Opcionalmente, um segundo passo enri
 cada CP com coordenadas (centroide) via /cp/{CP4-CP3}.
 """
 
-import time
-
 from django.db import transaction
 
 from ..models import CodigoPostal, Concelho, Localidade
@@ -181,15 +179,32 @@ def _enriquecer_coordenadas(cp4, lista_cp3, client, delay, cache_concelhos, job=
     Resiliente: um erro numa chamada NÃO interrompe o resto — conta a falha
     e continua. Atualiza o `job` periodicamente para acompanhamento na UI.
     """
+    # As chamadas de detalhe (1 por CP3) são o passo lento. Paralelizamos a
+    # parte de REDE com um pool de threads; as escritas na BD ficam na thread
+    # principal (no laço as_completed), evitando problemas de ligações Django
+    # entre threads. `delay` deixa de ser usado (a concorrência regula o ritmo).
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
     feitas, falhadas = 0, 0
     total = len(lista_cp3)
+    processados = 0
 
-    for i, cp3 in enumerate(lista_cp3):
+    def _fetch(cp3):
         try:
-            detalhe = client.consultar_cp(f"{cp4}-{cp3}")
+            return cp3, client.consultar_cp(f"{cp4}-{cp3}")
+        except Exception:
+            return cp3, None
+
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        futures = [executor.submit(_fetch, cp3) for cp3 in lista_cp3]
+        for fut in as_completed(futures):
+            cp3, detalhe = fut.result()
+            tem_coords = False
             if detalhe:
                 updates = {}
-                centroide = detalhe.get("centroide") or detalhe.get("centroDeMassa")
+                centroide = (
+                    detalhe.get("centroide") or detalhe.get("centroDeMassa")
+                )
                 if centroide and len(centroide) == 2:
                     updates["latitude"] = centroide[0]
                     updates["longitude"] = centroide[1]
@@ -206,28 +221,23 @@ def _enriquecer_coordenadas(cp4, lista_cp3, client, delay, cache_concelhos, job=
                         updates["concelho"] = concelho_obj
 
                 if updates:
-                    CodigoPostal.objects.filter(cp4=cp4, cp3=cp3).update(**updates)
-                    if "latitude" in updates:
-                        feitas += 1
-                    else:
-                        falhadas += 1
-                else:
-                    falhadas += 1
+                    CodigoPostal.objects.filter(
+                        cp4=cp4, cp3=cp3,
+                    ).update(**updates)
+                    tem_coords = "latitude" in updates
+
+            if tem_coords:
+                feitas += 1
             else:
                 falhadas += 1
-        except Exception:
-            # Não deixa um CP3 problemático matar a importação inteira.
-            falhadas += 1
 
-        # Atualiza o job a cada 5 CP3 (e no fim) para não martelar a BD.
-        if job and (i % 5 == 0 or i == total - 1):
-            job.coords_feitas = feitas
-            job.coords_falhadas = falhadas
-            job.save(
-                update_fields=["coords_feitas", "coords_falhadas", "updated_at"]
-            )
-
-        if i < total - 1:
-            time.sleep(delay)
+            processados += 1
+            # Atualiza o job a cada 8 CP3 (e no fim) para mostrar progresso.
+            if job and (processados % 8 == 0 or processados == total):
+                job.coords_feitas = feitas
+                job.coords_falhadas = falhadas
+                job.save(update_fields=[
+                    "coords_feitas", "coords_falhadas", "updated_at",
+                ])
 
     return feitas

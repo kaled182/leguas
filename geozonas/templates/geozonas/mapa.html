@@ -100,11 +100,11 @@
     <div class="mt-2 flex flex-wrap items-center gap-2">
       <input id="key-input" type="password" placeholder="Cola aqui a chave GeoAPI"
         class="flex-1 min-w-[220px] px-2 py-1 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 text-sm">
-      <button id="btn-key-save" class="px-3 py-1 rounded bg-indigo-600 hover:bg-indigo-700 text-white text-sm">Guardar</button>
-      <button id="btn-key-clear" class="px-3 py-1 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 text-sm">Limpar</button>
+      <button id="btn-key-save" class="px-3 py-1 rounded bg-indigo-600 hover:bg-indigo-700 text-white text-sm">Inserir</button>
+      <button id="btn-key-clear" class="hidden px-3 py-1 rounded bg-rose-600 hover:bg-rose-700 text-white text-sm">Remover</button>
       <span id="key-msg" class="text-xs text-gray-400"></span>
     </div>
-    <p class="text-[11px] text-gray-400 mt-1">Guardada encriptada nas Configurações do Sistema. Se vazia, usa a do .env.</p>
+    <p class="text-[11px] text-gray-400 mt-1">Guardada encriptada nas Configurações do Sistema. Se vazia, usa a do .env. Por segurança a chave nunca é mostrada — para editar, cola a nova e clica Atualizar.</p>
   </details>
   {% endif %}
 
@@ -385,11 +385,23 @@ document.addEventListener('DOMContentLoaded', function () {
   // ── Chave GeoAPI (só admin) ───────────────────────────────────────
   const keyStatus = document.getElementById('key-status');
   if (keyStatus) {
+    const btnSave = document.getElementById('btn-key-save');
+    const btnClear = document.getElementById('btn-key-clear');
     function renderKey(d) {
       if (!d || !d.ok) { keyStatus.textContent = 'indisponível'; return; }
-      if (d.source === 'config') keyStatus.textContent = `definida (${d.masked}) · Configurações`;
-      else if (d.source === 'env') keyStatus.textContent = `a usar a do .env (${d.masked})`;
-      else keyStatus.textContent = 'não definida';
+      if (d.source === 'config') {
+        keyStatus.textContent = `definida (${d.masked}) · Configurações`;
+        btnSave.textContent = 'Atualizar';      // editar = colar nova
+        btnClear.classList.remove('hidden');     // remover disponível
+      } else if (d.source === 'env') {
+        keyStatus.textContent = `a usar a do .env (${d.masked})`;
+        btnSave.textContent = 'Inserir';         // sobrepõe a do .env
+        btnClear.classList.add('hidden');
+      } else {
+        keyStatus.textContent = 'não definida';
+        btnSave.textContent = 'Inserir';
+        btnClear.classList.add('hidden');
+      }
     }
     function carregarKey() {
       fetch(URL_GEOAPI_KEY).then(r => r.json()).then(renderKey).catch(() => {
@@ -401,7 +413,7 @@ document.addEventListener('DOMContentLoaded', function () {
       msg.textContent = 'a guardar…';
       post(URL_GEOAPI_KEY, { key: valor }).then(d => {
         if (d.ok) {
-          msg.textContent = valor ? 'guardada ✓' : 'limpa ✓';
+          msg.textContent = valor ? 'guardada ✓' : 'removida ✓';
           document.getElementById('key-input').value = '';
           renderKey(d);
           carregarQuota(true);  // valida a chave nova lendo a quota
@@ -413,8 +425,8 @@ document.addEventListener('DOMContentLoaded', function () {
       if (!v) { document.getElementById('key-msg').textContent = 'cola uma chave primeiro'; return; }
       guardarKey(v);
     });
-    document.getElementById('btn-key-clear').addEventListener('click', () => {
-      if (confirm('Limpar a chave guardada? Volta a usar a do .env.')) guardarKey('');
+    btnClear.addEventListener('click', () => {
+      if (confirm('Remover a chave guardada? Volta a usar a do .env.')) guardarKey('');
     });
     carregarKey();
   }

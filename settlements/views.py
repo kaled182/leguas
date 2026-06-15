@@ -2404,15 +2404,41 @@ def pre_invoice_add_extra(request, pre_invoice_id):
             status=400,
         )
 
-    extra = PreInvoiceExtra.objects.create(
-        pre_invoice=pf,
-        data=body.get("data") or pf.periodo_fim,
-        tipo=(body.get("tipo") or "SERVICO_EXTRA").upper(),
-        descricao=(body.get("descricao") or "")[:300],
-        valor=valor,
-        created_by=request.user if request.user.is_authenticated else None,
-    )
-    pf.recalcular()
+    from datetime import date as _date
+
+    # Normaliza a data (aceita "YYYY-MM-DD"); fallback ao fim do período.
+    data_raw = (body.get("data") or "").strip()
+    data_val = pf.periodo_fim
+    if data_raw:
+        try:
+            data_val = _date.fromisoformat(data_raw)
+        except (ValueError, TypeError):
+            data_val = pf.periodo_fim
+
+    tipo = (body.get("tipo") or "SERVICO_EXTRA").upper()
+    tipos_validos = {c for c, _ in PreInvoiceExtra.TIPO_CHOICES}
+    if tipo not in tipos_validos:
+        tipo = "OUTRO"
+
+    try:
+        extra = PreInvoiceExtra.objects.create(
+            pre_invoice=pf,
+            data=data_val,
+            tipo=tipo,
+            descricao=(body.get("descricao") or "")[:300],
+            valor=valor,
+            created_by=request.user if request.user.is_authenticated else None,
+        )
+        pf.recalcular()
+    except Exception as exc:  # noqa: BLE001 — devolver a causa ao operador
+        import logging
+        logging.getLogger("settlements").exception(
+            "pre_invoice_add_extra falhou"
+        )
+        return JsonResponse(
+            {"success": False, "error": f"{type(exc).__name__}: {exc}"},
+            status=500,
+        )
     return JsonResponse({"success": True, "id": extra.id})
 
 

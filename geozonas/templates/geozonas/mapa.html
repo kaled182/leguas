@@ -9,123 +9,93 @@
      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-<!-- Leaflet.draw -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css"/>
 <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
 {% include 'system_config/_leaflet_tiles.html' %}
 <style>
-  #map { height: calc(100vh - 230px); min-height: 560px; border-radius: 12px;
-         box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
-  .gz-card { background: var(--tw-bg, #fff); }
+  .gz-wrap { position: relative; height: calc(100vh - 3.5rem); overflow: hidden; }
+  #map { position: absolute; inset: 0; }
+  .gz-float { background: rgba(255,255,255,.96); }
+  .dark .gz-float { background: rgba(31,41,55,.96); }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="p-4">
-  <div class="mb-3 flex items-start justify-between gap-3 flex-wrap">
-    <div>
-      <h1 class="text-2xl font-bold text-gray-800 dark:text-gray-100">Mapa de Códigos Postais</h1>
-      <p class="text-sm text-gray-500 dark:text-gray-400">
-        Cadastra uma área (prefixo CP4), carrega os pontos e desenha as zonas de entrega.
-      </p>
-    </div>
-    {# Quota GeoAPI (cabeçalhos RateLimit-*) #}
-    <div id="quota-badge" class="text-xs rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2 bg-gray-50 dark:bg-gray-800/50">
-      <div class="flex items-center gap-2">
-        <i data-lucide="gauge" class="w-4 h-4 text-indigo-500"></i>
-        <span class="font-semibold text-gray-700 dark:text-gray-200">GeoAPI</span>
-        <button id="quota-refresh" title="Atualizar agora (1 pedido)"
-                class="text-indigo-500 hover:text-indigo-700">
-          <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
-        </button>
-      </div>
-      <div id="quota-text" class="text-gray-500 dark:text-gray-400 mt-0.5">a carregar…</div>
-    </div>
-    <button id="btn-modo-triagem" class="px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold inline-flex items-center gap-1.5 self-start">
-      <i data-lucide="scan-line" class="w-4 h-4"></i> Modo Triagem
-    </button>
-  </div>
+<div class="gz-wrap -m-4 lg:-m-8">
+  <div id="map"></div>
 
-  {# ─── Painel de Triagem (Sorting) ─── #}
-  <div id="painel-triagem" class="hidden mb-3">
-    <div class="flex gap-2 items-center">
-      <input id="triagem-input" type="text" autocomplete="off"
-        placeholder="Bipa a etiqueta do pacote ou escreve o CP (ex.: 4990-008)"
-        class="flex-1 px-4 py-3 text-lg rounded-lg border-2 border-indigo-400 dark:bg-gray-800 dark:text-gray-100">
-      <button id="btn-triagem-sair" class="px-3 py-2 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 text-sm">Sair</button>
-    </div>
-    <div id="triagem-banner" class="hidden mt-3 rounded-xl p-6 text-center text-white shadow" style="background:#6b7280">
-      <div id="triagem-zona" class="text-4xl font-extrabold tracking-wide">—</div>
-      <div id="triagem-detalhe" class="text-sm opacity-90 mt-1"></div>
-    </div>
-  </div>
-
-  <div id="painel-gestao" class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
-    <!-- Cadastrar área -->
-    <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-3">
-      <h3 class="font-semibold text-gray-700 dark:text-gray-200 mb-2 text-sm">1. Cadastrar área (GeoAPI)</h3>
-      <div class="flex gap-2 items-center">
-        <input id="ingest-cp4" type="text" maxlength="4" placeholder="4990"
-          class="w-24 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100">
-        <label class="text-xs text-gray-600 dark:text-gray-300 flex items-center gap-1">
-          <input id="ingest-coords" type="checkbox" checked> coords
-        </label>
-        <button id="btn-ingest" class="px-3 py-1 rounded bg-emerald-600 hover:bg-emerald-700 text-white text-sm">Importar</button>
-      </div>
-      <p class="text-xs text-gray-400 mt-1">Corre em segundo plano (Celery). Podes importar vários.</p>
-
-      <!-- Barras de progresso (uma por importação) -->
-      <div id="ingest-jobs" class="mt-2 space-y-2"></div>
-    </div>
-
-    <!-- Carregar pontos -->
-    <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-3">
-      <h3 class="font-semibold text-gray-700 dark:text-gray-200 mb-2 text-sm">2. Carregar pontos</h3>
-
-      <!-- Por HUB -->
-      <div class="flex flex-wrap gap-2 items-center">
-        <select id="sel-hub" class="px-2 py-1 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 text-sm">
-          <option value="">— HUB —</option>
-        </select>
-        <button id="btn-load-hub" class="px-3 py-1 rounded bg-indigo-600 hover:bg-indigo-700 text-white text-sm">Carregar HUB</button>
-        <button id="btn-zona-hub" class="hidden px-3 py-1 rounded bg-green-600 hover:bg-green-700 text-white text-sm">Criar zona do HUB</button>
-      </div>
-      <!-- Chips dos CP4 do HUB (multi-seleção) -->
-      <div id="hub-cp4s" class="hidden flex flex-wrap gap-1 mt-2"></div>
-
-      <!-- Por CP4 individual -->
-      <div class="flex gap-2 items-center mt-2 pt-2 border-t border-gray-100 dark:border-gray-700/50">
-        <select id="sel-cp4" class="px-2 py-1 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 text-sm">
-          <option value="">— todos —</option>
-          {% for cp4 in cp4s %}<option value="{{ cp4 }}">{{ cp4 }}</option>{% endfor %}
-        </select>
-        <button id="btn-load" class="px-3 py-1 rounded bg-indigo-600 hover:bg-indigo-700 text-white text-sm">Carregar</button>
-        <button id="btn-zona-cp4" class="hidden px-3 py-1 rounded bg-green-600 hover:bg-green-700 text-white text-sm">Criar zona deste CP4</button>
-      </div>
-
-      <label class="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-300 mt-2">
-        <input id="chk-freguesias" type="checkbox" checked> Mostrar fronteiras de freguesia (zonas detalhadas)
-      </label>
-      <label class="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-300">
-        <input id="chk-freg-clicavel" type="checkbox"> Clicar na freguesia → criar zona (desativa o desenho)
-      </label>
-      <p id="load-info" class="text-xs text-gray-400 mt-1"></p>
-      <button id="btn-coords-faltam" class="hidden mt-1 px-2 py-1 rounded bg-amber-600 hover:bg-amber-700 text-white text-xs">
-        Preencher GPS em falta
+  {# ─── Painel de operação (flutuante, esquerda) ─── #}
+  <div id="painel-gestao" class="absolute top-3 left-3 z-[600] w-80 max-w-[90vw] flex flex-col gz-float backdrop-blur rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 max-h-[calc(100%-1.5rem)]">
+    <div class="px-3 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
+      <i data-lucide="map-pinned" class="w-4 h-4 text-indigo-500"></i>
+      <span class="font-bold text-sm text-gray-800 dark:text-gray-100">Códigos Postais</span>
+      <button id="painel-toggle" class="ml-auto text-gray-400 hover:text-gray-600" title="Recolher">
+        <i data-lucide="chevron-up" class="w-4 h-4"></i>
       </button>
     </div>
 
-    <!-- Guardar zona -->
-    <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-3">
-      <h3 class="font-semibold text-gray-700 dark:text-gray-200 mb-2 text-sm">3. Guardar zona desenhada</h3>
-      <div class="flex gap-2 items-center">
-        <input id="zona-nome" type="text" placeholder="Zona A"
-          class="w-24 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 text-sm">
-        <input id="zona-cor" type="color" value="#2563eb" class="w-9 h-8 rounded border border-gray-300">
-        <button id="btn-zona" disabled class="px-3 py-1 rounded bg-gray-400 text-white text-sm">Guardar</button>
+    <div id="painel-body" class="p-3 overflow-y-auto space-y-3 text-sm">
+      {# Tabs HUB / CP4 #}
+      <div class="flex rounded-lg overflow-hidden border border-gray-200 dark:border-gray-600 text-xs">
+        <button id="tab-hub" class="flex-1 px-2 py-1.5 font-semibold bg-indigo-600 text-white">Por HUB</button>
+        <button id="tab-cp4" class="flex-1 px-2 py-1.5 font-semibold bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">Por CP4</button>
       </div>
-      <p id="zona-info" class="text-xs text-gray-400 mt-1">Desenha um polígono primeiro.</p>
-      <div class="mt-2 pt-2 border-t border-gray-100 dark:border-gray-700/50">
+
+      {# Conteúdo HUB #}
+      <div id="pane-hub" class="space-y-2">
+        <div class="flex gap-2 items-center">
+          <select id="sel-hub" class="flex-1 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 text-sm">
+            <option value="">— escolhe o HUB —</option>
+          </select>
+          <button id="btn-load-hub" class="px-3 py-1 rounded bg-indigo-600 hover:bg-indigo-700 text-white text-sm">Ver</button>
+        </div>
+        <div id="hub-cp4s" class="hidden flex flex-wrap gap-1"></div>
+        <button id="btn-zona-hub" class="hidden w-full px-3 py-1 rounded bg-green-600 hover:bg-green-700 text-white text-sm">Criar zona do HUB</button>
+      </div>
+
+      {# Conteúdo CP4 (multi-seleção) #}
+      <div id="pane-cp4" class="hidden space-y-2">
+        <div class="flex gap-2 items-center">
+          <input id="cp4-tag-input" type="text" maxlength="4" inputmode="numeric" placeholder="4900 + Enter"
+            class="w-28 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 text-sm">
+          <button id="btn-load-multi" class="px-3 py-1 rounded bg-indigo-600 hover:bg-indigo-700 text-white text-sm">Ver</button>
+        </div>
+        <div id="cp4-tags" class="flex flex-wrap gap-1"></div>
+        <div class="flex gap-2 items-center pt-1 border-t border-gray-100 dark:border-gray-700/50">
+          <select id="sel-cp4" class="flex-1 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 text-sm">
+            <option value="">— um CP4 já importado —</option>
+            {% for cp4 in cp4s %}<option value="{{ cp4 }}">{{ cp4 }}</option>{% endfor %}
+          </select>
+          <button id="btn-load" class="px-2 py-1 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 text-xs">Ver</button>
+        </div>
+        <button id="btn-zona-cp4" class="hidden w-full px-3 py-1 rounded bg-green-600 hover:bg-green-700 text-white text-sm">Criar zona deste CP4</button>
+      </div>
+
+      {# Toggles de freguesia #}
+      <div class="pt-2 border-t border-gray-100 dark:border-gray-700/50 space-y-1">
+        <label class="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-300">
+          <input id="chk-freguesias" type="checkbox" checked> Fronteiras de freguesia
+        </label>
+        <label class="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-300">
+          <input id="chk-freg-clicavel" type="checkbox"> Clicar na freguesia → criar zona
+        </label>
+        <p id="load-info" class="text-xs text-gray-400"></p>
+        <button id="btn-coords-faltam" class="hidden px-2 py-1 rounded bg-amber-600 hover:bg-amber-700 text-white text-xs">Preencher GPS em falta</button>
+      </div>
+
+      {# Desenhar / guardar zona #}
+      <div class="pt-2 border-t border-gray-100 dark:border-gray-700/50">
+        <div class="flex gap-2 items-center">
+          <input id="zona-nome" type="text" placeholder="Zona A"
+            class="flex-1 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 text-sm">
+          <input id="zona-cor" type="color" value="#2563eb" class="w-9 h-8 rounded border border-gray-300">
+          <button id="btn-zona" disabled class="px-3 py-1 rounded bg-gray-400 text-white text-sm">Guardar</button>
+        </div>
+        <p id="zona-info" class="text-xs text-gray-400 mt-1">Desenha um polígono (ferramentas no mapa) e guarda.</p>
+      </div>
+
+      {# Zonas guardadas (reativas ao âmbito) #}
+      <div class="pt-2 border-t border-gray-100 dark:border-gray-700/50">
         <div class="flex items-center gap-1 mb-1 flex-wrap">
           <p class="text-xs font-semibold text-gray-600 dark:text-gray-300">Zonas guardadas</p>
           <button id="btn-orfaos" class="ml-auto px-2 py-0.5 rounded bg-rose-600 hover:bg-rose-700 text-white text-[11px]">CPs sem zona</button>
@@ -134,46 +104,105 @@
         <p id="cobertura-info" class="text-[11px] text-gray-400 mb-1"></p>
         <div id="zonas-lista" class="max-h-40 overflow-y-auto"></div>
       </div>
+
+      {# Cadastrar área (importar da GeoAPI) #}
+      <details class="pt-2 border-t border-gray-100 dark:border-gray-700/50">
+        <summary class="text-xs font-semibold text-gray-600 dark:text-gray-300 cursor-pointer">Cadastrar área (importar da GeoAPI)</summary>
+        <div class="flex gap-2 items-center mt-2">
+          <input id="ingest-cp4" type="text" maxlength="4" placeholder="4990"
+            class="w-20 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 text-sm">
+          <label class="text-xs text-gray-600 dark:text-gray-300 flex items-center gap-1">
+            <input id="ingest-coords" type="checkbox" checked> coords
+          </label>
+          <button id="btn-ingest" class="px-3 py-1 rounded bg-emerald-600 hover:bg-emerald-700 text-white text-sm">Importar</button>
+        </div>
+        <div id="ingest-jobs" class="mt-2 space-y-2"></div>
+      </details>
+
+      {% if nao_migrado %}
+      <p class="text-xs text-red-600">Tabelas não migradas — corre <code>migrate geozonas</code>.</p>
+      {% endif %}
     </div>
   </div>
 
-  {% if request.user.is_staff or request.user.is_superuser %}
-  <details id="painel-chave" class="mb-3 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2">
-    <summary class="text-sm font-semibold text-gray-700 dark:text-gray-200 cursor-pointer flex items-center gap-2">
-      <i data-lucide="key-round" class="w-4 h-4 text-indigo-500"></i>
-      Chave GeoAPI
-      <span id="key-status" class="ml-2 text-xs font-normal text-gray-400">a carregar…</span>
-    </summary>
-    <div class="mt-2 flex flex-wrap items-center gap-2">
-      <input id="key-input" type="password" placeholder="Cola aqui a chave GeoAPI"
-        class="flex-1 min-w-[220px] px-2 py-1 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 text-sm">
-      <button id="btn-key-save" class="px-3 py-1 rounded bg-indigo-600 hover:bg-indigo-700 text-white text-sm">Inserir</button>
-      <button id="btn-key-clear" class="hidden px-3 py-1 rounded bg-rose-600 hover:bg-rose-700 text-white text-sm">Remover</button>
-      <span id="key-msg" class="text-xs text-gray-400"></span>
+  {# ─── Canto superior direito: Triagem · Quota · Engrenagem ─── #}
+  <div class="absolute top-3 right-3 z-[600] flex items-start gap-2">
+    <button id="btn-modo-triagem" class="px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold inline-flex items-center gap-1.5 shadow">
+      <i data-lucide="scan-line" class="w-4 h-4"></i> Modo Triagem
+    </button>
+    <div class="relative">
+      <button id="btn-quota" class="p-2 rounded-lg gz-float border border-gray-200 dark:border-gray-700 shadow text-indigo-600" title="Quota GeoAPI">
+        <i data-lucide="gauge" class="w-4 h-4"></i>
+      </button>
+      <div id="quota-panel" class="hidden absolute right-0 mt-1 w-64 gz-float border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-3 text-xs">
+        <div class="flex items-center gap-2 mb-1">
+          <span class="font-semibold text-gray-700 dark:text-gray-200">GeoAPI · quota</span>
+          <button id="quota-refresh" class="ml-auto text-indigo-500 hover:text-indigo-700" title="Atualizar (1 pedido)">
+            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+        <div id="quota-text" class="text-gray-500 dark:text-gray-400">a carregar…</div>
+      </div>
     </div>
-    <p class="text-[11px] text-gray-400 mt-1">Guardada encriptada nas Configurações do Sistema. Se vazia, usa a do .env. Por segurança a chave nunca é mostrada — para editar, cola a nova e clica Atualizar.</p>
-  </details>
-  {% endif %}
-
-  {% if nao_migrado %}
-  <div class="mb-3 rounded-lg border border-red-300 bg-red-50 dark:border-red-700 dark:bg-red-900/30 px-4 py-2 text-sm text-red-800 dark:text-red-200">
-    Tabelas ainda não migradas. Corre <code>migrate geozonas</code> no servidor.
+    {% if request.user.is_staff or request.user.is_superuser %}
+    <button id="btn-gear" class="p-2 rounded-lg gz-float border border-gray-200 dark:border-gray-700 shadow text-gray-600 dark:text-gray-300" title="Configurar chave GeoAPI">
+      <i data-lucide="settings" class="w-4 h-4"></i>
+    </button>
+    {% endif %}
   </div>
-  {% endif %}
 
-  <!-- Barra de edição de forma da zona -->
-  <div id="edit-forma-bar" class="hidden mb-2 rounded-lg border border-indigo-300 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/30 px-3 py-2 flex items-center gap-3 flex-wrap">
+  {# ─── Barra de Triagem (topo, no modo triagem) ─── #}
+  <div id="painel-triagem" class="hidden absolute top-3 left-1/2 -translate-x-1/2 z-[650] w-[min(680px,92vw)]">
+    <div class="flex gap-2 items-center gz-float border-2 border-indigo-400 rounded-xl shadow-lg p-2">
+      <i data-lucide="scan-line" class="w-6 h-6 text-indigo-500 ml-1"></i>
+      <input id="triagem-input" type="text" autocomplete="off"
+        placeholder="Bipa a etiqueta ou escreve o CP (ex.: 4990-008)"
+        class="flex-1 px-3 py-2 text-lg bg-transparent outline-none dark:text-gray-100">
+      <button id="btn-triagem-sair" class="px-3 py-2 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 text-sm">Sair</button>
+    </div>
+  </div>
+
+  {# ─── Flash de triagem (ecrã inteiro) ─── #}
+  <div id="triagem-banner" class="hidden absolute inset-0 z-[700] flex flex-col items-center justify-center text-white" style="background:#6b7280">
+    <div id="triagem-zona" class="text-6xl md:text-7xl font-black tracking-wide text-center px-4">—</div>
+    <div id="triagem-detalhe" class="text-2xl mt-3 opacity-95 text-center px-4"></div>
+    <div id="triagem-motorista" class="text-xl mt-1 opacity-90"></div>
+  </div>
+
+  {# ─── Barra de edição de forma (baixo) ─── #}
+  <div id="edit-forma-bar" class="hidden absolute bottom-3 left-1/2 -translate-x-1/2 z-[650] gz-float border border-indigo-300 dark:border-indigo-700 rounded-lg shadow px-3 py-2 flex items-center gap-3 flex-wrap">
     <span class="text-sm text-indigo-800 dark:text-indigo-200">A editar a forma de <b id="edit-forma-nome"></b> — arrasta os vértices.</span>
-    <button id="btn-guardar-forma" class="ml-auto px-3 py-1 rounded bg-green-600 hover:bg-green-700 text-white text-sm">Guardar forma</button>
+    <button id="btn-guardar-forma" class="px-3 py-1 rounded bg-green-600 hover:bg-green-700 text-white text-sm">Guardar forma</button>
     <button id="btn-cancelar-forma" class="px-3 py-1 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 text-sm">Cancelar</button>
   </div>
-
-  <div id="map"></div>
 </div>
+
+{# ─── Modal da chave GeoAPI ─── #}
+{% if request.user.is_staff or request.user.is_superuser %}
+<div id="key-modal" class="hidden fixed inset-0 z-[800] flex items-center justify-center p-4 bg-black/40">
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md">
+    <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
+      <i data-lucide="key-round" class="w-5 h-5 text-indigo-500"></i>
+      <h3 class="font-bold text-gray-800 dark:text-gray-100">Chave GeoAPI</h3>
+      <span id="key-status" class="ml-2 text-xs font-normal text-gray-400">a carregar…</span>
+      <button id="btn-key-close" class="ml-auto text-gray-400 hover:text-gray-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+    </div>
+    <div class="p-5 space-y-2">
+      <div class="flex flex-wrap items-center gap-2">
+        <input id="key-input" type="password" placeholder="Cola aqui a chave GeoAPI"
+          class="flex-1 min-w-[220px] px-2 py-1.5 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 text-sm">
+        <button id="btn-key-save" class="px-3 py-1.5 rounded bg-indigo-600 hover:bg-indigo-700 text-white text-sm">Inserir</button>
+        <button id="btn-key-clear" class="hidden px-3 py-1.5 rounded bg-rose-600 hover:bg-rose-700 text-white text-sm">Remover</button>
+      </div>
+      <p id="key-msg" class="text-xs text-gray-400"></p>
+      <p class="text-[11px] text-gray-400">Guardada encriptada nas Configurações. Se vazia, usa a do .env. Por segurança nunca é mostrada.</p>
+    </div>
+  </div>
+</div>
+{% endif %}
 {% endblock %}
 
 {% block extra_js %}
-{{ zonas_json|json_script:"zonas-data" }}
 <script>
 const CSRF = "{{ csrf_token }}";
 const URL_CPS = "{% url 'geozonas:api-cps' %}";
@@ -197,22 +226,23 @@ const URL_ZONA_HUB = "{% url 'geozonas:api-zona-from-hub' %}";
 const URL_ZONA_CP4 = "{% url 'geozonas:api-zona-from-cp4s' %}";
 
 document.addEventListener('DOMContentLoaded', function () {
-  const map = L.map('map').setView([{{ map_center.0|unlocalize }}, {{ map_center.1|unlocalize }}], {{ map_zoom }});
+  const map = L.map('map', { zoomControl: false }).setView([{{ map_center.0|unlocalize }}, {{ map_center.1|unlocalize }}], {{ map_zoom }});
   window.addTileLayer(map, { maxZoom: 18 });
+  L.control.zoom({ position: 'bottomright' }).addTo(map);
+  setTimeout(() => map.invalidateSize(), 200);
 
   const pontosLayer = L.layerGroup().addTo(map);
   const selecaoLayer = L.layerGroup().addTo(map);
-  const limiteLayer = L.layerGroup().addTo(map);  // contorno (divisas) do CP4
-  const freguesiaLayer = L.layerGroup().addTo(map);  // fronteiras de freguesia
-  const zonasLayer = L.layerGroup().addTo(map);  // zonas guardadas
-  const orfaosLayer = L.layerGroup().addTo(map);  // CPs sem zona
-  const conflitoLayer = L.layerGroup().addTo(map);  // sobreposições
-  const triagemLayer = L.layerGroup().addTo(map);  // marcador da triagem
+  const freguesiaLayer = L.layerGroup().addTo(map);
+  const zonasLayer = L.layerGroup().addTo(map);
+  const orfaosLayer = L.layerGroup().addTo(map);
+  const conflitoLayer = L.layerGroup().addTo(map);
+  const triagemLayer = L.layerGroup().addTo(map);
   const drawnItems = new L.FeatureGroup().addTo(map);
   let ultimaGeometria = null;
 
-  // Controlo de desenho (polígono e retângulo)
   map.addControl(new L.Control.Draw({
+    position: 'bottomright',
     edit: { featureGroup: drawnItems, remove: true },
     draw: { polygon: true, rectangle: true, polyline: false, circle: false,
             marker: false, circlemarker: false }
@@ -226,11 +256,25 @@ document.addEventListener('DOMContentLoaded', function () {
     }).then(r => r.json());
   }
 
-  // Pontos dos CPs
+  // ── Tabs HUB / CP4 ──
+  function setTab(which) {
+    const hub = which === 'hub';
+    document.getElementById('pane-hub').classList.toggle('hidden', !hub);
+    document.getElementById('pane-cp4').classList.toggle('hidden', hub);
+    document.getElementById('tab-hub').className = 'flex-1 px-2 py-1.5 font-semibold ' + (hub ? 'bg-indigo-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300');
+    document.getElementById('tab-cp4').className = 'flex-1 px-2 py-1.5 font-semibold ' + (!hub ? 'bg-indigo-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300');
+  }
+  document.getElementById('tab-hub').addEventListener('click', () => setTab('hub'));
+  document.getElementById('tab-cp4').addEventListener('click', () => setTab('cp4'));
+
+  // Recolher o painel
+  document.getElementById('painel-toggle').addEventListener('click', () => {
+    document.getElementById('painel-body').classList.toggle('hidden');
+  });
+
+  // ── Pontos / freguesias ──
   let cp4Atual = '';
   let queryAtual = '';
-  // Carrega pontos por query (cp4=A / cp4=A&cp4=B / hub_id=N).
-  // opts.cp4 = CP4 único (ativa o botão "preencher GPS em falta").
   function carregarPontosQuery(query, opts) {
     opts = opts || {};
     cp4Atual = opts.cp4 || '';
@@ -241,7 +285,6 @@ document.addEventListener('DOMContentLoaded', function () {
     btnFaltam.classList.add('hidden');
     fetch(u).then(r => r.json()).then(fc => {
       pontosLayer.clearLayers();
-      limiteLayer.clearLayers();
       const bounds = [];
       fc.features.forEach(f => {
         const [lng, lat] = f.geometry.coordinates;
@@ -254,18 +297,15 @@ document.addEventListener('DOMContentLoaded', function () {
       document.getElementById('load-info').textContent =
         `${m.com_gps != null ? m.com_gps : fc.features.length}/${m.total != null ? m.total : fc.features.length} com GPS`
         + (m.sem_gps ? ` · ${m.sem_gps} em falta` : '');
-      // Botão "preencher GPS" só faz sentido para um CP4 único.
       if (opts.cp4 && m.sem_gps > 0) btnFaltam.classList.remove('hidden');
       if (bounds.length) map.fitBounds(bounds, { maxZoom: 14 });
     });
-    // Fronteiras de freguesia (se o toggle estiver ativo).
     if (document.getElementById('chk-freguesias').checked) carregarFreguesias();
+    carregarZonas();  // lista reativa ao âmbito atual
   }
   function carregarPontos(cp4) {
     carregarPontosQuery(cp4 ? `cp4=${encodeURIComponent(cp4)}` : '', { cp4: cp4 });
   }
-  // Desenha as fronteiras de freguesia (linhas finas, não-interativas) para
-  // o âmbito atualmente carregado (queryAtual).
   function carregarFreguesias() {
     freguesiaLayer.clearLayers();
     if (!document.getElementById('chk-freguesias').checked || !queryAtual) return;
@@ -274,10 +314,9 @@ document.addEventListener('DOMContentLoaded', function () {
       (fc.features || []).forEach(f => {
         const nome = (f.properties && f.properties.nome) || 'freguesia';
         const lyr = L.geoJSON(f, {
-          interactive: clicavel,  // só clicável no modo de seleção
+          interactive: clicavel,
           style: { color: '#2563eb', weight: clicavel ? 1.5 : 1,
-                   fillColor: '#2563eb', fillOpacity: clicavel ? 0.05 : 0,
-                   dashArray: '3 3' }
+                   fillColor: '#2563eb', fillOpacity: clicavel ? 0.05 : 0, dashArray: '3 3' }
         }).addTo(freguesiaLayer);
         if (clicavel) {
           lyr.bindTooltip(nome, { sticky: true });
@@ -301,7 +340,7 @@ document.addEventListener('DOMContentLoaded', function () {
   });
   document.getElementById('chk-freg-clicavel').addEventListener('change', carregarFreguesias);
 
-  // ── Cobertura: CPs sem zona (órfãos) e sobreposições ──────────────
+  // ── Cobertura ──
   const cobInfo = () => document.getElementById('cobertura-info');
   document.getElementById('btn-orfaos').addEventListener('click', function () {
     orfaosLayer.clearLayers(); conflitoLayer.clearLayers();
@@ -310,13 +349,10 @@ document.addEventListener('DOMContentLoaded', function () {
     fetch(u).then(r => r.json()).then(fc => {
       (fc.features || []).forEach(f => {
         const [lng, lat] = f.geometry.coordinates;
-        L.circleMarker([lat, lng], { radius: 5, color: '#dc2626', weight: 2,
-          fillColor: '#dc2626', fillOpacity: 0.9 })
+        L.circleMarker([lat, lng], { radius: 5, color: '#dc2626', weight: 2, fillColor: '#dc2626', fillOpacity: 0.9 })
           .bindPopup(`⚠ Sem zona<br><b>${f.properties.cp}</b>`).addTo(orfaosLayer);
       });
-      cobInfo().textContent = fc.count
-        ? `⚠ ${fc.count} CPs sem zona (a vermelho).`
-        : '✓ Todos os CPs do âmbito carregado estão cobertos.';
+      cobInfo().textContent = fc.count ? `⚠ ${fc.count} CPs sem zona (a vermelho).` : '✓ Todos cobertos no âmbito.';
     }).catch(() => { cobInfo().textContent = 'Erro ao calcular.'; });
   });
   document.getElementById('btn-conflitos').addEventListener('click', function () {
@@ -326,30 +362,23 @@ document.addEventListener('DOMContentLoaded', function () {
       (d.conflitos || []).forEach(c => {
         L.geoJSON({ type: 'Feature', geometry: c.geometry }, {
           interactive: false,
-          style: { color: '#f59e0b', weight: 1, fillColor: '#f59e0b',
-                   fillOpacity: 0.4, dashArray: '4 3' }
+          style: { color: '#f59e0b', weight: 1, fillColor: '#f59e0b', fillOpacity: 0.4, dashArray: '4 3' }
         }).addTo(conflitoLayer);
       });
-      if (!d.conflitos || !d.conflitos.length) {
-        cobInfo().textContent = '✓ Sem sobreposições entre zonas.';
-      } else {
-        const pares = d.conflitos.map(c => `${c.zona_a}×${c.zona_b}`).join(', ');
-        cobInfo().textContent = `⚠ ${d.total_cps} CPs em conflito (${pares}).`;
-      }
+      if (!d.conflitos || !d.conflitos.length) cobInfo().textContent = '✓ Sem sobreposições.';
+      else cobInfo().textContent = `⚠ ${d.total_cps} CPs em conflito (${d.conflitos.map(c => `${c.zona_a}×${c.zona_b}`).join(', ')}).`;
     }).catch(() => { cobInfo().textContent = 'Erro ao calcular.'; });
   });
 
-  // Zonas guardadas — desenho (não-interativo, p/ não bloquear o desenho)
-  // + lista de gestão (renomear / mudar cor / apagar).
+  // ── Zonas guardadas (reativas) ──
   function carregarZonas() {
-    fetch(URL_ZONAS).then(r => r.json()).then(d => {
+    const u = queryAtual ? `${URL_ZONAS}?${queryAtual}` : URL_ZONAS;
+    fetch(u).then(r => r.json()).then(d => {
       zonasLayer.clearLayers();
       const lista = document.getElementById('zonas-lista');
       lista.innerHTML = '';
       const zonas = d.zonas || [];
-      if (!zonas.length) {
-        lista.innerHTML = '<p class="text-xs text-gray-400">Ainda não há zonas. Desenha uma e guarda.</p>';
-      }
+      if (!zonas.length) lista.innerHTML = '<p class="text-xs text-gray-400">Sem zonas neste âmbito.</p>';
       zonas.forEach(z => {
         if (z.poligono) {
           L.geoJSON({ type: 'Feature', geometry: z.poligono }, {
@@ -359,109 +388,80 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         const row = document.createElement('div');
         row.className = 'flex items-center gap-2 py-1';
-        row.innerHTML =
-          `<span class="inline-block w-3 h-3 rounded" style="background:${z.cor}"></span>`
+        row.innerHTML = `<span class="inline-block w-3 h-3 rounded" style="background:${z.cor}"></span>`
           + `<span class="flex-1 text-sm text-gray-700 dark:text-gray-200 truncate">${z.nome}</span>`;
         const cor = document.createElement('input');
         cor.type = 'color'; cor.value = z.cor;
-        cor.className = 'w-6 h-6 rounded border border-gray-300 cursor-pointer';
-        cor.title = 'Mudar cor';
+        cor.className = 'w-6 h-6 rounded border border-gray-300 cursor-pointer'; cor.title = 'Mudar cor';
         cor.addEventListener('change', () => atualizarZona(z.id, null, cor.value));
         const ren = document.createElement('button');
-        ren.textContent = '✎'; ren.title = 'Renomear';
-        ren.className = 'px-1.5 text-gray-500 hover:text-indigo-600';
-        ren.addEventListener('click', () => {
-          const novo = prompt('Novo nome da zona:', z.nome);
-          if (novo && novo.trim()) atualizarZona(z.id, novo.trim(), null);
-        });
+        ren.textContent = '✎'; ren.title = 'Renomear'; ren.className = 'px-1.5 text-gray-500 hover:text-indigo-600';
+        ren.addEventListener('click', () => { const n = prompt('Novo nome:', z.nome); if (n && n.trim()) atualizarZona(z.id, n.trim(), null); });
         const forma = document.createElement('button');
-        forma.textContent = '✐'; forma.title = 'Editar forma (mover vértices)';
-        forma.className = 'px-1.5 text-gray-500 hover:text-indigo-600';
+        forma.textContent = '✐'; forma.title = 'Editar forma'; forma.className = 'px-1.5 text-gray-500 hover:text-indigo-600';
         forma.addEventListener('click', () => editarFormaZona(z));
         const del = document.createElement('button');
-        del.textContent = '🗑'; del.title = 'Apagar';
-        del.className = 'px-1.5 text-gray-500 hover:text-rose-600';
-        del.addEventListener('click', () => {
-          if (confirm(`Apagar a zona "${z.nome}"?`)) apagarZona(z.id);
-        });
-        row.appendChild(cor); row.appendChild(ren);
-        row.appendChild(forma); row.appendChild(del);
+        del.textContent = '🗑'; del.title = 'Apagar'; del.className = 'px-1.5 text-gray-500 hover:text-rose-600';
+        del.addEventListener('click', () => { if (confirm(`Apagar a zona "${z.nome}"?`)) apagarZona(z.id); });
+        row.appendChild(cor); row.appendChild(ren); row.appendChild(forma); row.appendChild(del);
         lista.appendChild(row);
       });
     }).catch(() => {});
   }
   function atualizarZona(id, nome, cor) {
-    post(URL_ZONA_UPDATE, { id: id, nome: nome, cor: cor }).then(res => {
-      if (res.ok) carregarZonas(); else alert('Erro: ' + (res.erro || 'falhou'));
-    });
+    post(URL_ZONA_UPDATE, { id, nome, cor }).then(res => { if (res.ok) carregarZonas(); else alert('Erro: ' + (res.erro || 'falhou')); });
   }
   function apagarZona(id) {
-    post(URL_ZONA_DELETE, { id: id }).then(res => {
-      if (res.ok) carregarZonas(); else alert('Erro: ' + (res.erro || 'falhou'));
-    });
+    post(URL_ZONA_DELETE, { id }).then(res => { if (res.ok) carregarZonas(); else alert('Erro: ' + (res.erro || 'falhou')); });
   }
   carregarZonas();
 
-  // ── Editar a FORMA de uma zona (mover vértices via Leaflet.draw) ──
+  // ── Editar forma ──
   let editandoZonaId = null;
   function geometriaDeDrawnItems() {
     const feats = drawnItems.toGeoJSON().features || [];
     const polys = feats.map(f => f.geometry).filter(Boolean);
     if (polys.length === 1 && polys[0].type === 'Polygon') return polys[0];
     const coords = [];
-    polys.forEach(g => {
-      if (g.type === 'Polygon') coords.push(g.coordinates);
-      else if (g.type === 'MultiPolygon') (g.coordinates || []).forEach(c => coords.push(c));
-    });
+    polys.forEach(g => { if (g.type === 'Polygon') coords.push(g.coordinates); else if (g.type === 'MultiPolygon') (g.coordinates || []).forEach(c => coords.push(c)); });
     return { type: 'MultiPolygon', coordinates: coords };
   }
   function editarFormaZona(z) {
-    if (!z.poligono) { alert('Esta zona não tem forma para editar.'); return; }
-    drawnItems.clearLayers();
-    selecaoLayer.clearLayers();
+    if (!z.poligono) { alert('Esta zona não tem forma.'); return; }
+    drawnItems.clearLayers(); selecaoLayer.clearLayers();
     editandoZonaId = z.id;
     const gj = L.geoJSON({ type: 'Feature', geometry: z.poligono });
-    gj.eachLayer(l => {
-      drawnItems.addLayer(l);
-      if (l.editing) l.editing.enable();
-    });
+    gj.eachLayer(l => { drawnItems.addLayer(l); if (l.editing) l.editing.enable(); });
     try { map.fitBounds(gj.getBounds(), { maxZoom: 15 }); } catch (e) {}
     document.getElementById('edit-forma-nome').textContent = z.nome;
     document.getElementById('edit-forma-bar').classList.remove('hidden');
   }
   function cancelarEdicaoForma() {
-    editandoZonaId = null;
-    drawnItems.clearLayers();
+    editandoZonaId = null; drawnItems.clearLayers();
     document.getElementById('edit-forma-bar').classList.add('hidden');
   }
   document.getElementById('btn-cancelar-forma').addEventListener('click', cancelarEdicaoForma);
   document.getElementById('btn-guardar-forma').addEventListener('click', function () {
     if (!editandoZonaId) return;
-    const geometry = geometriaDeDrawnItems();
-    this.disabled = true;
-    post(URL_ZONA_UPDATE, { id: editandoZonaId, geometry: geometry }).then(res => {
+    const geometry = geometriaDeDrawnItems(); this.disabled = true;
+    post(URL_ZONA_UPDATE, { id: editandoZonaId, geometry }).then(res => {
       this.disabled = false;
-      if (res.ok) {
-        cancelarEdicaoForma();
-        carregarZonas();
-        alert(`Forma atualizada${res.count != null ? ' (' + res.count + ' CPs)' : ''}.`);
-      } else { alert('Erro: ' + (res.erro || 'falhou')); }
+      if (res.ok) { cancelarEdicaoForma(); carregarZonas(); alert(`Forma atualizada${res.count != null ? ' (' + res.count + ' CPs)' : ''}.`); }
+      else alert('Erro: ' + (res.erro || 'falhou'));
     }).catch(() => { this.disabled = false; alert('Erro de rede.'); });
   });
 
-  // Desenho criado → seleciona CPs lá dentro
+  // Desenho criado → seleciona CPs
   map.on(L.Draw.Event.CREATED, function (e) {
-    drawnItems.clearLayers();
-    drawnItems.addLayer(e.layer);
+    drawnItems.clearLayers(); drawnItems.addLayer(e.layer);
     const geometry = e.layer.toGeoJSON().geometry;
     ultimaGeometria = geometry;
     const cp4 = document.getElementById('sel-cp4').value;
     selecaoLayer.clearLayers();
-    post(URL_SEL, { geometry: geometry, cp4: cp4 || null }).then(res => {
+    post(URL_SEL, { geometry, cp4: cp4 || null }).then(res => {
       (res.features || []).forEach(f => {
         const [lng, lat] = f.geometry.coordinates;
-        L.circleMarker([lat, lng], { radius: 5, color: '#dc2626', weight: 2, fillOpacity: 0.9 })
-          .addTo(selecaoLayer);
+        L.circleMarker([lat, lng], { radius: 5, color: '#dc2626', weight: 2, fillOpacity: 0.9 }).addTo(selecaoLayer);
       });
       const btn = document.getElementById('btn-zona');
       btn.disabled = false; btn.className = 'px-3 py-1 rounded bg-blue-600 hover:bg-blue-700 text-white text-sm';
@@ -469,42 +469,59 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   });
 
-  // Botões
+  // ── CP4 individual ──
   const selCp4 = document.getElementById('sel-cp4');
   const btnZonaCp4 = document.getElementById('btn-zona-cp4');
-  function refrescarBtnZonaCp4() {
-    if (selCp4.value) btnZonaCp4.classList.remove('hidden');
-    else btnZonaCp4.classList.add('hidden');
-  }
-  document.getElementById('btn-load').addEventListener('click', () =>
-    carregarPontos(selCp4.value));
-  // Desenha automaticamente as divisas ao selecionar o CP4.
+  document.getElementById('btn-load').addEventListener('click', () => { if (selCp4.value) carregarPontos(selCp4.value); });
   selCp4.addEventListener('change', () => {
-    refrescarBtnZonaCp4();
+    btnZonaCp4.classList.toggle('hidden', !selCp4.value);
     if (selCp4.value) carregarPontos(selCp4.value);
   });
-  // Criar zona a partir das divisas do CP4 selecionado.
   btnZonaCp4.addEventListener('click', function () {
-    const cp4 = selCp4.value;
-    if (!cp4) { alert('Seleciona um CP4 primeiro.'); return; }
-    const nome = prompt('Nome da zona:', 'Zona ' + cp4);
-    if (nome === null) return;
+    const cp4 = selCp4.value; if (!cp4) return;
+    const nome = prompt('Nome da zona:', 'Zona ' + cp4); if (nome === null) return;
     this.disabled = true;
-    post(URL_ZONA_CP4, { cp4s: [cp4], nome: nome }).then(res => {
+    post(URL_ZONA_CP4, { cp4s: [cp4], nome }).then(res => {
       this.disabled = false;
-      if (res.ok) {
-        carregarZonas();
-        alert(`Zona "${res.nome}" criada com ${res.count} CPs.`);
-      } else { alert('Erro: ' + (res.erro || 'falhou')); }
+      if (res.ok) { carregarZonas(); alert(`Zona "${res.nome}" criada com ${res.count} CPs.`); }
+      else alert('Erro: ' + (res.erro || 'falhou'));
     }).catch(() => { this.disabled = false; alert('Erro de rede.'); });
   });
 
-  // ── HUBs ──────────────────────────────────────────────────────────
+  // ── CP4 multi-seleção (tags) ──
+  const cp4Tags = new Set();
+  const cp4TagsBox = document.getElementById('cp4-tags');
+  const cp4TagInput = document.getElementById('cp4-tag-input');
+  function renderCp4Tags() {
+    cp4TagsBox.innerHTML = '';
+    cp4Tags.forEach(c => {
+      const b = document.createElement('button');
+      b.className = 'px-2 py-0.5 rounded text-xs bg-indigo-600 text-white inline-flex items-center gap-1';
+      b.innerHTML = `${c} <span class="opacity-80">✕</span>`;
+      b.addEventListener('click', () => { cp4Tags.delete(c); renderCp4Tags(); });
+      cp4TagsBox.appendChild(b);
+    });
+  }
+  cp4TagInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      const v = cp4TagInput.value.trim();
+      if (/^\d{4}$/.test(v)) { cp4Tags.add(v); cp4TagInput.value = ''; renderCp4Tags(); }
+    }
+  });
+  document.getElementById('btn-load-multi').addEventListener('click', () => {
+    const v = cp4TagInput.value.trim();
+    if (/^\d{4}$/.test(v)) { cp4Tags.add(v); cp4TagInput.value = ''; renderCp4Tags(); }
+    const arr = [...cp4Tags];
+    if (!arr.length) { alert('Adiciona pelo menos um CP4 (escreve e Enter).'); return; }
+    const query = arr.map(c => 'cp4=' + encodeURIComponent(c)).join('&');
+    carregarPontosQuery(query, { cp4: arr.length === 1 ? arr[0] : '' });
+  });
+
+  // ── HUBs ──
   let hubsData = [];
   let hubAtual = null;
   let hubCp4Sel = new Set();
   const hubChipsBox = document.getElementById('hub-cp4s');
-
   function carregarHubSel() {
     const sel = [...hubCp4Sel];
     const query = sel.map(c => 'cp4=' + encodeURIComponent(c)).join('&');
@@ -512,20 +529,16 @@ document.addEventListener('DOMContentLoaded', function () {
   }
   function renderHubChips() {
     if (!hubAtual) { hubChipsBox.classList.add('hidden'); hubChipsBox.innerHTML = ''; return; }
-    hubChipsBox.classList.remove('hidden');
-    hubChipsBox.innerHTML = '';
+    hubChipsBox.classList.remove('hidden'); hubChipsBox.innerHTML = '';
     hubAtual.cp4s.forEach(c => {
       const on = hubCp4Sel.has(c);
       const b = document.createElement('button');
       b.textContent = c;
-      b.className = 'px-2 py-0.5 rounded text-xs border ' + (on
-        ? 'bg-indigo-600 text-white border-indigo-600'
-        : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300 border-gray-300 dark:border-gray-600');
+      b.className = 'px-2 py-0.5 rounded text-xs border ' + (on ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300 border-gray-300 dark:border-gray-600');
       b.addEventListener('click', () => {
         if (hubCp4Sel.has(c)) hubCp4Sel.delete(c); else hubCp4Sel.add(c);
         if (hubCp4Sel.size === 0) hubAtual.cp4s.forEach(x => hubCp4Sel.add(x));
-        renderHubChips();
-        carregarHubSel();
+        renderHubChips(); carregarHubSel();
       });
       hubChipsBox.appendChild(b);
     });
@@ -536,103 +549,62 @@ document.addEventListener('DOMContentLoaded', function () {
     const zbtn = document.getElementById('btn-zona-hub');
     if (!hubAtual) { hubChipsBox.classList.add('hidden'); zbtn.classList.add('hidden'); return; }
     hubCp4Sel = new Set(hubAtual.cp4s);
-    renderHubChips();
-    zbtn.classList.remove('hidden');
-    carregarHubSel();
+    renderHubChips(); zbtn.classList.remove('hidden'); carregarHubSel();
   });
   document.getElementById('btn-zona-hub').addEventListener('click', function () {
-    if (!hubAtual) return;
-    this.disabled = true;
+    if (!hubAtual) return; this.disabled = true;
     post(URL_ZONA_HUB, { hub_id: hubAtual.id }).then(res => {
       this.disabled = false;
       if (res.ok) {
         carregarZonas();
         let msg = `Zona "${res.nome}" criada com ${res.count} CPs.`;
-        if (res.cp4s_sem_contorno && res.cp4s_sem_contorno.length)
-          msg += `\nSem contorno (importa primeiro): ${res.cp4s_sem_contorno.join(', ')}.`;
+        if (res.cp4s_sem_contorno && res.cp4s_sem_contorno.length) msg += `\nSem contorno (importa): ${res.cp4s_sem_contorno.join(', ')}.`;
         alert(msg);
-      } else { alert('Erro: ' + (res.erro || 'falhou')); }
+      } else alert('Erro: ' + (res.erro || 'falhou'));
     }).catch(() => { this.disabled = false; alert('Erro de rede.'); });
   });
-  // Carrega a lista de HUBs no dropdown
   fetch(URL_HUBS).then(r => r.json()).then(d => {
     hubsData = d.hubs || [];
     const sel = document.getElementById('sel-hub');
     hubsData.forEach(h => sel.add(new Option(`${h.name} (${h.cp4s.length})`, h.id)));
   }).catch(() => {});
 
-  // Preencher GPS em falta (só vai buscar os CP3 sem coordenadas — poupa tokens)
+  // ── Importar (ingest) + barras de progresso ──
   document.getElementById('btn-coords-faltam').addEventListener('click', function () {
-    const cp4 = cp4Atual;
-    if (!cp4) return;
-    this.disabled = true;
-    post(URL_COORDS_FALTAM, { cp4: cp4 }).then(res => {
+    const cp4 = cp4Atual; if (!cp4) return; this.disabled = true;
+    post(URL_COORDS_FALTAM, { cp4 }).then(res => {
       this.disabled = false;
-      if (res.ok && res.job_id) {
-        criarBarra(res.job_id, cp4);
-        acompanharJob(res.job_id, cp4);
-      } else if (res.ok && res.nada_a_fazer) {
-        alert('Este CP4 já tem todas as coordenadas.');
-      } else {
-        alert('Erro: ' + (res.erro || 'falhou'));
-      }
+      if (res.ok && res.job_id) { criarBarra(res.job_id, cp4); acompanharJob(res.job_id, cp4); }
+      else if (res.ok && res.nada_a_fazer) alert('Este CP4 já tem todas as coordenadas.');
+      else alert('Erro: ' + (res.erro || 'falhou'));
     }).catch(() => { this.disabled = false; alert('Erro de rede.'); });
   });
-
-  // ── Progresso de importações (várias em simultâneo, 1 barra por CP4) ──
   const jobsBox = document.getElementById('ingest-jobs');
-  const barras = {};  // jobId -> { row, bar, pct, label, timer }
-
-  function corStatus(s) {
-    if (s === 'ERRO') return 'bg-red-500';
-    if (s === 'CONCLUIDO') return 'bg-blue-500';
-    return 'bg-emerald-500';
-  }
-
+  const barras = {};
+  function corStatus(s) { return s === 'ERRO' ? 'bg-red-500' : (s === 'CONCLUIDO' ? 'bg-blue-500' : 'bg-emerald-500'); }
   function criarBarra(jobId, cp4) {
     if (barras[jobId]) return barras[jobId];
     const row = document.createElement('div');
-    row.innerHTML =
-      '<div class="flex justify-between text-xs text-gray-600 dark:text-gray-300 mb-0.5">'
+    row.innerHTML = '<div class="flex justify-between text-xs text-gray-600 dark:text-gray-300 mb-0.5">'
       + `<span class="font-semibold">CP ${cp4}</span><span class="gz-pct">0%</span></div>`
-      + '<div class="w-full h-2 rounded bg-gray-200 dark:bg-gray-700 overflow-hidden">'
-      + '<div class="gz-bar h-full bg-emerald-500 transition-all duration-300" style="width:0%"></div></div>'
+      + '<div class="w-full h-2 rounded bg-gray-200 dark:bg-gray-700 overflow-hidden"><div class="gz-bar h-full bg-emerald-500 transition-all duration-300" style="width:0%"></div></div>'
       + '<div class="gz-label text-xs text-gray-400 mt-0.5">em fila…</div>';
     jobsBox.appendChild(row);
-    const obj = {
-      row: row,
-      bar: row.querySelector('.gz-bar'),
-      pct: row.querySelector('.gz-pct'),
-      label: row.querySelector('.gz-label'),
-      timer: null,
-    };
-    barras[jobId] = obj;
-    return obj;
+    const obj = { row, bar: row.querySelector('.gz-bar'), pct: row.querySelector('.gz-pct'), label: row.querySelector('.gz-label'), timer: null };
+    barras[jobId] = obj; return obj;
   }
-
   function atualizarBarra(obj, j) {
     obj.bar.style.width = j.percent + '%';
     obj.bar.className = 'gz-bar h-full transition-all duration-300 ' + corStatus(j.status);
     obj.pct.textContent = j.percent + '%';
     let label = '';
-    if (j.status === 'A_CORRER') {
-      label = j.coords_total
-        ? `coordenadas ${j.coords_feitas}/${j.coords_total}`
-        : `${j.processados}/${j.total} CPs`;
-    } else if (j.status === 'CONCLUIDO') {
-      label = `concluído (${j.total} CPs`
-        + (j.coords_total ? `, ${j.coords_feitas} c/ GPS` : '')
-        + (j.coords_falhadas ? `, ${j.coords_falhadas} falhas` : '') + ')';
-    } else if (j.status === 'ERRO') {
-      label = '⚠ ' + (j.erro || 'erro');
-    } else {
-      label = 'em fila…';
-    }
+    if (j.status === 'A_CORRER') label = j.coords_total ? `coordenadas ${j.coords_feitas}/${j.coords_total}` : `${j.processados}/${j.total} CPs`;
+    else if (j.status === 'CONCLUIDO') label = `concluído (${j.total} CPs` + (j.coords_total ? `, ${j.coords_feitas} c/ GPS` : '') + (j.coords_falhadas ? `, ${j.coords_falhadas} falhas` : '') + ')';
+    else if (j.status === 'ERRO') label = '⚠ ' + (j.erro || 'erro');
+    else label = 'em fila…';
     obj.label.textContent = (j.concelho ? j.concelho + ': ' : '') + label;
-    obj.label.className = 'gz-label text-xs mt-0.5 '
-      + (j.status === 'ERRO' ? 'text-red-500 font-medium' : 'text-gray-400');
+    obj.label.className = 'gz-label text-xs mt-0.5 ' + (j.status === 'ERRO' ? 'text-red-500 font-medium' : 'text-gray-400');
   }
-
   function acompanharJob(jobId, cp4) {
     const obj = criarBarra(jobId, cp4);
     if (obj.timer) clearInterval(obj.timer);
@@ -644,184 +616,141 @@ document.addEventListener('DOMContentLoaded', function () {
           clearInterval(obj.timer);
           if (j.status === 'CONCLUIDO') {
             const sel = document.getElementById('sel-cp4');
-            if (![...sel.options].some(o => o.value === cp4)) {
-              sel.add(new Option(cp4, cp4));
-            }
-            sel.value = cp4;
-            carregarPontos(cp4);
+            if (![...sel.options].some(o => o.value === cp4)) sel.add(new Option(cp4, cp4));
+            sel.value = cp4; carregarPontos(cp4);
           }
-          // Remove a barra passado algum tempo (erros ficam mais tempo visíveis)
-          setTimeout(() => {
-            obj.row.remove();
-            delete barras[jobId];
-          }, j.status === 'ERRO' ? 15000 : 7000);
+          setTimeout(() => { obj.row.remove(); delete barras[jobId]; }, j.status === 'ERRO' ? 15000 : 7000);
         }
       }).catch(() => {});
     }, 1500);
     return obj;
   }
-
   document.getElementById('btn-ingest').addEventListener('click', function () {
     const inp = document.getElementById('ingest-cp4');
     const cp4 = inp.value.trim();
     const coords = document.getElementById('ingest-coords').checked;
     if (!/^\d{4}$/.test(cp4)) { alert('CP4 deve ter 4 dígitos.'); return; }
-    post(URL_INGEST, { cp4: cp4, coords: coords }).then(res => {
-      if (res.ok && res.job_id) {
-        criarBarra(res.job_id, cp4);
-        acompanharJob(res.job_id, cp4);
-        inp.value = '';
-      } else {
-        alert('Erro: ' + (res.erro || 'falhou'));
-      }
-    }).catch(() => alert('Erro de rede ao iniciar a importação.'));
+    post(URL_INGEST, { cp4, coords }).then(res => {
+      if (res.ok && res.job_id) { criarBarra(res.job_id, cp4); acompanharJob(res.job_id, cp4); inp.value = ''; }
+      else alert('Erro: ' + (res.erro || 'falhou'));
+    }).catch(() => alert('Erro de rede.'));
   });
+  fetch(URL_JOBS_ACTIVE).then(r => r.json()).then(d => { (d.jobs || []).forEach(j => acompanharJob(j.id, j.cp4)); }).catch(() => {});
 
-  // Reata barras de importações que já estavam a decorrer (após refresh)
-  fetch(URL_JOBS_ACTIVE).then(r => r.json()).then(d => {
-    (d.jobs || []).forEach(j => acompanharJob(j.id, j.cp4));
-  }).catch(() => {});
-
+  // Guardar zona desenhada
   document.getElementById('btn-zona').addEventListener('click', function () {
     if (!ultimaGeometria) return;
     const nome = document.getElementById('zona-nome').value.trim();
     const cor = document.getElementById('zona-cor').value;
-    if (!nome) { alert('Indica o nome da zona (ex.: Zona A).'); return; }
-    post(URL_ZONA, { nome: nome, cor: cor, geometry: ultimaGeometria }).then(res => {
-      if (res.ok) {
-        carregarZonas();
-        drawnItems.clearLayers();
-        document.getElementById('zona-info').textContent = `"${res.nome}" guardada com ${res.count} CPs.`;
-      } else { alert(`Erro: ${res.erro}`); }
+    if (!nome) { alert('Indica o nome da zona.'); return; }
+    post(URL_ZONA, { nome, cor, geometry: ultimaGeometria }).then(res => {
+      if (res.ok) { carregarZonas(); drawnItems.clearLayers(); document.getElementById('zona-info').textContent = `"${res.nome}" guardada (${res.count} CPs).`; }
+      else alert(`Erro: ${res.erro}`);
     });
   });
 
-  // ── Modo Triagem (Sorting) ────────────────────────────────────────
+  // ── Modo Triagem ──
+  const painelGestao = document.getElementById('painel-gestao');
   const painelTriagem = document.getElementById('painel-triagem');
   const triInput = document.getElementById('triagem-input');
   const triBanner = document.getElementById('triagem-banner');
+  let flashTimer = null;
   function setTriagem(on) {
-    document.getElementById('painel-gestao').classList.toggle('hidden', on);
-    const chave = document.getElementById('painel-chave');
-    if (chave) chave.classList.toggle('hidden', on);
+    painelGestao.classList.toggle('hidden', on);
     painelTriagem.classList.toggle('hidden', !on);
     document.getElementById('btn-modo-triagem').innerHTML = on
-      ? '<i data-lucide="x" class="w-4 h-4"></i> Voltar à Gestão'
+      ? '<i data-lucide="x" class="w-4 h-4"></i> Sair da Triagem'
       : '<i data-lucide="scan-line" class="w-4 h-4"></i> Modo Triagem';
     if (window.lucide) lucide.createIcons();
     if (on) { triBanner.classList.add('hidden'); triInput.value = ''; triInput.focus(); }
-    else { triagemLayer.clearLayers(); }
+    else { triagemLayer.clearLayers(); triBanner.classList.add('hidden'); }
   }
-  document.getElementById('btn-modo-triagem').addEventListener('click', () =>
-    setTriagem(painelTriagem.classList.contains('hidden')));
+  document.getElementById('btn-modo-triagem').addEventListener('click', () => setTriagem(painelTriagem.classList.contains('hidden')));
   document.getElementById('btn-triagem-sair').addEventListener('click', () => setTriagem(false));
-  triInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') { const v = triInput.value.trim(); if (v) triar(v); }
-  });
+  triInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { const v = triInput.value.trim(); if (v) triar(v); } });
   function triar(q) {
     fetch(`${URL_TRIAGEM}?q=${encodeURIComponent(q)}`).then(r => r.json()).then(d => {
       triagemLayer.clearLayers();
-      triBanner.classList.remove('hidden');
       const zonaEl = document.getElementById('triagem-zona');
       const detEl = document.getElementById('triagem-detalhe');
+      const motEl = document.getElementById('triagem-motorista');
+      motEl.textContent = '';
       if (d.encontrado && d.lat != null) {
         map.setView([d.lat, d.lng], 15);
         const cor = d.zona ? d.zona.cor : '#dc2626';
-        L.circleMarker([d.lat, d.lng], { radius: 10, color: '#111', weight: 2,
-          fillColor: cor, fillOpacity: 1 }).addTo(triagemLayer);
+        L.circleMarker([d.lat, d.lng], { radius: 12, color: '#111', weight: 2, fillColor: cor, fillOpacity: 1 }).addTo(triagemLayer);
         if (d.zona) {
           triBanner.style.background = d.zona.cor;
           zonaEl.textContent = (d.zona.nome || '').toUpperCase();
-          detEl.textContent = `${d.cp || ''} · ${d.localidade || ''}`.trim();
+          detEl.textContent = `${d.cp || ''} · ${d.freguesia || d.localidade || ''}`.trim();
+          if (d.zona.motorista) motEl.textContent = 'MOTORISTA: ' + d.zona.motorista.toUpperCase();
         } else {
           triBanner.style.background = '#dc2626';
           zonaEl.textContent = 'SEM ZONA';
-          detEl.textContent = `${d.cp || d.q} ${d.localidade || ''} — não está em nenhuma zona`;
+          detEl.textContent = `${d.cp || d.q} · ${d.freguesia || d.localidade || ''}`.trim();
         }
       } else {
         triBanner.style.background = '#6b7280';
         zonaEl.textContent = 'NÃO ENCONTRADO';
         detEl.textContent = d.cp ? `CP ${d.cp} sem coordenadas` : `"${q}" não encontrado`;
       }
-      try { triBanner.animate([{ opacity: 0.3 }, { opacity: 1 }], { duration: 250 }); } catch (e) {}
+      // Flash de 1.5s sobre o mapa
+      triBanner.classList.remove('hidden');
+      if (flashTimer) clearTimeout(flashTimer);
+      flashTimer = setTimeout(() => { triBanner.classList.add('hidden'); triInput.focus(); }, 1500);
       triInput.value = ''; triInput.focus();
     }).catch(() => {});
   }
 
-  // ── Quota GeoAPI ──────────────────────────────────────────────────
+  // ── Quota (dropdown) ──
   const quotaText = document.getElementById('quota-text');
-  function renderQuota(q) {
-    if (!q) { quotaText.textContent = 'sem dados (importa um CP4 ou atualiza)'; return; }
-    const lim = q.limit, rem = q.remaining;
-    let txt = (rem != null && lim != null) ? `${rem.toLocaleString('pt-PT')} / ${lim.toLocaleString('pt-PT')} restantes hoje`
-            : (rem != null ? `${rem} restantes` : '—');
-    if (q.reset_at) {
-      const ms = new Date(q.reset_at).getTime() - Date.now();
-      if (ms > 0) {
-        const h = Math.floor(ms / 3600000);
-        const m = Math.floor((ms % 3600000) / 60000);
-        txt += ` · reinicia em ${h}h${m.toString().padStart(2, '0')}`;
-      }
+  function renderQuota(qd) {
+    if (!qd) { quotaText.textContent = 'sem dados (importa um CP4 ou atualiza)'; return; }
+    const lim = qd.limit, rem = qd.remaining;
+    let txt = (rem != null && lim != null) ? `${rem.toLocaleString('pt-PT')} / ${lim.toLocaleString('pt-PT')} restantes hoje` : (rem != null ? `${rem} restantes` : '—');
+    if (qd.reset_at) {
+      const ms = new Date(qd.reset_at).getTime() - Date.now();
+      if (ms > 0) { const h = Math.floor(ms / 3600000); const m = Math.floor((ms % 3600000) / 60000); txt += ` · reinicia em ${h}h${m.toString().padStart(2, '0')}`; }
     }
     quotaText.textContent = txt;
   }
   function carregarQuota(refresh) {
     if (refresh) quotaText.textContent = 'a atualizar…';
-    const u = refresh ? `${URL_QUOTA}?refresh=1` : URL_QUOTA;
-    fetch(u).then(r => r.json()).then(d => renderQuota(d.quota)).catch(() => {
-      quotaText.textContent = 'indisponível';
-    });
+    fetch(refresh ? `${URL_QUOTA}?refresh=1` : URL_QUOTA).then(r => r.json()).then(d => renderQuota(d.quota)).catch(() => { quotaText.textContent = 'indisponível'; });
   }
+  document.getElementById('btn-quota').addEventListener('click', () => {
+    const p = document.getElementById('quota-panel');
+    p.classList.toggle('hidden');
+    if (!p.classList.contains('hidden')) carregarQuota(false);
+  });
   document.getElementById('quota-refresh').addEventListener('click', () => carregarQuota(true));
-  carregarQuota(false);
 
-  // ── Chave GeoAPI (só admin) ───────────────────────────────────────
-  const keyStatus = document.getElementById('key-status');
-  if (keyStatus) {
+  // ── Chave GeoAPI (modal) ──
+  const gear = document.getElementById('btn-gear');
+  if (gear) {
+    const modal = document.getElementById('key-modal');
+    const keyStatus = document.getElementById('key-status');
     const btnSave = document.getElementById('btn-key-save');
     const btnClear = document.getElementById('btn-key-clear');
     function renderKey(d) {
       if (!d || !d.ok) { keyStatus.textContent = 'indisponível'; return; }
-      if (d.source === 'config') {
-        keyStatus.textContent = `definida (${d.masked}) · Configurações`;
-        btnSave.textContent = 'Atualizar';      // editar = colar nova
-        btnClear.classList.remove('hidden');     // remover disponível
-      } else if (d.source === 'env') {
-        keyStatus.textContent = `a usar a do .env (${d.masked})`;
-        btnSave.textContent = 'Inserir';         // sobrepõe a do .env
-        btnClear.classList.add('hidden');
-      } else {
-        keyStatus.textContent = 'não definida';
-        btnSave.textContent = 'Inserir';
-        btnClear.classList.add('hidden');
-      }
+      if (d.source === 'config') { keyStatus.textContent = `definida (${d.masked})`; btnSave.textContent = 'Atualizar'; btnClear.classList.remove('hidden'); }
+      else if (d.source === 'env') { keyStatus.textContent = `a usar a do .env (${d.masked})`; btnSave.textContent = 'Inserir'; btnClear.classList.add('hidden'); }
+      else { keyStatus.textContent = 'não definida'; btnSave.textContent = 'Inserir'; btnClear.classList.add('hidden'); }
     }
-    function carregarKey() {
-      fetch(URL_GEOAPI_KEY).then(r => r.json()).then(renderKey).catch(() => {
-        keyStatus.textContent = 'indisponível';
-      });
-    }
+    function carregarKey() { fetch(URL_GEOAPI_KEY).then(r => r.json()).then(renderKey).catch(() => { keyStatus.textContent = 'indisponível'; }); }
     function guardarKey(valor) {
-      const msg = document.getElementById('key-msg');
-      msg.textContent = 'a guardar…';
+      const msg = document.getElementById('key-msg'); msg.textContent = 'a guardar…';
       post(URL_GEOAPI_KEY, { key: valor }).then(d => {
-        if (d.ok) {
-          msg.textContent = valor ? 'guardada ✓' : 'removida ✓';
-          document.getElementById('key-input').value = '';
-          renderKey(d);
-          carregarQuota(true);  // valida a chave nova lendo a quota
-        } else { msg.textContent = 'erro: ' + (d.erro || 'falhou'); }
+        if (d.ok) { msg.textContent = valor ? 'guardada ✓' : 'removida ✓'; document.getElementById('key-input').value = ''; renderKey(d); carregarQuota(true); }
+        else msg.textContent = 'erro: ' + (d.erro || 'falhou');
       }).catch(() => { msg.textContent = 'erro de rede'; });
     }
-    document.getElementById('btn-key-save').addEventListener('click', () => {
-      const v = document.getElementById('key-input').value.trim();
-      if (!v) { document.getElementById('key-msg').textContent = 'cola uma chave primeiro'; return; }
-      guardarKey(v);
-    });
-    btnClear.addEventListener('click', () => {
-      if (confirm('Remover a chave guardada? Volta a usar a do .env.')) guardarKey('');
-    });
-    carregarKey();
+    gear.addEventListener('click', () => { modal.classList.remove('hidden'); carregarKey(); });
+    document.getElementById('btn-key-close').addEventListener('click', () => modal.classList.add('hidden'));
+    modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.add('hidden'); });
+    btnSave.addEventListener('click', () => { const v = document.getElementById('key-input').value.trim(); if (!v) { document.getElementById('key-msg').textContent = 'cola uma chave'; return; } guardarKey(v); });
+    btnClear.addEventListener('click', () => { if (confirm('Remover a chave guardada? Volta a usar a do .env.')) guardarKey(''); });
   }
 });
 </script>

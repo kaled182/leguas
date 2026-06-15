@@ -254,8 +254,39 @@ def api_criar_zona(request):
 @login_required
 @require_GET
 def api_zonas(request):
-    """Lista das zonas guardadas (com polígono) para listar/desenhar."""
-    zonas = ZonaGeo.objects.filter(is_active=True).order_by("nome")
+    """Lista das zonas guardadas (com polígono). Se vier ?cp4=A&cp4=B ou
+    ?hub_id=N, devolve só as zonas que intersetam essa área (lista reativa)."""
+    cp4s = [c.strip() for c in request.GET.getlist("cp4") if c.strip()]
+    hub_id = request.GET.get("hub_id")
+    if hub_id:
+        from settlements.models import CainiaoHub
+        hub = CainiaoHub.objects.filter(id=hub_id).first()
+        if hub:
+            cp4s = hub.cp4_list()
+
+    zonas = list(ZonaGeo.objects.filter(is_active=True).order_by("nome"))
+
+    if cp4s:
+        from shapely.geometry import shape
+        area_shapes = []
+        for a in AreaCP4.objects.filter(cp4__in=cp4s).exclude(poligono=None):
+            try:
+                area_shapes.append(shape(a.poligono))
+            except Exception:
+                continue
+        if area_shapes:
+            filtradas = []
+            for z in zonas:
+                if not z.poligono:
+                    continue
+                try:
+                    zs = shape(z.poligono)
+                except Exception:
+                    continue
+                if any(zs.intersects(a) for a in area_shapes):
+                    filtradas.append(z)
+            zonas = filtradas
+
     return JsonResponse({
         "zonas": [
             {
@@ -466,12 +497,15 @@ def api_triagem(request):
                         ).select_related("localidade", "concelho").first()
                         cp_str = f"{zm.group(1)}-{zm.group(2)}"
 
+    freguesia = ""
     if cp:
         cp_str = cp.codigo_postal
         if lat is None and cp.latitude is not None:
             lat, lng = float(cp.latitude), float(cp.longitude)
         localidade = localidade or (cp.localidade.nome if cp.localidade else "")
         concelho = cp.concelho.nome if cp.concelho else ""
+        if cp.freguesia_id:
+            freguesia = cp.freguesia.nome
 
     if lat is None or lng is None:
         return JsonResponse({
@@ -481,10 +515,21 @@ def api_triagem(request):
 
     pt = Point(lng, lat)
     zona = None
-    for z in ZonaGeo.objects.filter(is_active=True).exclude(poligono__isnull=True):
+    for z in (
+        ZonaGeo.objects.filter(is_active=True)
+        .exclude(poligono__isnull=True)
+        .select_related("motorista_default")
+    ):
         try:
             if shape(z.poligono).contains(pt):
-                zona = {"id": z.id, "nome": z.nome, "cor": z.cor}
+                mot = ""
+                if z.motorista_default_id:
+                    m = z.motorista_default
+                    mot = m.nome_completo or m.apelido or ""
+                zona = {
+                    "id": z.id, "nome": z.nome, "cor": z.cor,
+                    "motorista": mot,
+                }
                 break
         except Exception:
             continue
@@ -492,7 +537,7 @@ def api_triagem(request):
     return JsonResponse({
         "ok": True, "encontrado": True, "q": q, "cp": cp_str,
         "waybill": waybill, "localidade": localidade, "concelho": concelho,
-        "lat": lat, "lng": lng, "zona": zona,
+        "freguesia": freguesia, "lat": lat, "lng": lng, "zona": zona,
     })
 
 

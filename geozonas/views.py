@@ -413,29 +413,43 @@ def api_triagem(request):
             cp4=s, latitude__isnull=False
         ).select_related("localidade", "concelho").first()
     else:  # waybill / etiqueta
-        task = (
-            CainiaoOperationTask.objects.filter(waybill_number=s)
-            .order_by("-task_date").first()
-        )
-        if task:
-            waybill = task.waybill_number
-            localidade = task.destination_city or ""
-            for la, lo in [
-                (task.receiver_latitude, task.receiver_longitude),
-                (task.actual_latitude, task.actual_longitude),
-            ]:
-                try:
-                    if la and lo:
-                        lat, lng = float(la), float(lo)
-                        break
-                except (TypeError, ValueError):
-                    pass
-            zm = re.match(r"^(\d{4})-?(\d{3})", (task.zip_code or "").strip())
-            if zm:
-                cp = CodigoPostal.objects.filter(
-                    cp4=zm.group(1), cp3=zm.group(2)
-                ).select_related("localidade", "concelho").first()
-                cp_str = f"{zm.group(1)}-{zm.group(2)}"
+        waybill = s
+        # O CP vem no início do waybill: prefixo de letras + 7 dígitos.
+        # Ex.: CNPRT45255041234... → 4525504 → 4525-504.
+        gm = re.match(r"^[A-Z]+(\d{4})(\d{3})", s)
+        if gm:
+            cp_str = f"{gm.group(1)}-{gm.group(2)}"
+            cp = CodigoPostal.objects.filter(
+                cp4=gm.group(1), cp3=gm.group(2)
+            ).select_related("localidade", "concelho").first()
+        # Fallback: a task real dá coordenadas precisas (se o CP não estiver
+        # importado, ou para etiquetas sem o CP no início).
+        if cp is None or cp.latitude is None:
+            task = (
+                CainiaoOperationTask.objects.filter(waybill_number=s)
+                .order_by("-task_date").first()
+            )
+            if task:
+                localidade = task.destination_city or ""
+                for la, lo in [
+                    (task.receiver_latitude, task.receiver_longitude),
+                    (task.actual_latitude, task.actual_longitude),
+                ]:
+                    try:
+                        if la and lo:
+                            lat, lng = float(la), float(lo)
+                            break
+                    except (TypeError, ValueError):
+                        pass
+                if cp is None:
+                    zm = re.match(
+                        r"^(\d{4})-?(\d{3})", (task.zip_code or "").strip()
+                    )
+                    if zm:
+                        cp = CodigoPostal.objects.filter(
+                            cp4=zm.group(1), cp3=zm.group(2)
+                        ).select_related("localidade", "concelho").first()
+                        cp_str = f"{zm.group(1)}-{zm.group(2)}"
 
     if cp:
         cp_str = cp.codigo_postal

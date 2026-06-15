@@ -140,29 +140,44 @@ def api_freguesias(request):
         if hub:
             cp4s = hub.cp4_list()
 
-    # Só as freguesias que têm CPs deste(s) CP4 (atribuídas por point-in-polygon
-    # na importação) — não todas as do concelho.
-    freg_ids = (
-        CodigoPostal.objects.filter(cp4__in=cp4s, freguesia__isnull=False)
-        .values_list("freguesia_id", flat=True).distinct()
-        if cp4s else []
+    # Auto-corretivo: devolve TODAS as freguesias (dos concelhos cobertos
+    # pelos CP4) que contêm pelo menos um ponto de CP do CP4 — calculado por
+    # point-in-polygon na hora (não depende da ligação CP→freguesia gravada).
+    from shapely.geometry import Point, shape
+
+    if not cp4s:
+        return JsonResponse({"type": "FeatureCollection", "features": []})
+
+    concelho_ids = list(
+        CodigoPostal.objects.filter(cp4__in=cp4s, concelho__isnull=False)
+        .values_list("concelho_id", flat=True).distinct()
     )
+    pts = [
+        Point(float(cp.longitude), float(cp.latitude))
+        for cp in CodigoPostal.objects.filter(
+            cp4__in=cp4s, latitude__isnull=False, longitude__isnull=False,
+        ).only("latitude", "longitude")
+    ]
     fregs = (
-        Freguesia.objects.filter(id__in=list(freg_ids))
+        Freguesia.objects.filter(concelho_id__in=concelho_ids)
         .exclude(geojson__isnull=True)
         .select_related("concelho")
     )
-    features = [
-        {
-            "type": "Feature",
-            "properties": {
-                "nome": f.nome,
-                "concelho": f.concelho.nome if f.concelho else "",
-            },
-            "geometry": f.geojson,
-        }
-        for f in fregs
-    ]
+    features = []
+    for f in fregs:
+        try:
+            geom = shape(f.geojson)
+        except Exception:
+            continue
+        if any(geom.contains(p) for p in pts):
+            features.append({
+                "type": "Feature",
+                "properties": {
+                    "nome": f.nome,
+                    "concelho": f.concelho.nome if f.concelho else "",
+                },
+                "geometry": f.geojson,
+            })
     return JsonResponse({"type": "FeatureCollection", "features": features})
 
 

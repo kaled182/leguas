@@ -301,6 +301,17 @@ def ingest_cp4(
         stats["com_coordenadas"] = _enriquecer_coordenadas(
             cp4, cp3_coords, client, delay_coords, cache_concelhos, job=job
         )
+        # Garante freguesias de TODOS os concelhos reais dos CPs deste CP4
+        # (apanha o caso multi-concelho, ex.: 4740 = Barcelos + Esposende).
+        nomes_reais = (
+            CodigoPostal.objects.filter(cp4=cp4, concelho__isnull=False)
+            .values_list("concelho__nome", flat=True).distinct()
+        )
+        for cnome in set(nomes_reais):
+            try:
+                _ingest_freguesias(cnome, client, forcar=forcar_coords)
+            except Exception:
+                pass
         # Liga cada CP à sua freguesia (point-in-polygon) — não-fatal.
         try:
             atribuir_freguesias([cp4])

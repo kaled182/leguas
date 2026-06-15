@@ -301,6 +301,88 @@ def api_zona_delete(request):
 
 @login_required
 @require_GET
+def api_cps_sem_zona(request):
+    """CPs (com GPS) que NÃO caem em nenhuma zona — gaps de cobertura.
+    Âmbito: ?cp4=A&cp4=B ou ?hub_id=N (default: todos)."""
+    from shapely.geometry import Point, shape
+    cp4s = [c.strip() for c in request.GET.getlist("cp4") if c.strip()]
+    hub_id = request.GET.get("hub_id")
+    if hub_id:
+        from settlements.models import CainiaoHub
+        hub = CainiaoHub.objects.filter(id=hub_id).first()
+        if hub:
+            cp4s = hub.cp4_list()
+
+    qs = CodigoPostal.objects.filter(
+        latitude__isnull=False, longitude__isnull=False
+    ).select_related("localidade", "concelho")
+    if cp4s:
+        qs = qs.filter(cp4__in=cp4s)
+
+    shapes = []
+    for z in ZonaGeo.objects.filter(is_active=True).exclude(poligono__isnull=True):
+        try:
+            shapes.append(shape(z.poligono))
+        except Exception:
+            continue
+
+    orfaos = []
+    for cp in qs[:12000]:
+        pt = Point(float(cp.longitude), float(cp.latitude))
+        if not any(s.contains(pt) for s in shapes):
+            orfaos.append(_feature(cp))
+    return JsonResponse({
+        "type": "FeatureCollection", "features": orfaos, "count": len(orfaos),
+    })
+
+
+@login_required
+@require_GET
+def api_zonas_conflitos(request):
+    """Sobreposições entre zonas: devolve a geometria da interseção de cada
+    par e quantos CPs caem nessa zona de conflito."""
+    from shapely.geometry import Point, mapping, shape
+    zonas = [
+        z for z in ZonaGeo.objects.filter(is_active=True)
+        .exclude(poligono__isnull=True)
+    ]
+    shp = []
+    for z in zonas:
+        try:
+            shp.append((z, shape(z.poligono)))
+        except Exception:
+            continue
+
+    pts = [
+        Point(float(c.longitude), float(c.latitude))
+        for c in CodigoPostal.objects.filter(
+            latitude__isnull=False, longitude__isnull=False
+        ).only("latitude", "longitude")[:20000]
+    ]
+
+    conflitos = []
+    total = 0
+    for i in range(len(shp)):
+        for j in range(i + 1, len(shp)):
+            try:
+                inter = shp[i][1].intersection(shp[j][1])
+            except Exception:
+                continue
+            if inter.is_empty or inter.area <= 0:
+                continue
+            n = sum(1 for p in pts if inter.contains(p))
+            total += n
+            conflitos.append({
+                "zona_a": shp[i][0].nome,
+                "zona_b": shp[j][0].nome,
+                "count": n,
+                "geometry": mapping(inter),
+            })
+    return JsonResponse({"conflitos": conflitos, "total_cps": total})
+
+
+@login_required
+@require_GET
 def api_hubs(request):
     """Lista dos HUBs Cainiao e os respetivos CP4 (para filtrar o mapa)."""
     from settlements.models import CainiaoHub

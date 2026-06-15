@@ -41,9 +41,26 @@
       </div>
       <div id="quota-text" class="text-gray-500 dark:text-gray-400 mt-0.5">a carregar…</div>
     </div>
+    <button id="btn-modo-triagem" class="px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold inline-flex items-center gap-1.5 self-start">
+      <i data-lucide="scan-line" class="w-4 h-4"></i> Modo Triagem
+    </button>
   </div>
 
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+  {# ─── Painel de Triagem (Sorting) ─── #}
+  <div id="painel-triagem" class="hidden mb-3">
+    <div class="flex gap-2 items-center">
+      <input id="triagem-input" type="text" autocomplete="off"
+        placeholder="Bipa a etiqueta do pacote ou escreve o CP (ex.: 4990-008)"
+        class="flex-1 px-4 py-3 text-lg rounded-lg border-2 border-indigo-400 dark:bg-gray-800 dark:text-gray-100">
+      <button id="btn-triagem-sair" class="px-3 py-2 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 text-sm">Sair</button>
+    </div>
+    <div id="triagem-banner" class="hidden mt-3 rounded-xl p-6 text-center text-white shadow" style="background:#6b7280">
+      <div id="triagem-zona" class="text-4xl font-extrabold tracking-wide">—</div>
+      <div id="triagem-detalhe" class="text-sm opacity-90 mt-1"></div>
+    </div>
+  </div>
+
+  <div id="painel-gestao" class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
     <!-- Cadastrar área -->
     <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-3">
       <h3 class="font-semibold text-gray-700 dark:text-gray-200 mb-2 text-sm">1. Cadastrar área (GeoAPI)</h3>
@@ -121,7 +138,7 @@
   </div>
 
   {% if request.user.is_staff or request.user.is_superuser %}
-  <details class="mb-3 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2">
+  <details id="painel-chave" class="mb-3 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2">
     <summary class="text-sm font-semibold text-gray-700 dark:text-gray-200 cursor-pointer flex items-center gap-2">
       <i data-lucide="key-round" class="w-4 h-4 text-indigo-500"></i>
       Chave GeoAPI
@@ -168,6 +185,7 @@ const URL_ZONA_UPDATE = "{% url 'geozonas:api-zona-update' %}";
 const URL_ZONA_DELETE = "{% url 'geozonas:api-zona-delete' %}";
 const URL_CPS_SEM_ZONA = "{% url 'geozonas:api-cps-sem-zona' %}";
 const URL_ZONAS_CONFLITOS = "{% url 'geozonas:api-zonas-conflitos' %}";
+const URL_TRIAGEM = "{% url 'geozonas:api-triagem' %}";
 const URL_INGEST = "{% url 'geozonas:api-ingest' %}";
 const URL_INGEST_STATUS = "{% url 'geozonas:api-job-status' %}";
 const URL_JOBS_ACTIVE = "{% url 'geozonas:api-jobs-active' %}";
@@ -189,6 +207,7 @@ document.addEventListener('DOMContentLoaded', function () {
   const zonasLayer = L.layerGroup().addTo(map);  // zonas guardadas
   const orfaosLayer = L.layerGroup().addTo(map);  // CPs sem zona
   const conflitoLayer = L.layerGroup().addTo(map);  // sobreposições
+  const triagemLayer = L.layerGroup().addTo(map);  // marcador da triagem
   const drawnItems = new L.FeatureGroup().addTo(map);
   let ultimaGeometria = null;
 
@@ -676,6 +695,58 @@ document.addEventListener('DOMContentLoaded', function () {
       } else { alert(`Erro: ${res.erro}`); }
     });
   });
+
+  // ── Modo Triagem (Sorting) ────────────────────────────────────────
+  const painelTriagem = document.getElementById('painel-triagem');
+  const triInput = document.getElementById('triagem-input');
+  const triBanner = document.getElementById('triagem-banner');
+  function setTriagem(on) {
+    document.getElementById('painel-gestao').classList.toggle('hidden', on);
+    const chave = document.getElementById('painel-chave');
+    if (chave) chave.classList.toggle('hidden', on);
+    painelTriagem.classList.toggle('hidden', !on);
+    document.getElementById('btn-modo-triagem').innerHTML = on
+      ? '<i data-lucide="x" class="w-4 h-4"></i> Voltar à Gestão'
+      : '<i data-lucide="scan-line" class="w-4 h-4"></i> Modo Triagem';
+    if (window.lucide) lucide.createIcons();
+    if (on) { triBanner.classList.add('hidden'); triInput.value = ''; triInput.focus(); }
+    else { triagemLayer.clearLayers(); }
+  }
+  document.getElementById('btn-modo-triagem').addEventListener('click', () =>
+    setTriagem(painelTriagem.classList.contains('hidden')));
+  document.getElementById('btn-triagem-sair').addEventListener('click', () => setTriagem(false));
+  triInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { const v = triInput.value.trim(); if (v) triar(v); }
+  });
+  function triar(q) {
+    fetch(`${URL_TRIAGEM}?q=${encodeURIComponent(q)}`).then(r => r.json()).then(d => {
+      triagemLayer.clearLayers();
+      triBanner.classList.remove('hidden');
+      const zonaEl = document.getElementById('triagem-zona');
+      const detEl = document.getElementById('triagem-detalhe');
+      if (d.encontrado && d.lat != null) {
+        map.setView([d.lat, d.lng], 15);
+        const cor = d.zona ? d.zona.cor : '#dc2626';
+        L.circleMarker([d.lat, d.lng], { radius: 10, color: '#111', weight: 2,
+          fillColor: cor, fillOpacity: 1 }).addTo(triagemLayer);
+        if (d.zona) {
+          triBanner.style.background = d.zona.cor;
+          zonaEl.textContent = (d.zona.nome || '').toUpperCase();
+          detEl.textContent = `${d.cp || ''} · ${d.localidade || ''}`.trim();
+        } else {
+          triBanner.style.background = '#dc2626';
+          zonaEl.textContent = 'SEM ZONA';
+          detEl.textContent = `${d.cp || d.q} ${d.localidade || ''} — não está em nenhuma zona`;
+        }
+      } else {
+        triBanner.style.background = '#6b7280';
+        zonaEl.textContent = 'NÃO ENCONTRADO';
+        detEl.textContent = d.cp ? `CP ${d.cp} sem coordenadas` : `"${q}" não encontrado`;
+      }
+      try { triBanner.animate([{ opacity: 0.3 }, { opacity: 1 }], { duration: 250 }); } catch (e) {}
+      triInput.value = ''; triInput.focus();
+    }).catch(() => {});
+  }
 
   // ── Quota GeoAPI ──────────────────────────────────────────────────
   const quotaText = document.getElementById('quota-text');

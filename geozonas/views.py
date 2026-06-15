@@ -383,6 +383,92 @@ def api_zonas_conflitos(request):
 
 @login_required
 @require_GET
+def api_triagem(request):
+    """Modo Triagem: dado um CP (4990-008) OU uma etiqueta/waybill, devolve a
+    zona (cor+nome) e as coordenadas para o mapa centrar. Auto-deteta o tipo."""
+    import re
+
+    from shapely.geometry import Point, shape
+
+    from settlements.models import CainiaoOperationTask
+
+    q = (request.GET.get("q") or "").strip()
+    if not q:
+        return JsonResponse({"ok": False, "erro": "Indica um CP ou waybill"}, status=400)
+
+    s = q.upper()
+    cp = None
+    cp_str = ""
+    waybill = ""
+    lat = lng = None
+    localidade = concelho = ""
+
+    m = re.match(r"^(\d{4})-?(\d{3})$", s)
+    if m:  # CP completo (XXXX-XXX ou 7 dígitos)
+        cp = CodigoPostal.objects.filter(
+            cp4=m.group(1), cp3=m.group(2)
+        ).select_related("localidade", "concelho").first()
+    elif re.match(r"^\d{4}$", s):  # só CP4
+        cp = CodigoPostal.objects.filter(
+            cp4=s, latitude__isnull=False
+        ).select_related("localidade", "concelho").first()
+    else:  # waybill / etiqueta
+        task = (
+            CainiaoOperationTask.objects.filter(waybill_number=s)
+            .order_by("-task_date").first()
+        )
+        if task:
+            waybill = task.waybill_number
+            localidade = task.destination_city or ""
+            for la, lo in [
+                (task.receiver_latitude, task.receiver_longitude),
+                (task.actual_latitude, task.actual_longitude),
+            ]:
+                try:
+                    if la and lo:
+                        lat, lng = float(la), float(lo)
+                        break
+                except (TypeError, ValueError):
+                    pass
+            zm = re.match(r"^(\d{4})-?(\d{3})", (task.zip_code or "").strip())
+            if zm:
+                cp = CodigoPostal.objects.filter(
+                    cp4=zm.group(1), cp3=zm.group(2)
+                ).select_related("localidade", "concelho").first()
+                cp_str = f"{zm.group(1)}-{zm.group(2)}"
+
+    if cp:
+        cp_str = cp.codigo_postal
+        if lat is None and cp.latitude is not None:
+            lat, lng = float(cp.latitude), float(cp.longitude)
+        localidade = localidade or (cp.localidade.nome if cp.localidade else "")
+        concelho = cp.concelho.nome if cp.concelho else ""
+
+    if lat is None or lng is None:
+        return JsonResponse({
+            "ok": True, "encontrado": False, "q": q, "cp": cp_str,
+            "waybill": waybill,
+        })
+
+    pt = Point(lng, lat)
+    zona = None
+    for z in ZonaGeo.objects.filter(is_active=True).exclude(poligono__isnull=True):
+        try:
+            if shape(z.poligono).contains(pt):
+                zona = {"id": z.id, "nome": z.nome, "cor": z.cor}
+                break
+        except Exception:
+            continue
+
+    return JsonResponse({
+        "ok": True, "encontrado": True, "q": q, "cp": cp_str,
+        "waybill": waybill, "localidade": localidade, "concelho": concelho,
+        "lat": lat, "lng": lng, "zona": zona,
+    })
+
+
+@login_required
+@require_GET
 def api_hubs(request):
     """Lista dos HUBs Cainiao e os respetivos CP4 (para filtrar o mapa)."""
     from settlements.models import CainiaoHub

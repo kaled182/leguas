@@ -632,7 +632,7 @@ async function addLinha() {
   const taxa = await window.promptModal({title:'Taxa por entrega (€)', default:'1.00'});
   if (!taxa) return;
   const dsr = await window.promptModal({title:'DSR % (0 se não aplicável)', default:'0'});
-  const d = await _post(`/settlements/pre-invoices/${PF_ID}/linhas/add/`, {
+  const d = await _post(`/settlements/pre-invoices/${PF_ID}/linha/add/`, {
     parceiro_id: parseInt(partnerId),
     courier_id: courierId || '',
     total_pacotes: parseInt(totalPacotes),
@@ -649,7 +649,7 @@ async function editLinha(id, totalPacotes, taxa, dsr) {
   const newTaxa = await window.promptModal({title:'Taxa €', default: String(taxa)});
   if (!newTaxa) return;
   const newDsr = await window.promptModal({title:'DSR %', default: String(dsr)});
-  const d = await _post(`/settlements/pre-invoices/${PF_ID}/linhas/${id}/update/`, {
+  const d = await _post(`/settlements/pre-invoices/linha/${id}/update/`, {
     total_pacotes: parseInt(newTotal),
     taxa_por_entrega: parseFloat(newTaxa),
     dsr_percentual: parseFloat(newDsr || 0),
@@ -661,7 +661,7 @@ async function editLinha(id, totalPacotes, taxa, dsr) {
 async function deleteLinha(id) {
   const ok = await window.confirmModal({type:'danger', title:'Eliminar linha?'});
   if (!ok) return;
-  const d = await _post(`/settlements/pre-invoices/${PF_ID}/linhas/${id}/delete/`);
+  const d = await _post(`/settlements/pre-invoices/linha/${id}/delete/`);
   if (d.success) { window.toast({type:'success', message:'Linha eliminada.'}); setTimeout(()=>location.reload(), 600); }
   else window.toast({type:'error', message: d.error || 'Erro'});
 }

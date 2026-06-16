@@ -17,6 +17,11 @@
   #map { position: absolute; inset: 0; }
   .gz-float { background: rgba(255,255,255,.96); }
   .dark .gz-float { background: rgba(31,41,55,.96); }
+  /* Etiqueta com o nome da zona, ao centro */
+  .gz-zone-label { background: rgba(255,255,255,.88); border: 1px solid rgba(0,0,0,.25);
+    border-radius: 5px; color: #111; font-weight: 700; font-size: 11px; padding: 1px 6px;
+    box-shadow: 0 1px 2px rgba(0,0,0,.2); white-space: nowrap; }
+  .gz-zone-label::before { display: none !important; }
 </style>
 {% endblock %}
 
@@ -381,10 +386,16 @@ document.addEventListener('DOMContentLoaded', function () {
       if (!zonas.length) lista.innerHTML = '<p class="text-xs text-gray-400">Sem zonas neste âmbito.</p>';
       zonas.forEach(z => {
         if (z.poligono) {
-          L.geoJSON({ type: 'Feature', geometry: z.poligono }, {
+          const lyr = L.geoJSON({ type: 'Feature', geometry: z.poligono }, {
             interactive: false,
             style: { color: z.cor, weight: 2, fillColor: z.cor, fillOpacity: 0.12 }
           }).addTo(zonasLayer);
+          // Etiqueta permanente com o nome, ao centro da zona.
+          try {
+            lyr.bindTooltip(z.nome, {
+              permanent: true, direction: 'center', className: 'gz-zone-label',
+            }).openTooltip();
+          } catch (e) {}
         }
         const row = document.createElement('div');
         row.className = 'flex items-center gap-2 py-1';

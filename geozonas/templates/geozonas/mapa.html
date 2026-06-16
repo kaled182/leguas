@@ -34,7 +34,7 @@
       </button>
     </div>
 
-    <div id="painel-body" class="p-3 overflow-y-auto space-y-3 text-sm">
+    <div id="painel-body" class="p-3 overflow-y-auto overflow-x-hidden space-y-3 text-sm">
       {# Tabs HUB / CP4 #}
       <div class="flex rounded-lg overflow-hidden border border-gray-200 dark:border-gray-600 text-xs">
         <button id="tab-hub" class="flex-1 px-2 py-1.5 font-semibold bg-indigo-600 text-white">Por HUB</button>
@@ -44,7 +44,7 @@
       {# Conteúdo HUB #}
       <div id="pane-hub" class="space-y-2">
         <div class="flex gap-2 items-center">
-          <select id="sel-hub" class="flex-1 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 text-sm">
+          <select id="sel-hub" class="flex-1 min-w-0 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 text-sm">
             <option value="">— escolhe o HUB —</option>
           </select>
           <button id="btn-load-hub" class="px-3 py-1 rounded bg-indigo-600 hover:bg-indigo-700 text-white text-sm">Ver</button>
@@ -62,7 +62,7 @@
         </div>
         <div id="cp4-tags" class="flex flex-wrap gap-1"></div>
         <div class="flex gap-2 items-center pt-1 border-t border-gray-100 dark:border-gray-700/50">
-          <select id="sel-cp4" class="flex-1 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 text-sm">
+          <select id="sel-cp4" class="flex-1 min-w-0 px-2 py-1 rounded border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 text-sm">
             <option value="">— um CP4 já importado —</option>
             {% for cp4 in cp4s %}<option value="{{ cp4 }}">{{ cp4 }}</option>{% endfor %}
           </select>

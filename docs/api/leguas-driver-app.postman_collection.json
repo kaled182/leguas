@@ -163,6 +163,25 @@
           }
         }
       ]
+    },
+    {
+      "name": "Triagem",
+      "item": [
+        {
+          "name": "Resolver zona (CP ou waybill)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/sorting?q=4525-504",
+              "host": ["{{base_url}}"],
+              "path": ["sorting"],
+              "query": [{ "key": "q", "value": "4525-504" }]
+            },
+            "description": "Triagem por zona: q = código postal (4990-008/CP4) ou etiqueta/waybill. Devolve a zona de entrega (nome+cor+motorista) e a localização."
+          }
+        }
+      ]
     }
   ]
 }

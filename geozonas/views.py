@@ -431,114 +431,16 @@ def api_zonas_conflitos(request):
 @require_GET
 def api_triagem(request):
     """Modo Triagem: dado um CP (4990-008) OU uma etiqueta/waybill, devolve a
-    zona (cor+nome) e as coordenadas para o mapa centrar. Auto-deteta o tipo."""
-    import re
+    zona (cor+nome) e as coordenadas para o mapa centrar. Auto-deteta o tipo.
 
-    from shapely.geometry import Point, shape
-
-    from settlements.models import CainiaoOperationTask
+    Lógica em geozonas/services/triagem.py (partilhada com a API da app).
+    """
+    from .services.triagem import resolver_triagem
 
     q = (request.GET.get("q") or "").strip()
     if not q:
         return JsonResponse({"ok": False, "erro": "Indica um CP ou waybill"}, status=400)
-
-    s = q.upper()
-    cp = None
-    cp_str = ""
-    waybill = ""
-    lat = lng = None
-    localidade = concelho = ""
-
-    m = re.match(r"^(\d{4})-?(\d{3})$", s)
-    if m:  # CP completo (XXXX-XXX ou 7 dígitos)
-        cp = CodigoPostal.objects.filter(
-            cp4=m.group(1), cp3=m.group(2)
-        ).select_related("localidade", "concelho").first()
-    elif re.match(r"^\d{4}$", s):  # só CP4
-        cp = CodigoPostal.objects.filter(
-            cp4=s, latitude__isnull=False
-        ).select_related("localidade", "concelho").first()
-    else:  # waybill / etiqueta
-        waybill = s
-        # O CP vem no início do waybill: prefixo de letras + 7 dígitos.
-        # Ex.: CNPRT45255041234... → 4525504 → 4525-504.
-        gm = re.match(r"^[A-Z]+(\d{4})(\d{3})", s)
-        if gm:
-            cp_str = f"{gm.group(1)}-{gm.group(2)}"
-            cp = CodigoPostal.objects.filter(
-                cp4=gm.group(1), cp3=gm.group(2)
-            ).select_related("localidade", "concelho").first()
-        # Fallback: a task real dá coordenadas precisas (se o CP não estiver
-        # importado, ou para etiquetas sem o CP no início).
-        if cp is None or cp.latitude is None:
-            task = (
-                CainiaoOperationTask.objects.filter(waybill_number=s)
-                .order_by("-task_date").first()
-            )
-            if task:
-                localidade = task.destination_city or ""
-                for la, lo in [
-                    (task.receiver_latitude, task.receiver_longitude),
-                    (task.actual_latitude, task.actual_longitude),
-                ]:
-                    try:
-                        if la and lo:
-                            lat, lng = float(la), float(lo)
-                            break
-                    except (TypeError, ValueError):
-                        pass
-                if cp is None:
-                    zm = re.match(
-                        r"^(\d{4})-?(\d{3})", (task.zip_code or "").strip()
-                    )
-                    if zm:
-                        cp = CodigoPostal.objects.filter(
-                            cp4=zm.group(1), cp3=zm.group(2)
-                        ).select_related("localidade", "concelho").first()
-                        cp_str = f"{zm.group(1)}-{zm.group(2)}"
-
-    freguesia = ""
-    if cp:
-        cp_str = cp.codigo_postal
-        if lat is None and cp.latitude is not None:
-            lat, lng = float(cp.latitude), float(cp.longitude)
-        localidade = localidade or (cp.localidade.nome if cp.localidade else "")
-        concelho = cp.concelho.nome if cp.concelho else ""
-        if cp.freguesia_id:
-            freguesia = cp.freguesia.nome
-
-    if lat is None or lng is None:
-        return JsonResponse({
-            "ok": True, "encontrado": False, "q": q, "cp": cp_str,
-            "waybill": waybill,
-        })
-
-    pt = Point(lng, lat)
-    zona = None
-    for z in (
-        ZonaGeo.objects.filter(is_active=True)
-        .exclude(poligono__isnull=True)
-        .select_related("motorista_default")
-    ):
-        try:
-            if shape(z.poligono).contains(pt):
-                mot = ""
-                if z.motorista_default_id:
-                    m = z.motorista_default
-                    mot = m.nome_completo or m.apelido or ""
-                zona = {
-                    "id": z.id, "nome": z.nome, "cor": z.cor,
-                    "motorista": mot,
-                }
-                break
-        except Exception:
-            continue
-
-    return JsonResponse({
-        "ok": True, "encontrado": True, "q": q, "cp": cp_str,
-        "waybill": waybill, "localidade": localidade, "concelho": concelho,
-        "freguesia": freguesia, "lat": lat, "lng": lng, "zona": zona,
-    })
+    return JsonResponse(resolver_triagem(q))
 
 
 @login_required

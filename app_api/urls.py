@@ -20,4 +20,6 @@ urlpatterns = [
     path("discounts", views.discounts, name="discounts"),
     # Reclamações
     path("complaints", views.complaints, name="complaints"),
+    # Triagem / separação por zona
+    path("sorting", views.sorting, name="sorting"),
 ]

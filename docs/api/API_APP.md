@@ -268,7 +268,48 @@ Cria uma reclamação. Campos **obrigatórios**: `numero_pacote`, `tipo`,
 
 ---
 
-## 7. Valores de enumeração
+## 7. Triagem (separação por zona)
+
+Permite ao motorista **separar os pacotes por zona** na própria app — ganha
+tempo ao não depender da triagem central. Faz scan (ou digita) o **código
+postal** ou a **etiqueta/waybill** e recebe a **zona de entrega**.
+
+### 7.1 `GET /sorting?q=...`
+
+Requer `Authorization`. `q` = CP (`4990-008`, 7 dígitos ou só CP4) **ou** waybill.
+
+**Resposta `200` (zona encontrada)**
+```json
+{
+  "ok": true,
+  "encontrado": true,
+  "q": "CNPRT45255041234007787775",
+  "cp": "4525-504",
+  "waybill": "CNPRT45255041234007787775",
+  "localidade": "Canelas",
+  "concelho": "Espinho",
+  "freguesia": "Canelas",
+  "lat": 41.01,
+  "lng": -8.63,
+  "zona": { "id": 3, "nome": "Zona A", "cor": "#22c55e", "motorista": "Affonso LF" }
+}
+```
+
+- `zona` é `null` quando o ponto não cai em nenhuma zona desenhada.
+- `encontrado=false` quando não foi possível localizar o CP/waybill (sem
+  coordenadas) — devolve apenas `cp`/`waybill`.
+
+```bash
+curl "$BASE/sorting?q=4525-504" -H "Authorization: Bearer $TOKEN"
+```
+
+> Fluxo de app sugerido: scan da etiqueta → mostra um cartão grande com a
+> **cor** e o **nome** da zona (e o motorista) → o motorista coloca o pacote
+> na pilha/caixa dessa zona.
+
+---
+
+## 8. Valores de enumeração
 
 **Perfil — `status`:** `PENDENTE`, `EM_ANALISE`, `ATIVO`, `BLOQUEADO`, `IRREGULAR`
 · **`tipo_vinculo`:** `DIRETO`, `PARCEIRO`
@@ -293,7 +334,7 @@ Cria uma reclamação. Campos **obrigatórios**: `numero_pacote`, `tipo`,
 
 ---
 
-## 8. Resumo dos endpoints
+## 9. Resumo dos endpoints
 
 | Método | Caminho | Auth | Descrição |
 |---|---|:---:|---|
@@ -307,5 +348,6 @@ Cria uma reclamação. Campos **obrigatórios**: `numero_pacote`, `tipo`,
 | GET | `/discounts` | ✔ | Descontos + contadores (`?status`) |
 | GET | `/complaints` | ✔ | Listar reclamações (`?status`) |
 | POST | `/complaints` | ✔ | Criar reclamação |
+| GET | `/sorting` | ✔ | Triagem: CP/waybill → zona (`?q`) |
 
 *Auth ✔ = requer `Authorization: Bearer <token>`.*

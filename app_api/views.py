@@ -245,3 +245,23 @@ def complaints(request):
             for v, label in CustomerComplaint.STATUS_CHOICES
         ],
     })
+
+
+# ─── Triagem / separação por zona ───────────────────────────────────
+
+@require_http_methods(["GET"])
+@app_token_required
+def sorting(request):
+    """Triagem: dado um CP (4990-008) ou uma etiqueta/waybill em `q`,
+    devolve a zona de entrega (nome+cor) e a localização, para o motorista
+    separar os pacotes por zona na própria app. Reusa o serviço do Modo
+    Triagem do geozonas."""
+    from geozonas.services.triagem import resolver_triagem
+
+    q = (request.GET.get("q") or "").strip()
+    if not q:
+        return JsonResponse(
+            {"ok": False, "error": "Indica um CP ou waybill (parâmetro q)."},
+            status=400,
+        )
+    return JsonResponse(resolver_triagem(q))

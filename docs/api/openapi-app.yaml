@@ -39,6 +39,8 @@ tags:
     description: Descontos / reclamações financeiras (DriverClaim).
   - name: Reclamações
     description: Reclamações de cliente (tickets) associadas ao motorista.
+  - name: Triagem
+    description: Separação de pacotes por zona de entrega (CP ou waybill → zona).
 
 security:
   - bearerAuth: []
@@ -312,6 +314,42 @@ paths:
                     properties:
                       duplicate_complaint_id: { type: integer, nullable: true }
 
+  /sorting:
+    get:
+      tags: [Triagem]
+      summary: Resolver a zona de um CP ou waybill
+      description: |
+        Triagem/separação por zona: o motorista introduz (ou faz scan de) um
+        **código postal** (`4990-008`, 7 dígitos ou só CP4) ou uma
+        **etiqueta/waybill**, e a API devolve a **zona de entrega** desenhada
+        que contém o ponto (nome + cor + motorista por defeito) e a
+        localização. Permite separar os pacotes por zona na própria app.
+
+        O CP é extraído do início do waybill quando possível; caso contrário,
+        as coordenadas vêm da operação Cainiao correspondente.
+      x-status: existe
+      x-maps-to: app_api.views.sorting / geozonas.services.triagem.resolver_triagem
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: CP (`4990-008`) ou waybill (`CNPRT4525504...`).
+          schema: { type: string }
+          examples:
+            cp: { value: "4525-504" }
+            waybill: { value: "CNPRT45255041234007787775" }
+      responses:
+        '200':
+          description: Resultado da triagem.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TriagemResult' }
+        '400':
+          description: Falta o parâmetro `q`.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -492,6 +530,35 @@ components:
         attachments:
           type: array
           items: { $ref: '#/components/schemas/ComplaintAttachment' }
+
+    Zona:
+      type: object
+      nullable: true
+      description: Zona de entrega desenhada que contém o ponto (null se nenhuma).
+      properties:
+        id: { type: integer }
+        nome: { type: string, examples: ["Zona A — Esposende"] }
+        cor: { type: string, examples: ["#22c55e"] }
+        motorista:
+          type: string
+          description: Motorista por defeito da zona (vazio se não definido).
+
+    TriagemResult:
+      type: object
+      properties:
+        ok: { type: boolean }
+        encontrado:
+          type: boolean
+          description: true se foi possível localizar o ponto no mapa.
+        q: { type: string, description: "Consulta original (CP ou waybill)." }
+        cp: { type: string, examples: ["4525-504"] }
+        waybill: { type: string }
+        localidade: { type: string }
+        concelho: { type: string }
+        freguesia: { type: string }
+        lat: { type: number, nullable: true }
+        lng: { type: number, nullable: true }
+        zona: { $ref: '#/components/schemas/Zona' }
 
     ComplaintCreateInput:
       type: object

@@ -27,6 +27,31 @@
   </div>
 </div>
 
+{% if counts.nao_aplicados %}
+<div class="mb-4 rounded-xl border border-orange-300 dark:border-orange-700/50 bg-orange-50 dark:bg-orange-900/20 px-5 py-4">
+  <div class="flex items-start justify-between flex-wrap gap-3">
+    <div class="flex items-start gap-3">
+      <i data-lucide="alert-triangle" class="w-6 h-6 text-orange-500 flex-shrink-0 mt-0.5"></i>
+      <div>
+        <p class="font-bold text-orange-800 dark:text-orange-200">
+          {{ counts.nao_aplicados }} desconto(s) aprovado(s) ainda sem lançamento em fatura
+          <span class="font-extrabold">— € {{ valor_nao_aplicado|floatformat:2 }}</span>
+        </p>
+        <p class="text-xs text-orange-700 dark:text-orange-300 mt-0.5">
+          Estão aprovados mas o desconto não entrou em nenhuma Pré-Fatura.
+          Aplica agora para garantir o lançamento na pré-fatura aberta mais
+          recente (ou serão incluídos na próxima PF gerada).
+        </p>
+      </div>
+    </div>
+    <button type="button" onclick="aplicarTodos(this)"
+            class="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-sm font-semibold inline-flex items-center gap-2 flex-shrink-0">
+      <i data-lucide="check-check" class="w-4 h-4"></i> Aplicar todos
+    </button>
+  </div>
+</div>
+{% endif %}
+
 <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden mb-4">
   <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
     <div class="flex items-center gap-2">
@@ -46,6 +71,15 @@
             <span class="font-mono text-xs text-gray-500">#{{ claim.id }}</span>
             <span class="font-semibold text-gray-900 dark:text-white">{{ claim.get_claim_type_display }}</span>
             <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold {{ claim.situacao.classes }}">{{ claim.situacao.label }}</span>
+            {% if claim.aplicado is False %}
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300 inline-flex items-center gap-1">
+                <i data-lucide="alert-triangle" class="w-3 h-3"></i> Sem desconto em fatura
+              </span>
+            {% elif claim.aplicado is True %}
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 inline-flex items-center gap-1">
+                <i data-lucide="check" class="w-3 h-3"></i> Descontado em fatura
+              </span>
+            {% endif %}
             <span class="text-xs text-gray-500">{{ claim.occurred_at|date:"d/m/Y H:i" }}</span>
           </div>
           {% if claim.waybill_number %}
@@ -94,6 +128,13 @@
                class="text-[11px] text-gray-600 hover:text-violet-600 inline-flex items-center gap-1">
               <i data-lucide="external-link" class="w-3 h-3"></i> Detalhes
             </a>
+            {% if claim.aplicado is False %}
+              <button type="button"
+                      onclick="aplicarDesconto(this, {{ driver.id }}, {{ claim.id }})"
+                      class="px-3 py-1 bg-orange-600 hover:bg-orange-700 text-white rounded text-[11px] font-semibold inline-flex items-center gap-1">
+                <i data-lucide="check-check" class="w-3 h-3"></i> Aplicar desconto
+              </button>
+            {% endif %}
             {% if claim.status == 'PENDING' or claim.status == 'APPROVED' %}
               <button type="button"
                       onclick="document.getElementById('appeal-{{ claim.id }}').classList.toggle('hidden')"
@@ -152,5 +193,65 @@
     {% endfor %}
   </div>
 </div>
+
+<script>
+function _csrf() {
+  const m = document.cookie.match(/csrftoken=([^;]+)/);
+  return m ? m[1] : '';
+}
+
+async function aplicarDesconto(btn, driverId, claimId) {
+  if (!confirm('Aplicar este desconto na pré-fatura aberta mais recente?')) return;
+  btn.disabled = true;
+  const original = btn.innerHTML;
+  btn.innerHTML = 'A aplicar…';
+  try {
+    const resp = await fetch(
+      '/driversapp/portal/' + driverId + '/descontos/' + claimId + '/aplicar/',
+      { method: 'POST', headers: { 'X-CSRFToken': _csrf() }, credentials: 'same-origin' },
+    );
+    const d = await resp.json();
+    if (d.success && d.applied) {
+      alert('Desconto lançado na Pré-Fatura ' + (d.pf || '') + '.');
+      location.reload();
+    } else if (d.success && !d.applied) {
+      alert(d.reason || 'Não foi possível aplicar agora.');
+      btn.disabled = false; btn.innerHTML = original;
+    } else {
+      alert('Erro: ' + (d.error || 'desconhecido'));
+      btn.disabled = false; btn.innerHTML = original;
+    }
+  } catch (e) {
+    alert('Erro de rede ao aplicar desconto.');
+    btn.disabled = false; btn.innerHTML = original;
+  }
+}
+
+async function aplicarTodos(btn) {
+  if (!confirm('Aplicar TODOS os descontos aprovados ainda sem fatura?')) return;
+  btn.disabled = true;
+  btn.innerHTML = 'A aplicar…';
+  try {
+    const resp = await fetch(
+      '/driversapp/portal/{{ driver.id }}/descontos/aplicar-todos/',
+      { method: 'POST', headers: { 'X-CSRFToken': _csrf() }, credentials: 'same-origin' },
+    );
+    const d = await resp.json();
+    if (d.success) {
+      let msg = d.aplicados + ' desconto(s) lançado(s)';
+      if (d.pfs && d.pfs.length) msg += ' nas PF: ' + d.pfs.join(', ');
+      if (d.pendentes) msg += '. ' + d.pendentes + ' sem PF aberta (entram na próxima PF gerada)';
+      alert(msg + '.');
+      location.reload();
+    } else {
+      alert('Erro: ' + (d.error || 'desconhecido'));
+      btn.disabled = false;
+    }
+  } catch (e) {
+    alert('Erro de rede ao aplicar descontos.');
+    btn.disabled = false;
+  }
+}
+</script>
 
 {% endblock %}

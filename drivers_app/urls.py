@@ -71,6 +71,14 @@ urlpatterns = [
         views.driver_claim_appeal, name="driver_claim_appeal",
     ),
     path(
+        "portal/<int:driver_id>/descontos/<int:claim_id>/aplicar/",
+        views.driver_claim_apply_now, name="driver_claim_apply_now",
+    ),
+    path(
+        "portal/<int:driver_id>/descontos/aplicar-todos/",
+        views.driver_claims_apply_all, name="driver_claims_apply_all",
+    ),
+    path(
         "portal/<int:driver_id>/reclamacoes/<int:complaint_id>/aplicar-desconto/",
         views.driver_complaint_apply_claim,
         name="driver_complaint_apply_claim",

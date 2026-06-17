@@ -635,25 +635,39 @@ def driver_claims(request, driver_id):
     com a Cainiao.
     """
     from settlements.models import DriverClaim
+    from settlements.services_claims_in_pf import claim_is_applied
 
     driver = get_object_or_404(DriverProfile, pk=driver_id)
-    claims = DriverClaim.objects.filter(driver=driver).order_by(
-        "-occurred_at",
+    claims = list(
+        DriverClaim.objects.filter(driver=driver).order_by("-occurred_at")
     )
 
+    # Marca cada claim com a verdade financeira: o desconto APROVADO já
+    # entrou (foi lançado) numa fatura? O estado APPROVED por si só não
+    # garante isso. Sinaliza os aprovados que ainda não foram descontados.
+    nao_aplicados = 0
+    valor_nao_aplicado = 0
+    for claim in claims:
+        aplicado = claim_is_applied(claim) if claim.status == "APPROVED" else None
+        claim.aplicado = aplicado
+        if aplicado is False:
+            nao_aplicados += 1
+            valor_nao_aplicado += claim.amount or 0
+
     counts = {
-        "total": claims.count(),
-        "pending": claims.filter(status="PENDING").count(),
-        "approved": claims.filter(status="APPROVED").count(),
-        "rejected": claims.filter(status="REJECTED").count(),
-        "appealed": claims.filter(status="APPEALED").count(),
+        "total": len(claims),
+        "pending": sum(1 for c in claims if c.status == "PENDING"),
+        "approved": sum(1 for c in claims if c.status == "APPROVED"),
+        "rejected": sum(1 for c in claims if c.status == "REJECTED"),
+        "appealed": sum(1 for c in claims if c.status == "APPEALED"),
+        "nao_aplicados": nao_aplicados,
     }
-    total_pending_value = claims.filter(status="PENDING").aggregate(
-        s=models.Sum("amount"),
-    )["s"] or 0
-    total_approved_value = claims.filter(status="APPROVED").aggregate(
-        s=models.Sum("amount"),
-    )["s"] or 0
+    total_pending_value = sum(
+        (c.amount or 0) for c in claims if c.status == "PENDING"
+    )
+    total_approved_value = sum(
+        (c.amount or 0) for c in claims if c.status == "APPROVED"
+    )
 
     return render(request, "drivers_app/portal/admin_claims.html", {
         "driver": driver,
@@ -661,6 +675,65 @@ def driver_claims(request, driver_id):
         "counts": counts,
         "total_pending_value": total_pending_value,
         "total_approved_value": total_approved_value,
+        "valor_nao_aplicado": valor_nao_aplicado,
+    })
+
+
+@admin_required
+@require_http_methods(["POST"])
+def driver_claim_apply_now(request, driver_id, claim_id):
+    """Garante o desconto: lança um DriverClaim APPROVED ainda não
+    descontado na PF aberta mais recente do motorista (ou informa que
+    será apanhado na próxima PF gerada)."""
+    from django.http import JsonResponse
+    from settlements.models import DriverClaim
+    from settlements.services_claims_in_pf import apply_claim_now
+
+    driver = get_object_or_404(DriverProfile, pk=driver_id)
+    claim = get_object_or_404(DriverClaim, pk=claim_id, driver=driver)
+    try:
+        result = apply_claim_now(claim)
+    except Exception as exc:  # noqa: BLE001 — erro amigável
+        return JsonResponse(
+            {"success": False, "error": f"{type(exc).__name__}: {exc}"},
+            status=500,
+        )
+    return JsonResponse({"success": True, **result})
+
+
+@admin_required
+@require_http_methods(["POST"])
+def driver_claims_apply_all(request, driver_id):
+    """Lança todos os descontos APROVADOS deste motorista que ainda não
+    foram descontados em nenhuma fatura. Best-effort por claim."""
+    from settlements.models import DriverClaim
+    from settlements.services_claims_in_pf import (
+        apply_claim_now,
+        unapplied_approved_claim_ids,
+    )
+
+    driver = get_object_or_404(DriverProfile, pk=driver_id)
+    aplicados = pendentes = 0
+    pf_numeros = set()
+    for cid in unapplied_approved_claim_ids(driver.id):
+        claim = DriverClaim.objects.filter(pk=cid, driver=driver).first()
+        if not claim:
+            continue
+        try:
+            r = apply_claim_now(claim)
+        except Exception:  # noqa: BLE001 — não rebenta o lote
+            continue
+        if r.get("applied"):
+            aplicados += 1
+            if r.get("pf"):
+                pf_numeros.add(r["pf"])
+        else:
+            pendentes += 1
+    return JsonResponse({
+        "success": True,
+        "aplicados": aplicados,
+        "pendentes": pendentes,
+        "pfs": sorted(pf_numeros),
     })
 
 

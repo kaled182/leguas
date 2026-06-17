@@ -1108,10 +1108,22 @@ class DriverClaim(models.Model):
                 periodo_fim__gte=ref_date,
                 status__in=["CALCULADO", "APROVADO", "PENDENTE"],
             )
+            incluido = False
             for pf in open_pfs:
                 result = auto_include_approved_claims(pf)
                 if result["included"]:
                     pf.recalcular()
+                    incluido = True
+            # Fallback: nenhuma PF do período o apanhou → garante o
+            # lançamento na PF aberta mais recente (carry-forward). Se não
+            # houver PF aberta, fica sinalizado e entra na próxima gerada.
+            if not incluido:
+                from .services_claims_in_pf import (
+                    apply_claim_now,
+                    claim_is_applied,
+                )
+                if not claim_is_applied(self):
+                    apply_claim_now(self)
         except Exception:
             import logging
             logging.getLogger(__name__).exception(

@@ -99,6 +99,169 @@ def auto_include_approved_claims(pre_invoice):
 # PFs onde ainda se pode remover/editar linhas (PAGO e REPROVADO são terminais)
 EDITABLE_PF_STATES = ("RASCUNHO", "CALCULADO", "APROVADO", "PENDENTE", "CONTESTADO")
 
+# PFs onde uma linha de desconto conta como "efetivamente aplicada":
+# editáveis (vai cobrar) + PAGO (já cobrou). REPROVADO não cobra → não conta.
+APPLIED_PF_STATES = EDITABLE_PF_STATES + ("PAGO",)
+
+
+def claim_is_applied(claim):
+    """True se o desconto deste claim está efetivamente lançado nalguma PF
+    não-reprovada (linha auto:driver_claim:<id> presente).
+
+    Distingue o *estado* APPROVED (apenas decisão) do facto de o desconto
+    ter realmente entrado numa fatura — é a fonte de verdade financeira.
+    """
+    from .models import PreInvoiceLostPackage
+
+    return PreInvoiceLostPackage.objects.filter(
+        api_source=f"auto:driver_claim:{claim.id}",
+        pre_invoice__status__in=APPLIED_PF_STATES,
+    ).exists()
+
+
+def unapplied_approved_claim_ids(driver_id):
+    """IDs dos DriverClaim APPROVED do motorista cujo desconto ainda não
+    foi lançado em nenhuma fatura (carry-forward pendente)."""
+    from .models import DriverClaim
+
+    pendentes = []
+    for claim in DriverClaim.objects.filter(
+        driver_id=driver_id, status="APPROVED",
+    ).only("id"):
+        if not claim_is_applied(claim):
+            pendentes.append(claim.id)
+    return pendentes
+
+
+def apply_claim_now(claim):
+    """Lança imediatamente o desconto de um claim APPROVED ainda não
+    descontado, garantindo que entra numa fatura.
+
+    Procura, por ordem: (1) PF aberta que cubra a data da entrega;
+    (2) PF aberta mais recente do motorista (carry-forward). Se não houver
+    nenhuma PF aberta, devolve applied=False e o desconto será apanhado na
+    próxima PF gerada (via carry_forward_unapplied_claims).
+
+    Devolve dict: {applied: bool, pf: <numero|None>, reason: <str|None>}.
+    """
+    from .models import DriverPreInvoice, PreInvoiceLostPackage
+
+    if claim.status != "APPROVED":
+        return {"applied": False, "pf": None,
+                "reason": "O desconto não está aprovado."}
+    if claim_is_applied(claim):
+        return {"applied": False, "pf": None,
+                "reason": "Já descontado numa fatura."}
+
+    ref_date = (
+        claim.operation_task_date
+        or (claim.occurred_at.date() if claim.occurred_at else None)
+    )
+
+    pf = None
+    if ref_date:
+        pf = (
+            DriverPreInvoice.objects.filter(
+                driver_id=claim.driver_id,
+                periodo_inicio__lte=ref_date,
+                periodo_fim__gte=ref_date,
+                status__in=EDITABLE_PF_STATES,
+            )
+            .order_by("-periodo_fim")
+            .first()
+        )
+    if pf is None:
+        pf = (
+            DriverPreInvoice.objects.filter(
+                driver_id=claim.driver_id,
+                status__in=EDITABLE_PF_STATES,
+            )
+            .order_by("-periodo_fim")
+            .first()
+        )
+    if pf is None:
+        return {
+            "applied": False, "pf": None,
+            "reason": "Sem pré-fatura aberta — será incluído na próxima gerada.",
+        }
+
+    PreInvoiceLostPackage.objects.create(
+        pre_invoice=pf,
+        data=ref_date or pf.periodo_fim,
+        numero_pacote=claim.waybill_number or f"claim-{claim.id}",
+        descricao=(claim.description or "")[:300],
+        valor=claim.amount,
+        api_source=f"auto:driver_claim:{claim.id}",
+        observacoes=(
+            f"Desconto do DriverClaim #{claim.id} aplicado nesta PF"
+        )[:300],
+    )
+    pf.recalcular()
+    log.info("apply_claim_now claim #%s -> PF %s (€%s)",
+             claim.id, pf.numero, claim.amount)
+    return {"applied": True, "pf": pf.numero, "reason": None}
+
+
+def carry_forward_unapplied_claims(pre_invoice):
+    """Garante que descontos APPROVED em atraso entram nesta PF.
+
+    Apanha qualquer DriverClaim APPROVED cuja entrega ocorreu **até ao fim
+    do período** desta PF e que ainda não foi descontado em nenhuma fatura,
+    mesmo que a data caia **fora** do período (a PF do período original já
+    tinha sido gerada/paga, ou um recurso negado não tinha PF aberta).
+
+    Não arrasta entregas futuras (ref_date > período_fim).
+    """
+    from .models import DriverClaim, PreInvoiceLostPackage
+
+    if not pre_invoice or not pre_invoice.driver_id:
+        return {"included": 0}
+    if pre_invoice.status not in EDITABLE_PF_STATES:
+        return {"included": 0}
+
+    period_start = pre_invoice.periodo_inicio
+    period_end = pre_invoice.periodo_fim
+    included = 0
+    for claim in DriverClaim.objects.filter(
+        driver_id=pre_invoice.driver_id, status="APPROVED",
+    ):
+        ref_date = (
+            claim.operation_task_date
+            or (claim.occurred_at.date() if claim.occurred_at else None)
+        )
+        if ref_date is None:
+            continue
+        # dentro do período → já tratado por auto_include_approved_claims
+        if period_start <= ref_date <= period_end:
+            continue
+        # entrega futura → não pertence a esta PF
+        if ref_date > period_end:
+            continue
+        # já lançado nalguma fatura → nada a fazer
+        if claim_is_applied(claim):
+            continue
+        marker = f"auto:driver_claim:{claim.id}"
+        if PreInvoiceLostPackage.objects.filter(
+            pre_invoice=pre_invoice, api_source=marker,
+        ).exists():
+            continue
+        PreInvoiceLostPackage.objects.create(
+            pre_invoice=pre_invoice,
+            data=ref_date,
+            numero_pacote=claim.waybill_number or f"claim-{claim.id}",
+            descricao=(claim.description or "")[:300],
+            valor=claim.amount,
+            api_source=marker,
+            observacoes=(
+                f"Desconto em atraso do DriverClaim #{claim.id} "
+                f"(entrega {ref_date:%d/%m/%Y})"
+            )[:300],
+        )
+        included += 1
+        log.info("Carry-forward claim #%s -> PF %s (€%s)",
+                 claim.id, pre_invoice.numero, claim.amount)
+    return {"included": included}
+
 
 def revert_claim_from_preinvoices(claim):
     """Estorna um DriverClaim das pré-faturas — devolve o valor ao motorista.
@@ -218,4 +381,13 @@ def reapply_claim(claim):
         if r["included"]:
             pf.recalcular()
             total += r["included"]
+
+    # 3) fallback: se nenhuma PF do período o apanhou e continua por
+    #    descontar, garante o lançamento na PF aberta mais recente
+    #    (carry-forward). Se não houver PF aberta, fica pendente para a
+    #    próxima PF gerada.
+    if total == 0 and not claim_is_applied(claim):
+        r = apply_claim_now(claim)
+        if r["applied"]:
+            total += 1
     return {"included": total}

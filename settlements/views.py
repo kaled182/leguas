@@ -2283,9 +2283,15 @@ def driver_pre_invoice_create(request, driver_id):
     pf.recalcular()
 
     # Auto-inclui DriverClaim APPROVED do período como pacotes perdidos
-    from .services_claims_in_pf import auto_include_approved_claims
+    # e arrasta descontos aprovados em atraso (cuja PF de origem já tinha
+    # sido gerada/paga) — garante que todo o desconto entra numa fatura.
+    from .services_claims_in_pf import (
+        auto_include_approved_claims,
+        carry_forward_unapplied_claims,
+    )
     claims_result = auto_include_approved_claims(pf)
-    if claims_result["included"]:
+    carry_result = carry_forward_unapplied_claims(pf)
+    if claims_result["included"] or carry_result["included"]:
         pf.recalcular()  # recalcular para somar os novos pacotes perdidos
 
     # Auto-inclui TODOS os PreInvoiceAdvance PENDENTE do motorista —

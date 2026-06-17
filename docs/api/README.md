@@ -19,27 +19,31 @@ O modelo é o mesmo que as apps de entregas usam — **telemóvel + código por 
 
 Sem cookies de sessão, sem CSRF — adequado a app nativa.
 
-## Estado de implementação
+## Estado de implementação — ✅ IMPLEMENTADO
 
-A spec é o **contrato-alvo**. Cada endpoint está anotado com `x-status`:
+A camada **`app_api`** está implementada e montada em **`/api/app/v1/`**.
+A anotação `x-status` na spec é histórica (`existe` = já havia lógica web;
+`a-implementar` = criado agora nesta camada) — **todos os endpoints abaixo
+estão funcionais** após `migrate` (tabela `app_api_driverapptoken`).
 
-- **`existe`** — a lógica já existe no backend (hoje servida por sessão/AJAX web).
-  Para a app, precisa de ser exposta sob auth por token.
-- **`a-implementar`** — faz parte da camada **`app-api`** a criar: emissão de
-  token a partir do OTP (`/auth/verify-code`), `/me`, e respostas JSON limpas
-  para faturas e descontos.
+### Como está construído (backend)
 
-### Recomendação de implementação (backend)
+App Django `app_api` (registada em `INSTALLED_APPS`, rotas em `/api/app/v1/`):
 
-Criar uma app Django `app_api` montada em `/api/app/v1/` com:
+- **Token** — modelo `app_api.DriverAppToken` (chave opaca de 64 hex, validade
+  90 dias, revogável). Emitido em `/auth/verify-code`, validado pelo decorator
+  `app_token_required` que resolve o `DriverProfile` a partir do `Authorization:
+  Bearer <token>` (sem sessão/cookies). POST são `csrf_exempt`.
+- **OTP partilhado** — `customauth/otp_service.py` (`resolve_driver_by_phone`,
+  `send_otp`, `verify_otp`) é usado tanto pelo login web (sessão) como pela app
+  (token) — uma só fonte de verdade. Reaproveita `DriverLoginOTP`,
+  `to_whatsapp_number` e `send_text_reliable`.
+- **Recursos** — faturas/descontos/reclamações usam os mesmos modelos
+  (`DriverPreInvoice`, `DriverClaim`, `CustomerComplaint`); PDF da PF via
+  `PDFGenerator`. Respostas JSON em `app_api/serializers.py`.
 
-- **Token**: tabela de tokens por motorista (ou JWT/`rest_framework` TokenAuth),
-  emitido no `verify-code` e validado num *authentication middleware* próprio
-  (resolve o `DriverProfile` a partir do token, sem sessão).
-- **Reutilização**: o OTP (`DriverLoginOTP`) e o normalizador de número
-  (`to_whatsapp_number`) já existem; o `verify-code` só muda o retorno
-  (token em vez de `redirect`). Faturas/descontos/reclamações reaproveitam
-  os mesmos modelos (`DriverPreInvoice`, `DriverClaim`, `CustomerComplaint`).
+> **Rotas sem barra final** (`/auth/request-code`, não `.../request-code/`).
+> Token devolvido em `/auth/verify-code` no campo `token` (válido 90 dias).
 
 ## Como usar a coleção Postman
 

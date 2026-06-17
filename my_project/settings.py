@@ -172,6 +172,8 @@ INSTALLED_APPS = [
     "analytics",  # Métricas, Forecasting e Dashboards
     # Contratos
     "contracts",
+    # API da app do motorista (token Bearer sobre OTP)
+    "app_api",
 ]
 
 # Middleware

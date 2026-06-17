@@ -78,6 +78,7 @@ urlpatterns = [
     path("", include("paack_dashboard.urls")),  # Dashboard para visualizar dados
     # path('delnext/', include('delnext_dashboard.urls')),
     path("driversapp/", include("drivers_app.urls")),
+    path("api/app/v1/", include("app_api.urls")),  # API da app do motorista
     path("sendpaackreports/", include("send_paack_reports.urls")),
     # path('mixed/', include('mixed_dashboard.urls')),
     path("converter/", include("converter.urls")),  # Conversor de listas para XLSX

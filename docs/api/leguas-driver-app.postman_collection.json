@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Léguas Franzinas — App do Motorista",
-    "description": "Coleção da API da app do motorista. Auth OTP (telemóvel + código WhatsApp) → token Bearer. Ver docs/api/openapi-app.yaml. Endpoints marcados [a-implementar] fazem parte da camada app-api a criar; [existe] já existem no backend (hoje em sessão/AJAX web).",
+    "description": "Coleção da API da app do motorista (IMPLEMENTADA em /api/app/v1/). Auth OTP (telemóvel + código WhatsApp) → token Bearer (90 dias). Fluxo: Pedir código OTP → Validar código (guarda o token) → restantes pedidos autenticados. Ver docs/api/openapi-app.yaml.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -20,7 +20,7 @@
       "name": "Auth",
       "item": [
         {
-          "name": "Pedir código OTP [existe]",
+          "name": "Pedir código OTP",
           "request": {
             "auth": { "type": "noauth" },
             "method": "POST",
@@ -34,7 +34,7 @@
           }
         },
         {
-          "name": "Validar código → token [a-implementar]",
+          "name": "Validar código → token",
           "event": [
             {
               "listen": "test",
@@ -66,7 +66,7 @@
           }
         },
         {
-          "name": "Logout [a-implementar]",
+          "name": "Logout",
           "request": {
             "method": "POST",
             "header": [],
@@ -79,7 +79,7 @@
       "name": "Perfil",
       "item": [
         {
-          "name": "Eu (perfil) [a-implementar]",
+          "name": "Eu (perfil)",
           "request": {
             "method": "GET",
             "header": [],
@@ -92,7 +92,7 @@
       "name": "Faturas",
       "item": [
         {
-          "name": "Listar pré-faturas [a-implementar]",
+          "name": "Listar pré-faturas",
           "request": {
             "method": "GET",
             "header": [],
@@ -105,7 +105,7 @@
           }
         },
         {
-          "name": "Detalhe pré-fatura [a-implementar]",
+          "name": "Detalhe pré-fatura",
           "request": {
             "method": "GET",
             "header": [],
@@ -113,7 +113,7 @@
           }
         },
         {
-          "name": "PDF da pré-fatura [existe]",
+          "name": "PDF da pré-fatura",
           "request": {
             "method": "GET",
             "header": [],
@@ -126,7 +126,7 @@
       "name": "Descontos",
       "item": [
         {
-          "name": "Listar descontos [a-implementar]",
+          "name": "Listar descontos",
           "request": {
             "method": "GET",
             "header": [],
@@ -143,7 +143,7 @@
       "name": "Reclamações",
       "item": [
         {
-          "name": "Listar reclamações [existe]",
+          "name": "Listar reclamações",
           "request": {
             "method": "GET",
             "header": [],
@@ -151,7 +151,7 @@
           }
         },
         {
-          "name": "Criar reclamação [existe]",
+          "name": "Criar reclamação",
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],

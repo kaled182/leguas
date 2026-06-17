@@ -10,17 +10,14 @@ info:
     código, a app recebe um *token* e usa-o no cabeçalho `Authorization:
     Bearer <token>` em todos os pedidos seguintes (sem cookies de sessão).
 
-    ## Estado de implementação
-    Esta spec é o **contrato-alvo** da app. Os campos dos modelos são reais
-    (extraídos do código). O estado de cada endpoint está anotado:
+    ## Estado de implementação — ✅ IMPLEMENTADO
+    Todos os endpoints estão funcionais na app Django `app_api`, montada em
+    `/api/app/v1/`. Os campos dos modelos são reais (extraídos do código).
+    A anotação `x-status: existe` em cada operação indica que está disponível;
+    `x-maps-to` mostra a origem da lógica no backend.
 
-    - **`x-status: existe`** — já existe no backend (hoje em sessão/AJAX web);
-      para a app precisa apenas de exposição com auth por token.
-    - **`x-status: a-implementar`** — faz parte da camada `app-api` a criar
-      (token a partir do OTP + respostas JSON limpas).
-
-    A estratégia recomendada é uma app **API-first**: o backend implementa
-    exatamente este contrato sob o prefixo `/api/app/v1/`.
+    Requer `migrate` (tabela `app_api_driverapptoken`). Rotas **sem barra
+    final** (ex.: `/auth/request-code`).
 
 servers:
   - url: https://app.leguasfranzinas.pt/api/app/v1
@@ -96,12 +93,9 @@ paths:
       summary: Validar código e obter token
       description: |
         Valida o código OTP (máx. 5 tentativas) e, em caso de sucesso, devolve
-        um **token Bearer** para a app e o perfil do motorista.
-
-        Nota: o endpoint web atual devolve `redirect` (inicia sessão por
-        cookie). A variante da app devolve `token` em vez de `redirect`.
-      x-status: a-implementar
-      x-maps-to: customauth:driver_login_verify_code (variante token)
+        um **token Bearer** (validade 90 dias) e o perfil do motorista.
+      x-status: existe
+      x-maps-to: app_api.views.verify_code (token via app_api.auth.issue_token)
       security: []
       requestBody:
         required: true
@@ -142,7 +136,7 @@ paths:
     post:
       tags: [Auth]
       summary: Revogar o token atual
-      x-status: a-implementar
+      x-status: existe
       responses:
         '204': { description: Sessão terminada. }
 
@@ -150,7 +144,7 @@ paths:
     get:
       tags: [Perfil]
       summary: Perfil do motorista autenticado
-      x-status: a-implementar
+      x-status: existe
       x-maps-to: drivers_app.DriverProfile (do token)
       responses:
         '200':
@@ -169,7 +163,7 @@ paths:
       tags: [Faturas]
       summary: Listar pré-faturas do motorista
       description: Pré-faturas (DriverPreInvoice) do motorista autenticado.
-      x-status: a-implementar
+      x-status: existe
       x-maps-to: drivers_app:driver_portal_invoices / settlements DriverPreInvoice
       parameters:
         - name: status
@@ -196,7 +190,7 @@ paths:
     get:
       tags: [Faturas]
       summary: Detalhe de uma pré-fatura
-      x-status: a-implementar
+      x-status: existe
       parameters:
         - name: id
           in: path
@@ -239,7 +233,7 @@ paths:
       description: |
         Descontos financeiros do motorista, incluindo estado de recurso.
         Inclui o objeto `situacao` (rótulo/ícone/tom) pronto para a UI.
-      x-status: a-implementar
+      x-status: existe
       x-maps-to: drivers_app:driver_claims / settlements DriverClaim
       parameters:
         - name: status

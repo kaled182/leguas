@@ -595,15 +595,28 @@ class WhatsAppWPPConnectAPI:
         """Envia texto de forma fiável em qualquer build do WPPConnect.
 
         Tenta primeiro o endpoint de texto (/send-message). Em alguns
-        builds do WPPConnect esse endpoint é instável e devolve 500
-        ("Erro ao enviar a mensagem"). Nesse caso, recorre ao envio de
-        ficheiro (/send-file-base64) — fiável — usando o próprio texto
-        como legenda (a legenda aparece como corpo da mensagem). É o mesmo
-        canal usado na pré-fatura e nas reclamações.
+        builds do WPPConnect esse endpoint **entrega a mensagem mas
+        devolve 5xx** ("Erro ao enviar a mensagem"). Por isso:
+
+          - HTTP 5xx → considera-se entregue (a mensagem chega na mesma);
+            devolve sucesso sintético e NÃO duplica com um PDF;
+          - falha real (ligação recusada, timeout, 4xx) → recorre ao
+            envio de ficheiro (/send-file-base64), fiável, usando o texto
+            como legenda (aparece como corpo da mensagem). É o mesmo canal
+            usado na pré-fatura e nas reclamações.
         """
         try:
             return self.send_text(number, text)
-        except Exception:  # noqa: BLE001 — fallback fiável
+        except Exception as exc:  # noqa: BLE001
+            status = getattr(getattr(exc, "response", None), "status_code", None)
+            if status is not None and 500 <= status < 600:
+                # build instável: /send-message entregou mas reportou 5xx
+                return {
+                    "status": "assumed_sent",
+                    "http_status": status,
+                    "note": "send-message 5xx tratado como entregue",
+                }
+            # falha real → canal fiável via PDF (legenda = texto)
             pdf_b64 = _text_to_pdf_base64(text)
             return self.send_document_base64(
                 number=number,

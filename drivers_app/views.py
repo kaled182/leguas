@@ -3143,7 +3143,42 @@ def driver_complaint_notify_whatsapp(request, complaint_id):
             status=502,
         )
 
-    return JsonResponse({"success": True})
+    # Segunda mensagem: o PDF da reclamação (texto separado + PDF).
+    # Reutiliza a view do PDF (só @login_required, aceita POST) para não
+    # duplicar a geração. Best-effort: se o PDF falhar, o texto já seguiu.
+    pdf_sent = False
+    pdf_error = None
+    try:
+        pdf_resp = driver_complaint_pdf(request, complaint_id)
+        content_type = (
+            pdf_resp.get("Content-Type", "") if hasattr(pdf_resp, "get") else ""
+        )
+        if getattr(pdf_resp, "status_code", 500) == 200 and "pdf" in content_type:
+            import base64
+            pdf_b64 = base64.b64encode(pdf_resp.content).decode("utf-8")
+            pkg = (getattr(complaint, "numero_pacote", "") or "").strip()
+            filename = f"Reclamacao_{complaint.id}.pdf"
+            caption = f"Reclamação {pkg}".strip() if pkg else "Reclamação"
+            api.send_document_base64(
+                number=telefone,
+                b64_content=pdf_b64,
+                filename=filename,
+                caption=caption,
+                mimetype="application/pdf",
+            )
+            pdf_sent = True
+        else:
+            # A view do PDF devolveu JSON de erro: extrai a mensagem.
+            try:
+                pdf_error = json.loads(pdf_resp.content).get("error")
+            except Exception:  # noqa: BLE001
+                pdf_error = "Não foi possível gerar o PDF da reclamação."
+    except Exception as exc:  # noqa: BLE001 — não rebenta: o texto já foi enviado
+        pdf_error = f"Falha ao enviar o PDF: {exc}"
+
+    return JsonResponse(
+        {"success": True, "pdf_sent": pdf_sent, "pdf_error": pdf_error}
+    )
 
 
 @login_required

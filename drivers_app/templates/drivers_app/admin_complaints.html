@@ -1499,7 +1499,13 @@ function complaintsPanel() {
         const data = await resp.json();
         if (data.success) {
           this.skipWhatsApp();
-          alert('Mensagem enviada por WhatsApp.');
+          if (data.pdf_sent) {
+            alert('Mensagem + PDF da reclamação enviados por WhatsApp.');
+          } else if (data.pdf_error) {
+            alert('Mensagem enviada, mas o PDF falhou: ' + data.pdf_error);
+          } else {
+            alert('Mensagem enviada por WhatsApp.');
+          }
         } else {
           alert(data.error || 'Falha ao enviar WhatsApp.');
         }

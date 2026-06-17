@@ -191,7 +191,11 @@ def driver_login_send_code(request):
             f"*{code}*\n\n"
             f"Válido por 5 minutos. Não partilhes este código com ninguém."
         )
-        api.send_text(to_whatsapp_number(profile.telefone), msg)
+        api.send_text_reliable(
+            to_whatsapp_number(profile.telefone),
+            msg,
+            filename="Codigo-de-acesso.pdf",
+        )
     except Exception as exc:  # noqa: BLE001 — erro amigável
         otp.delete()
         return JsonResponse(

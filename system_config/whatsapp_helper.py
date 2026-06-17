@@ -586,6 +586,33 @@ class WhatsAppWPPConnectAPI:
         payload = {"phone": self._ensure_recipients(number), "message": text}
         return self._request("post", "/send-message", json=payload)
 
+    def send_text_reliable(
+        self,
+        number: Sequence[str] | str,
+        text: str,
+        filename: str = "Mensagem.pdf",
+    ) -> Dict:
+        """Envia texto de forma fiável em qualquer build do WPPConnect.
+
+        Tenta primeiro o endpoint de texto (/send-message). Em alguns
+        builds do WPPConnect esse endpoint é instável e devolve 500
+        ("Erro ao enviar a mensagem"). Nesse caso, recorre ao envio de
+        ficheiro (/send-file-base64) — fiável — usando o próprio texto
+        como legenda (a legenda aparece como corpo da mensagem). É o mesmo
+        canal usado na pré-fatura e nas reclamações.
+        """
+        try:
+            return self.send_text(number, text)
+        except Exception:  # noqa: BLE001 — fallback fiável
+            pdf_b64 = _text_to_pdf_base64(text)
+            return self.send_document_base64(
+                number=number,
+                b64_content=pdf_b64,
+                filename=filename,
+                caption=text,
+                mimetype="application/pdf",
+            )
+
     def send_image(
         self, number: Sequence[str] | str, image_url: str, caption: str = ""
     ) -> Dict:
@@ -783,28 +810,82 @@ def format_phone_number(phone: str) -> str:
     return clean
 
 
-def to_whatsapp_number(phone: str, default_ddi: str = "351") -> str:
-    """Normaliza um número para o formato WhatsApp (DDI+número, só dígitos).
+def _default_country_ddi() -> str:
+    """Indicativo de país por defeito para números nacionais sem DDI.
 
-    Assume Portugal (351) por defeito: um número nacional de 9 dígitos
-    recebe o indicativo. Números que já tragam indicativo internacional
-    (ex.: começam por 351, ou vêm com 00351) são respeitados.
-
-    Ao contrário de ``format_phone_number`` (que força o DDI do Brasil),
-    esta função serve o contexto PT — usada no envio de códigos/avisos
-    ao motorista a partir do telefone do perfil.
+    Configurável via settings.DEFAULT_PHONE_DDI (ou .env). Fallback: 351
+    (Portugal). Permite que outras instalações/países definam o seu.
     """
+    try:
+        from django.conf import settings
+        ddi = str(getattr(settings, "DEFAULT_PHONE_DDI", "") or "").strip()
+        ddi = "".join(filter(str.isdigit, ddi))
+        if ddi:
+            return ddi
+    except Exception:  # noqa: BLE001 — fora do contexto Django
+        pass
+    return "351"
+
+
+def to_whatsapp_number(phone: str, default_ddi: str | None = None) -> str:
+    """Normaliza um número para o formato WhatsApp (DDI+número, só dígitos),
+    de forma agnóstica de país.
+
+    Regras:
+      - remove tudo o que não é dígito e o prefixo internacional ``00``;
+      - se já tiver indicativo internacional (não-nacional), respeita-o;
+      - números nacionais de 9 dígitos (ex.: Portugal) recebem o DDI por
+        defeito (settings.DEFAULT_PHONE_DDI, fallback 351).
+
+    Números estrangeiros guardados com o seu DDI (ex.: 5511999999999,
+    34xxxxxxxxx) passam intactos — por isso funciona para qualquer país,
+    desde que o número estrangeiro inclua o indicativo. Ao contrário de
+    ``format_phone_number`` (que força sempre 55/Brasil).
+    """
+    ddi = "".join(filter(str.isdigit, default_ddi)) if default_ddi else _default_country_ddi()
     d = "".join(filter(str.isdigit, phone or ""))
     if not d:
         return d
     if d.startswith("00"):
         d = d[2:]
-    if d.startswith(default_ddi):
+    if ddi and d.startswith(ddi):
         return d
-    # número nacional PT (9 dígitos) → acrescenta o indicativo
+    # número nacional de 9 dígitos → acrescenta o indicativo por defeito
     if len(d) == 9:
-        return default_ddi + d
+        return (ddi or "") + d
+    # caso contrário, assume-se que já inclui o indicativo do seu país
     return d
+
+
+def _text_to_pdf_base64(text: str) -> str:
+    """Gera um PDF mínimo de uma página com o texto e devolve-o em base64.
+
+    Usado como portador fiável de mensagens de texto quando o endpoint
+    /send-message do WPPConnect está instável (ver send_text_reliable).
+    """
+    import base64
+    from io import BytesIO
+
+    from reportlab.lib.pagesizes import A4
+    from reportlab.pdfgen import canvas
+
+    buf = BytesIO()
+    c = canvas.Canvas(buf, pagesize=A4)
+    _, height = A4
+    y = height - 80
+    c.setFont("Helvetica", 12)
+    for raw_line in (text or "").split("\n"):
+        # remove marcação WhatsApp (*negrito*) para a versão impressa
+        line = raw_line.replace("*", "")
+        c.drawString(60, y, line[:95])
+        y -= 18
+        if y < 60:
+            c.showPage()
+            c.setFont("Helvetica", 12)
+            y = height - 80
+    c.showPage()
+    c.save()
+    return base64.b64encode(buf.getvalue()).decode("utf-8")
 
 
 def save_qrcode_image(image: Image.Image, filepath: str):

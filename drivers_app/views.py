@@ -2557,6 +2557,7 @@ def _complaint_to_dict(c, now=None):
         "telefone_driver": (c.driver.telefone or "") if c.driver else "",
         "sla_estado": _complaint_sla(c, now),
         "whatsapp_text": c.whatsapp_text(),
+        "whatsapp_response_text": c.whatsapp_response_text(),
         "attachments": [
             {
                 "id": a.id,
@@ -3125,6 +3126,11 @@ def driver_complaint_notify_whatsapp(request, complaint_id):
         data = request.POST.dict()
 
     mensagem = (data.get("mensagem") or "").strip() or complaint.whatsapp_text()
+    # O PDF da reclamação só acompanha a mensagem de ABERTURA. Na resposta/
+    # fecho envia-se apenas texto. Default True (retrocompatível).
+    send_pdf = data.get("send_pdf", True)
+    if isinstance(send_pdf, str):
+        send_pdf = send_pdf.strip().lower() not in ("false", "0", "no", "")
 
     telefone = (complaint.driver.telefone or "").strip() if complaint.driver else ""
     if not telefone:
@@ -3147,9 +3153,15 @@ def driver_complaint_notify_whatsapp(request, complaint_id):
             status=502,
         )
 
-    # Segunda mensagem: o PDF da reclamação (texto separado + PDF).
-    # Reutiliza a view do PDF (só @login_required, aceita POST) para não
-    # duplicar a geração. Best-effort: se o PDF falhar, o texto já seguiu.
+    # Na resposta/fecho (send_pdf=False) envia-se apenas texto — sem PDF.
+    if not send_pdf:
+        return JsonResponse(
+            {"success": True, "pdf_sent": False, "pdf_error": None}
+        )
+
+    # Segunda mensagem: o PDF da reclamação (texto separado + PDF) — APENAS
+    # na mensagem de abertura. Reutiliza a view do PDF (só @login_required,
+    # aceita POST). Best-effort: se o PDF falhar, o texto já seguiu.
     pdf_sent = False
     pdf_error = None
     try:

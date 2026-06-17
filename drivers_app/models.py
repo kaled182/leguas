@@ -736,14 +736,28 @@ class CustomerComplaint(models.Model):
         )
 
     def whatsapp_text(self):
-        """Texto (cliente-facing) que o motorista envia ao cliente a pedir
-        confirmação da entrega."""
+        """Texto de ABERTURA — notificação inicial ao motorista sobre o
+        ticket (com o nº do pacote). Acompanhado do PDF da reclamação."""
         return (
             "Olá! 📦 Aqui é a equipa de entregas da Léguas Franzinas.\n\n"
             f"O nosso motorista registou a entrega da encomenda nº "
             f"{self.numero_pacote}. Conseguia apenas confirmar-nos com um "
             "\"Sim\" se já a tem consigo em segurança?\n\n"
             "Muito obrigado pela ajuda e um excelente dia!"
+        )
+
+    def whatsapp_response_text(self):
+        """Texto de RESPOSTA/FECHO — enviado quando o ticket é respondido
+        ou encerrado. Distinto da notificação de abertura e SEM PDF."""
+        resposta = (self.resposta_driver or "").strip()
+        corpo = (
+            f"\n\n📝 Resposta registada: {resposta}" if resposta else ""
+        )
+        return (
+            "Olá! 📦 Aqui é a equipa de entregas da Léguas Franzinas.\n\n"
+            f"Sobre a encomenda nº {self.numero_pacote}: registámos a tua "
+            f"resposta e o ticket foi atualizado.{corpo}\n\n"
+            "Obrigado pela colaboração e um excelente dia!"
         )
 
 

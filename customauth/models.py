@@ -6,9 +6,12 @@ Este módulo contém:
 - DriverRoute: Utilitário para gerenciar rotas de motoristas
 """
 
+import secrets
+
 from django.contrib.auth.hashers import check_password, make_password
 from django.contrib.auth.models import User
 from django.db import models
+from django.utils import timezone
 
 
 class DriverAccess(models.Model):
@@ -125,6 +128,55 @@ class DriverAccess(models.Model):
     def get_route(self, date=None):
         """Retorna o objeto DriverRoute para este motorista."""
         return DriverRoute(self.driver) if self.driver else None
+
+
+class DriverLoginOTP(models.Model):
+    """Código de uso único (OTP) enviado por WhatsApp para login do
+    motorista por número de telemóvel.
+
+    Liga ao DriverProfile (não exige DriverAccess) — qualquer motorista
+    com telefone registado pode pedir um código e entrar.
+    """
+
+    driver_profile = models.ForeignKey(
+        "drivers_app.DriverProfile",
+        on_delete=models.CASCADE,
+        related_name="login_otps",
+        verbose_name="Perfil do Motorista",
+    )
+    phone = models.CharField("Telefone", max_length=20)
+    code = models.CharField("Código", max_length=6)
+    created_at = models.DateTimeField("Criado em", auto_now_add=True)
+    expires_at = models.DateTimeField("Expira em")
+    used_at = models.DateTimeField("Usado em", null=True, blank=True)
+    attempts = models.PositiveSmallIntegerField("Tentativas", default=0)
+
+    MAX_ATTEMPTS = 5
+
+    class Meta:
+        verbose_name = "Código de login (OTP)"
+        verbose_name_plural = "Códigos de login (OTP)"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"OTP {self.phone} · {self.code}"
+
+    @property
+    def is_expired(self):
+        return timezone.now() >= self.expires_at
+
+    @property
+    def is_valid(self):
+        return (
+            self.used_at is None
+            and not self.is_expired
+            and self.attempts < self.MAX_ATTEMPTS
+        )
+
+    @staticmethod
+    def generate_code():
+        """Gera um código numérico de 6 dígitos (com zeros à esquerda)."""
+        return f"{secrets.randbelow(1_000_000):06d}"
 
 
 class EmpresaAccess(models.Model):

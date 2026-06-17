@@ -35,42 +35,212 @@
     {% endif %}
 
     {# Card login #}
-    <form method="post" class="bg-white rounded-3xl shadow-2xl p-8 space-y-5">
+    <div class="bg-white rounded-3xl shadow-2xl p-8">
       {% csrf_token %}
 
-      <div>
-        <label class="block text-sm font-semibold text-gray-700 mb-1.5">Username ou Email</label>
-        <div class="relative">
-          <i data-lucide="user" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"></i>
-          <input type="text" name="username" required autofocus
-                 class="w-full pl-9 pr-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition">
+      {# Separadores #}
+      <div class="flex p-1 bg-gray-100 rounded-xl mb-6">
+        <button type="button" id="tab-phone" onclick="switchTab('phone')"
+                class="flex-1 py-2 rounded-lg text-sm font-semibold transition bg-white shadow text-indigo-600">
+          <i data-lucide="smartphone" class="w-4 h-4 inline -mt-0.5"></i> Telemóvel
+        </button>
+        <button type="button" id="tab-password" onclick="switchTab('password')"
+                class="flex-1 py-2 rounded-lg text-sm font-semibold transition text-gray-500">
+          <i data-lucide="lock" class="w-4 h-4 inline -mt-0.5"></i> Password
+        </button>
+      </div>
+
+      {# Erro AJAX (telemóvel) #}
+      <div id="otp-error" class="hidden mb-4 px-4 py-3 rounded-xl text-sm bg-red-50 text-red-700 border border-red-200"></div>
+
+      {# ─── Painel TELEMÓVEL (OTP) ─── #}
+      <div id="pane-phone" class="space-y-5">
+        {# Passo 1: pedir número #}
+        <div id="otp-step-phone" class="space-y-5">
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1.5">Número de telemóvel</label>
+            <div class="relative">
+              <i data-lucide="smartphone" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"></i>
+              <input type="tel" id="otp-phone" inputmode="tel" autocomplete="tel" autofocus
+                     placeholder="912 345 678"
+                     class="w-full pl-9 pr-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition">
+            </div>
+            <p class="text-xs text-gray-500 mt-1.5">Enviamos um código por WhatsApp para o teu número registado.</p>
+          </div>
+          <button type="button" id="btn-send-code" onclick="sendCode()"
+                  class="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl font-bold shadow-md transition inline-flex items-center justify-center gap-2">
+            <i data-lucide="message-circle" class="w-4 h-4"></i> Enviar código por WhatsApp
+          </button>
+        </div>
+
+        {# Passo 2: introduzir código #}
+        <div id="otp-step-code" class="hidden space-y-5">
+          <div class="px-4 py-3 rounded-xl text-sm bg-emerald-50 text-emerald-700 border border-emerald-200">
+            Código enviado por WhatsApp para <strong id="masked-phone"></strong>.
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1.5">Código (6 dígitos)</label>
+            <div class="relative">
+              <i data-lucide="key-round" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"></i>
+              <input type="text" id="otp-code" inputmode="numeric" maxlength="6" autocomplete="one-time-code"
+                     placeholder="••••••"
+                     class="w-full pl-9 pr-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-center tracking-[0.5em] text-lg font-bold text-gray-900 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition">
+            </div>
+          </div>
+          <button type="button" id="btn-verify-code" onclick="verifyCode()"
+                  class="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl font-bold shadow-md transition inline-flex items-center justify-center gap-2">
+            <i data-lucide="log-in" class="w-4 h-4"></i> Entrar no Portal
+          </button>
+          <div class="flex items-center justify-between text-xs">
+            <button type="button" onclick="resetOtp()" class="text-gray-500 hover:text-gray-700">← Mudar número</button>
+            <button type="button" id="btn-resend" onclick="sendCode(true)" class="text-indigo-600 hover:text-indigo-700 font-semibold">Reenviar código</button>
+          </div>
         </div>
       </div>
 
-      <div>
-        <label class="block text-sm font-semibold text-gray-700 mb-1.5">Password</label>
-        <div class="relative">
-          <i data-lucide="lock" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"></i>
-          <input type="password" name="password" required
-                 class="w-full pl-9 pr-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition">
+      {# ─── Painel PASSWORD ─── #}
+      <form method="post" id="pane-password" class="hidden space-y-5">
+        {% csrf_token %}
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1.5">Username ou Email</label>
+          <div class="relative">
+            <i data-lucide="user" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"></i>
+            <input type="text" name="username"
+                   class="w-full pl-9 pr-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition">
+          </div>
         </div>
-      </div>
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1.5">Password</label>
+          <div class="relative">
+            <i data-lucide="lock" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"></i>
+            <input type="password" name="password"
+                   class="w-full pl-9 pr-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition">
+          </div>
+        </div>
+        <button type="submit"
+                class="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl font-bold shadow-md transition">
+          Entrar no Portal
+        </button>
+      </form>
 
-      <button type="submit"
-              class="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl font-bold shadow-md transition">
-        Entrar no Portal
-      </button>
-
-      <p class="text-xs text-center text-gray-500 mt-4">
-        Sem credenciais? Contacta o administrador.
+      <p class="text-xs text-center text-gray-500 mt-6">
+        Sem acesso? Contacta o administrador.
       </p>
-    </form>
+    </div>
 
     <p class="text-center text-white/70 text-xs mt-6">
       Léguas Franzinas © {% now "Y" %}
     </p>
   </div>
 
-  <script>lucide.createIcons();</script>
+  <script>
+    lucide.createIcons();
+
+    const SEND_URL = "{% url 'customauth:driver_login_send_code' %}";
+    const VERIFY_URL = "{% url 'customauth:driver_login_verify_code' %}";
+
+    function _csrf() {
+      const el = document.querySelector('[name=csrfmiddlewaretoken]');
+      return el ? el.value : '';
+    }
+    function showError(msg) {
+      const box = document.getElementById('otp-error');
+      box.textContent = msg;
+      box.classList.remove('hidden');
+    }
+    function clearError() {
+      document.getElementById('otp-error').classList.add('hidden');
+    }
+
+    function switchTab(which) {
+      const isPhone = which === 'phone';
+      document.getElementById('pane-phone').classList.toggle('hidden', !isPhone);
+      document.getElementById('pane-password').classList.toggle('hidden', isPhone);
+      clearError();
+      const tp = document.getElementById('tab-phone');
+      const tw = document.getElementById('tab-password');
+      tp.className = 'flex-1 py-2 rounded-lg text-sm font-semibold transition ' +
+        (isPhone ? 'bg-white shadow text-indigo-600' : 'text-gray-500');
+      tw.className = 'flex-1 py-2 rounded-lg text-sm font-semibold transition ' +
+        (isPhone ? 'text-gray-500' : 'bg-white shadow text-indigo-600');
+    }
+
+    function resetOtp() {
+      document.getElementById('otp-step-code').classList.add('hidden');
+      document.getElementById('otp-step-phone').classList.remove('hidden');
+      document.getElementById('otp-code').value = '';
+      clearError();
+    }
+
+    async function sendCode(isResend) {
+      clearError();
+      const phone = document.getElementById('otp-phone').value.trim();
+      if (!phone) { showError('Indica o teu número de telemóvel.'); return; }
+      const btn = document.getElementById(isResend ? 'btn-resend' : 'btn-send-code');
+      const original = btn.innerHTML;
+      btn.disabled = true; btn.innerHTML = 'A enviar…';
+      try {
+        const fd = new FormData();
+        fd.append('phone', phone);
+        const resp = await fetch(SEND_URL, {
+          method: 'POST', headers: { 'X-CSRFToken': _csrf() },
+          body: fd, credentials: 'same-origin',
+        });
+        const d = await resp.json();
+        if (d.success) {
+          document.getElementById('masked-phone').textContent = d.masked_phone || '';
+          document.getElementById('otp-step-phone').classList.add('hidden');
+          document.getElementById('otp-step-code').classList.remove('hidden');
+          document.getElementById('otp-code').focus();
+        } else {
+          showError(d.error || 'Não foi possível enviar o código.');
+        }
+      } catch (e) {
+        showError('Erro de rede ao enviar o código.');
+      } finally {
+        btn.disabled = false; btn.innerHTML = original;
+        lucide.createIcons();
+      }
+    }
+
+    async function verifyCode() {
+      clearError();
+      const phone = document.getElementById('otp-phone').value.trim();
+      const code = document.getElementById('otp-code').value.trim();
+      if (!code) { showError('Introduz o código recebido.'); return; }
+      const btn = document.getElementById('btn-verify-code');
+      const original = btn.innerHTML;
+      btn.disabled = true; btn.innerHTML = 'A validar…';
+      try {
+        const fd = new FormData();
+        fd.append('phone', phone);
+        fd.append('code', code);
+        const resp = await fetch(VERIFY_URL, {
+          method: 'POST', headers: { 'X-CSRFToken': _csrf() },
+          body: fd, credentials: 'same-origin',
+        });
+        const d = await resp.json();
+        if (d.success && d.redirect) {
+          window.location.href = d.redirect;
+        } else {
+          showError(d.error || 'Código inválido.');
+          btn.disabled = false; btn.innerHTML = original;
+          lucide.createIcons();
+        }
+      } catch (e) {
+        showError('Erro de rede ao validar o código.');
+        btn.disabled = false; btn.innerHTML = original;
+        lucide.createIcons();
+      }
+    }
+
+    // Enter no campo do código valida
+    document.getElementById('otp-code').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); verifyCode(); }
+    });
+    document.getElementById('otp-phone').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); sendCode(); }
+    });
+  </script>
 </body>
 </html>

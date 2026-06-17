@@ -5,7 +5,7 @@ Configuração do Django Admin para customauth.
 from django.contrib import admin
 from django.utils.html import format_html
 
-from .models import DriverAccess
+from .models import DriverAccess, DriverLoginOTP
 
 
 @admin.register(DriverAccess)
@@ -71,3 +71,24 @@ class DriverAccessAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         """Otimiza consultas do admin."""
         return super().get_queryset(request).select_related("user", "driver")
+
+
+@admin.register(DriverLoginOTP)
+class DriverLoginOTPAdmin(admin.ModelAdmin):
+    """Códigos OTP de login por WhatsApp (auditoria/diagnóstico)."""
+
+    list_display = [
+        "phone",
+        "driver_profile",
+        "code",
+        "created_at",
+        "expires_at",
+        "used_at",
+        "attempts",
+    ]
+    list_filter = ["created_at", "used_at"]
+    search_fields = ["phone", "driver_profile__nome_completo"]
+    readonly_fields = ["created_at"]
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related("driver_profile")

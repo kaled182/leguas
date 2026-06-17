@@ -1,6 +1,8 @@
 """Login dedicado para motoristas (DriverAccess) + criação de credenciais."""
+import re
 import secrets
 import string
+from datetime import timedelta
 from functools import wraps
 
 from django.contrib import messages
@@ -11,7 +13,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
-from customauth.models import DriverAccess
+from customauth.models import DriverAccess, DriverLoginOTP
 from drivers_app.models import DriverProfile
 
 
@@ -92,6 +94,172 @@ def driver_logout(request):
         request.session.pop(k, None)
     messages.success(request, "Sessão terminada.")
     return redirect("customauth:driver_login")
+
+
+# ─── Login por telemóvel + código WhatsApp (OTP) ────────────────────
+
+def _normalize_phone(raw):
+    """Mantém apenas os dígitos do número."""
+    return re.sub(r"\D", "", raw or "")
+
+
+def _mask_phone(phone):
+    """Mascara o número para mostrar ao motorista (ex: ••• ••• 678)."""
+    d = _normalize_phone(phone)
+    if len(d) <= 3:
+        return "•••"
+    return "••• ••• " + d[-3:]
+
+
+def _resolve_driver_by_phone(raw_phone):
+    """Encontra um DriverProfile pelo telefone, robusto a +351/formatação:
+    compara pelos últimos 9 dígitos (telemóvel PT).
+
+    Devolve (profile, erro). profile=None quando há erro.
+    """
+    digits = _normalize_phone(raw_phone)
+    if len(digits) < 9:
+        return None, "Número de telemóvel inválido."
+    tail = digits[-9:]
+    candidatos = DriverProfile.objects.filter(telefone__endswith=tail)
+    matches = [
+        p for p in candidatos
+        if _normalize_phone(p.telefone).endswith(tail)
+    ]
+    if not matches:
+        return None, "Não encontrámos nenhum motorista com este número."
+    if len(matches) > 1:
+        exatos = [p for p in matches if _normalize_phone(p.telefone) == digits]
+        if len(exatos) == 1:
+            return exatos[0], None
+        return None, (
+            "Vários motoristas com este número. Usa username e password."
+        )
+    return matches[0], None
+
+
+@require_http_methods(["POST"])
+def driver_login_send_code(request):
+    """Gera um código OTP e envia-o por WhatsApp para o telemóvel do
+    motorista. Resposta JSON (AJAX)."""
+    raw_phone = (request.POST.get("phone") or "").strip()
+    profile, erro = _resolve_driver_by_phone(raw_phone)
+    if erro:
+        return JsonResponse({"success": False, "error": erro}, status=400)
+
+    if not (profile.telefone or "").strip():
+        return JsonResponse(
+            {"success": False, "error": "Motorista sem telefone registado."},
+            status=400,
+        )
+
+    # Anti-spam: no máximo 1 código por 60s
+    recente = DriverLoginOTP.objects.filter(
+        driver_profile=profile,
+        created_at__gte=timezone.now() - timedelta(seconds=60),
+    ).exists()
+    if recente:
+        return JsonResponse(
+            {"success": False,
+             "error": "Já enviámos um código há instantes. Aguarda um pouco."},
+            status=429,
+        )
+
+    # invalida códigos anteriores ainda não usados (garante 1 ativo)
+    DriverLoginOTP.objects.filter(
+        driver_profile=profile, used_at__isnull=True,
+    ).update(used_at=timezone.now())
+
+    code = DriverLoginOTP.generate_code()
+    otp = DriverLoginOTP.objects.create(
+        driver_profile=profile,
+        phone=profile.telefone,
+        code=code,
+        expires_at=timezone.now() + timedelta(minutes=5),
+    )
+
+    try:
+        from system_config.whatsapp_helper import WhatsAppWPPConnectAPI
+        api = WhatsAppWPPConnectAPI.from_config()
+        nome = (profile.nome_completo or profile.apelido or "").split(" ")[0]
+        saudacao = f"Olá {nome}! " if nome else "Olá! "
+        msg = (
+            f"{saudacao}O teu código de acesso ao Portal do Motorista é:\n\n"
+            f"*{code}*\n\n"
+            f"Válido por 5 minutos. Não partilhes este código com ninguém."
+        )
+        api.send_text(profile.telefone, msg)
+    except Exception as exc:  # noqa: BLE001 — erro amigável
+        otp.delete()
+        return JsonResponse(
+            {"success": False,
+             "error": f"Não foi possível enviar o código por WhatsApp: {exc}"},
+            status=502,
+        )
+
+    return JsonResponse({"success": True, "masked_phone": _mask_phone(profile.telefone)})
+
+
+@require_http_methods(["POST"])
+def driver_login_verify_code(request):
+    """Valida o código OTP e inicia a sessão do motorista. JSON (AJAX)."""
+    raw_phone = (request.POST.get("phone") or "").strip()
+    code = (request.POST.get("code") or "").strip()
+    profile, erro = _resolve_driver_by_phone(raw_phone)
+    if erro:
+        return JsonResponse({"success": False, "error": erro}, status=400)
+    if not code:
+        return JsonResponse(
+            {"success": False, "error": "Indica o código recebido."},
+            status=400,
+        )
+
+    otp = DriverLoginOTP.objects.filter(
+        driver_profile=profile, used_at__isnull=True,
+    ).order_by("-created_at").first()
+    if not otp or otp.is_expired:
+        return JsonResponse(
+            {"success": False, "error": "Código expirado. Pede um novo."},
+            status=400,
+        )
+    if otp.attempts >= DriverLoginOTP.MAX_ATTEMPTS:
+        return JsonResponse(
+            {"success": False,
+             "error": "Demasiadas tentativas. Pede um novo código."},
+            status=429,
+        )
+
+    if otp.code != code:
+        otp.attempts += 1
+        otp.save(update_fields=["attempts"])
+        restantes = max(0, DriverLoginOTP.MAX_ATTEMPTS - otp.attempts)
+        return JsonResponse(
+            {"success": False,
+             "error": f"Código incorreto. {restantes} tentativa(s) restante(s)."},
+            status=400,
+        )
+
+    # Código válido → inicia sessão
+    otp.used_at = timezone.now()
+    otp.save(update_fields=["used_at"])
+
+    request.session["is_driver_authenticated"] = True
+    request.session["driver_profile_id"] = profile.id
+    request.session["driver_name"] = (
+        profile.nome_completo or profile.apelido or "Motorista"
+    )
+    access = DriverAccess.objects.filter(
+        driver_profile=profile, is_active=True,
+    ).first()
+    if access:
+        request.session["driver_access_id"] = access.id
+        access.last_login = timezone.now()
+        access.save(update_fields=["last_login"])
+
+    redirect_url = reverse(
+        "drivers_app:driver_portal", kwargs={"driver_id": profile.id},
+    )
+    return JsonResponse({"success": True, "redirect": redirect_url})
 
 
 # ─── Admin: gerir credenciais de driver ─────────────────────────────

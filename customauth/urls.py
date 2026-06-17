@@ -24,6 +24,16 @@ urlpatterns = [
     path("driver/login/", driver_auth_views.driver_login, name="driver_login_alias"),
     path("driver/logout/", driver_auth_views.driver_logout, name="driver_logout"),
     path(
+        "driver/send-code/",
+        driver_auth_views.driver_login_send_code,
+        name="driver_login_send_code",
+    ),
+    path(
+        "driver/verify-code/",
+        driver_auth_views.driver_login_verify_code,
+        name="driver_login_verify_code",
+    ),
+    path(
         "driver/credentials/<int:driver_id>/",
         driver_auth_views.admin_driver_credentials,
         name="admin_driver_credentials",

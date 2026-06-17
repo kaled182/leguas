@@ -1,0 +1,168 @@
+{
+  "info": {
+    "name": "Léguas Franzinas — App do Motorista",
+    "description": "Coleção da API da app do motorista. Auth OTP (telemóvel + código WhatsApp) → token Bearer. Ver docs/api/openapi-app.yaml. Endpoints marcados [a-implementar] fazem parte da camada app-api a criar; [existe] já existem no backend (hoje em sessão/AJAX web).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://89.153.26.181:8090/api/app/v1", "type": "string" },
+    { "key": "phone", "value": "912345678", "type": "string" },
+    { "key": "code", "value": "", "type": "string" },
+    { "key": "token", "value": "", "type": "string" },
+    { "key": "invoice_id", "value": "1", "type": "string" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Pedir código OTP [existe]",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/auth/request-code", "host": ["{{base_url}}"], "path": ["auth", "request-code"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"{{phone}}\"\n}"
+            },
+            "description": "Envia um código de 6 dígitos por WhatsApp para o telemóvel do motorista (válido 5 min)."
+          }
+        },
+        {
+          "name": "Validar código → token [a-implementar]",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Guarda o token automaticamente para os pedidos seguintes",
+                  "if (pm.response.code === 200) {",
+                  "  const data = pm.response.json();",
+                  "  if (data.token) {",
+                  "    pm.collectionVariables.set('token', data.token);",
+                  "    console.log('Token guardado.');",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/auth/verify-code", "host": ["{{base_url}}"], "path": ["auth", "verify-code"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"{{phone}}\",\n  \"code\": \"{{code}}\"\n}"
+            },
+            "description": "Valida o código e devolve um token Bearer + o perfil. O token é guardado na variável {{token}} pelo script de teste."
+          }
+        },
+        {
+          "name": "Logout [a-implementar]",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{base_url}}/auth/logout", "host": ["{{base_url}}"], "path": ["auth", "logout"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Perfil",
+      "item": [
+        {
+          "name": "Eu (perfil) [a-implementar]",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/me", "host": ["{{base_url}}"], "path": ["me"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Faturas",
+      "item": [
+        {
+          "name": "Listar pré-faturas [a-implementar]",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/invoices?status=PAGO",
+              "host": ["{{base_url}}"],
+              "path": ["invoices"],
+              "query": [{ "key": "status", "value": "PAGO" }]
+            }
+          }
+        },
+        {
+          "name": "Detalhe pré-fatura [a-implementar]",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/invoices/{{invoice_id}}", "host": ["{{base_url}}"], "path": ["invoices", "{{invoice_id}}"] }
+          }
+        },
+        {
+          "name": "PDF da pré-fatura [existe]",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/invoices/{{invoice_id}}/pdf", "host": ["{{base_url}}"], "path": ["invoices", "{{invoice_id}}", "pdf"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Descontos",
+      "item": [
+        {
+          "name": "Listar descontos [a-implementar]",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/discounts",
+              "host": ["{{base_url}}"],
+              "path": ["discounts"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reclamações",
+      "item": [
+        {
+          "name": "Listar reclamações [existe]",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/complaints", "host": ["{{base_url}}"], "path": ["complaints"] }
+          }
+        },
+        {
+          "name": "Criar reclamação [existe]",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/complaints", "host": ["{{base_url}}"], "path": ["complaints"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"numero_pacote\": \"CNPRT49009291234007659709\",\n  \"tipo\": \"ENTREGA_FALSA\",\n  \"descricao\": \"Cliente afirma não ter recebido a encomenda.\",\n  \"nome_cliente\": \"Graciano Gomes\",\n  \"telefone_cliente\": \"963960820\",\n  \"morada\": \"Rua Exemplo, 12\",\n  \"codigo_postal\": \"4900-123\",\n  \"cidade\": \"VIANA DO CASTELO\"\n}"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

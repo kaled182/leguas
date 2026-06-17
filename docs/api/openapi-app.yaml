@@ -1,0 +1,523 @@
+openapi: 3.1.0
+info:
+  title: Léguas Franzinas — API da App do Motorista
+  version: 0.1.0
+  description: |
+    Contrato da API para a **app móvel do motorista** (Léguas Franzinas).
+
+    Autenticação por **OTP (telemóvel + código WhatsApp) → token Bearer**,
+    reaproveitando o login que já existe no portal web. Depois de validar o
+    código, a app recebe um *token* e usa-o no cabeçalho `Authorization:
+    Bearer <token>` em todos os pedidos seguintes (sem cookies de sessão).
+
+    ## Estado de implementação
+    Esta spec é o **contrato-alvo** da app. Os campos dos modelos são reais
+    (extraídos do código). O estado de cada endpoint está anotado:
+
+    - **`x-status: existe`** — já existe no backend (hoje em sessão/AJAX web);
+      para a app precisa apenas de exposição com auth por token.
+    - **`x-status: a-implementar`** — faz parte da camada `app-api` a criar
+      (token a partir do OTP + respostas JSON limpas).
+
+    A estratégia recomendada é uma app **API-first**: o backend implementa
+    exatamente este contrato sob o prefixo `/api/app/v1/`.
+
+servers:
+  - url: https://app.leguasfranzinas.pt/api/app/v1
+    description: Produção (quando publicado sob TLS)
+  - url: http://{host}:8090/api/app/v1
+    description: Servidor atual (HTTP)
+    variables:
+      host:
+        default: 89.153.26.181
+
+tags:
+  - name: Auth
+    description: Login por telemóvel + código WhatsApp (OTP) e emissão de token.
+  - name: Perfil
+    description: Dados do motorista autenticado.
+  - name: Faturas
+    description: Pré-faturas (settlements) do motorista.
+  - name: Descontos
+    description: Descontos / reclamações financeiras (DriverClaim).
+  - name: Reclamações
+    description: Reclamações de cliente (tickets) associadas ao motorista.
+
+security:
+  - bearerAuth: []
+
+paths:
+  /auth/request-code:
+    post:
+      tags: [Auth]
+      summary: Pedir código OTP por WhatsApp
+      description: |
+        Resolve o motorista pelo número de telemóvel (match pelos últimos 9
+        dígitos, robusto a `+351`/formatação) e envia um código de 6 dígitos
+        por WhatsApp, válido 5 minutos. Anti-spam: 1 código por 60 s.
+      x-status: existe
+      x-maps-to: customauth:driver_login_send_code (POST /auth/driver/send-code/)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestCodeInput'
+      responses:
+        '200':
+          description: Código enviado.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sent: { type: boolean, examples: [true] }
+                  masked_phone: { type: string, examples: ["••• ••• 678"] }
+        '400':
+          description: Número inválido ou motorista não encontrado.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '429':
+          description: Pedido demasiado frequente (aguardar).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '502':
+          description: Falha ao enviar pelo WhatsApp.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /auth/verify-code:
+    post:
+      tags: [Auth]
+      summary: Validar código e obter token
+      description: |
+        Valida o código OTP (máx. 5 tentativas) e, em caso de sucesso, devolve
+        um **token Bearer** para a app e o perfil do motorista.
+
+        Nota: o endpoint web atual devolve `redirect` (inicia sessão por
+        cookie). A variante da app devolve `token` em vez de `redirect`.
+      x-status: a-implementar
+      x-maps-to: customauth:driver_login_verify_code (variante token)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyCodeInput'
+      responses:
+        '200':
+          description: Autenticado.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [token, driver]
+                properties:
+                  token:
+                    type: string
+                    description: Token Bearer para `Authorization`.
+                  token_type: { type: string, examples: ["Bearer"] }
+                  expires_in:
+                    type: integer
+                    description: Validade do token em segundos.
+                    examples: [2592000]
+                  driver: { $ref: '#/components/schemas/DriverProfile' }
+        '400':
+          description: Código incorreto, expirado ou inexistente.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '429':
+          description: Demasiadas tentativas — pedir novo código.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Revogar o token atual
+      x-status: a-implementar
+      responses:
+        '204': { description: Sessão terminada. }
+
+  /me:
+    get:
+      tags: [Perfil]
+      summary: Perfil do motorista autenticado
+      x-status: a-implementar
+      x-maps-to: drivers_app.DriverProfile (do token)
+      responses:
+        '200':
+          description: Perfil.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DriverProfile' }
+        '401':
+          description: Token ausente ou inválido.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /invoices:
+    get:
+      tags: [Faturas]
+      summary: Listar pré-faturas do motorista
+      description: Pré-faturas (DriverPreInvoice) do motorista autenticado.
+      x-status: a-implementar
+      x-maps-to: drivers_app:driver_portal_invoices / settlements DriverPreInvoice
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema: { $ref: '#/components/schemas/PreInvoiceStatus' }
+        - name: ano
+          in: query
+          required: false
+          schema: { type: integer, examples: [2026] }
+      responses:
+        '200':
+          description: Lista de pré-faturas.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items: { $ref: '#/components/schemas/PreInvoiceSummary' }
+
+  /invoices/{id}:
+    get:
+      tags: [Faturas]
+      summary: Detalhe de uma pré-fatura
+      x-status: a-implementar
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Detalhe.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PreInvoiceDetail' }
+        '404':
+          description: Não encontrada / não pertence ao motorista.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /invoices/{id}/pdf:
+    get:
+      tags: [Faturas]
+      summary: PDF da pré-fatura
+      x-status: existe
+      x-maps-to: drivers_app:driver_pre_invoice_pdf
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Ficheiro PDF.
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+
+  /discounts:
+    get:
+      tags: [Descontos]
+      summary: Listar descontos (DriverClaim) do motorista
+      description: |
+        Descontos financeiros do motorista, incluindo estado de recurso.
+        Inclui o objeto `situacao` (rótulo/ícone/tom) pronto para a UI.
+      x-status: a-implementar
+      x-maps-to: drivers_app:driver_claims / settlements DriverClaim
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema: { $ref: '#/components/schemas/ClaimStatus' }
+      responses:
+        '200':
+          description: Lista de descontos + contadores.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items: { $ref: '#/components/schemas/Claim' }
+                  counts: { $ref: '#/components/schemas/ClaimCounts' }
+
+  /complaints:
+    get:
+      tags: [Reclamações]
+      summary: Listar reclamações de cliente do motorista
+      x-status: existe
+      x-maps-to: drivers_app:driver-complaints-api (GET)
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema: { $ref: '#/components/schemas/ComplaintStatus' }
+      responses:
+        '200':
+          description: Lista de reclamações + opções de filtro.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  complaints:
+                    type: array
+                    items: { $ref: '#/components/schemas/Complaint' }
+                  tipo_choices:
+                    type: array
+                    items: { $ref: '#/components/schemas/Choice' }
+                  status_choices:
+                    type: array
+                    items: { $ref: '#/components/schemas/Choice' }
+    post:
+      tags: [Reclamações]
+      summary: Criar reclamação de cliente
+      x-status: existe
+      x-maps-to: drivers_app:driver-complaint-create (POST)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ComplaintCreateInput' }
+      responses:
+        '200':
+          description: Criada.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  complaint: { $ref: '#/components/schemas/Complaint' }
+        '400':
+          description: Erro de validação ou duplicado.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Error'
+                  - type: object
+                    properties:
+                      duplicate_complaint_id: { type: integer, nullable: true }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: opaque
+      description: Token obtido em `/auth/verify-code`.
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        success: { type: boolean, examples: [false] }
+        error: { type: string, examples: ["Código expirado. Pede um novo."] }
+
+    Choice:
+      type: object
+      properties:
+        value: { type: string }
+        label: { type: string }
+
+    RequestCodeInput:
+      type: object
+      required: [phone]
+      properties:
+        phone:
+          type: string
+          description: Telemóvel em qualquer formato (aceita +351 ou só dígitos).
+          examples: ["912345678", "+351912345678"]
+
+    VerifyCodeInput:
+      type: object
+      required: [phone, code]
+      properties:
+        phone: { type: string, examples: ["912345678"] }
+        code:
+          type: string
+          pattern: '^[0-9]{6}$'
+          examples: ["472662"]
+
+    DriverProfileStatus:
+      type: string
+      enum: [PENDENTE, EM_ANALISE, ATIVO, BLOQUEADO, IRREGULAR]
+
+    DriverProfile:
+      type: object
+      properties:
+        id: { type: integer }
+        nome_completo: { type: string }
+        apelido: { type: string, nullable: true }
+        telefone: { type: string }
+        email: { type: string, format: email }
+        nif: { type: string, description: "9 dígitos" }
+        status: { $ref: '#/components/schemas/DriverProfileStatus' }
+        is_active: { type: boolean }
+        tipo_vinculo: { type: string, enum: [DIRETO, PARCEIRO] }
+        courier_id_cainiao: { type: string, nullable: true }
+        created_at: { type: string, format: date-time }
+
+    PreInvoiceStatus:
+      type: string
+      enum: [RASCUNHO, CALCULADO, APROVADO, PENDENTE, CONTESTADO, REPROVADO, PAGO]
+
+    PreInvoiceSummary:
+      type: object
+      properties:
+        id: { type: integer }
+        numero: { type: string, examples: ["PF-0001"] }
+        periodo_inicio: { type: string, format: date }
+        periodo_fim: { type: string, format: date }
+        status: { $ref: '#/components/schemas/PreInvoiceStatus' }
+        total_a_receber: { type: string, description: "EUR (decimal)", examples: ["482.50"] }
+        data_pagamento: { type: string, format: date, nullable: true }
+
+    PreInvoiceDetail:
+      allOf:
+        - $ref: '#/components/schemas/PreInvoiceSummary'
+        - type: object
+          properties:
+            base_entregas: { type: string, examples: ["420.00"] }
+            total_bonus: { type: string, examples: ["30.00"] }
+            total_pudo: { type: string, examples: ["12.50"] }
+            total_extras: { type: string, examples: ["20.00"] }
+            total_pacotes_perdidos: { type: string, examples: ["30.00"] }
+            total_adiantamentos: { type: string, examples: ["0.00"] }
+            referencia_pagamento: { type: string, nullable: true }
+            pdf_url: { type: string, format: uri, nullable: true }
+
+    ClaimStatus:
+      type: string
+      enum: [PENDING, APPROVED, REJECTED, APPEALED, QUARANTINE]
+
+    ClaimType:
+      type: string
+      enum:
+        - ORDER_LOSS
+        - ORDER_DAMAGE
+        - VEHICLE_FINE
+        - VEHICLE_DAMAGE
+        - FUEL_EXCESS
+        - MISSING_POD
+        - LATE_DELIVERY
+        - CUSTOMER_COMPLAINT
+        - FAKE_DELIVERY
+        - OTHER
+
+    ClaimSituacao:
+      type: object
+      description: Estado visual pronto para a UI.
+      properties:
+        label: { type: string, examples: ["Desconto aplicado"] }
+        icon: { type: string, examples: ["check-circle"] }
+        tone: { type: string, enum: [pending, good, bad, info] }
+        classes: { type: string, description: "Classes Tailwind (web); a app pode ignorar." }
+
+    Claim:
+      type: object
+      properties:
+        id: { type: integer }
+        claim_type: { $ref: '#/components/schemas/ClaimType' }
+        status: { $ref: '#/components/schemas/ClaimStatus' }
+        amount: { type: string, description: "EUR (decimal)", examples: ["30.00"] }
+        waybill_number: { type: string, nullable: true }
+        description: { type: string }
+        occurred_at: { type: string, format: date-time }
+        operation_task_date: { type: string, format: date, nullable: true }
+        situacao: { $ref: '#/components/schemas/ClaimSituacao' }
+
+    ClaimCounts:
+      type: object
+      properties:
+        total: { type: integer }
+        pending: { type: integer }
+        approved: { type: integer }
+        rejected: { type: integer }
+        appealed: { type: integer }
+
+    ComplaintStatus:
+      type: string
+      enum: [ABERTO, NOTIFICADO, RESPONDIDO, FECHADO, CANCELADO]
+
+    ComplaintTipo:
+      type: string
+      enum: [ENTREGA_FALSA, ITEM_FALTANDO, PACOTE_DANIFICADO, ENTREGA_ATRASADA, OUTRO]
+
+    ComplaintAttachment:
+      type: object
+      properties:
+        id: { type: integer }
+        tipo: { type: string }
+        tipo_display: { type: string }
+        url: { type: string, format: uri }
+        descricao: { type: string }
+        filename: { type: string }
+
+    Complaint:
+      type: object
+      properties:
+        id: { type: integer }
+        numero_pacote: { type: string }
+        tipo: { $ref: '#/components/schemas/ComplaintTipo' }
+        tipo_display: { type: string }
+        status: { $ref: '#/components/schemas/ComplaintStatus' }
+        status_display: { type: string }
+        descricao: { type: string }
+        nome_cliente: { type: string }
+        telefone_cliente: { type: string }
+        email_cliente: { type: string, nullable: true }
+        cidade: { type: string }
+        morada: { type: string }
+        codigo_postal: { type: string }
+        data_entrega: { type: string, format: date-time, nullable: true }
+        deadline: { type: string, format: date-time, nullable: true }
+        created_at: { type: string, examples: ["14/06/2026 11:44"] }
+        driver_id: { type: integer }
+        driver_nome: { type: string }
+        sla_estado: { type: object, additionalProperties: true }
+        attachments:
+          type: array
+          items: { $ref: '#/components/schemas/ComplaintAttachment' }
+
+    ComplaintCreateInput:
+      type: object
+      required:
+        - numero_pacote
+        - tipo
+        - descricao
+        - nome_cliente
+        - telefone_cliente
+        - morada
+        - codigo_postal
+        - cidade
+      properties:
+        numero_pacote: { type: string }
+        tipo: { $ref: '#/components/schemas/ComplaintTipo' }
+        descricao: { type: string }
+        nome_cliente: { type: string }
+        telefone_cliente: { type: string }
+        email_cliente: { type: string }
+        morada: { type: string }
+        codigo_postal: { type: string }
+        cidade: { type: string }
+        data_entrega: { type: string, format: date-time }

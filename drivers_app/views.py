@@ -3134,9 +3134,13 @@ def driver_complaint_notify_whatsapp(request, complaint_id):
         )
 
     try:
-        from system_config.whatsapp_helper import WhatsAppWPPConnectAPI
+        from system_config.whatsapp_helper import (
+            WhatsAppWPPConnectAPI,
+            to_whatsapp_number,
+        )
         api = WhatsAppWPPConnectAPI.from_config()
-        api.send_text(telefone, mensagem)
+        wa_number = to_whatsapp_number(telefone)
+        api.send_text(wa_number, mensagem)
     except Exception as exc:  # noqa: BLE001 — erro amigável, não rebenta o Kanban
         return JsonResponse(
             {"success": False, "error": f"Falha ao enviar WhatsApp: {exc}"},
@@ -3160,7 +3164,7 @@ def driver_complaint_notify_whatsapp(request, complaint_id):
             filename = f"Reclamacao_{complaint.id}.pdf"
             caption = f"Reclamação {pkg}".strip() if pkg else "Reclamação"
             api.send_document_base64(
-                number=telefone,
+                number=wa_number,
                 b64_content=pdf_b64,
                 filename=filename,
                 caption=caption,

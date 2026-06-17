@@ -179,7 +179,10 @@ def driver_login_send_code(request):
     )
 
     try:
-        from system_config.whatsapp_helper import WhatsAppWPPConnectAPI
+        from system_config.whatsapp_helper import (
+            WhatsAppWPPConnectAPI,
+            to_whatsapp_number,
+        )
         api = WhatsAppWPPConnectAPI.from_config()
         nome = (profile.nome_completo or profile.apelido or "").split(" ")[0]
         saudacao = f"Olá {nome}! " if nome else "Olá! "
@@ -188,7 +191,7 @@ def driver_login_send_code(request):
             f"*{code}*\n\n"
             f"Válido por 5 minutos. Não partilhes este código com ninguém."
         )
-        api.send_text(profile.telefone, msg)
+        api.send_text(to_whatsapp_number(profile.telefone), msg)
     except Exception as exc:  # noqa: BLE001 — erro amigável
         otp.delete()
         return JsonResponse(

@@ -783,6 +783,30 @@ def format_phone_number(phone: str) -> str:
     return clean
 
 
+def to_whatsapp_number(phone: str, default_ddi: str = "351") -> str:
+    """Normaliza um número para o formato WhatsApp (DDI+número, só dígitos).
+
+    Assume Portugal (351) por defeito: um número nacional de 9 dígitos
+    recebe o indicativo. Números que já tragam indicativo internacional
+    (ex.: começam por 351, ou vêm com 00351) são respeitados.
+
+    Ao contrário de ``format_phone_number`` (que força o DDI do Brasil),
+    esta função serve o contexto PT — usada no envio de códigos/avisos
+    ao motorista a partir do telefone do perfil.
+    """
+    d = "".join(filter(str.isdigit, phone or ""))
+    if not d:
+        return d
+    if d.startswith("00"):
+        d = d[2:]
+    if d.startswith(default_ddi):
+        return d
+    # número nacional PT (9 dígitos) → acrescenta o indicativo
+    if len(d) == 9:
+        return default_ddi + d
+    return d
+
+
 def save_qrcode_image(image: Image.Image, filepath: str):
     """
     Salva QR Code como imagem

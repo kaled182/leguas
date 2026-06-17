@@ -2963,36 +2963,60 @@ def driver_complaint_create(request, driver_id):
     deadline_val    = _parse_dt(data.get("deadline"))
     data_entrega_val = _parse_dt(data.get("data_entrega"))
 
-    complaint = CustomerComplaint.objects.create(
-        driver=driver,
-        numero_pacote=numero_pacote,
-        tipo=data.get("tipo", "ENTREGA_FALSA"),
-        descricao=data["descricao"].strip(),
-        nome_cliente=data["nome_cliente"].strip(),
-        telefone_cliente=data["telefone_cliente"].strip(),
-        email_cliente=(data.get("email_cliente") or "").strip(),
-        morada=data["morada"].strip(),
-        codigo_postal=data["codigo_postal"].strip(),
-        cidade=data["cidade"].strip(),
-        notas=(data.get("notas") or "").strip(),
-        deadline=deadline_val,
-        data_entrega=data_entrega_val,
-        created_by=request.user,
-    )
+    # Datas tz-aware quando o projeto usa USE_TZ (evita avisos/erros no save).
+    from django.conf import settings as _settings
+    if getattr(_settings, "USE_TZ", False):
+        if deadline_val and timezone.is_naive(deadline_val):
+            deadline_val = timezone.make_aware(deadline_val)
+        if data_entrega_val and timezone.is_naive(data_entrega_val):
+            data_entrega_val = timezone.make_aware(data_entrega_val)
 
-    # Optional inline attachments (multi-file, one per list entry)
-    attachment_files = request.FILES.getlist("attachment_files")
-    if attachment_files:
-        from .models import CustomerComplaintAttachment
-        for i, f in enumerate(attachment_files):
-            CustomerComplaintAttachment.objects.create(
-                complaint=complaint,
-                tipo=request.POST.get(f"attachment_tipo_{i}", "RECLAMACAO"),
-                ficheiro=f,
-                descricao=(request.POST.get(f"attachment_descricao_{i}") or "").strip(),
-            )
+    try:
+        complaint = CustomerComplaint.objects.create(
+            driver=driver,
+            numero_pacote=numero_pacote,
+            tipo=(data.get("tipo") or "ENTREGA_FALSA"),
+            descricao=data["descricao"].strip(),
+            nome_cliente=data["nome_cliente"].strip(),
+            telefone_cliente=data["telefone_cliente"].strip(),
+            email_cliente=(data.get("email_cliente") or "").strip(),
+            morada=data["morada"].strip(),
+            codigo_postal=data["codigo_postal"].strip(),
+            cidade=data["cidade"].strip(),
+            notas=(data.get("notas") or "").strip(),
+            deadline=deadline_val,
+            data_entrega=data_entrega_val,
+            created_by=request.user,
+        )
 
-    return JsonResponse({"success": True, "complaint": _complaint_to_dict(complaint)})
+        # Optional inline attachments (multi-file, one per list entry)
+        attachment_files = request.FILES.getlist("attachment_files")
+        if attachment_files:
+            from .models import CustomerComplaintAttachment
+            tipos_validos = {c for c, _ in CustomerComplaintAttachment.TIPO_CHOICES}
+            for i, f in enumerate(attachment_files):
+                tipo_anexo = request.POST.get(f"attachment_tipo_{i}", "RECLAMACAO")
+                if tipo_anexo not in tipos_validos:
+                    tipo_anexo = "RECLAMACAO"
+                CustomerComplaintAttachment.objects.create(
+                    complaint=complaint,
+                    tipo=tipo_anexo,
+                    ficheiro=f,
+                    descricao=(request.POST.get(f"attachment_descricao_{i}") or "").strip(),
+                )
+
+        payload = _complaint_to_dict(complaint)
+    except Exception as exc:  # noqa: BLE001 — devolver a causa ao operador
+        import logging
+        logging.getLogger("drivers_app").exception(
+            "driver_complaint_create falhou"
+        )
+        return JsonResponse(
+            {"success": False, "error": f"{type(exc).__name__}: {exc}"},
+            status=500,
+        )
+
+    return JsonResponse({"success": True, "complaint": payload})
 
 
 @login_required

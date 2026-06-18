@@ -84,6 +84,19 @@
                 <i data-lucide="circle-dollar-sign" class="w-2.5 h-2.5"></i>
                 Desconto #{{ line.existing_claim.id }} · {{ line.existing_claim.get_status_display }} · {{ line.existing_claim.created_at|date:"d/m/y" }}
               </a>
+              {% if line.existing_appeal %}
+                <span class="mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-[9px] font-bold font-sans"
+                      title="Já existe um recurso (disputa com o parceiro) para este pacote">
+                  <i data-lucide="shield" class="w-2.5 h-2.5"></i>
+                  Recurso criado
+                </span>
+              {% else %}
+                <span class="mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700/60 text-gray-500 dark:text-gray-400 text-[9px] font-bold font-sans"
+                      title="Ainda não foi aberto recurso para este pacote">
+                  <i data-lucide="shield-off" class="w-2.5 h-2.5"></i>
+                  Sem recurso
+                </span>
+              {% endif %}
             {% endif %}
             {% if line.existing_complaint %}
               <span class="mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300 text-[9px] font-bold font-sans"

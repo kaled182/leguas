@@ -4717,6 +4717,75 @@ class CainiaoBillingImport(models.Model):
             ])
         return changed
 
+    def sync_partner_invoice(self, save=True):
+        """Sincroniza a PartnerInvoice agregada com os totais reais.
+
+        A PartnerInvoice é criada no import e ficava CONGELADA — os
+        contadores da sessão auto-curam-se (recompute_counters) mas o
+        valor a receber da fatura ficava obsoleto/zerado, deixando-a a
+        €0,00 na listagem de Faturas de Parceiros e invisível na
+        Tesouraria. Este método repõe gross/net a partir dos totais,
+        cria a fatura se faltar e promove DRAFT→PENDING (para entrar no
+        'a receber'). Nunca toca em faturas terminais (PAID/CANCELLED).
+
+        Devolve True se criou ou alterou a fatura.
+        """
+        from datetime import timedelta
+
+        gross = (
+            (self.total_envio or Decimal("0"))
+            + (self.total_compensacion or Decimal("0"))
+        ).quantize(Decimal("0.01"))
+
+        pi = self.partner_invoice
+        if pi is None:
+            from core.models import Partner
+            cainiao_partner = Partner.objects.filter(
+                name__iexact="CAINIAO",
+            ).first()
+            if not cainiao_partner:
+                return False
+            invoice_number = (
+                f"CAINIAO-{self.period_from.strftime('%Y%m%d')}-"
+                f"{self.period_to.strftime('%Y%m%d')}-{self.id}"
+            )
+            pi = PartnerInvoice.objects.create(
+                partner=cainiao_partner,
+                invoice_number=invoice_number,
+                period_start=self.period_from,
+                period_end=self.period_to,
+                gross_amount=gross,
+                tax_amount=Decimal("0.00"),
+                net_amount=gross,
+                status="PENDING",
+                issue_date=timezone.now().date(),
+                due_date=self.period_to + timedelta(days=30),
+            )
+            self.partner_invoice = pi
+            if save:
+                self.save(update_fields=["partner_invoice"])
+            return True
+
+        # Faturas já pagas/canceladas são imutáveis.
+        if pi.status in (
+            PartnerInvoice.STATUS_PAID, PartnerInvoice.STATUS_CANCELLED,
+        ):
+            return False
+
+        changed = False
+        if pi.gross_amount != gross or pi.net_amount != gross:
+            pi.gross_amount = gross
+            pi.net_amount = gross
+            changed = True
+        if pi.status == PartnerInvoice.STATUS_DRAFT:
+            pi.status = PartnerInvoice.STATUS_PENDING
+            changed = True
+        if changed and save:
+            pi.save(update_fields=[
+                "gross_amount", "net_amount", "status", "updated_at",
+            ])
+        return changed
+
 
 class CainiaoBillingLine(models.Model):
     """Uma linha do XLSX Cainiao — 1 envio fee ou 1 compensación.

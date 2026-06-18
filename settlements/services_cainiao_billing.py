@@ -1178,3 +1178,83 @@ def reconciliation_for_import(session):
         "special_prices": special_prices,
         "special_prices_count": special_prices.count(),
     }
+
+
+def _norm_wb(w):
+    return (w or "").strip().upper()
+
+
+def compensacion_lines_for_claims(claims):
+    """Mapeia cada DriverClaim à linha de compensación (desconto na
+    fatura do parceiro) que cubra o seu pacote — ou None se ainda NÃO
+    há cobrança efetivada pelo parceiro.
+
+    Um recurso pode ser aberto antes de a Cainiao cobrar: nesse caso a
+    resposta/provas ficam guardadas a aguardar que a cobrança apareça
+    numa fatura futura (move-se sozinho assim que a compensación entrar).
+
+    Faz cross-matching de waybills: o claim pode ter sido aberto com o
+    waybill CNPRT, enquanto a linha da fatura traz o LP (LP88...). A
+    CainiaoOperationTask liga ambos.
+
+    Devolve {claim_id: CainiaoBillingLine | None}.
+    """
+    from django.db.models import Q
+    from .models import CainiaoBillingLine, CainiaoOperationTask
+
+    claims = list(claims)
+    if not claims:
+        return {}
+
+    claim_wbs = {_norm_wb(c.waybill_number) for c in claims}
+    claim_wbs.discard("")
+
+    # Alternates CNPRT<->LP via tasks (1 query)
+    alt = {wb: {wb} for wb in claim_wbs}
+    if claim_wbs:
+        raw = list(claim_wbs)
+        for t in (
+            CainiaoOperationTask.objects
+            .filter(Q(waybill_number__in=raw) | Q(lp_number__in=raw))
+            .only("waybill_number", "lp_number")
+        ):
+            w, lp = _norm_wb(t.waybill_number), _norm_wb(t.lp_number)
+            for key in (w, lp):
+                if key in alt:
+                    if w:
+                        alt[key].add(w)
+                    if lp:
+                        alt[key].add(lp)
+
+    all_cands = set()
+    for s in alt.values():
+        all_cands |= s
+
+    # Linhas de compensación que batem com qualquer candidato
+    comp_by_wb = {}  # norm(wb) -> CainiaoBillingLine (mais recente)
+    if all_cands:
+        for ln in (
+            CainiaoBillingLine.objects
+            .filter(fee_type="compensacion", waybill_number__in=list(all_cands))
+            .select_related("task")
+            .order_by("-biz_time")
+        ):
+            keys = (
+                _norm_wb(ln.waybill_number),
+                _norm_wb(getattr(ln.task, "waybill_number", "")),
+                _norm_wb(getattr(ln.task, "lp_number", "")),
+            )
+            for key in keys:
+                if key and key not in comp_by_wb:
+                    comp_by_wb[key] = ln
+
+    out = {}
+    for c in claims:
+        wb = _norm_wb(c.waybill_number)
+        match = None
+        for k in alt.get(wb, {wb}) if wb else ():
+            if k in comp_by_wb:
+                match = comp_by_wb[k]
+                break
+        out[c.id] = match
+    return out

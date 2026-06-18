@@ -19,11 +19,17 @@
   </div>
 
   <!-- KPIs -->
-  <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+  <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3">
     <div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200/50 dark:border-gray-700/50">
       <p class="text-xs uppercase font-bold text-gray-500">Aguardando envio</p>
       <p class="text-2xl font-extrabold text-gray-900 dark:text-white mt-1">{{ kpis.aguardando }}</p>
     </div>
+    <a href="#sem-cobranca"
+       class="bg-purple-50 dark:bg-purple-900/20 rounded-xl p-4 border border-purple-200/50 dark:border-purple-700/30 transition-all hover:shadow-md">
+      <p class="text-xs uppercase font-bold text-purple-700 dark:text-purple-300">Sem cobrança</p>
+      <p class="text-2xl font-extrabold text-purple-700 dark:text-purple-300 mt-1">{{ kpis.sem_cobranca }}</p>
+      <p class="text-[10px] text-purple-600 mt-0.5">€{{ kpis.sem_cobranca_total|floatformat:2 }} a aguardar fatura</p>
+    </a>
     <div class="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 border border-blue-200/50 dark:border-blue-700/30">
       <p class="text-xs uppercase font-bold text-blue-700 dark:text-blue-300">Em análise (parceiro)</p>
       <p class="text-2xl font-extrabold text-blue-700 dark:text-blue-300 mt-1">{{ kpis.em_analise }}</p>
@@ -94,6 +100,7 @@
               <th class="px-4 py-2 text-left">Motorista</th>
               <th class="px-4 py-2 text-left">Motivo (Cainiao)</th>
               <th class="px-4 py-2 text-right">Valor</th>
+              <th class="px-4 py-2 text-left">Cobrança</th>
               <th class="px-4 py-2 text-left">Chamado</th>
               <th class="px-4 py-2"></th>
             </tr>
@@ -107,7 +114,7 @@
                        @change="toggleGroup($event.target.checked, [{% for c in g.claims %}'{{ c.id }}'{% if not forloop.last %},{% endif %}{% endfor %}])"
                        class="rounded border-gray-300 text-blue-600" title="Selecionar este mês">
               </td>
-              <td colspan="6" class="px-4 py-2">
+              <td colspan="7" class="px-4 py-2">
                 <div class="flex items-center justify-between">
                   <span class="flex items-center gap-2">
                     <i data-lucide="chevron-down" class="w-4 h-4 text-gray-400 transition-transform" :class="open ? '' : '-rotate-90'"></i>
@@ -136,6 +143,17 @@
                 </select>
               </td>
               <td class="px-4 py-2 text-right font-semibold">€{{ c.amount|floatformat:2 }}</td>
+              <td class="px-4 py-2">
+                {% if c.tem_cobranca %}
+                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" title="Já existe compensación na fatura do parceiro">
+                    <i data-lucide="check-circle-2" class="w-3 h-3"></i> Cobrada
+                  </span>
+                {% else %}
+                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400" title="Recurso aberto — ainda sem desconto na fatura do parceiro. Fica a aguardar a cobrança numa fatura futura.">
+                    <i data-lucide="hourglass" class="w-3 h-3"></i> Sem cobrança
+                  </span>
+                {% endif %}
+              </td>
               <td class="px-4 py-2">
                 {% if c.customer_complaint_id %}<span class="text-xs text-violet-600">#{{ c.customer_complaint_id }}</span>{% else %}<span class="text-gray-300">—</span>{% endif %}
               </td>
@@ -175,6 +193,7 @@
             <th class="px-4 py-2 text-left">Waybill / LP</th>
             <th class="px-4 py-2 text-left">Motorista</th>
             <th class="px-4 py-2 text-right">Valor</th>
+            <th class="px-4 py-2 text-left">Cobrança</th>
             <th class="px-4 py-2 text-left">Enviado</th>
             <th class="px-4 py-2 text-left">Prazo</th>
             <th class="px-4 py-2"></th>
@@ -186,6 +205,13 @@
             <td class="px-4 py-2 font-mono text-xs">{{ it.c.waybill_number|default:"—" }}</td>
             <td class="px-4 py-2">{{ it.c.driver.nome_completo }}</td>
             <td class="px-4 py-2 text-right font-semibold">€{{ it.c.amount|floatformat:2 }}</td>
+            <td class="px-4 py-2">
+              {% if it.c.tem_cobranca %}
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" title="Já existe compensación na fatura do parceiro"><i data-lucide="check-circle-2" class="w-3 h-3"></i> Cobrada</span>
+              {% else %}
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400" title="Sem desconto na fatura do parceiro — a aguardar cobrança"><i data-lucide="hourglass" class="w-3 h-3"></i> Sem cobrança</span>
+              {% endif %}
+            </td>
             <td class="px-4 py-2 text-xs text-gray-500">{{ it.c.appeal_sent_at|date:"d/m/Y"|default:"—" }}</td>
             <td class="px-4 py-2">
               {% if it.dias is None %}
@@ -213,6 +239,51 @@
     </div>
     {% else %}
     <div class="p-8 text-center text-gray-400 text-sm">Nada em análise do parceiro.</div>
+    {% endif %}
+  </div>
+
+  <!-- ░░ Recursos sem cobrança efetivada do parceiro ░░ -->
+  <div id="sem-cobranca" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-purple-200/50 dark:border-purple-700/30 overflow-hidden">
+    <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-700">
+      <h2 class="font-semibold text-gray-700 dark:text-gray-200 flex items-center gap-2">
+        <i data-lucide="hourglass" class="w-4 h-4 text-purple-400"></i>
+        Recursos sem cobrança efetivada
+        <span class="bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 px-2 py-0.5 rounded-full text-xs">{{ sem_cobranca|length }}</span>
+      </h2>
+      <p class="text-xs text-gray-400 mt-1">Recurso aberto e provas guardadas, mas o parceiro ainda não cobrou este pacote. Move-se sozinho assim que a compensación entrar numa fatura futura.</p>
+    </div>
+    {% if sem_cobranca %}
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-gray-50 dark:bg-gray-700/50 text-xs text-gray-500 dark:text-gray-400 uppercase">
+          <tr>
+            <th class="px-4 py-2 text-left">Waybill / LP</th>
+            <th class="px-4 py-2 text-left">Motorista</th>
+            <th class="px-4 py-2 text-right">Valor</th>
+            <th class="px-4 py-2 text-left">Estado</th>
+            <th class="px-4 py-2"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+          {% for c in sem_cobranca %}
+          <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+            <td class="px-4 py-2 font-mono text-xs">{{ c.waybill_number|default:"—" }}</td>
+            <td class="px-4 py-2">{{ c.driver.nome_completo }}</td>
+            <td class="px-4 py-2 text-right font-semibold">€{{ c.amount|floatformat:2 }}</td>
+            <td class="px-4 py-2">
+              <span class="px-2 py-0.5 rounded-full text-xs font-semibold {{ c.situacao.classes }}">{{ c.situacao.label }}</span>
+            </td>
+            <td class="px-4 py-2 text-right">
+              <a href="{% url 'claim-detail' c.id %}" class="text-xs text-indigo-600 hover:underline">abrir</a>
+              {% if c.waybill_number %}· <a href="{% url 'package-360' c.waybill_number %}" class="text-xs text-orange-600 hover:underline">360º</a>{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="p-8 text-center text-gray-400 text-sm">Todos os recursos abertos já têm cobrança do parceiro. ✓</div>
     {% endif %}
   </div>
 

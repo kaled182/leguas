@@ -93,8 +93,10 @@ def cainiao_billing_detail(request, import_id):
     )
 
     # Auto-cura: os contadores cached (KPIs do topo) podem estar
-    # obsoletos/zerados apesar de existirem linhas. Recompõe da verdade.
+    # obsoletos/zerados apesar de existirem linhas. Recompõe da verdade
+    # e sincroniza a PartnerInvoice (valor a receber) com esses totais.
     session.recompute_counters()
+    session.sync_partner_invoice()
 
     active_tab = request.GET.get("tab", "summary")
     ctx = {"session": session, "active_tab": active_tab}
@@ -287,6 +289,8 @@ def cainiao_billing_detail(request, import_id):
                 .select_related("driver")
                 .only(
                     "id", "waybill_number", "status", "created_at", "amount",
+                    "justification", "partner_response", "appeal_sent_at",
+                    "appeal_batch_id",
                     "driver__nome_completo", "driver__apelido",
                 )
             ):
@@ -316,6 +320,15 @@ def cainiao_billing_detail(request, import_id):
                     clm = cand
             ln.existing_complaint = comp
             ln.existing_claim = clm
+            # Recurso já criado para este pacote? (em recurso/quarentena
+            # ou já passou por disputa com o parceiro). Facilita a
+            # identificação na tab Claims sem abrir o detalhe.
+            ln.existing_appeal = bool(
+                clm and (
+                    clm.status in ("APPEALED", "QUARANTINE")
+                    or clm.had_appeal
+                )
+            )
             # Bloqueado para criação: desconto activo (não rejeitado) OU
             # ticket não cancelado já existe sobre o pacote.
             active_claim = bool(clm and clm.status != "REJECTED")
@@ -1110,6 +1123,7 @@ def cainiao_billing_reresolve(request, import_id):
     try:
         result = reresolve_matching(session)
         session.recompute_counters()
+        session.sync_partner_invoice()
     except Exception as e:
         log.exception("reresolve_matching falhou")
         messages.error(request, f"Erro ao reprocessar matching: {e}")

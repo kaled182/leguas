@@ -1163,6 +1163,22 @@ def appeals_inbox(request):
         total_quarentena += c.amount
         em_analise.append({"c": c, "dias": dias, "vencido": vencido})
 
+    # ── Cobrança do parceiro ────────────────────────────────────────
+    # Um recurso só faz sentido disputar quando o parceiro de facto
+    # cobrou (linha de compensación na fatura Cainiao). Permitimos abrir
+    # o recurso à mesma — fica guardado a aguardar que a cobrança apareça
+    # numa fatura futura. Aqui marcamos cada recurso aberto com/sem
+    # cobrança efetivada e separamos os 'sem cobrança' numa secção.
+    from .services_cainiao_billing import compensacion_lines_for_claims
+    open_claims = list(aguardando) + [it["c"] for it in em_analise]
+    charge_map = compensacion_lines_for_claims(open_claims)
+    for c in open_claims:
+        ln = charge_map.get(c.id)
+        c.tem_cobranca = ln is not None
+        c.cobranca_line = ln
+    sem_cobranca = [c for c in open_claims if not c.tem_cobranca]
+    sem_cobranca_total = sum((c.amount for c in sem_cobranca), _D("0"))
+
     resolved = base.filter(partner_response__in=("APPROVED", "DENIED"))
     aprovados = resolved.filter(partner_response="APPROVED").count()
     negados = resolved.filter(partner_response="DENIED").count()
@@ -1188,6 +1204,7 @@ def appeals_inbox(request):
         "aguardando": aguardando,
         "aguardando_groups": aguardando_groups,
         "em_analise": em_analise,
+        "sem_cobranca": sem_cobranca,
         "fechados": fechados,
         "show_fechados": show_fechados,
         "reason_choices": DriverClaim.APPEAL_REASON_CHOICES,
@@ -1200,6 +1217,8 @@ def appeals_inbox(request):
             "aprovados": aprovados,
             "negados": negados,
             "fechados": fechados_count,
+            "sem_cobranca": len(sem_cobranca),
+            "sem_cobranca_total": sem_cobranca_total,
         },
     })
 

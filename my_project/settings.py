@@ -174,6 +174,8 @@ INSTALLED_APPS = [
     "contracts",
     # API da app do motorista (token Bearer sobre OTP)
     "app_api",
+    #Dashboard Atualizado
+    "dashboard_leguas",
 ]
 
 # Middleware

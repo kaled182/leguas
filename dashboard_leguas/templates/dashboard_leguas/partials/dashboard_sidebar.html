@@ -1,0 +1,104 @@
+{% load static %}
+
+<div
+    x-data="{
+        open: true,
+        darkMode: false,
+        themePress: false,
+        init() {
+            const savedTheme = localStorage.getItem('theme');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            this.darkMode = savedTheme ? savedTheme === 'dark' : prefersDark;
+            document.documentElement.classList.toggle('dark', this.darkMode);
+            if (window.lucide) {
+                this.$nextTick(() => lucide.createIcons());
+            }
+        },
+        toggleTheme() {
+            this.themePress = true;
+            this.darkMode = !this.darkMode;
+            document.documentElement.classList.toggle('dark', this.darkMode);
+            localStorage.setItem('theme', this.darkMode ? 'dark' : 'light');
+            setTimeout(() => {
+                this.themePress = false;
+            }, 160);
+        }
+    }"
+    class="relative min-h-screen"
+>
+    <aside
+        class="min-h-screen overflow-hidden border-r border-gray-200 bg-white text-gray-900 shadow-xl ring-1 ring-gray-900/5 transition-[width] duration-300 ease-out dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:ring-white/10"
+        :style="`width: ${open ? '16rem' : '0'}`"
+    >
+        <div class="flex min-h-screen flex-col py-5">
+            <div class="px-4" x-show="open" x-transition.opacity.duration.150ms x-cloak>
+                <a href="{% url 'dashboard_leguas:dashboard_v2' %}" class="inline-flex items-center">
+                    <img src="{% static 'dashboard_leguas/img/logo.png' %}" alt="Léguas Franzinas" class="pl-10 h-35 w-auto" />
+                </a>
+            </div>
+
+            <nav class="mt-8 flex-1 space-y-1 px-2" aria-label="Sidebar">
+                <a href="{% url 'dashboard_leguas:dashboard_v2' %}" class="group flex items-center gap-3 rounded-md bg-indigo-500 px-3 py-2 text-sm font-medium text-white shadow-lg hover:bg-indigo-600">
+                    <svg class="h-5 w-5 shrink-0 stroke-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2 7-7 7 7 2 2M5 10v10h14V10" />
+                    </svg>
+                    <span x-show="open" x-transition.opacity.duration.150ms x-cloak>Dashboard</span>
+                </a>
+
+                <a href="#" class="group flex items-center gap-3 rounded-md px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-700/70 dark:hover:text-white">
+                    <svg class="h-5 w-5 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5V4H2v16h5m10 0v-4a3 3 0 00-3-3H10a3 3 0 00-3 3v4m10 0H7" />
+                    </svg>
+                    <span x-show="open" x-transition.opacity.duration.150ms x-cloak>Tickets</span>
+                </a>
+
+                <a href="#" class="group flex items-center gap-3 rounded-md px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-700/70 dark:hover:text-white">
+                    <svg class="h-5 w-5 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7h5l2 2h11v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+                    </svg>
+                    <span x-show="open" x-transition.opacity.duration.150ms x-cloak>Gestao</span>
+                </a>
+
+                <a href="#" class="group flex items-center gap-3 rounded-md px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-700/70 dark:hover:text-white">
+                    <svg class="h-5 w-5 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <span x-show="open" x-transition.opacity.duration.150ms x-cloak>Calendario</span>
+                </a>
+            </nav>
+
+            <div class="mb-3 px-2 items-center">
+                <button
+                    type="button"
+                    @click="toggleTheme()"
+                    :aria-label="darkMode ? 'Mudar para modo claro' : 'Mudar para modo escuro'"
+                    :aria-pressed="darkMode"
+                    :class="themePress ? 'scale-95' : 'scale-100'"
+                    class="group flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm text-gray-600 transition-[transform,colors] duration-150 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-700/70 dark:hover:text-white cursor-pointer"
+                >
+                    <i x-show="!darkMode" x-cloak data-lucide="moon" class="h-4 w-4"></i>
+                    <i x-show="darkMode" x-cloak data-lucide="sun" class="h-4 w-4"></i>
+                    <span x-show="open" x-transition.opacity.duration.150ms x-cloak x-text="darkMode ? 'Light Mode' : 'Dark Mode'"></span>
+                </button>
+            </div>
+
+            <div class="border-t border-gray-200 px-4 pt-4 dark:border-gray-700" x-show="open" x-transition.opacity.duration.150ms x-cloak>
+                <p class="text-sm font-medium text-gray-900 dark:text-white">John Doe</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Ver perfil</p>
+            </div>
+        </div>
+    </aside>
+
+    <button
+        type="button"
+        @click="open = !open"
+        :style="`left: ${open ? '14.75rem' : '0.5rem'}`"
+        class="absolute top-6 z-30 rounded-full border border-gray-300 bg-white p-2 text-gray-700 shadow-xl ring-1 ring-gray-900/5 transition-[left,transform] duration-300 ease-out hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:ring-white/10 dark:hover:bg-gray-700 dark:focus:ring-indigo-500"
+        :aria-label="open ? 'Recolher menu lateral' : 'Expandir menu lateral'"
+        :aria-expanded="open"
+    >
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 transition-transform duration-300" :class="open ? 'rotate-0' : 'rotate-180'" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16" />
+        </svg>
+    </button>
+</div>

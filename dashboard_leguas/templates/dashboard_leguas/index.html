@@ -1,0 +1,27 @@
+{% extends 'dashboard_leguas/base.html' %}
+
+{% block title %}Léguas Dashboard{% endblock title %}
+
+{% block extra_head %}
+<style>
+    [x-cloak] {
+        display: none !important;
+    }
+</style>
+{% endblock extra_head %}
+
+{% block content %}
+<main class="min-h-screen flex">
+    <!--Sidebar HTML-->
+    {% include 'dashboard_leguas/partials/dashboard_sidebar.html' %}
+
+    <!--Header HTML-->
+    {% include 'dashboard_leguas/partials/dashboard_header.html' %}
+
+    
+</main>
+{% endblock content %}
+
+{% block scripts %}
+
+{% endblock scripts %}

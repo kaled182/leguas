@@ -67,6 +67,10 @@ def healthcheck(request):
 
 
 urlpatterns = [
+
+    #Dashboard V2
+    path('', include('dashboard_leguas.urls')),
+
     path("health/", healthcheck, name="healthcheck"),
     path("admin/", admin.site.urls),
     # path('', redirect_mixed, name='redirect_mixed'),

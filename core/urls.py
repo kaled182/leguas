@@ -1,11 +1,12 @@
 ﻿# URLs do app core
-from django.urls import path
+from django.urls import path, include
 
 from . import views
 
 app_name = "core"
 
 urlpatterns = [
+    
     # Partners
     path("partners/", views.partner_list, name="partner-list"),
     path("partners/create/", views.partner_create, name="partner-create"),

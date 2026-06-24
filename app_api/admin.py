@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import DriverAppToken
+from .models import DriverAppToken, IncidencePacket, OcrCorrectionLearning, OcrScanAttempt
 
 
 @admin.register(DriverAppToken)
@@ -23,3 +23,38 @@ class DriverAppTokenAdmin(admin.ModelAdmin):
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related("driver_profile")
+
+
+@admin.register(IncidencePacket)
+class IncidencePacketAdmin(admin.ModelAdmin):
+    list_display = [
+        "id",
+        "barcode",
+        "driver_profile",
+        "client_name",
+        "zone",
+        "scanned_at",
+    ]
+    list_filter = ["zone", "scanned_at"]
+    search_fields = ["barcode", "tracking_number", "client_name", "driver_profile__nome_completo"]
+    readonly_fields = ["scanned_at", "updated_at"]
+
+
+@admin.register(OcrCorrectionLearning)
+class OcrCorrectionLearningAdmin(admin.ModelAdmin):
+    list_display = [
+        "id",
+        "field_name",
+        "score",
+        "occurrence_count",
+        "created_at",
+    ]
+    list_filter = ["field_name", "created_at"]
+    search_fields = ["original_value", "corrected_value", "normalized_original"]
+
+
+@admin.register(OcrScanAttempt)
+class OcrScanAttemptAdmin(admin.ModelAdmin):
+    list_display = ["id", "qr_code", "driver_profile", "was_edited", "created_at"]
+    list_filter = ["was_edited", "created_at"]
+    search_fields = ["qr_code", "driver_profile__nome_completo"]

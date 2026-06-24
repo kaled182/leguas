@@ -1,9 +1,41 @@
 """Construtores de dicts JSON para a API da app (campos reais dos modelos)."""
 
 
+def _profile_username(profile):
+    access = getattr(profile, "access", None)
+    if access and access.username:
+        return access.username
+    if profile.email:
+        return profile.email
+    return profile.telefone or f"driver-{profile.id}"
+
+
+def _profile_name_parts(profile):
+    access = getattr(profile, "access", None)
+    if access:
+        first = (access.first_name or "").strip()
+        last = (access.last_name or "").strip()
+        if first or last:
+            return first, last
+
+    full = (profile.nome_completo or "").strip()
+    if not full:
+        return "", ""
+    parts = full.split(" ", 1)
+    if len(parts) == 1:
+        return parts[0], ""
+    return parts[0], parts[1]
+
+
 def driver_dict(p):
+    access = getattr(p, "access", None)
+    linked_user = getattr(access, "user", None)
+    first_name, last_name = _profile_name_parts(p)
     return {
         "id": p.id,
+        "username": _profile_username(p),
+        "first_name": first_name,
+        "last_name": last_name,
         "nome_completo": p.nome_completo,
         "apelido": p.apelido or "",
         "telefone": p.telefone,
@@ -14,6 +46,8 @@ def driver_dict(p):
         "is_active": p.is_active,
         "tipo_vinculo": p.tipo_vinculo,
         "courier_id_cainiao": p.courier_id_cainiao or "",
+        "is_staff": bool(linked_user and linked_user.is_staff),
+        "is_superuser": bool(linked_user and linked_user.is_superuser),
         "created_at": p.created_at.isoformat() if p.created_at else None,
     }
 
@@ -69,4 +103,44 @@ def claim_dict(c):
             c.operation_task_date.isoformat() if c.operation_task_date else None
         ),
         "situacao": situacao,
+    }
+
+
+def incidence_dict(incidence):
+    profile = incidence.driver_profile
+    first_name, last_name = _profile_name_parts(profile)
+    image_url = ""
+    if incidence.package_image:
+        try:
+            image_url = incidence.package_image.url
+        except Exception:  # noqa: BLE001
+            image_url = str(incidence.package_image)
+
+    return {
+        "id": incidence.id,
+        "user_id": profile.id,
+        "user_username": _profile_username(profile),
+        "user_first_name": first_name,
+        "user_last_name": last_name,
+        "barcode": incidence.barcode,
+        "tracking_number": incidence.tracking_number,
+        "client_name": incidence.client_name,
+        "address": incidence.address,
+        "latitude": str(incidence.latitude),
+        "longitude": str(incidence.longitude),
+        "package_image": image_url,
+        "scanned_at": incidence.scanned_at.isoformat() if incidence.scanned_at else None,
+        "updated_at": incidence.updated_at.isoformat() if incidence.updated_at else None,
+        "ocr_data": incidence.ocr_data,
+        "zone": incidence.zone,
+    }
+
+
+def driver_option_dict(profile):
+    first_name, last_name = _profile_name_parts(profile)
+    return {
+        "id": profile.id,
+        "username": _profile_username(profile),
+        "first_name": first_name,
+        "last_name": last_name,
     }

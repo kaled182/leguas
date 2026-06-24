@@ -22,4 +22,12 @@ urlpatterns = [
     path("complaints", views.complaints, name="complaints"),
     # Triagem / separação por zona
     path("sorting", views.sorting, name="sorting"),
+    # Incidencias
+    path("incidences/add", views.incidences_add, name="incidences_add"),
+    path("incidences/history", views.incidences_history, name="incidences_history"),
+    path("incidences/drivers", views.incidences_drivers, name="incidences_drivers"),
+    path("incidences/scan", views.incidences_process_scan, name="incidences_process_scan"),
+    path("incidences/ocr", views.incidences_process_scan, name="incidences_process_ocr_alias"),
+    path("incidences/complete", views.incidences_complete, name="incidences_complete"),
+    path("incidences/confirm-ocr", views.incidences_confirm_ocr, name="incidences_confirm_ocr"),
 ]

@@ -1361,6 +1361,9 @@ class PDFGenerator:
         )
 
         def _add(label, value, note):
+            # Espaço fixo (não-quebrável) entre o cifrão e o número: dá folga
+            # visual e impede que "€" e o valor caiam em linhas diferentes.
+            value = value.replace("€", "€ ")
             resumo_rows.append([label, value, Paragraph(note or "", note_style)])
             return len(resumo_rows) - 1
 
@@ -1477,7 +1480,7 @@ class PDFGenerator:
                     fontSize=13, textColor=colors.whitesmoke,
                     fontName="Helvetica-Bold",
                 )),
-                Paragraph(f"€{float(total_final):.2f}", ParagraphStyle(
+                Paragraph(f"€ {float(total_final):.2f}", ParagraphStyle(
                     "TotalVal", parent=self.styles["Normal"],
                     fontSize=16, textColor=colors.whitesmoke,
                     fontName="Helvetica-Bold", alignment=TA_CENTER,

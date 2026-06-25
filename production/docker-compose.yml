@@ -81,7 +81,9 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:8090/health/"]
+      # gunicorn ouve na 8000 DENTRO do contentor; 8090 é a porta externa
+      # do Caddy (host), inacessível a partir daqui — usar sempre 8000.
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/health/"]
       interval: 30s
       timeout: 10s
       retries: 3

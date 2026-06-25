@@ -1400,31 +1400,39 @@ class PDFGenerator:
             bold_rows.append(idx)
             color_rows.append((idx, colors.HexColor("#0D9488")))
 
-        # ── Bloco 1: Base Faturável → IVA → VALOR DA FATURA-RECIBO ─────────
+        # ── Bloco 1: produção bruta → (IVA) → VALOR DA FATURA-RECIBO ───────
+        # A fatura-recibo assenta SEMPRE no BRUTO da produção (base
+        # facturável), tenha ou não IVA. Regime Normal soma o IVA;
+        # isento (art. 53º) / simplificado: fatura-recibo = base facturável.
         base_idx = None
         fatura_idx = None
-        if vat_amount > 0 or irs_amount > 0:
+        if vat_amount > 0:
             base_idx = _add(
                 "Base Faturável (s/ IVA)",
                 f"€{float(pre_invoice.base_faturavel):.2f}",
                 "Produção bruta — base do IVA (s/ adiantamentos)")
             bold_rows.append(base_idx)
-        if vat_amount > 0:
             idx = _add("IVA (23%)", f"+€{float(vat_amount):.2f}",
                        "Regime Normal — 23% sobre a produção bruta")
             bold_rows.append(idx)
             color_rows.append((idx, colors.HexColor("#7C3AED")))
-            fatura_idx = _add(
-                "VALOR DA FATURA-RECIBO",
-                f"€{float(pre_invoice.total_fatura):.2f}",
-                "Recibo a emitir — sobre o BRUTO da produção")
-            bold_rows.append(fatura_idx)
+            fatura_nota = "Recibo a emitir — sobre o BRUTO da produção"
+        else:
+            fatura_nota = "Recibo sobre o BRUTO da produção (isento de IVA)"
+        fatura_idx = _add(
+            "VALOR DA FATURA-RECIBO",
+            f"€{float(pre_invoice.total_fatura):.2f}", fatura_nota)
+        bold_rows.append(fatura_idx)
 
         # ── Bloco 2: Fatura-Recibo → (-) Adiantamentos → TOTAL A RECEBER ───
+        adiant_nota = (
+            "Já pago ao motorista — deduzido após o IVA" if vat_amount > 0
+            else "Já pago ao motorista — deduzido do recibo"
+        )
         red_rows.append(_add(
             "Adiantamentos / Combustível",
             f"-€{float(pre_invoice.total_adiantamentos):.2f}",
-            "Já pago ao motorista — deduzido após o IVA"))
+            adiant_nota))
         if irs_amount > 0:
             irs_pct = (
                 getattr(pre_invoice.driver, "irs_retention_pct", Decimal("0"))

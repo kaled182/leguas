@@ -92,8 +92,18 @@
         {% endif %}
       </div>
     {% else %}
-      <p class="text-xs uppercase font-bold text-emerald-100">Total a Receber</p>
+      <p class="text-xs uppercase font-bold text-emerald-100">Total a Receber <span class="normal-case font-normal">(após adiantam.)</span></p>
       <p class="text-3xl font-extrabold mt-1">€ {{ pf.total_a_receber|floatformat:2 }}</p>
+      <div class="text-[11px] text-emerald-50 mt-1 space-y-0.5 border-t border-white/20 pt-1">
+        <div class="flex items-center justify-between gap-2">
+          <span class="font-bold">Fatura-Recibo (bruto):</span>
+          <span class="font-mono font-bold">€ {{ pf.total_fatura|floatformat:2 }}</span>
+        </div>
+        <div class="flex items-center justify-between gap-2 text-amber-200">
+          <span>Adiantamentos:</span>
+          <span class="font-mono font-bold">-€ {{ pf.total_adiantamentos|floatformat:2 }}</span>
+        </div>
+      </div>
       {% if pf.driver.vat_regime == 'isento' %}
         <p class="text-[11px] text-emerald-100 mt-1">Isento de IVA (art. 53º)</p>
       {% elif pf.driver.vat_regime == 'simplificado' %}

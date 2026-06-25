@@ -55,9 +55,24 @@ theme/node_modules/
 
 # Arquivos de backup
 files/
+**/files/
 
-# Backups
+# Backups (raiz e aninhados — ex: production/backups, database/backups)
 backups/
+**/backups/
+production/backups/
+database/backups/
+
+# Tarballs / dumps grandes que nunca devem entrar na imagem
+# (dumps .sql de backup ficam sob **/backups/, já excluídos acima;
+#  não excluímos *.sql global p/ preservar deploy/dev/init-db.sql)
+*.tar
+*.tar.gz
+*.tgz
+*.dump
+
+# Media (uploads) aninhada — só top-level estava coberto
+**/media/
 
 # Docker dev backup
 docker-compose.yml.bak

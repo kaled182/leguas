@@ -1967,7 +1967,7 @@ def get_configuration(request):
             # Backup automation defaults
             "BACKUP_AUTO_ENABLED": False,
             "BACKUP_FREQUENCY": "weekly",
-            "BACKUP_RETENTION_DAYS": "30",
+            "BACKUP_RETENTION_DAYS": "3",
             "BACKUP_CLOUD_UPLOAD": False,
             "BACKUP_CLOUD_PROVIDER": "google_drive",
             "BACKUP_CLOUD_PATH": "/backups/provemaps",

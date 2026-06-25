@@ -3,7 +3,8 @@
 # Léguas Franzinas — Backup script (DB + media)
 # ════════════════════════════════════════════════════════════════════
 # Faz dump de MySQL + tar do volume media, com timestamp e compressão.
-# Retém últimos N backups (default 30) — apaga mais antigos.
+# Retém backups dos últimos N dias (default 3) — apaga mais antigos.
+# Configurável via BACKUP_RETENTION_DAYS no .env.
 #
 # Uso:
 #   ./backup.sh                      # backup on-demand
@@ -27,7 +28,7 @@ else
 fi
 
 BACKUP_DIR="${BACKUP_DIR:-./backups}"
-RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-30}"
+RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-3}"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 
 mkdir -p "$BACKUP_DIR"

@@ -3888,8 +3888,10 @@ def empresa_lancamento_detail_api(request, lancamento_id):
         "pacotes_perdidos": str(lanc.pacotes_perdidos),
         "adiantamentos": str(lanc.adiantamentos),
         "taxa_iva": str(lanc.taxa_iva),
+        "base_faturavel": str(lanc.base_faturavel),
         "total_a_receber": str(lanc.total_a_receber),
         "valor_iva": str(lanc.valor_iva),
+        "total_fatura": str(lanc.total_fatura),
         "total_com_iva": str(lanc.total_com_iva),
         "periodo_inicio": lanc.periodo_inicio.strftime("%d/%m/%Y"),
         "periodo_fim": lanc.periodo_fim.strftime("%d/%m/%Y"),
@@ -3972,9 +3974,11 @@ def empresa_lancamento_update(request, lancamento_id):
 
     return JsonResponse({
         "success": True,
+        "base_faturavel": str(lanc.base_faturavel),
         "total_a_receber": str(lanc.total_a_receber),
         "taxa_iva": str(lanc.taxa_iva),
         "valor_iva": str(lanc.valor_iva),
+        "total_fatura": str(lanc.total_fatura),
         "total_com_iva": str(lanc.total_com_iva),
         "descricao": lanc.descricao,
         "periodo_inicio": lanc.periodo_inicio.strftime("%d/%m/%Y"),

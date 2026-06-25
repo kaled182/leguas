@@ -61,16 +61,24 @@
   {% endif %}
   <div class="bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl p-4 text-white shadow">
     {% if pf.driver.vat_regime == 'normal' %}
-      <p class="text-xs uppercase font-bold text-emerald-100">Total c/ IVA</p>
+      <p class="text-xs uppercase font-bold text-emerald-100">Total a Receber <span class="normal-case font-normal">(após adiantam.)</span></p>
       <p class="text-3xl font-extrabold mt-1">€ {{ pf.total_com_iva|floatformat:2 }}</p>
       <div class="text-[11px] text-emerald-50 mt-1 space-y-0.5 border-t border-white/20 pt-1">
         <div class="flex items-center justify-between gap-2">
-          <span>Sem IVA:</span>
-          <span class="font-mono font-bold">€ {{ pf.total_a_receber|floatformat:2 }}</span>
+          <span>Base Faturável:</span>
+          <span class="font-mono font-bold">€ {{ pf.base_faturavel|floatformat:2 }}</span>
         </div>
         <div class="flex items-center justify-between gap-2">
           <span>IVA (23%):</span>
           <span class="font-mono font-bold">+€ {{ pf.vat_amount|floatformat:2 }}</span>
+        </div>
+        <div class="flex items-center justify-between gap-2 pt-0.5 border-t border-white/20">
+          <span class="font-bold">Fatura-Recibo (bruto):</span>
+          <span class="font-mono font-bold">€ {{ pf.total_fatura|floatformat:2 }}</span>
+        </div>
+        <div class="flex items-center justify-between gap-2 text-amber-200">
+          <span>Adiantamentos:</span>
+          <span class="font-mono font-bold">-€ {{ pf.total_adiantamentos|floatformat:2 }}</span>
         </div>
         {% if pf.irs_retention_amount and pf.irs_retention_amount > 0 %}
         <div class="flex items-center justify-between gap-2 text-amber-200">

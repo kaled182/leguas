@@ -1982,7 +1982,10 @@ def empresa_parceira_prefaturas(request, empresa_id):
     rows = []
     total_base = D("0")
     total_bonus = D("0")
-    total_liquido = D("0")
+    # Base facturável (bruto) e adiantamentos somados em separado: o IVA
+    # incide sobre o bruto e os adiantamentos só são deduzidos após o IVA.
+    total_base_mot = D("0")
+    total_adiant_mot = D("0")
     for pf in pre_invoices:
         rows.append({
             "id": pf.id,
@@ -2000,7 +2003,8 @@ def empresa_parceira_prefaturas(request, empresa_id):
         })
         total_base += pf.base_entregas
         total_bonus += pf.total_bonus
-        total_liquido += pf.total_a_receber
+        total_base_mot += pf.base_faturavel
+        total_adiant_mot += pf.total_adiantamentos
 
     # Lançamentos manuais do mesmo período
     lancamentos = EmpresaParceiraLancamento.objects.filter(
@@ -2012,7 +2016,8 @@ def empresa_parceira_prefaturas(request, empresa_id):
     lanc_rows = []
     total_lanc_base = D("0")
     total_lanc_bonus = D("0")
-    total_lanc_total = D("0")
+    total_base_lanc = D("0")
+    total_adiant_lanc = D("0")
     for lc in lancamentos:
         lanc_rows.append({
             "id": lc.id,
@@ -2033,12 +2038,16 @@ def empresa_parceira_prefaturas(request, empresa_id):
         })
         total_lanc_base += lc.valor_base
         total_lanc_bonus += lc.valor_bonus
-        total_lanc_total += lc.total_a_receber
+        total_base_lanc += lc.base_faturavel
+        total_adiant_lanc += lc.adiantamentos
 
-    grand_total = total_liquido + total_lanc_total
+    # IVA sobre a BASE FATURÁVEL (produção bruta); adiantamentos só depois.
+    base_faturavel = total_base_mot + total_base_lanc
+    total_adiantamentos = total_adiant_mot + total_adiant_lanc
     iva_rate = empresa.taxa_iva / 100
-    total_iva = grand_total * iva_rate
-    total_com_iva = grand_total + total_iva
+    total_iva = base_faturavel * iva_rate
+    total_fatura = base_faturavel + total_iva           # fatura-recibo (bruto)
+    total_com_iva = total_fatura - total_adiantamentos  # valor a pagar
 
     return JsonResponse({
         "empresa_nome": empresa.nome,
@@ -2050,10 +2059,12 @@ def empresa_parceira_prefaturas(request, empresa_id):
         "totais": {
             "base_entregas": str(total_base),
             "total_bonus": str(total_bonus),
-            "total_liquido": str(total_liquido),
-            "total_lancamentos": str(total_lanc_total),
-            "grand_total": str(grand_total),
+            "subtotal_motoristas": str(total_base_mot),
+            "subtotal_lancamentos": str(total_base_lanc),
+            "base_faturavel": str(base_faturavel),
+            "total_adiantamentos": str(total_adiantamentos),
             "total_iva": str(total_iva),
+            "total_fatura": str(total_fatura),
             "total_com_iva": str(total_com_iva),
         },
     })
@@ -2373,7 +2384,12 @@ def empresa_parceira_prefatura_pdf(request, empresa_id):
     pre_invoices = []
     total_base = D("0")
     total_bonus = D("0")
-    total_liquido = D("0")
+    # Base facturável (produção bruta) e adiantamentos, somados em separado:
+    # o IVA incide sobre a base bruta e os adiantamentos só são deduzidos
+    # DEPOIS do IVA (exigência contabilística — a fatura-recibo é sobre a
+    # produção, não sobre o saldo).
+    total_base_mot = D("0")
+    total_adiant_mot = D("0")
     for pf in pre_invoices_qs:
         pre_invoices.append({
             "driver_nome": pf.driver.nome_completo,
@@ -2387,7 +2403,8 @@ def empresa_parceira_prefatura_pdf(request, empresa_id):
         })
         total_base += pf.base_entregas
         total_bonus += pf.total_bonus
-        total_liquido += pf.total_a_receber
+        total_base_mot += pf.base_faturavel
+        total_adiant_mot += pf.total_adiantamentos
 
     # Lançamentos manuais
     lancamentos_qs = EmpresaParceiraLancamento.objects.filter(
@@ -2395,7 +2412,8 @@ def empresa_parceira_prefatura_pdf(request, empresa_id):
         periodo_inicio__month=mes, periodo_inicio__year=ano,
     ).order_by("periodo_inicio")
     lancamentos = []
-    total_lanc = D("0")
+    total_base_lanc = D("0")
+    total_adiant_lanc = D("0")
     for lc in lancamentos_qs:
         lancamentos.append({
             "descricao": lc.descricao,
@@ -2409,18 +2427,24 @@ def empresa_parceira_prefatura_pdf(request, empresa_id):
             "status": lc.status,
             "status_display": lc.get_status_display(),
         })
-        total_lanc += lc.total_a_receber
+        total_base_lanc += lc.base_faturavel
+        total_adiant_lanc += lc.adiantamentos
 
-    grand_total = total_liquido + total_lanc
+    # IVA sobre a BASE FATURÁVEL (produção bruta); adiantamentos só depois.
+    base_faturavel = total_base_mot + total_base_lanc
+    total_adiantamentos = total_adiant_mot + total_adiant_lanc
     iva_rate = empresa.taxa_iva / 100
-    total_iva = grand_total * iva_rate
-    total_com_iva = grand_total + total_iva
+    total_iva = base_faturavel * iva_rate
+    total_fatura = base_faturavel + total_iva           # fatura-recibo (bruto)
+    total_com_iva = total_fatura - total_adiantamentos  # valor a pagar
 
     totais = {
-        "total_liquido": str(total_liquido),
-        "total_lancamentos": str(total_lanc),
-        "grand_total": str(grand_total),
+        "subtotal_motoristas": str(total_base_mot),
+        "subtotal_lancamentos": str(total_base_lanc),
+        "base_faturavel": str(base_faturavel),
+        "total_adiantamentos": str(total_adiantamentos),
         "total_iva": str(total_iva),
+        "total_fatura": str(total_fatura),
         "total_com_iva": str(total_com_iva),
     }
 

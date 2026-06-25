@@ -1503,30 +1503,44 @@ class DriverPreInvoice(models.Model):
             + self.total_extras
             + self.ajuste_manual
         )
-        self.total_a_receber = (
+
+        # Base FATURÁVEL — valor da produção sujeito a facturação. É sobre
+        # este BRUTO que incide o IVA (e o IRS) e que assenta a fatura-recibo
+        # do motorista. Penalizações, pacotes perdidos e comissões SÃO
+        # ajustes ao serviço prestado, por isso entram na base. Os
+        # ADIANTAMENTOS *não* entram: são adiantamentos de tesouraria
+        # (dinheiro já pago ao motorista), deduzidos apenas DEPOIS do IVA.
+        # Calcular o IVA sobre o saldo líquido de adiantamentos é incorrecto
+        # para a contabilidade — a factura-recibo tem de reflectir a
+        # produção total, não o saldo.
+        base_faturavel = (
             self.subtotal_bruto
             - self.penalizacoes_gerais
             - self.total_pacotes_perdidos
-            - self.total_adiantamentos
             + self.total_comissoes_indicacao
         )
 
-        # IVA: motoristas em regime Normal cobram 23% na factura.
-        # Isento (art. 53º) e Simplificado: sem IVA.
-        # IVA é adicional ao total_a_receber (não substitui).
+        # IVA: motoristas em regime Normal cobram 23% na factura, SEMPRE
+        # sobre a base facturável (produção bruta), nunca sobre o saldo
+        # líquido de adiantamentos. Isento (art. 53º) e Simplificado: sem IVA.
         regime = getattr(self.driver, "vat_regime", "isento") or "isento"
         if regime == "normal":
             self.vat_amount = (
-                self.total_a_receber * Decimal("0.23")
+                base_faturavel * Decimal("0.23")
             ).quantize(Decimal("0.01"))
         else:
             self.vat_amount = Decimal("0.00")
 
-        # Retenção IRS sobre total_a_receber (sem IVA)
+        # Total a receber (s/ IVA) = base facturável menos adiantamentos.
+        # O valor numérico é o mesmo de sempre; o que muda é a base do IVA.
+        self.total_a_receber = base_faturavel - self.total_adiantamentos
+
+        # Retenção IRS — também sobre a base facturável (rendimento bruto),
+        # não sobre o saldo líquido de adiantamentos.
         irs_pct = getattr(self.driver, "irs_retention_pct", None) or Decimal("0")
         if irs_pct > 0:
             self.irs_retention_amount = (
-                self.total_a_receber * irs_pct / Decimal("100")
+                base_faturavel * irs_pct / Decimal("100")
             ).quantize(Decimal("0.01"))
         else:
             self.irs_retention_amount = Decimal("0.00")
@@ -1535,9 +1549,31 @@ class DriverPreInvoice(models.Model):
         self.save()
 
     @property
+    def base_faturavel(self):
+        """Base facturável (s/ IVA) — produção sujeita a factura: subtotal
+        bruto menos penalizações e pacotes perdidos, mais comissões de
+        indicação. NÃO desconta adiantamentos (deduzidos só depois do IVA).
+        É a base de cálculo do IVA e da retenção de IRS."""
+        return (
+            self.subtotal_bruto
+            - self.penalizacoes_gerais
+            - self.total_pacotes_perdidos
+            + self.total_comissoes_indicacao
+        )
+
+    @property
+    def total_fatura(self):
+        """Valor da FATURA-RECIBO = base facturável + IVA. É o valor que o
+        motorista factura à empresa, assente no BRUTO da produção e
+        independente de adiantamentos. Equivale a total_com_iva acrescido
+        dos adiantamentos."""
+        return self.base_faturavel + self.vat_amount
+
+    @property
     def total_com_iva(self):
-        """Total a receber + IVA. Para drivers em regime Normal, é o
-        valor que a factura do motorista efectivamente apresenta."""
+        """Valor que o motorista efectivamente recebe = fatura-recibo menos
+        adiantamentos. Equivale a total_a_receber (líquido de adiantamentos)
+        + IVA sobre a produção bruta."""
         return self.total_a_receber + self.vat_amount
 
     @property

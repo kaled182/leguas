@@ -2703,24 +2703,30 @@ document.addEventListener('alpine:init', () => {
                   <span class="text-sm font-medium text-red-600">- €<span x-text="parseFloat($store.lancView.lanc.pacotes_perdidos).toFixed(2)"></span></span>
                 </div>
               </template>
-              <template x-if="parseFloat($store.lancView.lanc.adiantamentos) > 0">
-                <div class="flex justify-between items-center px-4 py-2.5 bg-white dark:bg-gray-800">
-                  <span class="text-sm text-gray-600 dark:text-gray-300">Adiantamentos / Combustível</span>
-                  <span class="text-sm font-medium text-red-600">- €<span x-text="parseFloat($store.lancView.lanc.adiantamentos).toFixed(2)"></span></span>
-                </div>
-              </template>
               <div class="flex justify-between items-center px-4 py-2.5 bg-gray-50 dark:bg-gray-700/50">
-                <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">Subtotal (sem IVA)</span>
-                <span class="text-sm font-semibold text-gray-900 dark:text-white">€<span x-text="parseFloat($store.lancView.lanc.total_a_receber).toFixed(2)"></span></span>
+                <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">Base Faturável (s/ IVA)</span>
+                <span class="text-sm font-semibold text-gray-900 dark:text-white">€<span x-text="parseFloat($store.lancView.lanc.base_faturavel).toFixed(2)"></span></span>
               </div>
               <template x-if="parseFloat($store.lancView.lanc.taxa_iva) > 0">
                 <div class="flex justify-between items-center px-4 py-2.5 bg-white dark:bg-gray-800">
-                  <span class="text-sm text-gray-600 dark:text-gray-300">IVA (<span x-text="$store.lancView.lanc.taxa_iva"></span>%)</span>
-                  <span class="text-sm font-medium text-gray-900 dark:text-white">€<span x-text="parseFloat($store.lancView.lanc.valor_iva).toFixed(2)"></span></span>
+                  <span class="text-sm text-gray-600 dark:text-gray-300">IVA (<span x-text="$store.lancView.lanc.taxa_iva"></span>%) — sobre o bruto</span>
+                  <span class="text-sm font-medium text-gray-900 dark:text-white">+€<span x-text="parseFloat($store.lancView.lanc.valor_iva).toFixed(2)"></span></span>
+                </div>
+              </template>
+              <template x-if="parseFloat($store.lancView.lanc.taxa_iva) > 0">
+                <div class="flex justify-between items-center px-4 py-2.5 bg-emerald-50 dark:bg-emerald-900/20">
+                  <span class="text-sm font-bold text-emerald-800 dark:text-emerald-300">Valor da Fatura-Recibo (bruto)</span>
+                  <span class="text-sm font-bold text-emerald-800 dark:text-emerald-300">€<span x-text="parseFloat($store.lancView.lanc.total_fatura).toFixed(2)"></span></span>
+                </div>
+              </template>
+              <template x-if="parseFloat($store.lancView.lanc.adiantamentos) > 0">
+                <div class="flex justify-between items-center px-4 py-2.5 bg-white dark:bg-gray-800">
+                  <span class="text-sm text-gray-600 dark:text-gray-300">Adiantamentos / Combustível <span class="text-xs text-gray-400">(após IVA)</span></span>
+                  <span class="text-sm font-medium text-red-600">- €<span x-text="parseFloat($store.lancView.lanc.adiantamentos).toFixed(2)"></span></span>
                 </div>
               </template>
               <div class="flex justify-between items-center px-4 py-3 bg-indigo-600">
-                <span class="text-sm font-bold text-white">Total com IVA</span>
+                <span class="text-sm font-bold text-white">Total a Pagar (c/ IVA)</span>
                 <span class="text-lg font-bold text-white">€<span x-text="parseFloat($store.lancView.lanc.total_com_iva).toFixed(2)"></span></span>
               </div>
             </div>

@@ -185,20 +185,31 @@ class EmpresaParceiraLancamento(models.Model):
         return f"{self.empresa.nome} — {self.descricao} ({self.periodo_inicio})"
 
     @property
+    def base_faturavel(self):
+        """Base facturável (s/ IVA) — produção sujeita a factura: base de
+        entregas + bónus menos pacotes perdidos. NÃO desconta adiantamentos
+        (são adiantamentos de tesouraria, deduzidos só depois do IVA). É a
+        base de cálculo do IVA da fatura-recibo."""
+        return self.valor_base + self.valor_bonus - self.pacotes_perdidos
+
+    @property
     def total_a_receber(self):
-        return (
-            self.valor_base
-            + self.valor_bonus
-            - self.pacotes_perdidos
-            - self.adiantamentos
-        )
+        return self.base_faturavel - self.adiantamentos
 
     @property
     def valor_iva(self):
-        return (self.total_a_receber * self.taxa_iva / Decimal("100")).quantize(Decimal("0.01"))
+        # IVA incide sobre a base facturável (produção bruta), nunca sobre o
+        # saldo líquido de adiantamentos — exigência contabilística.
+        return (self.base_faturavel * self.taxa_iva / Decimal("100")).quantize(Decimal("0.01"))
+
+    @property
+    def total_fatura(self):
+        """Valor da FATURA-RECIBO = base facturável + IVA (sobre o BRUTO)."""
+        return self.base_faturavel + self.valor_iva
 
     @property
     def total_com_iva(self):
+        """Valor a pagar = fatura-recibo menos adiantamentos."""
         return self.total_a_receber + self.valor_iva
 
 

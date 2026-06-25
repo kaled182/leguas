@@ -988,23 +988,23 @@
           <div class="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase mb-3">Resumo da Empresa — Fatura Unificada</div>
           <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
             <div class="text-center">
-              <div class="text-xs text-gray-500">Motoristas</div>
-              <div class="font-bold text-gray-900 dark:text-white text-sm" x-text="'€' + parseFloat(pfData?.totais?.total_liquido || 0).toFixed(2)"></div>
+              <div class="text-xs text-gray-500">Base Faturável</div>
+              <div class="font-bold text-gray-900 dark:text-white text-sm" x-text="'€' + parseFloat(pfData?.totais?.base_faturavel || 0).toFixed(2)"></div>
             </div>
             <div class="text-center">
-              <div class="text-xs text-gray-500">Lançamentos</div>
-              <div class="font-bold text-indigo-700 dark:text-indigo-300 text-sm" x-text="'€' + parseFloat(pfData?.totais?.total_lancamentos || 0).toFixed(2)"></div>
+              <div class="text-xs text-gray-500">IVA (<span x-text="pfData?.taxa_iva"></span>%) s/ bruto</div>
+              <div class="font-bold text-orange-600 text-sm" x-text="'+€' + parseFloat(pfData?.totais?.total_iva || 0).toFixed(2)"></div>
+            </div>
+            <div class="text-center bg-emerald-50 dark:bg-emerald-900/30 rounded-lg p-2 border border-emerald-200 dark:border-emerald-700">
+              <div class="text-xs text-emerald-700 dark:text-emerald-300">Fatura-Recibo (bruto)</div>
+              <div class="font-bold text-emerald-800 dark:text-emerald-200 text-sm" x-text="'€' + parseFloat(pfData?.totais?.total_fatura || 0).toFixed(2)"></div>
             </div>
             <div class="text-center">
-              <div class="text-xs text-gray-500">Subtotal</div>
-              <div class="font-bold text-gray-900 dark:text-white text-sm" x-text="'€' + parseFloat(pfData?.totais?.grand_total || 0).toFixed(2)"></div>
-            </div>
-            <div class="text-center">
-              <div class="text-xs text-gray-500">IVA (<span x-text="pfData?.taxa_iva"></span>%)</div>
-              <div class="font-bold text-orange-600 text-sm" x-text="'€' + parseFloat(pfData?.totais?.total_iva || 0).toFixed(2)"></div>
+              <div class="text-xs text-gray-500">Adiantamentos</div>
+              <div class="font-bold text-red-600 text-sm" x-text="'-€' + parseFloat(pfData?.totais?.total_adiantamentos || 0).toFixed(2)"></div>
             </div>
             <div class="text-center bg-emerald-600 rounded-lg p-2">
-              <div class="text-xs text-emerald-100">TOTAL C/ IVA</div>
+              <div class="text-xs text-emerald-100">TOTAL A PAGAR</div>
               <div class="font-bold text-white text-base" x-text="'€' + parseFloat(pfData?.totais?.total_com_iva || 0).toFixed(2)"></div>
             </div>
           </div>

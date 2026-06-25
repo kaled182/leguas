@@ -1356,7 +1356,7 @@ class PDFGenerator:
         # o estilo (negrito/cor) aplicado via TableStyle.
         note_style = ParagraphStyle(
             "ResumoNote", parent=self.styles["Normal"],
-            fontSize=8, leading=9.5,
+            fontSize=7, leading=8.5, wordWrap="CJK",
             textColor=colors.HexColor("#6B7280"),
         )
 
@@ -1431,7 +1431,7 @@ class PDFGenerator:
                 "Retenção IRS", f"-€{float(irs_amount):.2f}",
                 f"{float(irs_pct):.2f}% sobre a produção bruta"))
 
-        res_table = Table(resumo_rows, colWidths=[7 * cm, 4 * cm, 6 * cm])
+        res_table = Table(resumo_rows, colWidths=[6 * cm, 3.3 * cm, 7.2 * cm])
         ts = [
             ("ROWBACKGROUNDS", (0, 0), (-1, -1), [colors.white, light_gray]),
             ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#E5E7EB")),

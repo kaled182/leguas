@@ -1350,8 +1350,18 @@ class PDFGenerator:
         bold_rows = []      # linhas de realce (negrito)
         color_rows = []     # (idx, cor) para texto colorido
 
+        # A 3ª coluna (descrição) tem de quebrar linha dentro da célula —
+        # strings simples não quebram no ReportLab e transbordam. Por isso
+        # é embrulhada em Paragraph; label e valor ficam string para manter
+        # o estilo (negrito/cor) aplicado via TableStyle.
+        note_style = ParagraphStyle(
+            "ResumoNote", parent=self.styles["Normal"],
+            fontSize=8, leading=9.5,
+            textColor=colors.HexColor("#6B7280"),
+        )
+
         def _add(label, value, note):
-            resumo_rows.append([label, value, note])
+            resumo_rows.append([label, value, Paragraph(note or "", note_style)])
             return len(resumo_rows) - 1
 
         _add("Base Entregas", f"€{float(pre_invoice.base_entregas):.2f}",

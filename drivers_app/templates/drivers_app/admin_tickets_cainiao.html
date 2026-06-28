@@ -1,0 +1,385 @@
+{% extends 'paack_dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Processador de Tickets Cainiao{% endblock %}
+{% block sidebar_title %}Tickets Cainiao{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+
+<style>
+  .tbl-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
+  .tbl-scroll::-webkit-scrollbar-thumb {
+    background: rgba(148,163,184,.30); border-radius: 4px;
+  }
+  .dropzone.dragover {
+    outline: 2px dashed #f97316; outline-offset: -2px;
+    background: rgba(249,115,22,.08);
+  }
+  .dropzone.paste-target {
+    box-shadow: 0 0 0 2px #f97316 inset;
+  }
+</style>
+
+<div class="p-6" x-data="ticketsPanel()" x-init="init()"
+     @paste.window="onPaste($event)">
+
+  <!-- ── Header ───────────────────────────────────────────────────────── -->
+  <div class="mb-6 flex items-center justify-between flex-wrap gap-3">
+    <div class="flex items-center gap-3">
+      <div class="w-12 h-12 bg-gradient-to-br from-orange-500 to-red-600 rounded-xl flex items-center justify-center">
+        <i data-lucide="file-spreadsheet" class="w-6 h-6 text-white"></i>
+      </div>
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Processador de Tickets Cainiao</h1>
+        <p class="text-sm text-gray-500 dark:text-gray-400">Importe a planilha de exceptions, abra reclamações em massa e exporte tudo.</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <select x-model="batchId" @change="switchBatch()"
+              class="px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200">
+        <option value="">— Selecionar lote —</option>
+        {% for b in recent_batches %}
+          <option value="{{ b.id }}">#{{ b.id }} · {{ b.ficheiro_nome|default:'lote' }} · {{ b.total_rows }} linhas · {{ b.created_at|date:'d/m H:i' }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+
+  <!-- ── Upload ───────────────────────────────────────────────────────── -->
+  <div class="mb-6 dropzone rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 p-6 text-center bg-white dark:bg-gray-800/50"
+       @dragover.prevent="$event.currentTarget.classList.add('dragover')"
+       @dragleave="$event.currentTarget.classList.remove('dragover')"
+       @drop.prevent="$event.currentTarget.classList.remove('dragover'); uploadFile($event.dataTransfer.files[0])">
+    <i data-lucide="upload-cloud" class="w-8 h-8 mx-auto text-orange-500 mb-2"></i>
+    <p class="text-sm text-gray-600 dark:text-gray-300">
+      Arraste a planilha <strong>.xlsx</strong> de exceptions Cainiao aqui, ou
+      <button @click="$refs.xlsx.click()" class="text-orange-600 font-semibold underline">selecione o ficheiro</button>.
+    </p>
+    <input type="file" x-ref="xlsx" class="hidden" accept=".xlsx,.xlsm"
+           @change="uploadFile($event.target.files[0])">
+    <p x-show="uploading" class="text-sm text-orange-500 mt-2">A processar planilha…</p>
+  </div>
+
+  <!-- ── KPIs ─────────────────────────────────────────────────────────── -->
+  <div x-show="batchId" class="grid grid-cols-2 md:grid-cols-6 gap-3 mb-5">
+    <template x-for="k in kpiCards" :key="k.key">
+      <button @click="filters.status = (filters.status===k.status?'':k.status); load()"
+              class="text-left p-3 rounded-xl border bg-white dark:bg-gray-800 transition"
+              :class="filters.status===k.status ? 'border-orange-500 ring-1 ring-orange-500' : 'border-gray-200 dark:border-gray-700'">
+        <div class="text-xs text-gray-500 dark:text-gray-400" x-text="k.label"></div>
+        <div class="text-2xl font-bold" :class="k.color" x-text="kpis[k.key] ?? 0"></div>
+      </button>
+    </template>
+  </div>
+
+  <!-- ── Filtros + ações em massa ─────────────────────────────────────── -->
+  <div x-show="batchId" class="mb-4 flex flex-wrap items-center gap-2">
+    <input x-model.debounce.400ms="filters.q" @input="load()" placeholder="Pesquisar waybill, ticket, cliente…"
+           class="px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 w-64">
+    <select x-model="filters.hub" @change="load()"
+            class="px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200">
+      <option value="">Todos os HUBs</option>
+      <template x-for="h in kpis.hubs || []" :key="h"><option :value="h" x-text="h"></option></template>
+    </select>
+    <label class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+      <input type="checkbox" x-model="filters.no_driver" @change="load()"> Sem motorista
+    </label>
+
+    <div class="ml-auto flex items-center gap-2">
+      <span class="text-sm text-gray-500" x-text="selectedCount + ' selecionada(s)'"></span>
+      <button @click="bulkOpen()" :disabled="selectedCount===0 || busy"
+              class="px-3 py-2 text-sm rounded-lg bg-orange-600 text-white font-semibold disabled:opacity-40">
+        <i data-lucide="ticket-plus" class="w-4 h-4 inline"></i> Abrir selecionadas
+      </button>
+      <a :href="'/driversapp/api/tickets-cainiao/' + batchId + '/export/zip/'"
+         class="px-3 py-2 text-sm rounded-lg bg-indigo-600 text-white font-semibold">
+        <i data-lucide="file-down" class="w-4 h-4 inline"></i> ZIP PDFs
+      </a>
+      <a :href="'/driversapp/api/tickets-cainiao/' + batchId + '/export/xlsx/'"
+         class="px-3 py-2 text-sm rounded-lg bg-emerald-600 text-white font-semibold">
+        <i data-lucide="table" class="w-4 h-4 inline"></i> Excel estado
+      </a>
+    </div>
+  </div>
+
+  <!-- ── Tabela ───────────────────────────────────────────────────────── -->
+  <div x-show="batchId" class="tbl-scroll overflow-auto rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+    <table class="w-full text-sm">
+      <thead class="bg-gray-50 dark:bg-gray-900/40 text-gray-500 dark:text-gray-400 text-xs uppercase">
+        <tr>
+          <th class="p-3 w-10"><input type="checkbox" @change="toggleAll($event.target.checked)" :checked="allVisibleSelected"></th>
+          <th class="p-3 text-left">Ticket / Waybill</th>
+          <th class="p-3 text-left">Exception</th>
+          <th class="p-3 text-left">HUB</th>
+          <th class="p-3 text-left">Motorista</th>
+          <th class="p-3 text-left">Estado</th>
+          <th class="p-3 text-left">Prints</th>
+          <th class="p-3 text-left">Ação</th>
+        </tr>
+      </thead>
+      <tbody>
+        <template x-for="r in rows" :key="r.id">
+          <tr class="border-t border-gray-100 dark:border-gray-700/60 hover:bg-gray-50 dark:hover:bg-gray-900/30 align-top">
+            <td class="p-3">
+              <input type="checkbox" :checked="r.selected" :disabled="!r.can_open"
+                     @change="toggleRow(r, $event.target.checked)">
+            </td>
+            <td class="p-3">
+              <div class="font-mono text-xs text-gray-900 dark:text-gray-100" x-text="r.waybill_number"></div>
+              <div class="text-xs text-gray-400">#<span x-text="r.ticket_no"></span></div>
+              <div class="text-[10px] text-gray-400" x-text="fmtDate(r.exception_creation_time)"></div>
+            </td>
+            <td class="p-3 max-w-xs">
+              <span class="inline-block px-2 py-0.5 rounded text-[11px] font-semibold bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300" x-text="r.exception_name"></span>
+              <div class="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-3" x-text="r.description"></div>
+            </td>
+            <td class="p-3 text-xs text-gray-600 dark:text-gray-300" x-text="r.hub"></td>
+            <td class="p-3">
+              <template x-if="r.driver_id">
+                <div class="text-xs font-semibold text-gray-800 dark:text-gray-200" x-text="r.driver_nome"></div>
+              </template>
+              <template x-if="!r.driver_id">
+                <span class="text-xs text-red-500">Não resolvido</span>
+              </template>
+              <div class="text-[10px] text-gray-400" x-show="r.driver_name_raw" x-text="'planilha: ' + r.driver_name_raw"></div>
+              <button @click="openDriverPicker(r)" class="text-[11px] text-indigo-500 underline mt-0.5">alterar</button>
+            </td>
+            <td class="p-3">
+              <span class="px-2 py-1 rounded text-[11px] font-semibold" :class="statusClass(r.internal_status)" x-text="r.internal_status_display"></span>
+              <a x-show="r.complaint_id" :href="'/driversapp/admin/reclamacoes/'" class="block text-[10px] text-indigo-500 underline mt-1">recl. #<span x-text="r.complaint_id"></span></a>
+            </td>
+            <td class="p-3">
+              <div class="dropzone rounded-lg border border-dashed border-gray-300 dark:border-gray-600 p-2 min-w-[120px] cursor-pointer"
+                   :class="pasteTarget===r.id ? 'paste-target' : ''"
+                   @click="pasteTarget = r.id"
+                   @dragover.prevent="$event.currentTarget.classList.add('dragover')"
+                   @dragleave="$event.currentTarget.classList.remove('dragover')"
+                   @drop.prevent="$event.currentTarget.classList.remove('dragover'); attachFiles(r, $event.dataTransfer.files)">
+                <div class="flex flex-wrap gap-1">
+                  <template x-for="a in r.attachments" :key="a.id">
+                    <div class="relative group">
+                      <img :src="a.url" class="w-10 h-10 object-cover rounded border border-gray-200">
+                      <button @click.stop="deleteAttach(r, a)" class="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 text-[10px] leading-none">×</button>
+                    </div>
+                  </template>
+                </div>
+                <div class="text-[10px] text-gray-400 mt-1" x-show="pasteTarget===r.id">Ctrl+V para colar aqui</div>
+                <div class="text-[10px] text-gray-400" x-show="pasteTarget!==r.id && r.attachments.length===0">colar / arrastar / <button @click.stop="pickFile(r)" class="underline">ficheiro</button></div>
+              </div>
+            </td>
+            <td class="p-3">
+              <button x-show="r.can_open" @click="openOne(r)" :disabled="!r.driver_id || busy"
+                      class="px-2 py-1 text-xs rounded bg-orange-600 text-white font-semibold disabled:opacity-40">
+                Abrir ticket
+              </button>
+              <span x-show="!r.can_open" class="text-[11px] text-gray-400">—</span>
+            </td>
+          </tr>
+        </template>
+        <tr x-show="rows.length===0 && !loading">
+          <td colspan="8" class="p-8 text-center text-gray-400">Sem linhas. Importe uma planilha para começar.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- hidden file input for per-row "ficheiro" -->
+  <input type="file" x-ref="rowfile" class="hidden" accept="image/*,.pdf" multiple
+         @change="attachFiles(pickRow, $event.target.files); $event.target.value=''">
+
+  <!-- ── Driver picker modal ──────────────────────────────────────────── -->
+  <div x-show="driverModal" x-cloak class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" @click.self="driverModal=false">
+    <div class="bg-white dark:bg-gray-800 rounded-xl p-5 w-96 max-w-full">
+      <h3 class="font-bold text-gray-900 dark:text-white mb-3">Resolver motorista</h3>
+      <input x-model.debounce.300ms="driverQuery" @input="searchDrivers()" placeholder="Nome, apelido ou courier id…"
+             class="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 mb-3">
+      <div class="max-h-64 overflow-auto space-y-1">
+        <template x-for="d in driverResults" :key="d.id">
+          <button @click="assignDriver(d)" class="w-full text-left px-3 py-2 rounded-lg hover:bg-orange-50 dark:hover:bg-orange-900/20 text-sm text-gray-700 dark:text-gray-200">
+            <span class="font-semibold" x-text="d.nome_completo"></span>
+            <span class="text-xs text-gray-400" x-text="d.apelido ? ' · ' + d.apelido : ''"></span>
+          </button>
+        </template>
+      </div>
+    </div>
+  </div>
+
+  <!-- toast -->
+  <div x-show="toast" x-transition x-cloak class="fixed bottom-6 right-6 bg-gray-900 text-white px-4 py-3 rounded-lg text-sm shadow-lg z-50" x-text="toast"></div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function ticketsPanel() {
+  const csrf = () => document.querySelector('[name=csrfmiddlewaretoken]').value;
+  const POST_JSON = body => ({
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf() },
+    body: JSON.stringify(body),
+  });
+
+  return {
+    batchId: '{{ batch.id|default:"" }}',
+    rows: [], kpis: {}, loading: false, uploading: false, busy: false,
+    filters: { status: '', hub: '', q: '', no_driver: false },
+    pasteTarget: null, pickRow: null,
+    driverModal: false, driverQuery: '', driverResults: [], driverRow: null,
+    toast: '',
+
+    kpiCards: [
+      { key: 'total', label: 'Total', status: '', color: 'text-gray-800 dark:text-gray-100' },
+      { key: 'sem_reclamacao', label: 'Sem Reclamação', status: 'SEM_RECLAMACAO', color: 'text-orange-500' },
+      { key: 'aberta', label: 'Abertas', status: 'ABERTA', color: 'text-blue-500' },
+      { key: 'fechada', label: 'Fechadas', status: 'FECHADA', color: 'text-emerald-500' },
+      { key: 'em_recurso', label: 'Em Recurso', status: 'EM_RECURSO', color: 'text-amber-500' },
+      { key: 'descontada', label: 'Descontadas', status: 'DESCONTADA', color: 'text-red-500' },
+    ],
+
+    init() {
+      if (this.batchId) this.load();
+      this.$nextTick(() => window.lucide && window.lucide.createIcons());
+    },
+
+    get selectedCount() { return this.rows.filter(r => r.selected).length; },
+    get allVisibleSelected() {
+      const openable = this.rows.filter(r => r.can_open);
+      return openable.length > 0 && openable.every(r => r.selected);
+    },
+
+    fmtDate(iso) {
+      if (!iso) return '';
+      const d = new Date(iso);
+      return d.toLocaleString('pt-PT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+    },
+    statusClass(s) {
+      return {
+        SEM_RECLAMACAO: 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300',
+        ABERTA: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
+        FECHADA: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
+        EM_RECURSO: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
+        DESCONTADA: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
+      }[s] || 'bg-gray-100 text-gray-600';
+    },
+    showToast(msg) { this.toast = msg; setTimeout(() => this.toast = '', 3500); },
+
+    switchBatch() {
+      if (this.batchId) {
+        window.history.replaceState({}, '', '?batch=' + this.batchId);
+        this.load();
+      } else { this.rows = []; this.kpis = {}; }
+    },
+
+    async uploadFile(file) {
+      if (!file) return;
+      if (!/\.(xlsx|xlsm)$/i.test(file.name)) { this.showToast('Envie um ficheiro .xlsx'); return; }
+      this.uploading = true;
+      const fd = new FormData(); fd.append('file', file);
+      try {
+        const r = await fetch('/driversapp/api/tickets-cainiao/upload/', {
+          method: 'POST', headers: { 'X-CSRFToken': csrf() }, body: fd,
+        });
+        const j = await r.json();
+        if (!j.success) { this.showToast(j.error || 'Erro no upload'); return; }
+        this.batchId = String(j.batch_id);
+        window.history.replaceState({}, '', '?batch=' + this.batchId);
+        this.showToast('Importadas ' + j.total_rows + ' linhas.');
+        await this.load();
+      } catch (e) { this.showToast('Falha: ' + e); }
+      finally { this.uploading = false; }
+    },
+
+    async load() {
+      if (!this.batchId) return;
+      this.loading = true;
+      const p = new URLSearchParams();
+      if (this.filters.status) p.set('status', this.filters.status);
+      if (this.filters.hub) p.set('hub', this.filters.hub);
+      if (this.filters.q) p.set('q', this.filters.q);
+      if (this.filters.no_driver) p.set('no_driver', '1');
+      try {
+        const r = await fetch('/driversapp/api/tickets-cainiao/' + this.batchId + '/rows/?' + p);
+        const j = await r.json();
+        if (j.success) { this.rows = j.rows; this.kpis = j.kpis; }
+      } finally { this.loading = false; this.$nextTick(() => window.lucide && window.lucide.createIcons()); }
+    },
+
+    async updateRow(row, patch) {
+      const r = await fetch('/driversapp/api/tickets-cainiao/row/' + row.id + '/update/', POST_JSON(patch));
+      const j = await r.json();
+      if (j.success) Object.assign(row, j.row);
+      return j;
+    },
+
+    toggleRow(row, val) { row.selected = val; this.updateRow(row, { selected: val }); },
+    async toggleAll(val) {
+      const ids = this.rows.filter(r => r.can_open).map(r => r.id);
+      this.rows.forEach(r => { if (r.can_open) r.selected = val; });
+      await fetch('/driversapp/api/tickets-cainiao/' + this.batchId + '/bulk-select/', POST_JSON({ selected: val, ids }));
+    },
+
+    // ── Anexos ──
+    pickFile(row) { this.pickRow = row; this.$refs.rowfile.click(); },
+    async attachFiles(row, fileList) {
+      if (!row || !fileList || !fileList.length) return;
+      const fd = new FormData();
+      for (const f of fileList) fd.append('file', f);
+      const r = await fetch('/driversapp/api/tickets-cainiao/row/' + row.id + '/attach/', {
+        method: 'POST', headers: { 'X-CSRFToken': csrf() }, body: fd,
+      });
+      const j = await r.json();
+      if (j.success) { row.attachments.push(...j.attachments); row.n_attachments = j.n_attachments; }
+      else this.showToast(j.error || 'Erro ao anexar');
+    },
+    async onPaste(e) {
+      if (!this.pasteTarget) return;
+      const row = this.rows.find(r => r.id === this.pasteTarget);
+      if (!row) return;
+      const items = (e.clipboardData || {}).items || [];
+      const files = [];
+      for (const it of items) {
+        if (it.kind === 'file') { const f = it.getAsFile(); if (f) files.push(f); }
+      }
+      if (files.length) { e.preventDefault(); await this.attachFiles(row, files); this.showToast('Print colado.'); }
+    },
+    async deleteAttach(row, att) {
+      const r = await fetch('/driversapp/api/tickets-cainiao/attach/' + att.id + '/delete/', {
+        method: 'POST', headers: { 'X-CSRFToken': csrf() },
+      });
+      const j = await r.json();
+      if (j.success) { row.attachments = row.attachments.filter(a => a.id !== att.id); row.n_attachments = j.n_attachments; }
+    },
+
+    // ── Driver picker ──
+    openDriverPicker(row) { this.driverRow = row; this.driverQuery = ''; this.driverResults = []; this.driverModal = true; },
+    async searchDrivers() {
+      const r = await fetch('/driversapp/api/tickets-cainiao/driver-search/?q=' + encodeURIComponent(this.driverQuery));
+      const j = await r.json();
+      if (j.success) this.driverResults = j.drivers;
+    },
+    async assignDriver(d) {
+      await this.updateRow(this.driverRow, { driver_id: d.id });
+      this.driverModal = false;
+    },
+
+    // ── Abertura ──
+    async openOne(row) { await this.bulkOpenIds([row.id]); },
+    async bulkOpen() { await this.bulkOpenIds(this.rows.filter(r => r.selected).map(r => r.id)); },
+    async bulkOpenIds(ids) {
+      if (!ids.length) return;
+      this.busy = true;
+      try {
+        const r = await fetch('/driversapp/api/tickets-cainiao/' + this.batchId + '/bulk-open/', POST_JSON({ ids }));
+        const j = await r.json();
+        if (j.success) {
+          this.showToast('Abertas: ' + j.n_created + ' · Ignoradas: ' + j.n_skipped);
+          await this.load();
+        } else this.showToast(j.error || 'Erro ao abrir');
+      } finally { this.busy = false; }
+    },
+  };
+}
+</script>
+{% endblock %}

@@ -969,3 +969,155 @@ class DriverMergeAudit(models.Model):
     def __str__(self):
         target = self.target_driver.nome_completo if self.target_driver else "(target removido)"
         return f"{self.source_driver_repr} → {target}"
+
+
+class TicketImportBatch(models.Model):
+    """Sessão de importação da planilha de *exceptions* da Cainiao para
+    processamento em massa de tickets (abertura de reclamações + recursos).
+
+    Cada upload da planilha cria um batch; cada linha vira um
+    :class:`TicketImportRow` com o motorista resolvido e o estado interno
+    cruzado (reclamação aberta/fechada, claim em recurso/descontado).
+    """
+
+    nome = models.CharField("Nome do Lote", max_length=200, blank=True)
+    ficheiro_nome = models.CharField("Ficheiro Original", max_length=255, blank=True)
+    total_rows = models.IntegerField("Total de Linhas", default=0)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey(
+        "auth.User",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="ticket_import_batches",
+    )
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "Lote de Importação de Tickets"
+        verbose_name_plural = "Lotes de Importação de Tickets"
+
+    def __str__(self):
+        return f"{self.nome or self.ficheiro_nome or 'Lote'} (#{self.pk}) — {self.total_rows} linhas"
+
+
+class TicketImportRow(models.Model):
+    """Uma linha da planilha de exceptions Cainiao dentro de um batch.
+
+    Guarda os campos essenciais da planilha em colunas (para filtrar/ordenar)
+    e o resto em ``raw`` (JSON). Após o cruzamento, fica com o motorista
+    resolvido, o estado interno consolidado e — quando aberta em massa — a
+    referência à :class:`CustomerComplaint` criada.
+    """
+
+    # Estado interno CONSOLIDADO (prioridade: descontada > recurso > aberta)
+    STATUS_SEM_RECLAMACAO = "SEM_RECLAMACAO"
+    STATUS_ABERTA = "ABERTA"
+    STATUS_FECHADA = "FECHADA"
+    STATUS_EM_RECURSO = "EM_RECURSO"
+    STATUS_DESCONTADA = "DESCONTADA"
+    INTERNAL_STATUS_CHOICES = [
+        (STATUS_SEM_RECLAMACAO, "Sem Reclamação"),
+        (STATUS_ABERTA, "Reclamação Aberta"),
+        (STATUS_FECHADA, "Reclamação Fechada"),
+        (STATUS_EM_RECURSO, "Em Recurso"),
+        (STATUS_DESCONTADA, "Descontada"),
+    ]
+
+    batch = models.ForeignKey(
+        TicketImportBatch,
+        on_delete=models.CASCADE,
+        related_name="rows",
+    )
+
+    # ── Campos da planilha (essenciais) ──────────────────────────────────
+    exception_id = models.CharField("Exception ID", max_length=60, blank=True, db_index=True)
+    lp_number = models.CharField("LP Number", max_length=60, blank=True)
+    waybill_number = models.CharField("Tracking Number", max_length=100, blank=True, db_index=True)
+    ticket_no = models.CharField("Ticket No.", max_length=60, blank=True, db_index=True)
+    exception_creation_time = models.DateTimeField("Criação da Exception", null=True, blank=True)
+    exception_name = models.CharField("Exception Name", max_length=120, blank=True)
+    ticket_type = models.CharField("Ticket Type", max_length=40, blank=True)
+    description = models.TextField("Descrição", blank=True)
+    hub = models.CharField("HUB", max_length=120, blank=True, db_index=True)
+    driver_name_raw = models.CharField("Driver (planilha)", max_length=200, blank=True)
+    raw = models.JSONField("Linha Original", default=dict, blank=True)
+
+    # ── Resolução / cruzamento ───────────────────────────────────────────
+    driver = models.ForeignKey(
+        "DriverProfile",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="ticket_import_rows",
+        verbose_name="Motorista Resolvido",
+    )
+    internal_status = models.CharField(
+        "Estado Interno",
+        max_length=20,
+        choices=INTERNAL_STATUS_CHOICES,
+        default=STATUS_SEM_RECLAMACAO,
+        db_index=True,
+    )
+    complaint = models.ForeignKey(
+        "CustomerComplaint",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="import_rows",
+        help_text="Reclamação existente ou criada a partir desta linha.",
+    )
+    claim_id_ref = models.IntegerField(
+        "DriverClaim relacionado", null=True, blank=True,
+        help_text="PK do settlements.DriverClaim activo (recurso/desconto).",
+    )
+
+    # ── Estado de trabalho na página ─────────────────────────────────────
+    selected = models.BooleanField("Selecionada", default=False)
+    suggested_tipo = models.CharField("Tipo Sugerido", max_length=30, blank=True)
+    operator_notes = models.TextField("Notas do Operador", blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-exception_creation_time", "id"]
+        verbose_name = "Linha de Importação de Ticket"
+        verbose_name_plural = "Linhas de Importação de Tickets"
+        indexes = [
+            models.Index(
+                fields=["batch", "internal_status"],
+                name="drivers_app_batch_i_idx",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.ticket_no or self.waybill_number} [{self.get_internal_status_display()}]"
+
+    @property
+    def can_open(self):
+        """Só faz sentido abrir reclamação quando ainda não existe uma."""
+        return self.internal_status == self.STATUS_SEM_RECLAMACAO
+
+
+class TicketImportAttachment(models.Model):
+    """Print/anexo carregado (colar ou drag&drop) numa linha ANTES da
+    abertura da reclamação. Ao abrir em massa, é copiado para
+    :class:`CustomerComplaintAttachment`."""
+
+    row = models.ForeignKey(
+        TicketImportRow,
+        on_delete=models.CASCADE,
+        related_name="attachments",
+    )
+    ficheiro = models.FileField("Ficheiro", upload_to="ticket_imports/%Y/%m/")
+    descricao = models.CharField("Descrição", max_length=200, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["id"]
+
+    def __str__(self):
+        return f"Anexo linha #{self.row_id}"

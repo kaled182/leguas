@@ -144,7 +144,7 @@
       </div>
 
       <!-- Pacotes & Disputas - Submenu Expansível -->
-      <div x-data="{ open: {% if 'packages' in request.resolver_match.url_name|default:'' or 'package-360' in request.resolver_match.url_name|default:'' or 'claim' in request.resolver_match.url_name|default:'' or 'appeals' in request.resolver_match.url_name|default:'' or request.resolver_match.url_name == 'admin_complaints_dashboard' %}true{% else %}false{% endif %} }" class="mb-1">
+      <div x-data="{ open: {% if 'packages' in request.resolver_match.url_name|default:'' or 'package-360' in request.resolver_match.url_name|default:'' or 'claim' in request.resolver_match.url_name|default:'' or 'appeals' in request.resolver_match.url_name|default:'' or request.resolver_match.url_name == 'admin_complaints_dashboard' or request.resolver_match.url_name == 'admin_tickets_cainiao' %}true{% else %}false{% endif %} }" class="mb-1">
         <button @click="open = !open" type="button"
           class="nav-link flex items-center gap-3 p-3 rounded-lg transition-all duration-200 group w-full text-left {% if 'packages' in request.resolver_match.url_name|default:'' or 'package-360' in request.resolver_match.url_name|default:'' or 'claim' in request.resolver_match.url_name|default:'' or 'appeals' in request.resolver_match.url_name|default:'' or request.resolver_match.url_name == 'admin_complaints_dashboard' %}bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300{% else %}text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:text-orange-600 dark:hover:text-orange-400{% endif %}">
           <i data-lucide="package-search" class="w-5 h-5 text-current group-hover:scale-110 transition-transform flex-shrink-0"></i>
@@ -169,6 +169,11 @@
             class="flex items-center gap-2 p-2 rounded-lg text-sm transition-all {% if request.resolver_match.url_name == 'admin_complaints_dashboard' %}bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 font-medium{% else %}text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:text-orange-600 dark:hover:text-orange-400{% endif %}">
             <i data-lucide="message-circle-warning" class="w-4 h-4"></i>
             <span>Reclamações (Kanban)</span>
+          </a>
+          <a href="{% url 'drivers_app:admin_tickets_cainiao' %}"
+            class="flex items-center gap-2 p-2 rounded-lg text-sm transition-all {% if request.resolver_match.url_name == 'admin_tickets_cainiao' %}bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 font-medium{% else %}text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:text-orange-600 dark:hover:text-orange-400{% endif %}">
+            <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+            <span>Tickets Cainiao (Massa)</span>
           </a>
           <a href="{% url 'claim-list' %}"
             class="flex items-center gap-2 p-2 rounded-lg text-sm transition-all {% if request.resolver_match.url_name == 'claim-list' or request.resolver_match.url_name == 'claim-detail' %}bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 font-medium{% else %}text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:text-orange-600 dark:hover:text-orange-400{% endif %}">

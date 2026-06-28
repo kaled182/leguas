@@ -316,7 +316,9 @@ function ticketsPanel() {
   return {
     batchId: '{{ batch.id|default:"" }}',
     rows: [], kpis: {}, loading: false, uploading: false, busy: false,
-    filters: { status: '', hub: '', q: '', category: '', no_driver: false, show_handled: false },
+    // Por omissão foca os pacotes SEM reclamação (o objetivo: abrir tickets).
+    // Os restantes estados ficam acessíveis pelos cartões de KPI / "Total".
+    filters: { status: 'SEM_RECLAMACAO', hub: '', q: '', category: '', no_driver: false, show_handled: false },
     pasteTarget: null, pickRow: null,
     driverModal: false, driverQuery: '', driverResults: [], driverRow: null,
     // importação

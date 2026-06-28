@@ -452,6 +452,82 @@ def _new_batch(filename, file_obj, user):
     )
 
 
+def sync_batch_statuses(batch):
+    """Re-sincroniza o estado interno de TODAS as linhas do lote com a
+    realidade do sistema (reclamação + claim) — respeitando a "vida" do
+    ticket em ambos os sentidos. Não toca na disposição do operador
+    (row_action). Devolve o nº de linhas alteradas. Eficiente: poucas
+    queries independentemente do nº de linhas."""
+    from .models import CustomerComplaint, TicketImportRow
+    from settlements.models import DriverClaim
+
+    rows = list(batch.rows.all())
+    if not rows:
+        return 0
+
+    def _key(wb):
+        return DriverClaim.normalize_waybill(wb) or (wb or "").strip().upper()
+
+    raw_waybills = [r.waybill_number for r in rows if r.waybill_number]
+    if not raw_waybills:
+        return 0
+
+    # Reclamação não-cancelada mais recente por waybill
+    comp_map = {}
+    for c in (CustomerComplaint.objects
+              .filter(numero_pacote__in=raw_waybills)
+              .exclude(status="CANCELADO")
+              .order_by("-created_at")):
+        k = _key(c.numero_pacote)
+        if k not in comp_map:
+            comp_map[k] = c
+
+    # Claim activo (não rejeitado) mais antigo por waybill
+    claim_map = {}
+    for cl in (DriverClaim.objects
+               .filter(waybill_number__in=raw_waybills)
+               .exclude(status="REJECTED")
+               .order_by("created_at")):
+        k = _key(cl.waybill_number)
+        if k not in claim_map:
+            claim_map[k] = cl
+
+    changed = []
+    for r in rows:
+        k = _key(r.waybill_number)
+        complaint = comp_map.get(k)
+        claim = claim_map.get(k)
+
+        new_status = TicketImportRow.STATUS_SEM_RECLAMACAO
+        if claim and claim.status == "APPROVED":
+            new_status = TicketImportRow.STATUS_DESCONTADA
+        elif claim and claim.status == "APPEALED":
+            new_status = TicketImportRow.STATUS_EM_RECURSO
+        elif complaint:
+            new_status = (
+                TicketImportRow.STATUS_FECHADA
+                if complaint.status == "FECHADO"
+                else TicketImportRow.STATUS_ABERTA
+            )
+
+        new_complaint_id = complaint.id if complaint else None
+        new_claim_id = claim.id if claim else None
+
+        if (r.internal_status != new_status
+                or r.complaint_id != new_complaint_id
+                or r.claim_id_ref != new_claim_id):
+            r.internal_status = new_status
+            r.complaint_id = new_complaint_id
+            r.claim_id_ref = new_claim_id
+            changed.append(r)
+
+    if changed:
+        TicketImportRow.objects.bulk_update(
+            changed, ["internal_status", "complaint", "claim_id_ref"],
+        )
+    return len(changed)
+
+
 def auto_close_delivered_expedited(batch):
     """Re-verifica os tickets Expedited Delivery do batch e fecha os que já
     estão entregues (atraso resolvido), respeitando a linha do tempo.

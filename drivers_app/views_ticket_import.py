@@ -167,6 +167,9 @@ def tickets_import_upload(request):
 @login_required
 def tickets_import_rows_api(request, batch_id):
     batch = get_object_or_404(TicketImportBatch, id=batch_id)
+    # Mantém o estado das linhas alinhado com a vida real do ticket
+    # (reclamação fechada/aberta, claim em recurso/descontado) em cada carga.
+    svc.sync_batch_statuses(batch)
     qs = (
         batch.rows.select_related("driver")
         .prefetch_related("attachments")
@@ -303,13 +306,17 @@ def _apply_row_action(batch, ids, action):
     n = 0
     close_complaints = []
     for row in qs:
+        fields = ["row_action", "updated_at"]
         row.row_action = action
-        row.save(update_fields=["row_action", "updated_at"])
         if (action == TicketImportRow.ACTION_CLOSED
                 and row.complaint_id
                 and row.complaint
                 and row.complaint.status not in ("FECHADO", "CANCELADO")):
             close_complaints.append(row.complaint)
+            # Reflete já o fecho na própria linha (a vida do ticket)
+            row.internal_status = TicketImportRow.STATUS_FECHADA
+            fields.append("internal_status")
+        row.save(update_fields=fields)
         n += 1
 
     for complaint in close_complaints:
@@ -381,17 +388,27 @@ def tickets_import_row_attach(request, row_id):
             {"success": False, "error": "Sem ficheiro(s)."}, status=400,
         )
     created = []
+    new_atts = []
     for f in files:
         att = TicketImportAttachment.objects.create(
             row=row,
             ficheiro=f,
             descricao=(request.POST.get("descricao") or "")[:200],
         )
+        new_atts.append(att)
         created.append({"id": att.id, "url": att.ficheiro.url})
+
+    # Se a linha já tem reclamação ligada, replica já os prints para o
+    # chamado (a cadeia do ticket é respeitada em tempo real).
+    replicated = 0
+    if row.complaint_id and row.complaint:
+        replicated = _copy_specific_attachments(new_atts, row.complaint)
+
     return JsonResponse({
         "success": True,
         "attachments": created,
         "n_attachments": row.attachments.count(),
+        "replicated_to_complaint": replicated,
     })
 
 
@@ -410,6 +427,45 @@ def tickets_import_attach_delete(request, att_id):
 # ─────────────────────────────────────────────────────────────────────────
 # Abertura de reclamações (helper + individual + em massa)
 # ─────────────────────────────────────────────────────────────────────────
+def _copy_specific_attachments(attachments, complaint):
+    """Duplica (cópia real do ficheiro) uma lista de TicketImportAttachment
+    para a reclamação, evitando duplicados (pelo nome base do ficheiro).
+    Devolve o nº efetivamente copiado."""
+    import os
+    from django.core.files.base import ContentFile
+
+    existing = {
+        os.path.basename(a.ficheiro.name)
+        for a in complaint.attachments.all()
+    }
+    n = 0
+    for att in attachments:
+        base = os.path.basename(att.ficheiro.name)
+        if base in existing:
+            continue
+        try:
+            att.ficheiro.open("rb")
+            content = att.ficheiro.read()
+            att.ficheiro.close()
+        except Exception:
+            continue
+        new = CustomerComplaintAttachment(
+            complaint=complaint,
+            tipo="RECLAMACAO",
+            descricao=att.descricao,
+        )
+        new.ficheiro.save(base, ContentFile(content), save=True)
+        existing.add(base)
+        n += 1
+    return n
+
+
+def _copy_attachments_to_complaint(row, complaint):
+    """Duplica todos os anexos da linha para a reclamação (cópia própria,
+    independente do lote de importação que pode ser apagado mais tarde)."""
+    return _copy_specific_attachments(list(row.attachments.all()), complaint)
+
+
 def _open_complaint_for_row(row, user, overrides=None):
     """Cria a CustomerComplaint de uma linha. ``overrides`` permite o
     operador fornecer/corrigir nome e telefone do cliente (e notas).
@@ -473,13 +529,7 @@ def _open_complaint_for_row(row, user, overrides=None):
         created_by=user,
     )
 
-    for att in row.attachments.all():
-        CustomerComplaintAttachment.objects.create(
-            complaint=complaint,
-            tipo="RECLAMACAO",
-            ficheiro=att.ficheiro,
-            descricao=att.descricao,
-        )
+    _copy_attachments_to_complaint(row, complaint)
 
     row.complaint = complaint
     row.internal_status = TicketImportRow.STATUS_ABERTA

@@ -408,8 +408,126 @@ def tickets_import_attach_delete(request, att_id):
 
 
 # ─────────────────────────────────────────────────────────────────────────
-# Abertura em massa de reclamações
+# Abertura de reclamações (helper + individual + em massa)
 # ─────────────────────────────────────────────────────────────────────────
+def _open_complaint_for_row(row, user, overrides=None):
+    """Cria a CustomerComplaint de uma linha. ``overrides`` permite o
+    operador fornecer/corrigir nome e telefone do cliente (e notas).
+
+    Devolve (complaint|None, reason). reason != "" quando a linha foi saltada.
+    """
+    overrides = overrides or {}
+
+    if not row.can_open:
+        return None, "Já tem reclamação/claim (ou foi ignorada/fechada)."
+    if not row.driver_id:
+        return None, "Sem motorista resolvido."
+
+    waybill = (row.waybill_number or "").strip()
+    if not waybill:
+        return None, "Sem waybill (tracking)."
+
+    # Guard anti-duplicado (mesma regra de driver_complaint_create)
+    today = timezone.localdate()
+    dup = (
+        CustomerComplaint.objects
+        .filter(numero_pacote__iexact=waybill, created_at__date=today)
+        .exclude(status="CANCELADO")
+        .first()
+    )
+    if dup:
+        row.complaint = dup
+        row.internal_status = TicketImportRow.STATUS_ABERTA
+        row.save(update_fields=["complaint", "internal_status", "updated_at"])
+        return None, f"Já existe reclamação hoje (#{dup.id})."
+
+    cust = svc.lookup_customer_data(waybill)
+    tipo = (overrides.get("tipo") or row.suggested_tipo or "ENTREGA_FALSA")
+
+    def _ov(key, fallback):
+        val = (overrides.get(key) or "").strip()
+        return val or fallback
+
+    nome = _ov("nome_cliente", cust["nome_cliente"] or "(a confirmar)")
+    telefone = _ov("telefone_cliente", cust["telefone_cliente"] or "")
+    extra_notes = (overrides.get("notas") or "").strip()
+
+    complaint = CustomerComplaint.objects.create(
+        driver=row.driver,
+        numero_pacote=waybill,
+        tipo=tipo,
+        descricao=(row.description or row.exception_name or "Ticket Cainiao"),
+        nome_cliente=nome,
+        telefone_cliente=telefone,
+        email_cliente=cust["email_cliente"] or "",
+        morada=cust["morada"] or "(a confirmar)",
+        codigo_postal=cust["codigo_postal"] or "",
+        cidade=cust["cidade"] or "",
+        data_entrega=cust["data_entrega"],
+        notas=(
+            f"Aberto via Processador de Tickets Cainiao.\n"
+            f"Ticket Nº: {row.ticket_no} | Exception: {row.exception_name}"
+            + (f"\n{row.operator_notes}" if row.operator_notes else "")
+            + (f"\n{extra_notes}" if extra_notes else "")
+        ),
+        created_by=user,
+    )
+
+    for att in row.attachments.all():
+        CustomerComplaintAttachment.objects.create(
+            complaint=complaint,
+            tipo="RECLAMACAO",
+            ficheiro=att.ficheiro,
+            descricao=att.descricao,
+        )
+
+    row.complaint = complaint
+    row.internal_status = TicketImportRow.STATUS_ABERTA
+    row.selected = False
+    row.save(update_fields=[
+        "complaint", "internal_status", "selected", "updated_at",
+    ])
+    return complaint, ""
+
+
+@login_required
+@require_http_methods(["POST"])
+def tickets_import_open_one(request, row_id):
+    """Abre a reclamação de UMA linha com nome/telefone confirmados pelo
+    operador (modal de abertura)."""
+    row = get_object_or_404(
+        TicketImportRow.objects.select_related("driver").prefetch_related(
+            "attachments",
+        ),
+        id=row_id,
+    )
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        data = request.POST.dict()
+
+    nome = (data.get("nome_cliente") or "").strip()
+    if not nome:
+        return JsonResponse(
+            {"success": False, "error": "Nome do cliente é obrigatório."},
+            status=400,
+        )
+
+    complaint, reason = _open_complaint_for_row(row, request.user, overrides={
+        "nome_cliente": nome,
+        "telefone_cliente": data.get("telefone_cliente"),
+        "tipo": data.get("tipo"),
+        "notas": data.get("notas"),
+    })
+    if not complaint:
+        return JsonResponse({"success": False, "error": reason}, status=409)
+    return JsonResponse({
+        "success": True,
+        "complaint_id": complaint.id,
+        "row": _row_to_dict(row),
+    })
+
+
 @login_required
 @require_http_methods(["POST"])
 def tickets_import_bulk_open(request, batch_id):
@@ -430,76 +548,11 @@ def tickets_import_bulk_open(request, batch_id):
 
     created, skipped = [], []
     for row in rows:
-        # Guards: precisa de motorista e não pode já ter reclamação
-        if not row.can_open:
-            skipped.append({"id": row.id, "reason": "Já tem reclamação/claim."})
-            continue
-        if not row.driver_id:
-            skipped.append({"id": row.id, "reason": "Sem motorista resolvido."})
-            continue
-
-        waybill = (row.waybill_number or "").strip()
-        if not waybill:
-            skipped.append({"id": row.id, "reason": "Sem waybill (tracking)."})
-            continue
-
-        # Guard anti-duplicado (mesma regra de driver_complaint_create)
-        today = timezone.localdate()
-        dup = (
-            CustomerComplaint.objects
-            .filter(numero_pacote__iexact=waybill, created_at__date=today)
-            .exclude(status="CANCELADO")
-            .first()
-        )
-        if dup:
-            row.complaint = dup
-            row.internal_status = TicketImportRow.STATUS_ABERTA
-            row.save(update_fields=["complaint", "internal_status", "updated_at"])
-            skipped.append({
-                "id": row.id,
-                "reason": f"Já existe reclamação hoje (#{dup.id}).",
-            })
-            continue
-
-        cust = svc.lookup_customer_data(waybill)
-        tipo = row.suggested_tipo or "ENTREGA_FALSA"
-
-        complaint = CustomerComplaint.objects.create(
-            driver=row.driver,
-            numero_pacote=waybill,
-            tipo=tipo,
-            descricao=(row.description or row.exception_name or "Ticket Cainiao"),
-            nome_cliente=cust["nome_cliente"] or "(a confirmar)",
-            telefone_cliente=cust["telefone_cliente"] or "",
-            email_cliente=cust["email_cliente"] or "",
-            morada=cust["morada"] or "(a confirmar)",
-            codigo_postal=cust["codigo_postal"] or "",
-            cidade=cust["cidade"] or "",
-            data_entrega=cust["data_entrega"],
-            notas=(
-                f"Aberto via Processador de Tickets Cainiao.\n"
-                f"Ticket Nº: {row.ticket_no} | Exception: {row.exception_name}"
-                + (f"\n{row.operator_notes}" if row.operator_notes else "")
-            ),
-            created_by=request.user,
-        )
-
-        # Copia os anexos da linha para a reclamação
-        for att in row.attachments.all():
-            CustomerComplaintAttachment.objects.create(
-                complaint=complaint,
-                tipo="RECLAMACAO",
-                ficheiro=att.ficheiro,
-                descricao=att.descricao,
-            )
-
-        row.complaint = complaint
-        row.internal_status = TicketImportRow.STATUS_ABERTA
-        row.selected = False
-        row.save(update_fields=[
-            "complaint", "internal_status", "selected", "updated_at",
-        ])
-        created.append({"row_id": row.id, "complaint_id": complaint.id})
+        complaint, reason = _open_complaint_for_row(row, request.user)
+        if complaint:
+            created.append({"row_id": row.id, "complaint_id": complaint.id})
+        else:
+            skipped.append({"id": row.id, "reason": reason})
 
     return JsonResponse({
         "success": True,

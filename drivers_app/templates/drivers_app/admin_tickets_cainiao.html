@@ -280,6 +280,49 @@
     </div>
   </div>
 
+  <!-- ── Modal de abertura de ticket (confirmar cliente) ──────────────── -->
+  <div x-show="openModal" x-cloak class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" @click.self="openModal=false">
+    <div class="bg-white dark:bg-gray-800 rounded-xl p-5 w-[30rem] max-w-full">
+      <h3 class="font-bold text-gray-900 dark:text-white mb-1">Abrir reclamação</h3>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">
+        Pacote <span class="font-mono" x-text="openRow?.waybill_number"></span>
+        · Motorista <strong x-text="openRow?.driver_nome || '—'"></strong>
+      </p>
+      <div x-show="openLoading" class="text-sm text-orange-500 mb-2">A obter dados do cliente…</div>
+
+      <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Nome do cliente *</label>
+      <input x-model="openForm.nome_cliente" placeholder="Nome do cliente"
+             class="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 mb-3">
+
+      <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Telefone do cliente</label>
+      <input x-model="openForm.telefone_cliente" placeholder="Telefone"
+             class="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 mb-3">
+
+      <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Tipo de reclamação</label>
+      <select x-model="openForm.tipo"
+              class="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 mb-3">
+        {% for code, label in tipo_choices %}
+          <option value="{{ code }}">{{ label }}</option>
+        {% endfor %}
+      </select>
+
+      <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Notas (opcional)</label>
+      <textarea x-model="openForm.notas" rows="2" placeholder="Notas internas"
+                class="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 mb-2"></textarea>
+
+      <p class="text-[11px] text-gray-400 mb-3" x-show="(openRow?.attachments?.length||0) > 0"
+         x-text="(openRow?.attachments?.length||0) + ' print(s) anexado(s) serão incluídos.'"></p>
+
+      <div class="flex justify-end gap-2">
+        <button @click="openModal=false" class="px-3 py-2 text-sm rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200">Cancelar</button>
+        <button @click="confirmOpen()" :disabled="!openForm.nome_cliente.trim() || busy"
+                class="px-3 py-2 text-sm rounded-lg bg-orange-600 text-white font-semibold disabled:opacity-40">
+          Confirmar abertura
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- ── Driver picker modal ──────────────────────────────────────────── -->
   <div x-show="driverModal" x-cloak class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" @click.self="driverModal=false">
     <div class="bg-white dark:bg-gray-800 rounded-xl p-5 w-96 max-w-full">
@@ -321,6 +364,9 @@ function ticketsPanel() {
     filters: { status: 'SEM_RECLAMACAO', hub: '', q: '', category: '', no_driver: false, show_handled: false },
     pasteTarget: null, pickRow: null,
     driverModal: false, driverQuery: '', driverResults: [], driverRow: null,
+    // abertura individual
+    openModal: false, openRow: null, openLoading: false,
+    openForm: { nome_cliente: '', telefone_cliente: '', tipo: 'ENTREGA_FALSA', notas: '' },
     // importação
     importModal: false, importPreview: { total: 0, types: [] },
     importChosen: [], importAutoClose: true, importFileName: '', importFile: null,
@@ -519,8 +565,41 @@ function ticketsPanel() {
       this.driverModal = false;
     },
 
-    // ── Abertura ──
-    async openOne(row) { await this.bulkOpenIds([row.id]); },
+    // ── Abertura individual (modal com confirmação de cliente) ──
+    async openOne(row) {
+      if (!row.driver_id) { this.showToast('Resolve o motorista primeiro.'); return; }
+      this.openRow = row;
+      this.openForm = {
+        nome_cliente: '', telefone_cliente: '',
+        tipo: row.suggested_tipo || 'ENTREGA_FALSA', notas: '',
+      };
+      this.openModal = true;
+      this.openLoading = true;
+      try {
+        const r = await fetch('/driversapp/api/waybill-lookup/?waybill=' + encodeURIComponent(row.waybill_number));
+        const j = await r.json();
+        if (j && j.success) {
+          this.openForm.nome_cliente = j.nome_cliente || '';
+          this.openForm.telefone_cliente = j.telefone_cliente || '';
+        }
+      } catch (e) { /* prefill best-effort */ }
+      finally { this.openLoading = false; }
+    },
+    async confirmOpen() {
+      if (!this.openRow || !this.openForm.nome_cliente.trim()) return;
+      this.busy = true;
+      try {
+        const r = await fetch('/driversapp/api/tickets-cainiao/row/' + this.openRow.id + '/open/', POST_JSON(this.openForm));
+        const j = await r.json();
+        if (j.success) {
+          this.openModal = false;
+          this.showToast('✓ Ticket aberto — reclamação #' + j.complaint_id);
+          await this.load();
+        } else {
+          this.showToast(j.error || 'Não foi possível abrir.');
+        }
+      } finally { this.busy = false; }
+    },
     async bulkOpen() { await this.bulkOpenIds(this.rows.filter(r => r.selected).map(r => r.id)); },
     async bulkOpenIds(ids) {
       if (!ids.length) return;

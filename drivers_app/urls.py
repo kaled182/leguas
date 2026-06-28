@@ -338,6 +338,11 @@ urlpatterns = [
         name="tickets_import_auto_close",
     ),
     path(
+        "api/tickets-cainiao/row/<int:row_id>/open/",
+        vti.tickets_import_open_one,
+        name="tickets_import_open_one",
+    ),
+    path(
         "api/tickets-cainiao/<int:batch_id>/bulk-open/",
         vti.tickets_import_bulk_open,
         name="tickets_import_bulk_open",

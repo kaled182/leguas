@@ -164,26 +164,20 @@ def tickets_import_upload(request):
 # ─────────────────────────────────────────────────────────────────────────
 # Listagem de linhas (com filtros) + KPIs
 # ─────────────────────────────────────────────────────────────────────────
-@login_required
-def tickets_import_rows_api(request, batch_id):
-    batch = get_object_or_404(TicketImportBatch, id=batch_id)
-    # Mantém o estado das linhas alinhado com a vida real do ticket
-    # (reclamação fechada/aberta, claim em recurso/descontado) em cada carga.
-    svc.sync_batch_statuses(batch)
-    qs = (
-        batch.rows.select_related("driver")
-        .prefetch_related("attachments")
-    )
+def _apply_row_filters(qs, params):
+    """Aplica os filtros da UI (estado, hub, tipo, disposição, pesquisa) a um
+    queryset de linhas. Partilhado pela listagem e pelos exports."""
+    from django.db.models import Q
 
-    status = request.GET.get("status", "").strip()
-    hub = request.GET.get("hub", "").strip()
-    exc_name = request.GET.get("exception_name", "").strip()
-    category = request.GET.get("category", "").strip()
-    action = request.GET.get("action", "").strip()
-    search = request.GET.get("q", "").strip()
-    only_no_driver = request.GET.get("no_driver", "") == "1"
+    status = (params.get("status") or "").strip()
+    hub = (params.get("hub") or "").strip()
+    exc_name = (params.get("exception_name") or "").strip()
+    category = (params.get("category") or "").strip()
+    action = (params.get("action") or "").strip()
+    search = (params.get("q") or "").strip()
+    only_no_driver = params.get("no_driver", "") == "1"
     # Por omissão esconde ignorados/fechados; ?show_handled=1 mostra tudo.
-    show_handled = request.GET.get("show_handled", "") == "1"
+    show_handled = params.get("show_handled", "") == "1"
 
     if status:
         qs = qs.filter(internal_status=status)
@@ -204,14 +198,27 @@ def tickets_import_rows_api(request, batch_id):
     if only_no_driver:
         qs = qs.filter(driver__isnull=True)
     if search:
-        from django.db.models import Q
         qs = qs.filter(
             Q(waybill_number__icontains=search)
             | Q(ticket_no__icontains=search)
             | Q(description__icontains=search)
             | Q(driver_name_raw__icontains=search)
         )
+    return qs
 
+
+@login_required
+def tickets_import_rows_api(request, batch_id):
+    batch = get_object_or_404(TicketImportBatch, id=batch_id)
+    # Mantém o estado das linhas alinhado com a vida real do ticket
+    # (reclamação fechada/aberta, claim em recurso/descontado) em cada carga.
+    svc.sync_batch_statuses(batch)
+    qs = (
+        batch.rows.select_related("driver")
+        .prefetch_related("attachments")
+    )
+
+    qs = _apply_row_filters(qs, request.GET)
     rows = [_row_to_dict(r) for r in qs]
 
     # KPIs sobre o batch inteiro (não filtrado)
@@ -630,14 +637,26 @@ def tickets_import_bulk_open(request, batch_id):
 # ─────────────────────────────────────────────────────────────────────────
 # Exports: ZIP de PDFs + planilha de estado
 # ─────────────────────────────────────────────────────────────────────────
+def _export_rows_qs(batch, request):
+    """Linhas a exportar: por `ids` selecionados (prioritário) ou pelos
+    filtros atuais (HUB, tipo, estado, etc.)."""
+    qs = batch.rows.all()
+    ids = (request.GET.get("ids") or "").strip()
+    if ids:
+        id_list = [int(x) for x in ids.split(",") if x.strip().isdigit()]
+        return qs.filter(id__in=id_list)
+    return _apply_row_filters(qs, request.GET)
+
+
 @login_required
 def tickets_import_export_zip(request, batch_id):
-    """ZIP com o PDF de cada reclamação ligada às linhas deste batch."""
+    """ZIP com o PDF das reclamações das linhas selecionadas/filtradas."""
     from .views import driver_complaint_pdf
 
     batch = get_object_or_404(TicketImportBatch, id=batch_id)
     complaint_ids = list(
-        batch.rows.exclude(complaint__isnull=True)
+        _export_rows_qs(batch, request)
+        .exclude(complaint__isnull=True)
         .values_list("complaint_id", flat=True).distinct()
     )
 
@@ -679,7 +698,11 @@ def tickets_import_export_xlsx(request, batch_id):
     ]
     ws.append(headers)
 
-    for r in batch.rows.select_related("driver").prefetch_related("attachments"):
+    export_qs = (
+        _export_rows_qs(batch, request)
+        .select_related("driver").prefetch_related("attachments")
+    )
+    for r in export_qs:
         ws.append([
             r.exception_id,
             r.waybill_number,

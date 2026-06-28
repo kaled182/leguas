@@ -124,11 +124,13 @@
               class="px-3 py-2 text-sm rounded-lg bg-orange-600 text-white font-semibold disabled:opacity-40">
         <i data-lucide="ticket-plus" class="w-4 h-4 inline"></i> Abrir selecionadas
       </button>
-      <a :href="'/driversapp/api/tickets-cainiao/' + batchId + '/export/zip/'"
-         class="px-3 py-2 text-sm rounded-lg bg-indigo-600 text-white font-semibold">
-        <i data-lucide="file-down" class="w-4 h-4 inline"></i> ZIP PDFs
+      <a :href="exportUrl('zip')"
+         class="px-3 py-2 text-sm rounded-lg bg-indigo-600 text-white font-semibold"
+         :title="selectedCount ? 'PDFs das ' + selectedCount + ' selecionadas' : 'PDFs do que está filtrado (HUB/tipo/estado)'">
+        <i data-lucide="file-down" class="w-4 h-4 inline"></i>
+        <span x-text="selectedCount ? 'ZIP PDFs (' + selectedCount + ')' : 'ZIP PDFs'"></span>
       </a>
-      <a :href="'/driversapp/api/tickets-cainiao/' + batchId + '/export/xlsx/'"
+      <a :href="exportUrl('xlsx')"
          class="px-3 py-2 text-sm rounded-lg bg-emerald-600 text-white font-semibold">
         <i data-lucide="table" class="w-4 h-4 inline"></i> Excel estado
       </a>
@@ -156,7 +158,7 @@
           <tr class="border-t border-gray-100 dark:border-gray-700/60 hover:bg-gray-50 dark:hover:bg-gray-900/30 align-top"
               :class="r.row_action ? 'opacity-60' : ''">
             <td class="p-3">
-              <input type="checkbox" :checked="r.selected" :disabled="!r.can_open"
+              <input type="checkbox" :checked="r.selected"
                      @change="toggleRow(r, $event.target.checked)">
             </td>
             <td class="p-3">
@@ -393,8 +395,25 @@ function ticketsPanel() {
 
     get selectedCount() { return this.rows.filter(r => r.selected).length; },
     get allVisibleSelected() {
-      const openable = this.rows.filter(r => r.can_open);
-      return openable.length > 0 && openable.every(r => r.selected);
+      return this.rows.length > 0 && this.rows.every(r => r.selected);
+    },
+
+    // URL de export respeitando seleção (prioritária) ou filtros atuais.
+    exportUrl(kind) {
+      const p = new URLSearchParams();
+      const sel = this.rows.filter(r => r.selected).map(r => r.id);
+      if (sel.length) {
+        p.set('ids', sel.join(','));
+      } else {
+        if (this.filters.status) p.set('status', this.filters.status);
+        if (this.filters.hub) p.set('hub', this.filters.hub);
+        if (this.filters.category) p.set('category', this.filters.category);
+        if (this.filters.q) p.set('q', this.filters.q);
+        if (this.filters.no_driver) p.set('no_driver', '1');
+        if (this.filters.show_handled) p.set('show_handled', '1');
+      }
+      return '/driversapp/api/tickets-cainiao/' + this.batchId +
+             '/export/' + kind + '/?' + p.toString();
     },
 
     fmtDate(iso) {
@@ -492,8 +511,8 @@ function ticketsPanel() {
 
     toggleRow(row, val) { row.selected = val; this.updateRow(row, { selected: val }); },
     async toggleAll(val) {
-      const ids = this.rows.filter(r => r.can_open).map(r => r.id);
-      this.rows.forEach(r => { if (r.can_open) r.selected = val; });
+      const ids = this.rows.map(r => r.id);
+      this.rows.forEach(r => { r.selected = val; });
       await fetch('/driversapp/api/tickets-cainiao/' + this.batchId + '/bulk-select/', POST_JSON({ selected: val, ids }));
     },
 

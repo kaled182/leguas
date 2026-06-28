@@ -157,31 +157,73 @@ def _resolve_driver_from_courier(courier_id, courier_name):
     return None
 
 
-def resolve_driver_for_waybill(waybill, fallback_name=""):
-    """Resolve o motorista responsável pela entrega de um waybill.
+def build_resolution_caches():
+    """Caches de resolução de motorista (courier_id→driver, nome→driver),
+    reutilizando a MESMA lógica do faturamento Cainiao para casar o login
+    EXATO que fez a entrega (inclui DriverCourierMapping e aliases)."""
+    from settlements.services_cainiao_billing import _build_resolution_caches
+    return _build_resolution_caches()
 
-    1) CainiaoOperationTask mais recente do waybill → courier_id/courier_name
-    2) Fallback: nome da planilha (`Driver's name`) por apelido/nome.
+
+def resolve_driver_for_waybill(waybill, fallback_name="", caches=None):
+    """Resolve o motorista que FEZ A ENTREGA de um waybill — respeitando o
+    login específico mesmo quando a pessoa tem vários logins/contas no mesmo
+    nome.
+
+    Ordem (igual à do faturamento, fonte de verdade do sistema):
+      1) WaybillAttributionOverride (transferência) — atribuição manual.
+      2) Task entregue (Delivered) → courier_id do login que entregou
+         (via DriverProfile.courier_id_cainiao OU DriverCourierMapping),
+         depois courier_name/alias. courier_id tem prioridade absoluta, por
+         isso NÃO cai no "login principal" por nome.
+      3) Task mais recente (não entregue) pelo mesmo critério.
+      4) Fallback: nome da planilha (`Driver's name`).
     """
-    from settlements.models import CainiaoOperationTask, DriverClaim
+    from settlements.models import (
+        CainiaoOperationTask, DriverClaim, WaybillAttributionOverride,
+    )
+    from settlements.services_cainiao_billing import (
+        _resolve_driver, _name_variants,
+    )
 
     wb = DriverClaim.normalize_waybill(waybill) or (waybill or "").strip()
-    if wb:
-        task = (
-            CainiaoOperationTask.objects.filter(waybill_number=wb)
-            .order_by("-task_date", "-id")
-            .first()
+    if not wb:
+        if fallback_name:
+            return _resolve_driver_from_courier("", fallback_name)
+        return None
+
+    # 1) Transferência manual de atribuição (login que recebeu o pacote)
+    override = (
+        WaybillAttributionOverride.objects
+        .filter(waybill_number=wb).select_related("attributed_to_driver")
+        .first()
+    )
+    if override and override.attributed_to_driver_id:
+        return override.attributed_to_driver
+
+    if caches is None:
+        caches = build_resolution_caches()
+    cid_to_driver, cname_to_driver = caches
+
+    # 2/3) Task: dá prioridade à entrega (Delivered) e resolve pelo courier
+    tasks = CainiaoOperationTask.objects.filter(waybill_number=wb)
+    task = (
+        tasks.filter(task_status="Delivered").order_by("-task_date", "-id").first()
+        or tasks.order_by("-task_date", "-id").first()
+    )
+    if task:
+        d = _resolve_driver(
+            "", task, cid_to_driver, cname_to_driver, fee_type="envio fee",
         )
-        if task:
-            d = _resolve_driver_from_courier(
-                getattr(task, "courier_id_cainiao", "") or "",
-                task.courier_name or "",
-            )
-            if d:
-                return d
-    # Fallback pelo nome vindo da planilha
-    if fallback_name:
-        return _resolve_driver_from_courier("", fallback_name)
+        if d:
+            return d
+
+    # 4) Fallback pelo nome vindo da planilha
+    name = (fallback_name or "").strip()
+    if name and name.upper() != "SYSTEM":
+        for k in _name_variants(name):
+            if k in cname_to_driver:
+                return cname_to_driver[k]
     return None
 
 
@@ -368,6 +410,7 @@ def create_batch_from_file(file_obj, filename="", user=None,
     cat_filter = set(categories) if categories else None
 
     batch = _new_batch(filename, file_obj, user)
+    caches = build_resolution_caches()  # uma vez por import (eficiente)
 
     rows = []
     n_kept = 0
@@ -381,6 +424,7 @@ def create_batch_from_file(file_obj, filename="", user=None,
         waybill = rec.get("waybill_number", "")
         driver = resolve_driver_for_waybill(
             waybill, fallback_name=rec.get("driver_name_raw", ""),
+            caches=caches,
         )
         status, complaint, claim_pk = classify_internal_status(waybill)
         is_delivered, delivered_at = get_delivery_info(waybill)
@@ -525,6 +569,36 @@ def sync_batch_statuses(batch):
         TicketImportRow.objects.bulk_update(
             changed, ["internal_status", "complaint", "claim_id_ref"],
         )
+    return len(changed)
+
+
+def reresolve_batch_drivers(batch, only_missing=False):
+    """Re-resolve o motorista de cada linha do lote com a lógica atual
+    (login exato que entregou). Útil para corrigir lotes importados antes.
+
+    - ``only_missing=True``: só toca em linhas sem motorista resolvido,
+      preservando escolhas manuais já feitas pelo operador.
+    Devolve o nº de linhas alteradas.
+    """
+    from .models import TicketImportRow
+
+    caches = build_resolution_caches()
+    qs = batch.rows.all()
+    if only_missing:
+        qs = qs.filter(driver__isnull=True)
+
+    changed = []
+    for row in qs:
+        d = resolve_driver_for_waybill(
+            row.waybill_number, fallback_name=row.driver_name_raw,
+            caches=caches,
+        )
+        new_id = d.id if d else None
+        if row.driver_id != new_id:
+            row.driver_id = new_id
+            changed.append(row)
+    if changed:
+        TicketImportRow.objects.bulk_update(changed, ["driver"])
     return len(changed)
 
 

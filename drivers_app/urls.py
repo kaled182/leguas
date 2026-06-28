@@ -338,6 +338,11 @@ urlpatterns = [
         name="tickets_import_auto_close",
     ),
     path(
+        "api/tickets-cainiao/<int:batch_id>/reresolve-drivers/",
+        vti.tickets_import_reresolve_drivers,
+        name="tickets_import_reresolve_drivers",
+    ),
+    path(
         "api/tickets-cainiao/row/<int:row_id>/open/",
         vti.tickets_import_open_one,
         name="tickets_import_open_one",

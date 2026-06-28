@@ -104,6 +104,11 @@
             title="Fecha tickets Expedited Delivery cujo pacote já foi entregue">
       <i data-lucide="package-check" class="w-4 h-4 inline"></i> Auto-fechar entregues
     </button>
+    <button @click="reresolveDrivers()" :disabled="busy"
+            class="px-3 py-2 text-sm rounded-lg bg-sky-700 text-white font-semibold disabled:opacity-40"
+            title="Re-resolve o motorista pelo login que fez a entrega (corrige logins múltiplos)">
+      <i data-lucide="user-check" class="w-4 h-4 inline"></i> Re-resolver motoristas
+    </button>
 
     <div class="ml-auto flex items-center gap-2">
       <span class="text-sm text-gray-500" x-text="selectedCount + ' selecionada(s)'"></span>
@@ -518,6 +523,15 @@ function ticketsPanel() {
         const r = await fetch('/driversapp/api/tickets-cainiao/' + this.batchId + '/auto-close/', POST_JSON({}));
         const j = await r.json();
         if (j.success) { this.showToast(j.n_closed + ' Expedited entregues fechadas.'); await this.load(); }
+      } finally { this.busy = false; }
+    },
+    async reresolveDrivers() {
+      if (!confirm('Re-resolver o motorista de todas as linhas pelo login que fez a entrega? (substitui escolhas manuais)')) return;
+      this.busy = true;
+      try {
+        const r = await fetch('/driversapp/api/tickets-cainiao/' + this.batchId + '/reresolve-drivers/', POST_JSON({ only_missing: false }));
+        const j = await r.json();
+        if (j.success) { this.showToast(j.n_changed + ' motorista(s) atualizado(s).'); await this.load(); }
       } finally { this.busy = false; }
     },
 

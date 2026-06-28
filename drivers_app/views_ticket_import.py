@@ -359,6 +359,20 @@ def tickets_import_auto_close(request, batch_id):
 
 @login_required
 @require_http_methods(["POST"])
+def tickets_import_reresolve_drivers(request, batch_id):
+    """Re-resolve o motorista (login que fez a entrega) das linhas do lote."""
+    batch = get_object_or_404(TicketImportBatch, id=batch_id)
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        data = {}
+    only_missing = bool(data.get("only_missing"))
+    n = svc.reresolve_batch_drivers(batch, only_missing=only_missing)
+    return JsonResponse({"success": True, "n_changed": n})
+
+
+@login_required
+@require_http_methods(["POST"])
 def tickets_import_bulk_select(request, batch_id):
     """Marca/desmarca seleção em massa (respeita filtro de ids enviado)."""
     batch = get_object_or_404(TicketImportBatch, id=batch_id)

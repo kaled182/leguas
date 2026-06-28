@@ -293,6 +293,11 @@ urlpatterns = [
         name="admin_tickets_cainiao",
     ),
     path(
+        "api/tickets-cainiao/preview/",
+        vti.tickets_import_preview,
+        name="tickets_import_preview",
+    ),
+    path(
         "api/tickets-cainiao/upload/",
         vti.tickets_import_upload,
         name="tickets_import_upload",
@@ -321,6 +326,16 @@ urlpatterns = [
         "api/tickets-cainiao/attach/<int:att_id>/delete/",
         vti.tickets_import_attach_delete,
         name="tickets_import_attach_delete",
+    ),
+    path(
+        "api/tickets-cainiao/<int:batch_id>/bulk-action/",
+        vti.tickets_import_bulk_action,
+        name="tickets_import_bulk_action",
+    ),
+    path(
+        "api/tickets-cainiao/<int:batch_id>/auto-close/",
+        vti.tickets_import_auto_close,
+        name="tickets_import_auto_close",
     ),
     path(
         "api/tickets-cainiao/<int:batch_id>/bulk-open/",

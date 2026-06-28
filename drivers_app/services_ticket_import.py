@@ -296,36 +296,127 @@ def suggest_tipo(exception_name):
     return "ENTREGA_FALSA"
 
 
+def normalize_category(exception_name):
+    """Normaliza o 'Exception name' (inclui variantes em chinês) numa das
+    categorias de TicketImportRow."""
+    from .models import TicketImportRow as R
+    key = (exception_name or "").strip().lower()
+    if "expedited" in key:
+        return R.CAT_EXPEDITED
+    if "fake" in key or "虚假" in key:
+        return R.CAT_FAKE_DELIVERY
+    if "lost" in key or "丢失" in key:
+        return R.CAT_PARCEL_LOST
+    return R.CAT_OTHER
+
+
+def get_delivery_info(waybill):
+    """Verifica se o pacote foi entregue (CainiaoOperationTask.task_status
+    == 'Delivered'). Devolve (is_delivered, delivered_at)."""
+    from settlements.models import CainiaoOperationTask, DriverClaim
+
+    wb = DriverClaim.normalize_waybill(waybill) or (waybill or "").strip()
+    if not wb:
+        return (None, None)
+    task = (
+        CainiaoOperationTask.objects.filter(waybill_number=wb)
+        .order_by("-task_date", "-id").first()
+    )
+    if not task:
+        return (None, None)
+    delivered = (task.task_status or "").strip().lower() == "delivered"
+    if not delivered and task.delivery_time:
+        delivered = True  # tem timestamp de entrega
+    return (delivered, task.delivery_time)
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Preview: contar categorias da planilha SEM criar nada
+# ─────────────────────────────────────────────────────────────────────────
+def preview_categories(file_obj):
+    """Faz parse e devolve a contagem por categoria, para o operador
+    escolher o que importar. Não toca na BD."""
+    from .models import TicketImportRow as R
+    records = parse_workbook(file_obj)
+    counts = {}
+    for rec in records:
+        cat = normalize_category(rec.get("exception_name", ""))
+        counts[cat] = counts.get(cat, 0) + 1
+    labels = dict(R.CATEGORY_CHOICES)
+    types = [
+        {"category": c, "label": labels.get(c, c), "count": n}
+        for c, n in sorted(counts.items(), key=lambda kv: -kv[1])
+    ]
+    return {"total": len(records), "types": types}
+
+
 # ─────────────────────────────────────────────────────────────────────────
 # Orquestração: criar batch + linhas a partir do ficheiro
 # ─────────────────────────────────────────────────────────────────────────
-def create_batch_from_file(file_obj, filename="", user=None):
-    """Faz parse da planilha, cria o batch e popula as linhas já cruzadas."""
-    from .models import TicketImportBatch, TicketImportRow
+def create_batch_from_file(file_obj, filename="", user=None,
+                           categories=None, auto_close_delivered=True):
+    """Faz parse da planilha, cria o batch e popula as linhas já cruzadas.
+
+    - ``categories``: lista de categorias a importar (None = todas).
+    - ``auto_close_delivered``: tickets Expedited Delivery cujo pacote já foi
+      entregue (após a criação da exception) são fechados automaticamente,
+      respeitando a linha do tempo do pacote.
+    """
+    from .models import TicketImportRow
 
     records = parse_workbook(file_obj)
+    cat_filter = set(categories) if categories else None
 
-    batch = TicketImportBatch.objects.create(
-        nome="",
-        ficheiro_nome=filename or getattr(file_obj, "name", ""),
-        total_rows=len(records),
-        created_by=user,
-    )
+    batch = _new_batch(filename, file_obj, user)
 
     rows = []
+    n_kept = 0
+    n_auto_closed = 0
     for rec in records:
+        cat = normalize_category(rec.get("exception_name", ""))
+        if cat_filter is not None and cat not in cat_filter:
+            continue
+        n_kept += 1
+
         waybill = rec.get("waybill_number", "")
         driver = resolve_driver_for_waybill(
             waybill, fallback_name=rec.get("driver_name_raw", ""),
         )
         status, complaint, claim_pk = classify_internal_status(waybill)
+        is_delivered, delivered_at = get_delivery_info(waybill)
+        created_dt = _parse_dt(rec.get("exception_creation_time"))
+
+        row_action = TicketImportRow.ACTION_NONE
+        notes = ""
+        # Auto-fecho do Expedited entregue (atraso resolvido). Respeita a
+        # linha do tempo: só fecha se a entrega é POSTERIOR à criação do
+        # ticket (ou sem data, mas marcado entregue). Não mexe noutras
+        # categorias nem em linhas já com reclamação/recurso/desconto.
+        if (auto_close_delivered
+                and cat == TicketImportRow.CAT_EXPEDITED
+                and is_delivered
+                and status == TicketImportRow.STATUS_SEM_RECLAMACAO):
+            timeline_ok = (
+                delivered_at is None
+                or created_dt is None
+                or delivered_at >= created_dt
+            )
+            if timeline_ok:
+                row_action = TicketImportRow.ACTION_CLOSED
+                when = (
+                    delivered_at.strftime("%Y-%m-%d %H:%M")
+                    if delivered_at else "data desconhecida"
+                )
+                notes = f"Auto-fechado: pacote entregue ({when})."
+                n_auto_closed += 1
+
         rows.append(TicketImportRow(
             batch=batch,
             exception_id=rec.get("exception_id", "")[:60],
             lp_number=rec.get("lp_number", "")[:60],
             waybill_number=waybill[:100],
             ticket_no=rec.get("ticket_no", "")[:60],
-            exception_creation_time=_parse_dt(rec.get("exception_creation_time")),
+            exception_creation_time=created_dt,
             exception_name=rec.get("exception_name", "")[:120],
             ticket_type=rec.get("ticket_type", "")[:40],
             description=rec.get("description", ""),
@@ -336,8 +427,66 @@ def create_batch_from_file(file_obj, filename="", user=None):
             internal_status=status,
             complaint=complaint,
             claim_id_ref=claim_pk,
+            category=cat,
+            is_delivered=is_delivered,
+            delivered_at=delivered_at,
+            row_action=row_action,
+            operator_notes=notes,
             suggested_tipo=suggest_tipo(rec.get("exception_name", "")),
         ))
 
     TicketImportRow.objects.bulk_create(rows, batch_size=200)
+    batch.total_rows = n_kept
+    batch.save(update_fields=["total_rows"])
+    batch.n_auto_closed = n_auto_closed  # atributo efémero p/ feedback
     return batch
+
+
+def _new_batch(filename, file_obj, user):
+    from .models import TicketImportBatch
+    return TicketImportBatch.objects.create(
+        nome="",
+        ficheiro_nome=filename or getattr(file_obj, "name", ""),
+        total_rows=0,
+        created_by=user,
+    )
+
+
+def auto_close_delivered_expedited(batch):
+    """Re-verifica os tickets Expedited Delivery do batch e fecha os que já
+    estão entregues (atraso resolvido), respeitando a linha do tempo.
+    Devolve o nº de linhas fechadas. Idempotente."""
+    from .models import TicketImportRow
+
+    qs = batch.rows.filter(
+        category=TicketImportRow.CAT_EXPEDITED,
+        row_action=TicketImportRow.ACTION_NONE,
+        internal_status=TicketImportRow.STATUS_SEM_RECLAMACAO,
+    )
+    n = 0
+    for row in qs:
+        is_delivered, delivered_at = get_delivery_info(row.waybill_number)
+        if not is_delivered:
+            continue
+        created_dt = row.exception_creation_time
+        if not (delivered_at is None or created_dt is None
+                or delivered_at >= created_dt):
+            continue
+        row.is_delivered = True
+        row.delivered_at = delivered_at
+        row.row_action = TicketImportRow.ACTION_CLOSED
+        when = (
+            delivered_at.strftime("%Y-%m-%d %H:%M")
+            if delivered_at else "data desconhecida"
+        )
+        extra = f"Auto-fechado: pacote entregue ({when})."
+        row.operator_notes = (
+            (row.operator_notes + "\n" + extra).strip()
+            if row.operator_notes else extra
+        )
+        row.save(update_fields=[
+            "is_delivered", "delivered_at", "row_action",
+            "operator_notes", "updated_at",
+        ])
+        n += 1
+    return n

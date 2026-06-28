@@ -1026,6 +1026,30 @@ class TicketImportRow(models.Model):
         (STATUS_DESCONTADA, "Descontada"),
     ]
 
+    # Categoria normalizada do ticket (a partir do Exception name)
+    CAT_EXPEDITED = "EXPEDITED"        # Expedited Delivery — leve (atraso)
+    CAT_FAKE_DELIVERY = "FAKE_DELIVERY"  # Fake Delivery / 虚假试投 — grave
+    CAT_PARCEL_LOST = "PARCEL_LOST"   # Parcel Lost — grave
+    CAT_OTHER = "OTHER"
+    CATEGORY_CHOICES = [
+        (CAT_EXPEDITED, "Expedited Delivery"),
+        (CAT_FAKE_DELIVERY, "Fake Delivery"),
+        (CAT_PARCEL_LOST, "Parcel Lost"),
+        (CAT_OTHER, "Outro"),
+    ]
+    # Categorias consideradas "graves" (geram reclamação/desconto)
+    SEVERE_CATEGORIES = {CAT_FAKE_DELIVERY, CAT_PARCEL_LOST}
+
+    # Disposição dada pelo operador (independente do estado interno)
+    ACTION_NONE = ""
+    ACTION_IGNORED = "IGNORED"
+    ACTION_CLOSED = "CLOSED"
+    ROW_ACTION_CHOICES = [
+        (ACTION_NONE, "Pendente"),
+        (ACTION_IGNORED, "Ignorado"),
+        (ACTION_CLOSED, "Fechado"),
+    ]
+
     batch = models.ForeignKey(
         TicketImportBatch,
         on_delete=models.CASCADE,
@@ -1074,8 +1098,29 @@ class TicketImportRow(models.Model):
         help_text="PK do settlements.DriverClaim activo (recurso/desconto).",
     )
 
+    # ── Classificação / entrega ──────────────────────────────────────────
+    category = models.CharField(
+        "Categoria",
+        max_length=20,
+        choices=CATEGORY_CHOICES,
+        default=CAT_OTHER,
+        db_index=True,
+    )
+    is_delivered = models.BooleanField(
+        "Entregue?", null=True, blank=True,
+        help_text="Resultado do cruzamento com CainiaoOperationTask.",
+    )
+    delivered_at = models.DateTimeField("Data de Entrega", null=True, blank=True)
+
     # ── Estado de trabalho na página ─────────────────────────────────────
     selected = models.BooleanField("Selecionada", default=False)
+    row_action = models.CharField(
+        "Disposição",
+        max_length=10,
+        choices=ROW_ACTION_CHOICES,
+        default=ACTION_NONE,
+        db_index=True,
+    )
     suggested_tipo = models.CharField("Tipo Sugerido", max_length=30, blank=True)
     operator_notes = models.TextField("Notas do Operador", blank=True)
 
@@ -1098,8 +1143,17 @@ class TicketImportRow(models.Model):
 
     @property
     def can_open(self):
-        """Só faz sentido abrir reclamação quando ainda não existe uma."""
-        return self.internal_status == self.STATUS_SEM_RECLAMACAO
+        """Só faz sentido abrir reclamação quando ainda não existe uma e a
+        linha não foi ignorada/fechada pelo operador."""
+        return (
+            self.internal_status == self.STATUS_SEM_RECLAMACAO
+            and self.row_action == self.ACTION_NONE
+        )
+
+    @property
+    def is_severe(self):
+        """Categoria grave (gera reclamação/desconto) vs leve (Expedited)."""
+        return self.category in self.SEVERE_CATEGORIES
 
 
 class TicketImportAttachment(models.Model):

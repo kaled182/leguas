@@ -51,6 +51,15 @@ def _row_to_dict(row):
         "driver_nome": row.driver.nome_completo if row.driver else "",
         "internal_status": row.internal_status,
         "internal_status_display": row.get_internal_status_display(),
+        "category": row.category,
+        "category_display": row.get_category_display(),
+        "is_severe": row.is_severe,
+        "is_delivered": row.is_delivered,
+        "delivered_at": (
+            row.delivered_at.isoformat() if row.delivered_at else None
+        ),
+        "row_action": row.row_action,
+        "row_action_display": row.get_row_action_display(),
         "complaint_id": row.complaint_id,
         "claim_id_ref": row.claim_id_ref,
         "can_open": row.can_open,
@@ -86,22 +95,57 @@ def admin_tickets_cainiao(request):
     })
 
 
+def _validate_xlsx(request):
+    f = request.FILES.get("file")
+    if not f:
+        return None, JsonResponse(
+            {"success": False, "error": "Sem ficheiro."}, status=400,
+        )
+    if not (f.name or "").lower().endswith((".xlsx", ".xlsm")):
+        return None, JsonResponse(
+            {"success": False, "error": "Envie um ficheiro .xlsx."}, status=400,
+        )
+    return f, None
+
+
+@login_required
+@require_http_methods(["POST"])
+def tickets_import_preview(request):
+    """Faz parse e devolve as categorias/contagens para o operador escolher
+    o que importar, SEM criar nada na BD."""
+    f, err = _validate_xlsx(request)
+    if err:
+        return err
+    try:
+        data = svc.preview_categories(f)
+    except Exception as exc:  # noqa: BLE001
+        import logging
+        logging.getLogger("drivers_app").exception("preview falhou")
+        return JsonResponse(
+            {"success": False, "error": f"{type(exc).__name__}: {exc}"},
+            status=500,
+        )
+    return JsonResponse({"success": True, **data})
+
+
 @login_required
 @require_http_methods(["POST"])
 def tickets_import_upload(request):
-    """Recebe o xlsx, cria o batch e devolve o id para redirecionar."""
-    f = request.FILES.get("file")
-    if not f:
-        return JsonResponse(
-            {"success": False, "error": "Sem ficheiro."}, status=400,
-        )
-    name = (f.name or "").lower()
-    if not name.endswith((".xlsx", ".xlsm")):
-        return JsonResponse(
-            {"success": False, "error": "Envie um ficheiro .xlsx."}, status=400,
-        )
+    """Recebe o xlsx (e categorias a importar) e cria o batch."""
+    f, err = _validate_xlsx(request)
+    if err:
+        return err
+
+    # categorias a importar (lista) — vazio/ausente = todas
+    raw_cats = request.POST.get("categories", "")
+    categories = [c for c in raw_cats.split(",") if c.strip()] or None
+    auto_close = request.POST.get("auto_close", "1") != "0"
+
     try:
-        batch = svc.create_batch_from_file(f, filename=f.name, user=request.user)
+        batch = svc.create_batch_from_file(
+            f, filename=f.name, user=request.user,
+            categories=categories, auto_close_delivered=auto_close,
+        )
     except Exception as exc:  # noqa: BLE001
         import logging
         logging.getLogger("drivers_app").exception("tickets_import_upload falhou")
@@ -113,6 +157,7 @@ def tickets_import_upload(request):
         "success": True,
         "batch_id": batch.id,
         "total_rows": batch.total_rows,
+        "n_auto_closed": getattr(batch, "n_auto_closed", 0),
     })
 
 
@@ -130,8 +175,12 @@ def tickets_import_rows_api(request, batch_id):
     status = request.GET.get("status", "").strip()
     hub = request.GET.get("hub", "").strip()
     exc_name = request.GET.get("exception_name", "").strip()
+    category = request.GET.get("category", "").strip()
+    action = request.GET.get("action", "").strip()
     search = request.GET.get("q", "").strip()
     only_no_driver = request.GET.get("no_driver", "") == "1"
+    # Por omissão esconde ignorados/fechados; ?show_handled=1 mostra tudo.
+    show_handled = request.GET.get("show_handled", "") == "1"
 
     if status:
         qs = qs.filter(internal_status=status)
@@ -139,6 +188,16 @@ def tickets_import_rows_api(request, batch_id):
         qs = qs.filter(hub__icontains=hub)
     if exc_name:
         qs = qs.filter(exception_name__icontains=exc_name)
+    if category:
+        qs = qs.filter(category=category)
+    if action:
+        qs = qs.filter(row_action=action)
+    elif not show_handled:
+        qs = qs.exclude(
+            row_action__in=[
+                TicketImportRow.ACTION_IGNORED, TicketImportRow.ACTION_CLOSED,
+            ]
+        )
     if only_no_driver:
         qs = qs.filter(driver__isnull=True)
     if search:
@@ -158,6 +217,15 @@ def tickets_import_rows_api(request, batch_id):
         d["internal_status"]: d["n"]
         for d in batch.rows.values("internal_status").annotate(n=Count("id"))
     }
+    by_cat = {
+        d["category"]: d["n"]
+        for d in batch.rows.values("category").annotate(n=Count("id"))
+    }
+    by_action = {
+        d["row_action"]: d["n"]
+        for d in batch.rows.values("row_action").annotate(n=Count("id"))
+    }
+    cat_labels = dict(TicketImportRow.CATEGORY_CHOICES)
     kpis = {
         "total": batch.total_rows,
         "sem_reclamacao": by_status.get(TicketImportRow.STATUS_SEM_RECLAMACAO, 0),
@@ -166,6 +234,12 @@ def tickets_import_rows_api(request, batch_id):
         "em_recurso": by_status.get(TicketImportRow.STATUS_EM_RECURSO, 0),
         "descontada": by_status.get(TicketImportRow.STATUS_DESCONTADA, 0),
         "sem_motorista": batch.rows.filter(driver__isnull=True).count(),
+        "ignorados": by_action.get(TicketImportRow.ACTION_IGNORED, 0),
+        "fechados_op": by_action.get(TicketImportRow.ACTION_CLOSED, 0),
+        "categories": [
+            {"category": c, "label": cat_labels.get(c, c), "count": n}
+            for c, n in sorted(by_cat.items(), key=lambda kv: -kv[1])
+        ],
         "hubs": list(
             batch.rows.exclude(hub="")
             .values_list("hub", flat=True).distinct().order_by("hub")
@@ -204,10 +278,76 @@ def tickets_import_row_update(request, row_id):
     if "operator_notes" in data:
         row.operator_notes = (data.get("operator_notes") or "").strip()
         fields.append("operator_notes")
+    if "row_action" in data:
+        val = (data.get("row_action") or "").strip().upper()
+        valid = {c for c, _ in TicketImportRow.ROW_ACTION_CHOICES}
+        if val not in valid:
+            val = TicketImportRow.ACTION_NONE
+        row.row_action = val
+        fields.append("row_action")
 
     if fields:
         row.save(update_fields=fields + ["updated_at"])
     return JsonResponse({"success": True, "row": _row_to_dict(row)})
+
+
+def _apply_row_action(batch, ids, action):
+    """Define a disposição (IGNORED/CLOSED/'') de várias linhas. Quando
+    CLOSED e existe reclamação aberta, fecha também a reclamação."""
+    qs = batch.rows.all()
+    if isinstance(ids, list) and ids:
+        qs = qs.filter(id__in=ids)
+    else:
+        qs = qs.filter(selected=True)
+
+    n = 0
+    close_complaints = []
+    for row in qs:
+        row.row_action = action
+        row.save(update_fields=["row_action", "updated_at"])
+        if (action == TicketImportRow.ACTION_CLOSED
+                and row.complaint_id
+                and row.complaint
+                and row.complaint.status not in ("FECHADO", "CANCELADO")):
+            close_complaints.append(row.complaint)
+        n += 1
+
+    for complaint in close_complaints:
+        complaint.status = "FECHADO"
+        complaint.data_fecho = timezone.now()
+        complaint.save(update_fields=["status", "data_fecho", "updated_at"])
+
+    return n, len(close_complaints)
+
+
+@login_required
+@require_http_methods(["POST"])
+def tickets_import_bulk_action(request, batch_id):
+    """Aplica Ignorar / Fechar / Reabrir a linhas selecionadas ou por ids."""
+    batch = get_object_or_404(TicketImportBatch, id=batch_id)
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        data = {}
+    action = (data.get("action") or "").strip().upper()
+    valid = {c for c, _ in TicketImportRow.ROW_ACTION_CHOICES}
+    if action not in valid:
+        return JsonResponse(
+            {"success": False, "error": "Ação inválida."}, status=400,
+        )
+    n, n_complaints = _apply_row_action(batch, data.get("ids"), action)
+    return JsonResponse({
+        "success": True, "n": n, "n_complaints_closed": n_complaints,
+    })
+
+
+@login_required
+@require_http_methods(["POST"])
+def tickets_import_auto_close(request, batch_id):
+    """Re-verifica os Expedited Delivery e fecha os já entregues."""
+    batch = get_object_or_404(TicketImportBatch, id=batch_id)
+    n = svc.auto_close_delivered_expedited(batch)
+    return JsonResponse({"success": True, "n_closed": n})
 
 
 @login_required

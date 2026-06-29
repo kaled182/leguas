@@ -104,6 +104,7 @@ urlpatterns = [
     ),  # APP para alocação de rotas e turnos
     path("orders/", include("orders_manager.urls")),  # APP para gestão de pedidos
     path("geozonas/", include("geozonas.urls")),  # Mapa de Códigos Postais e Zonas
+    path("sorting/", include("sorting.urls")),  # Sorting de pacotes em bigbags
     path("system/", include("system_config.urls")),  # Configurações do Sistema
     path(
         "analytics/", include("analytics.urls")

@@ -168,6 +168,7 @@ INSTALLED_APPS = [
     "pricing",  # Tarifação e Zonas Postais
     "route_allocation",  # Atribuição de Rotas e Turnos
     "geozonas",  # Catálogo de Códigos Postais (GeoAPI) e Zonas de Entrega
+    "sorting",  # Sorting de pacotes em bigbags virtuais por CP/geozona
     # Analytics (Fase 2)
     "analytics",  # Métricas, Forecasting e Dashboards
     # Contratos

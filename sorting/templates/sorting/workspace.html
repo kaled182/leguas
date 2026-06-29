@@ -1,0 +1,271 @@
+{% extends 'paack_dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Sorting de Pacotes{% endblock %}
+{% block sidebar_title %}Sorting{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<style>[x-cloak]{display:none!important}</style>
+
+<div class="p-6" x-data="sortingPanel()" x-init="init()">
+
+  <!-- Header -->
+  <div class="mb-5 flex items-center justify-between flex-wrap gap-3">
+    <div class="flex items-center gap-3">
+      <div class="w-12 h-12 bg-gradient-to-br from-sky-500 to-indigo-600 rounded-xl flex items-center justify-center">
+        <i data-lucide="layout-grid" class="w-6 h-6 text-white"></i>
+      </div>
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Sorting de Pacotes</h1>
+        <p class="text-sm text-gray-500 dark:text-gray-400">Cria bigbags virtuais por CP4 ou geozona e atribui ao motorista.</p>
+      </div>
+    </div>
+    <a href="/sorting/historico/" class="px-3 py-2 text-sm rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200">
+      <i data-lucide="history" class="w-4 h-4 inline"></i> Histórico
+    </a>
+  </div>
+
+  <!-- ── Sem sessão: criar nova ─────────────────────────────────────── -->
+  <div x-show="!session" class="max-w-xl bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
+    <h3 class="font-bold text-gray-900 dark:text-white mb-3">Nova sessão de sorting</h3>
+    <label class="block text-xs text-gray-500 mb-1">Nome (opcional)</label>
+    <input x-model="form.nome" placeholder="Ex.: Sorting manhã VIA LÉGUA"
+           class="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 mb-3">
+    <label class="block text-xs text-gray-500 mb-1">Modo</label>
+    <div class="flex gap-2 mb-3">
+      <button @click="form.mode='CP4'" :class="form.mode==='CP4' ? 'bg-indigo-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200'" class="flex-1 px-3 py-2 text-sm rounded-lg font-semibold">Por CP4 (total)</button>
+      <button @click="form.mode='ZONA'" :class="form.mode==='ZONA' ? 'bg-indigo-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200'" class="flex-1 px-3 py-2 text-sm rounded-lg font-semibold">Por Geozona</button>
+    </div>
+    <label class="block text-xs text-gray-500 mb-1">HUB (opcional)</label>
+    <input x-model="form.hub" list="hublist" placeholder="HUB"
+           class="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 mb-3">
+    <datalist id="hublist">{% for h in hubs %}<option value="{{ h }}">{% endfor %}</datalist>
+    <label class="block text-xs text-gray-500 mb-1">Observação (opcional)</label>
+    <textarea x-model="form.observacao" rows="2"
+              class="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 mb-4"></textarea>
+    <button @click="createSession()" :disabled="busy" class="w-full px-3 py-2 text-sm rounded-lg bg-sky-600 text-white font-semibold disabled:opacity-40">
+      <i data-lucide="play" class="w-4 h-4 inline"></i> Iniciar Sorting
+    </button>
+  </div>
+
+  <!-- ── Sessão ativa ───────────────────────────────────────────────── -->
+  <div x-show="session" x-cloak>
+    <!-- Barra da sessão -->
+    <div class="mb-4 flex flex-wrap items-center gap-3 p-3 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+      <div>
+        <div class="font-bold text-gray-900 dark:text-white" x-text="(session?.nome || ('Sorting #' + session?.id))"></div>
+        <div class="text-xs text-gray-500">
+          <span x-text="session?.mode_display"></span> ·
+          <span x-text="session?.hub || 'sem HUB'"></span> ·
+          <span class="font-semibold" :class="session?.status==='FINALIZADO' ? 'text-emerald-500':'text-sky-500'" x-text="session?.status_display"></span>
+        </div>
+      </div>
+      <div class="flex gap-4 text-center ml-2">
+        <div><div class="text-xl font-bold text-gray-800 dark:text-gray-100" x-text="session?.total_parcels||0"></div><div class="text-[10px] text-gray-400">pacotes</div></div>
+        <div><div class="text-xl font-bold text-indigo-500" x-text="session?.n_bigbags||0"></div><div class="text-[10px] text-gray-400">bigbags</div></div>
+        <div><div class="text-xl font-bold text-rose-500" x-text="session?.n_unresolved||0"></div><div class="text-[10px] text-gray-400">não class.</div></div>
+      </div>
+      <div class="ml-auto flex items-center gap-2">
+        <a :href="'/sorting/api/session/'+session?.id+'/export/xlsx/'" class="px-3 py-2 text-sm rounded-lg bg-emerald-600 text-white font-semibold"><i data-lucide="table" class="w-4 h-4 inline"></i> Excel</a>
+        <button x-show="session?.status!=='FINALIZADO'" @click="finishSession()" class="px-3 py-2 text-sm rounded-lg bg-orange-600 text-white font-semibold"><i data-lucide="check-circle" class="w-4 h-4 inline"></i> Finalizar e Salvar</button>
+        <button x-show="session?.status==='FINALIZADO'" @click="reopenSession()" class="px-3 py-2 text-sm rounded-lg bg-amber-600 text-white font-semibold">Reabrir</button>
+        <button @click="closeSession()" class="px-3 py-2 text-sm rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200">Nova sessão</button>
+      </div>
+    </div>
+
+    <!-- Scanner -->
+    <div x-show="session?.status!=='FINALIZADO'" class="mb-4 p-4 rounded-xl border-2"
+         :class="scanClass">
+      <div class="flex items-center gap-3">
+        <i data-lucide="scan-line" class="w-7 h-7 text-sky-500"></i>
+        <input x-ref="scanInput" x-model="scanValue" @keydown.enter.prevent="doScan()"
+               placeholder="Ler pacote (waybill) e Enter…" autocomplete="off"
+               class="flex-1 px-4 py-3 text-lg rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100">
+        <button @click="doScan()" class="px-4 py-3 rounded-lg bg-sky-600 text-white font-semibold">Ler</button>
+      </div>
+      <div class="mt-2 text-sm" x-show="lastScan" x-text="lastScanMsg"></div>
+    </div>
+
+    <!-- Bigbags -->
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+      <template x-for="b in bigbags" :key="b.id">
+        <div class="p-4 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+          <div class="flex items-center justify-between mb-2">
+            <div class="font-bold text-gray-900 dark:text-white" x-text="b.label"></div>
+            <span class="px-2 py-0.5 rounded-full text-xs font-bold bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300" x-text="b.parcel_count + ' pac.'"></span>
+          </div>
+          <div class="text-xs text-gray-400 mb-2" x-text="b.codigo"></div>
+          <div class="flex items-center gap-2 mb-2">
+            <i data-lucide="user" class="w-4 h-4 text-gray-400"></i>
+            <span class="text-sm" :class="b.driver_id ? 'text-gray-800 dark:text-gray-200 font-semibold':'text-rose-500'" x-text="b.driver_nome || 'sem motorista'"></span>
+            <button x-show="session?.status!=='FINALIZADO'" @click="openDriverPicker(b)" class="text-[11px] text-indigo-500 underline ml-auto">alterar</button>
+          </div>
+          <button @click="viewParcels(b)" class="text-xs text-sky-500 underline">ver pacotes</button>
+        </div>
+      </template>
+    </div>
+
+    <!-- Não classificados -->
+    <div x-show="(unresolved||[]).length" class="mt-4 p-4 rounded-xl bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800">
+      <div class="font-bold text-rose-700 dark:text-rose-300 mb-2">Não classificados (<span x-text="(unresolved||[]).length"></span>)</div>
+      <div class="flex flex-wrap gap-2">
+        <template x-for="p in unresolved" :key="p.id">
+          <span class="px-2 py-1 rounded bg-white dark:bg-gray-800 text-xs font-mono text-gray-700 dark:text-gray-200">
+            <span x-text="p.waybill_number"></span>
+            <button @click="deleteParcel(p)" class="text-rose-500 ml-1">×</button>
+          </span>
+        </template>
+      </div>
+    </div>
+  </div>
+
+  <!-- Parcels modal -->
+  <div x-show="parcelsModal" x-cloak class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" @click.self="parcelsModal=false">
+    <div class="bg-white dark:bg-gray-800 rounded-xl p-5 w-[40rem] max-w-full max-h-[80vh] overflow-auto">
+      <h3 class="font-bold text-gray-900 dark:text-white mb-3" x-text="'Pacotes — ' + (parcelsBigbag?.label||'')"></h3>
+      <table class="w-full text-sm">
+        <thead class="text-xs text-gray-400 uppercase"><tr><th class="text-left p-1">Waybill</th><th class="text-left p-1">CP</th><th class="text-left p-1">Localidade</th><th></th></tr></thead>
+        <tbody>
+          <template x-for="p in parcelsList" :key="p.id">
+            <tr class="border-t border-gray-100 dark:border-gray-700/50">
+              <td class="p-1 font-mono text-xs" x-text="p.waybill_number"></td>
+              <td class="p-1" x-text="p.cp"></td>
+              <td class="p-1" x-text="p.localidade"></td>
+              <td class="p-1 text-right"><button x-show="session?.status!=='FINALIZADO'" @click="deleteParcel(p, true)" class="text-rose-500">remover</button></td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Driver picker -->
+  <div x-show="driverModal" x-cloak class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" @click.self="driverModal=false">
+    <div class="bg-white dark:bg-gray-800 rounded-xl p-5 w-96 max-w-full">
+      <h3 class="font-bold text-gray-900 dark:text-white mb-3">Motorista da bigbag</h3>
+      <input x-model.debounce.300ms="driverQuery" @input="searchDrivers()" placeholder="Nome, apelido…"
+             class="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 mb-3">
+      <div class="max-h-64 overflow-auto space-y-1">
+        <button @click="assignDriver(null)" class="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-rose-500">— sem motorista —</button>
+        <template x-for="d in driverResults" :key="d.id">
+          <button @click="assignDriver(d)" class="w-full text-left px-3 py-2 rounded-lg hover:bg-sky-50 dark:hover:bg-sky-900/20 text-sm text-gray-700 dark:text-gray-200">
+            <span class="font-semibold" x-text="d.nome_completo"></span><span class="text-xs text-gray-400" x-text="d.apelido?(' · '+d.apelido):''"></span>
+          </button>
+        </template>
+      </div>
+    </div>
+  </div>
+
+  <div x-show="toast" x-transition x-cloak class="fixed bottom-6 right-6 bg-gray-900 text-white px-4 py-3 rounded-lg text-sm shadow-lg z-50" x-text="toast"></div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function sortingPanel() {
+  const csrf = () => document.querySelector('[name=csrfmiddlewaretoken]').value;
+  const POST = body => ({ method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':csrf()}, body: JSON.stringify(body||{}) });
+  return {
+    session: null, bigbags: [], unresolved: [],
+    form: { nome:'', mode:'CP4', hub:'', observacao:'' },
+    scanValue:'', lastScan:null, lastScanMsg:'', scanClass:'border-gray-200 dark:border-gray-700',
+    busy:false, toast:'',
+    parcelsModal:false, parcelsBigbag:null, parcelsList:[],
+    driverModal:false, driverBigbag:null, driverQuery:'', driverResults:[],
+
+    init() {
+      const initial = '{{ session.id|default:"" }}';
+      if (initial) this.loadSession(initial);
+      this.$nextTick(()=>window.lucide&&window.lucide.createIcons());
+    },
+    showToast(m){ this.toast=m; setTimeout(()=>this.toast='',3000); },
+
+    async createSession() {
+      this.busy=true;
+      try {
+        const r = await fetch('/sorting/api/session/create/', POST(this.form));
+        const j = await r.json();
+        if (j.success) { await this.loadSession(j.session_id); this.focusScan(); }
+      } finally { this.busy=false; }
+    },
+    closeSession(){ this.session=null; this.bigbags=[]; this.unresolved=[]; window.history.replaceState({},'', '/sorting/'); },
+
+    async loadSession(id) {
+      const r = await fetch('/sorting/api/session/'+id+'/');
+      const j = await r.json();
+      if (j.success) {
+        this.session = j.session; this.bigbags = j.bigbags; this.unresolved = j.unresolved;
+        window.history.replaceState({},'', '/sorting/?session='+id);
+        this.$nextTick(()=>{ window.lucide&&window.lucide.createIcons(); this.focusScan(); });
+      }
+    },
+    focusScan(){ this.$nextTick(()=>{ if(this.$refs.scanInput) this.$refs.scanInput.focus(); }); },
+
+    async doScan() {
+      const wb = (this.scanValue||'').trim();
+      if (!wb || !this.session) return;
+      this.scanValue='';
+      const r = await fetch('/sorting/api/session/'+this.session.id+'/scan/', POST({waybill:wb}));
+      const j = await r.json();
+      this.focusScan();
+      if (!j.success) { this.flash('err', j.error||'Erro'); return; }
+      this.lastScan = j;
+      if (j.status==='OK') {
+        this.flash(j.created_bigbag?'new':'ok', wb+' → '+(j.bigbag?.label||'')+(j.created_bigbag?'  (nova bigbag)':'')+(j.bigbag?.driver_nome?('  · '+j.bigbag.driver_nome):''));
+      } else if (j.status==='DUP') {
+        this.flash('dup', wb+' — '+j.message);
+      } else {
+        this.flash('err', wb+' — '+j.message);
+      }
+      await this.refresh();
+    },
+    flash(kind, msg) {
+      this.lastScanMsg = msg;
+      this.scanClass = {
+        ok:'border-emerald-400 bg-emerald-50 dark:bg-emerald-900/20',
+        new:'border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20',
+        dup:'border-amber-400 bg-amber-50 dark:bg-amber-900/20',
+        err:'border-rose-400 bg-rose-50 dark:bg-rose-900/20',
+      }[kind] || 'border-gray-200';
+      setTimeout(()=>{ this.scanClass='border-gray-200 dark:border-gray-700'; }, 1200);
+    },
+    async refresh() {
+      const r = await fetch('/sorting/api/session/'+this.session.id+'/');
+      const j = await r.json();
+      if (j.success) { this.session=j.session; this.bigbags=j.bigbags; this.unresolved=j.unresolved; this.$nextTick(()=>window.lucide&&window.lucide.createIcons()); }
+    },
+
+    async finishSession() {
+      const obs = prompt('Observação final (opcional):','') ?? '';
+      const r = await fetch('/sorting/api/session/'+this.session.id+'/finish/', POST({observacao:obs}));
+      const j = await r.json();
+      if (j.success) { this.session=j.session; this.bigbags=j.bigbags; this.unresolved=j.unresolved; this.showToast('Sessão finalizada. '+j.session.n_bigbags+' bigbags, '+j.session.total_parcels+' pacotes.'); }
+    },
+    async reopenSession() {
+      const r = await fetch('/sorting/api/session/'+this.session.id+'/reopen/', POST({}));
+      const j = await r.json(); if (j.success) await this.refresh();
+    },
+
+    async viewParcels(b) {
+      this.parcelsBigbag=b;
+      const r = await fetch('/sorting/api/session/'+this.session.id+'/parcels/?bigbag='+b.id);
+      const j = await r.json(); if (j.success){ this.parcelsList=j.parcels; this.parcelsModal=true; }
+    },
+    async deleteParcel(p, fromModal) {
+      if (!confirm('Remover o pacote '+p.waybill_number+'?')) return;
+      const r = await fetch('/sorting/api/parcel/'+p.id+'/delete/', POST({}));
+      const j = await r.json();
+      if (j.success){ await this.refresh(); if (fromModal && this.parcelsBigbag) this.viewParcels(this.parcelsBigbag); }
+    },
+
+    openDriverPicker(b){ this.driverBigbag=b; this.driverQuery=''; this.driverResults=[]; this.driverModal=true; },
+    async searchDrivers(){ const r=await fetch('/sorting/api/driver-search/?q='+encodeURIComponent(this.driverQuery)); const j=await r.json(); if(j.success)this.driverResults=j.drivers; },
+    async assignDriver(d){
+      const r = await fetch('/sorting/api/bigbag/'+this.driverBigbag.id+'/update/', POST({driver_id: d? d.id : null}));
+      const j = await r.json(); if (j.success){ this.driverModal=false; await this.refresh(); }
+    },
+  };
+}
+</script>
+{% endblock %}

@@ -1,0 +1,78 @@
+{% extends 'paack_dashboard/base.html' %}
+{% block title %}Histórico de Sorting{% endblock %}
+{% block sidebar_title %}Sorting{% endblock %}
+
+{% block content %}
+<div class="p-6">
+  <div class="mb-5 flex items-center justify-between flex-wrap gap-3">
+    <div class="flex items-center gap-3">
+      <div class="w-12 h-12 bg-gradient-to-br from-sky-500 to-indigo-600 rounded-xl flex items-center justify-center">
+        <i data-lucide="history" class="w-6 h-6 text-white"></i>
+      </div>
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Histórico de Sorting</h1>
+        <p class="text-sm text-gray-500 dark:text-gray-400">Sessões para conferência futura.</p>
+      </div>
+    </div>
+    <a href="/sorting/" class="px-3 py-2 text-sm rounded-lg bg-sky-600 text-white font-semibold">
+      <i data-lucide="plus" class="w-4 h-4 inline"></i> Novo Sorting
+    </a>
+  </div>
+
+  <form method="get" class="mb-4 flex flex-wrap gap-2">
+    <select name="status" class="px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200">
+      <option value="">Todos os estados</option>
+      {% for code, label in status_choices %}
+        <option value="{{ code }}" {% if request.GET.status == code %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+    <select name="hub" class="px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200">
+      <option value="">Todos os HUBs</option>
+      {% for h in hubs %}<option value="{{ h }}" {% if request.GET.hub == h %}selected{% endif %}>{{ h }}</option>{% endfor %}
+    </select>
+    <button class="px-3 py-2 text-sm rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200">Filtrar</button>
+  </form>
+
+  <div class="overflow-auto rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+    <table class="w-full text-sm">
+      <thead class="bg-gray-50 dark:bg-gray-900/40 text-gray-500 dark:text-gray-400 text-xs uppercase">
+        <tr>
+          <th class="p-3 text-left">#</th>
+          <th class="p-3 text-left">Nome</th>
+          <th class="p-3 text-left">Modo</th>
+          <th class="p-3 text-left">HUB</th>
+          <th class="p-3 text-left">Estado</th>
+          <th class="p-3 text-left">Bigbags</th>
+          <th class="p-3 text-left">Pacotes</th>
+          <th class="p-3 text-left">Criada</th>
+          <th class="p-3 text-left">Por</th>
+          <th class="p-3 text-left">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in sessions %}
+        <tr class="border-t border-gray-100 dark:border-gray-700/60 hover:bg-gray-50 dark:hover:bg-gray-900/30">
+          <td class="p-3 text-gray-500">{{ s.id }}</td>
+          <td class="p-3 font-semibold text-gray-800 dark:text-gray-100">{{ s.nome|default:"(sem nome)" }}</td>
+          <td class="p-3">{{ s.get_mode_display }}</td>
+          <td class="p-3 text-gray-600 dark:text-gray-300">{{ s.hub|default:"—" }}</td>
+          <td class="p-3">
+            <span class="px-2 py-1 rounded text-[11px] font-semibold {% if s.status == 'FINALIZADO' %}bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300{% else %}bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300{% endif %}">{{ s.get_status_display }}</span>
+          </td>
+          <td class="p-3">{{ s.bigbags.count }}</td>
+          <td class="p-3">{{ s.parcels.count }}</td>
+          <td class="p-3 text-gray-500">{{ s.created_at|date:"d/m/Y H:i" }}</td>
+          <td class="p-3 text-gray-500">{{ s.created_by.username|default:"—" }}</td>
+          <td class="p-3 whitespace-nowrap">
+            <a href="/sorting/?session={{ s.id }}" class="text-sky-500 underline">abrir</a>
+            <a href="/sorting/api/session/{{ s.id }}/export/xlsx/" class="text-emerald-500 underline ml-2">excel</a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="10" class="p-8 text-center text-gray-400">Sem sessões de sorting.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

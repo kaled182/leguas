@@ -47,7 +47,23 @@ def sorting_history(request):
     hub = (request.GET.get("hub") or "").strip()
     if hub:
         qs = qs.filter(hub=hub)
-    sessions = qs[:200]
+    sessions = list(qs[:200])
+
+    # CP4 distintos por sessão (uma query só), anexados a cada sessão.
+    cp4_map = {}
+    if sessions:
+        rows = (
+            SortingBigbag.objects
+            .filter(session_id__in=[s.id for s in sessions])
+            .exclude(cp4="")
+            .values_list("session_id", "cp4")
+            .distinct()
+        )
+        for sid, cp4 in rows:
+            cp4_map.setdefault(sid, set()).add(cp4)
+    for s in sessions:
+        s.cp4_list = sorted(cp4_map.get(s.id, []))
+
     return render(request, "sorting/history.html", {
         "sessions": sessions,
         "status_choices": SortingSession.STATUS_CHOICES,

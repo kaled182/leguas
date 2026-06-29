@@ -41,6 +41,7 @@
           <th class="p-3 text-left">Nome</th>
           <th class="p-3 text-left">Modo</th>
           <th class="p-3 text-left">HUB</th>
+          <th class="p-3 text-left">CP4</th>
           <th class="p-3 text-left">Estado</th>
           <th class="p-3 text-left">Bigbags</th>
           <th class="p-3 text-left">Pacotes</th>
@@ -57,6 +58,15 @@
           <td class="p-3">{{ s.get_mode_display }}</td>
           <td class="p-3 text-gray-600 dark:text-gray-300">{{ s.hub|default:"—" }}</td>
           <td class="p-3">
+            {% if s.cp4_list %}
+              <div class="flex flex-wrap gap-1">
+                {% for cp4 in s.cp4_list %}
+                  <span class="px-1.5 py-0.5 rounded text-[11px] font-mono bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">{{ cp4 }}</span>
+                {% endfor %}
+              </div>
+            {% else %}<span class="text-gray-400">—</span>{% endif %}
+          </td>
+          <td class="p-3">
             <span class="px-2 py-1 rounded text-[11px] font-semibold {% if s.status == 'FINALIZADO' %}bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300{% else %}bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300{% endif %}">{{ s.get_status_display }}</span>
           </td>
           <td class="p-3">{{ s.bigbags.count }}</td>
@@ -69,7 +79,7 @@
           </td>
         </tr>
         {% empty %}
-        <tr><td colspan="10" class="p-8 text-center text-gray-400">Sem sessões de sorting.</td></tr>
+        <tr><td colspan="11" class="p-8 text-center text-gray-400">Sem sessões de sorting.</td></tr>
         {% endfor %}
       </tbody>
     </table>

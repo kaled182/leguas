@@ -1,0 +1,79 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="utf-8">
+  <title>Etiquetas de Despacho</title>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+  <style>
+    @page { size: 10cm 15cm; margin: 0; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; color: #111; }
+    .label {
+      width: 10cm; height: 15cm; padding: 0.5cm 0.55cm;
+      page-break-after: always; overflow: hidden; position: relative;
+      display: flex; flex-direction: column;
+    }
+    .label:last-child { page-break-after: auto; }
+    .head { display: flex; align-items: center; gap: 0.25cm; border-bottom: 1.5px solid #111; padding-bottom: 0.15cm; }
+    .head img { height: 1.0cm; width: auto; }
+    .head .title { font-size: 8pt; font-weight: bold; letter-spacing: .3px; line-height: 1.1; }
+    .big { font-size: 26pt; font-weight: 800; margin: 0.15cm 0 0; line-height: 1; word-break: break-word; }
+    .drvlbl { font-size: 7pt; color: #6B7280; margin-top: 0.15cm; }
+    .drv { font-size: 15pt; font-weight: 700; line-height: 1.05; word-break: break-word; }
+    table.info { width: 100%; border-collapse: collapse; margin-top: 0.2cm; table-layout: fixed; }
+    table.info td { font-size: 8pt; vertical-align: top; padding: 2px 0; border-bottom: .5px solid #E5E7EB; word-break: break-word; overflow-wrap: anywhere; }
+    table.info td.k { width: 2.5cm; color: #6B7280; font-weight: bold; padding-right: 4px; }
+    .cps { font-size: 7.5pt; }
+    .barcode-wrap { margin-top: auto; text-align: center; }
+    .barcode-wrap svg { max-width: 100%; height: auto; }
+    .code { font-size: 8pt; letter-spacing: 1px; }
+    @media screen {
+      body { background: #444; padding: 12px; }
+      .label { background: #fff; box-shadow: 0 2px 12px rgba(0,0,0,.4); margin: 0 auto 12px; }
+    }
+  </style>
+</head>
+<body>
+  {% for L in labels %}
+  <div class="label">
+    <div class="head">
+      <img src="{% static 'img/logo.png' %}" alt="logo"
+           onerror="this.style.display='none'">
+      <div class="title">LÉGUAS FRANZINAS<br>ETIQUETA DE DESPACHO</div>
+    </div>
+
+    <div class="big">{{ L.label }}</div>
+    <div class="drvlbl">MOTORISTA</div>
+    <div class="drv">{{ L.driver|default:"— sem motorista" }}</div>
+
+    <table class="info">
+      <tr><td class="k">HUB</td><td>{{ L.hub|default:"—" }}</td></tr>
+      <tr><td class="k">Agrupamento</td><td>{{ L.grouping }}</td></tr>
+      <tr><td class="k">Nº Pacotes</td><td>{{ L.n }}</td></tr>
+      <tr><td class="k">Bigbag</td><td>{{ L.codigo }}</td></tr>
+      <tr><td class="k">Sessão</td><td>{{ L.sessao }}</td></tr>
+      {% if L.obs %}<tr><td class="k">Obs.</td><td>{{ L.obs }}</td></tr>{% endif %}
+      <tr><td class="k">Cód. Postais</td><td class="cps">{{ L.cp7|default:"—" }}</td></tr>
+    </table>
+
+    <div class="barcode-wrap">
+      <svg class="barcode" data-value="{{ L.codigo }}"></svg>
+      <div class="code">{{ L.codigo }}</div>
+    </div>
+  </div>
+  {% endfor %}
+
+  <script>
+    document.querySelectorAll('svg.barcode').forEach(function(el){
+      try {
+        JsBarcode(el, el.getAttribute('data-value'), {
+          format: 'CODE128', displayValue: false, height: 42, margin: 0, width: 1.6
+        });
+      } catch(e) {}
+    });
+    // Impressão automática (depois de carregar barcodes/logo)
+    window.addEventListener('load', function(){ setTimeout(function(){ window.print(); }, 350); });
+  </script>
+</body>
+</html>

@@ -441,3 +441,47 @@ def session_labels_pdf(request, session_id):
         .order_by("cp4", "zona_nome")
     )
     return _labels_pdf(bigbags, f"etiquetas_sessao_{session.id}.pdf")
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Etiqueta em HTML (impressão direta no browser — 10×15)
+# ─────────────────────────────────────────────────────────────────────────
+def _label_context(bigbag):
+    session = bigbag.session
+    return {
+        "label": bigbag.label,
+        "driver": bigbag.driver.nome_completo if bigbag.driver else "",
+        "hub": session.hub,
+        "grouping": (
+            f"GEOZONA: {bigbag.zona_nome}" if bigbag.zona_nome
+            else f"CP4: {bigbag.cp4}"
+        ),
+        "n": bigbag.parcels.count(),
+        "codigo": bigbag.codigo or f"BB-{bigbag.id}",
+        "sessao": f"#{session.id} {session.nome or ''}".strip(),
+        "cp7": ", ".join(svc.bigbag_cp7_list(bigbag)),
+        "obs": bigbag.observacao,
+    }
+
+
+@login_required
+def bigbag_label_print(request, bigbag_id):
+    bigbag = get_object_or_404(
+        SortingBigbag.objects.select_related("driver", "session"),
+        id=bigbag_id,
+    )
+    return render(request, "sorting/label_print.html", {
+        "labels": [_label_context(bigbag)],
+    })
+
+
+@login_required
+def session_labels_print(request, session_id):
+    session = get_object_or_404(SortingSession, id=session_id)
+    bigbags = (
+        session.bigbags.select_related("driver", "session")
+        .order_by("cp4", "zona_nome")
+    )
+    return render(request, "sorting/label_print.html", {
+        "labels": [_label_context(b) for b in bigbags],
+    })

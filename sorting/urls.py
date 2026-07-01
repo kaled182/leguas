@@ -39,6 +39,10 @@ urlpatterns = [
         "api/session/<int:session_id>/labels/pdf/",
         views.session_labels_pdf, name="session_labels_pdf",
     ),
+    path(
+        "session/<int:session_id>/labels/print/",
+        views.session_labels_print, name="session_labels_print",
+    ),
 
     # API — bigbags / pacotes
     path(
@@ -52,6 +56,10 @@ urlpatterns = [
     path(
         "api/bigbag/<int:bigbag_id>/label/pdf/",
         views.bigbag_label_pdf, name="bigbag_label_pdf",
+    ),
+    path(
+        "bigbag/<int:bigbag_id>/label/print/",
+        views.bigbag_label_print, name="bigbag_label_print",
     ),
     path(
         "api/parcel/<int:parcel_id>/delete/",

@@ -72,7 +72,7 @@
       </div>
       <div class="ml-auto flex items-center gap-2">
         <a :href="'/sorting/api/session/'+session?.id+'/export/xlsx/'" class="px-3 py-2 text-sm rounded-lg bg-emerald-600 text-white font-semibold"><i data-lucide="table" class="w-4 h-4 inline"></i> Excel total</a>
-        <a :href="'/sorting/api/session/'+session?.id+'/labels/pdf/'" target="_blank" class="px-3 py-2 text-sm rounded-lg bg-fuchsia-600 text-white font-semibold"><i data-lucide="tags" class="w-4 h-4 inline"></i> Etiquetas</a>
+        <a :href="'/sorting/session/'+session?.id+'/labels/print/'" target="_blank" class="px-3 py-2 text-sm rounded-lg bg-fuchsia-600 text-white font-semibold"><i data-lucide="printer" class="w-4 h-4 inline"></i> Imprimir etiquetas</a>
         <button x-show="session?.status!=='FINALIZADO'" @click="finishSession()" class="px-3 py-2 text-sm rounded-lg bg-orange-600 text-white font-semibold"><i data-lucide="check-circle" class="w-4 h-4 inline"></i> Finalizar e Salvar</button>
         <button x-show="session?.status==='FINALIZADO'" @click="reopenSession()" class="px-3 py-2 text-sm rounded-lg bg-amber-600 text-white font-semibold">Reabrir</button>
         <button @click="closeSession()" class="px-3 py-2 text-sm rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200">Nova sessão</button>
@@ -109,7 +109,7 @@
           <div class="flex items-center gap-3 flex-wrap">
             <button @click="viewParcels(b)" class="text-xs text-sky-500 underline">ver pacotes</button>
             <a :href="'/sorting/api/bigbag/'+b.id+'/export/xlsx/'" class="text-xs text-emerald-500 underline">excel</a>
-            <a :href="'/sorting/api/bigbag/'+b.id+'/label/pdf/'" target="_blank" class="text-xs text-fuchsia-500 underline">etiqueta</a>
+            <a :href="'/sorting/bigbag/'+b.id+'/label/print/'" target="_blank" class="text-xs text-fuchsia-500 underline">imprimir etiqueta</a>
           </div>
         </div>
       </template>

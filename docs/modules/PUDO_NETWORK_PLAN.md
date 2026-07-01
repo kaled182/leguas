@@ -119,13 +119,13 @@ ATRIBUIDO_HUB      sorting associou o pacote à bigbag daquele PUDO
         ↳ NÃO marca "entregue" a montante
    → ENTREGUE_CLIENTE  (POD: OTP ou NIF validado)         [terminal feliz]
         ↳ dispara: LINHA DE FATURAÇÃO À LOJA (imutável)
-        ↳ dispara: reconciliação a montante (ver Q1)
+        ↳ (futuro) reconciliação a montante via adaptador — NO-OP hoje (PUDO interno)
    → EXPIRADO          (cron de aging ultrapassa SLA)
         ↳ dispara: alerta no dashboard do PUDO
    → AGUARDA_DEVOLUCAO (hub/PUDO marca retorno, com motivo)
    → EM_DEVOLUCAO      (handshake reverso estafeta↔PUDO)
    → DEVOLVIDO_HUB     (receção conferida no hub)          [terminal]
-        ↳ dispara: update de devolução a montante
+        ↳ (futuro) update de devolução a montante via adaptador — NO-OP hoje
 
 DIVERGENCIA   exceção acessível de EM_STOCK_PUDO e DEVOLVIDO_HUB (falta/sobra).
               Nunca terminal: força resolução humana antes de reentrar no fluxo.

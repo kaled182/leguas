@@ -82,6 +82,20 @@ class SortingBigbag(models.Model):
     )
     observacao = models.CharField("Observação", max_length=255, blank=True)
 
+    # ─── Rede PUDO (add-on) ─────────────────────────────────────────
+    # Destino opcional a um PUDO gerido. Quando preenchido, esta bigbag é
+    # "assinada" a esse PUDO; `consumida` bloqueia reutilização depois de
+    # entregue à loja. Ver docs/modules/PUDO_NETWORK_PLAN.md.
+    pudo_store = models.ForeignKey(
+        "pudo_network.PudoStore", null=True, blank=True,
+        on_delete=models.SET_NULL, related_name="sorting_bigbags",
+        verbose_name="PUDO destino",
+    )
+    consumida = models.BooleanField(
+        "Consumida", default=False,
+        help_text="Bigbag já entregue/assinada ao PUDO; bloqueia reutilização.",
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

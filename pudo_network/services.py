@@ -10,6 +10,7 @@ receção no portal do lojista. Garantias:
 """
 import hashlib
 import hmac
+import uuid as uuidlib
 from dataclasses import dataclass
 from datetime import timedelta
 from decimal import Decimal
@@ -61,6 +62,25 @@ _OPEN_EXCLUDE = [
 ]
 
 
+def coerce_uuid(value):
+    """Devolve um UUID válido a partir de `value`.
+
+    Aceita UUID, string UUID, ou qualquer texto (ex.: fallback de clientes em
+    HTTP sem `crypto.randomUUID`). Texto não-UUID é convertido num UUID
+    DETERMINÍSTICO (uuid5) — preserva a idempotência para o mesmo input.
+    Vazio/None → UUID aleatório.
+    """
+    if isinstance(value, uuidlib.UUID):
+        return value
+    text = str(value or "").strip()
+    if not text:
+        return uuidlib.uuid4()
+    try:
+        return uuidlib.UUID(text)
+    except (ValueError, AttributeError, TypeError):
+        return uuidlib.uuid5(uuidlib.NAMESPACE_OID, text)
+
+
 @transaction.atomic
 def process_handshake(*, uuid, tipo, store, tracking_ref, origin,
                       actor="", actor_type="SYSTEM", driver=None,
@@ -78,6 +98,7 @@ def process_handshake(*, uuid, tipo, store, tracking_ref, origin,
         driver: DriverProfile (opcional).
     """
     tracking_ref = (tracking_ref or "").strip()
+    uuid = coerce_uuid(uuid)  # tolera fallback não-UUID de clientes HTTP
 
     # 1) Idempotência: get_or_create protege contra corridas na uuid única.
     txn, created = PudoTransaction.objects.get_or_create(

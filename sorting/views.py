@@ -303,87 +303,111 @@ def bigbag_export_xlsx(request, bigbag_id):
 # ─────────────────────────────────────────────────────────────────────────
 # Etiqueta de fecho/despacho (PDF) — por bigbag ou todas da sessão
 # ─────────────────────────────────────────────────────────────────────────
+# Etiqueta 10×15 cm (etiquetadora térmica)
+LABEL_W = 10.0
+LABEL_H = 15.0
+LABEL_MARGIN = 0.6  # cm
+CONTENT_W = LABEL_W - 2 * LABEL_MARGIN  # 8.8 cm
+
+
 def _build_label_flowables(bigbag, styles):
-    """Constrói os elementos de uma etiqueta (para 1 bigbag)."""
+    """Constrói os elementos de uma etiqueta 10×15 (para 1 bigbag)."""
     from reportlab.lib import colors
     from reportlab.lib.units import cm
     from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
-    from reportlab.graphics.barcode import code128
-    from reportlab.graphics.shapes import Drawing
 
     session = bigbag.session
     cp7 = svc.bigbag_cp7_list(bigbag)
     n = bigbag.parcels.count()
-    driver = bigbag.driver.nome_completo if bigbag.driver else "— (sem motorista)"
-    mode = session.get_mode_display()
+    driver = (
+        bigbag.driver.nome_completo if bigbag.driver else "— sem motorista"
+    )
     grouping = (
         f"GEOZONA: {bigbag.zona_nome}" if bigbag.zona_nome
         else f"CP4: {bigbag.cp4}"
     )
 
-    title = Paragraph(
-        "<b>LÉGUAS FRANZINAS — ETIQUETA DE DESPACHO</b>", styles["h"],
-    )
+    title = Paragraph("<b>LÉGUAS FRANZINAS · DESPACHO</b>", styles["h"])
     big = Paragraph(f"<b>{bigbag.label}</b>", styles["big"])
+    drv = Paragraph(f"<b>{driver}</b>", styles["drv"])
 
     rows = [
         ["HUB", session.hub or "—"],
-        ["Modo", mode],
         ["Agrupamento", grouping],
-        ["Motorista", driver],
-        ["Nº de Pacotes", str(n)],
+        ["Nº Pacotes", str(n)],
         ["Bigbag", bigbag.codigo or f"BB-{bigbag.id}"],
-        ["Sessão", f"#{session.id} — {session.nome or ''}"],
-        ["Códigos Postais", ", ".join(cp7) if cp7 else "—"],
+        ["Sessão", f"#{session.id} {session.nome or ''}".strip()],
+        ["Cód. Postais", ", ".join(cp7) if cp7 else "—"],
     ]
     if bigbag.observacao:
-        rows.append(["Observação", bigbag.observacao])
+        rows.append(["Obs.", bigbag.observacao])
 
-    tbl = Table(rows, colWidths=[3.2 * cm, 11.5 * cm])
+    tbl = Table(rows, colWidths=[2.4 * cm, CONTENT_W * cm - 2.4 * cm])
     tbl.setStyle(TableStyle([
-        ("FONTSIZE", (0, 0), (-1, -1), 9),
+        ("FONTSIZE", (0, 0), (-1, -1), 8),
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
         ("TEXTCOLOR", (0, 0), (0, -1), colors.HexColor("#6B7280")),
         ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+        ("TOPPADDING", (0, 0), (-1, -1), 2),
         ("LINEBELOW", (0, 0), (-1, -2), 0.4, colors.HexColor("#E5E7EB")),
     ]))
 
-    # Código de barras do código da bigbag
-    bc_value = bigbag.codigo or f"BB-{bigbag.id}"
-    bc = code128.Code128(bc_value, barHeight=1.4 * cm, barWidth=1.0)
-    d = Drawing(bc.width, 1.4 * cm)
-    d.add(bc)
-
-    return [
-        title, Spacer(1, 0.2 * cm), big, Spacer(1, 0.3 * cm),
-        tbl, Spacer(1, 0.4 * cm), d,
-        Paragraph(bc_value, styles["mono"]),
+    flow = [
+        title, Spacer(1, 0.15 * cm), big,
+        Paragraph("MOTORISTA", styles["lbl"]), drv,
+        Spacer(1, 0.2 * cm), tbl, Spacer(1, 0.35 * cm),
     ]
+
+    # Código de barras (robusto — não deve derrubar a etiqueta)
+    bc_value = bigbag.codigo or f"BB-{bigbag.id}"
+    try:
+        from reportlab.graphics.barcode import createBarcodeDrawing
+        bd = createBarcodeDrawing(
+            "Code128", value=bc_value, barHeight=1.2 * cm,
+            humanReadable=False,
+        )
+        avail = CONTENT_W * cm
+        if bd.width and bd.width > avail:
+            f = avail / bd.width
+            bd.scale(f, 1)
+            bd.width = avail
+        bd.hAlign = "CENTER"
+        flow.append(bd)
+    except Exception:
+        pass
+    flow.append(Paragraph(bc_value, styles["mono"]))
+    return flow
 
 
 def _labels_pdf(bigbags, filename):
     from reportlab.lib.enums import TA_CENTER
-    from reportlab.lib.pagesizes import A4
     from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
     from reportlab.lib.units import cm
-    from reportlab.platypus import PageBreak, SimpleDocTemplate
+    from reportlab.lib import colors
+    from reportlab.platypus import PageBreak, Paragraph, SimpleDocTemplate
 
     base = getSampleStyleSheet()["Normal"]
     styles = {
-        "h": ParagraphStyle("h", parent=base, fontSize=11, leading=14),
-        "big": ParagraphStyle(
-            "big", parent=base, fontSize=22, leading=24,
+        "h": ParagraphStyle(
+            "h", parent=base, fontSize=8, leading=10, alignment=TA_CENTER,
         ),
+        "big": ParagraphStyle("big", parent=base, fontSize=20, leading=22),
+        "lbl": ParagraphStyle(
+            "lbl", parent=base, fontSize=7, leading=9,
+            textColor=colors.HexColor("#6B7280"),
+        ),
+        "drv": ParagraphStyle("drv", parent=base, fontSize=14, leading=16),
         "mono": ParagraphStyle(
-            "mono", parent=base, fontSize=9, alignment=TA_CENTER,
+            "mono", parent=base, fontSize=8, alignment=TA_CENTER,
             fontName="Helvetica",
         ),
     }
     buf = BytesIO()
     doc = SimpleDocTemplate(
-        buf, pagesize=A4, topMargin=1.5 * cm, bottomMargin=1.5 * cm,
-        leftMargin=1.8 * cm, rightMargin=1.8 * cm,
+        buf, pagesize=(LABEL_W * cm, LABEL_H * cm),
+        topMargin=LABEL_MARGIN * cm, bottomMargin=LABEL_MARGIN * cm,
+        leftMargin=LABEL_MARGIN * cm, rightMargin=LABEL_MARGIN * cm,
     )
     story = []
     for i, b in enumerate(bigbags):
@@ -391,7 +415,7 @@ def _labels_pdf(bigbags, filename):
             story.append(PageBreak())
         story.extend(_build_label_flowables(b, styles))
     if not story:
-        story.append(getSampleStyleSheet()["Normal"].clone("x"))
+        story.append(Paragraph("Sem bigbags nesta sessão.", base))
     doc.build(story)
     buf.seek(0)
     resp = HttpResponse(buf.getvalue(), content_type="application/pdf")

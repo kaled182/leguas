@@ -9,6 +9,8 @@ from .models import (
     PudoCustodyEvent,
     PudoCustodyPackage,
     PudoDeliveryProof,
+    PudoDeviceKey,
+    PudoHandshakeNonce,
     PudoStore,
     PudoStoreBillingLine,
     PudoStoreStatement,
@@ -214,6 +216,27 @@ class PudoStoreStatementAdmin(admin.ModelAdmin):
         "total_valor", "total_com_iva", "n_linhas", "emitted_at",
     )
     date_hierarchy = "periodo_fim"
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(PudoDeviceKey)
+class PudoDeviceKeyAdmin(admin.ModelAdmin):
+    list_display = ("driver_profile", "is_active", "created_at", "rotated_at")
+    list_filter = ("is_active",)
+    search_fields = ("driver_profile__nome_completo",)
+    readonly_fields = ("secret", "created_at", "rotated_at")
+
+
+@admin.register(PudoHandshakeNonce)
+class PudoHandshakeNonceAdmin(admin.ModelAdmin):
+    list_display = ("nonce", "driver_profile", "created_at", "expires_at")
+    search_fields = ("nonce",)
+    readonly_fields = ("nonce", "driver_profile", "created_at", "expires_at")
 
     def has_add_permission(self, request):
         return False

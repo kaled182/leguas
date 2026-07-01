@@ -17,7 +17,13 @@ from django.views.decorators.http import require_http_methods
 from app_api.auth import app_token_required
 
 from .models import PudoStore, PudoTransaction
-from .services import process_handshake
+from .services import (
+    PudoServiceError,
+    issue_device_key,
+    process_handshake,
+    process_signed_handshake,
+    sync_batch,
+)
 
 
 def _json_body(request):
@@ -113,4 +119,75 @@ def handshake(request):
         "idempotent": result.idempotent,
         "transaction_uuid": str(result.transaction.uuid),
         "package": _package_dict(result.package),
+    }, status=200)
+
+
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
+@app_token_required
+def device_key(request):
+    """Emite/roda o segredo de assinatura offline do estafeta.
+
+    GET  → devolve o segredo atual (cria se não existir).
+    POST → roda o segredo (invalida QR ainda não sincronizados assinados
+           com o segredo antigo).
+    """
+    rotate = request.method == "POST"
+    key = issue_device_key(request.driver_profile, rotate=rotate)
+    return JsonResponse({
+        "success": True,
+        "driver": request.driver_profile.id,
+        "secret": key.secret,
+        "algo": "HMAC-SHA256",
+        "sign_fields": ["uuid", "pudo", "tracking_ref", "tipo", "nonce", "exp"],
+        "max_ttl_seconds": 300,
+    }, status=200)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@app_token_required
+def handshake_signed(request):
+    """Handshake offline ASSINADO (nonce + TTL + uso-único) pelo estafeta."""
+    data = _json_body(request)
+    try:
+        result = process_signed_handshake(
+            data, origin=PudoTransaction.Origin.DRIVER_APP,
+            expected_driver=request.driver_profile,
+        )
+    except PudoServiceError as exc:
+        return JsonResponse(
+            {"success": False, "error": exc.message}, status=exc.status,
+        )
+    return JsonResponse({
+        "success": True,
+        "idempotent": result.idempotent,
+        "package": _package_dict(result.package),
+    }, status=200)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@app_token_required
+def sync(request):
+    """Drena a fila offline: `{ "items": [ handshake, ... ] }`.
+
+    Cada item pode ser um handshake simples ou assinado (`sig`). Idempotente
+    por `uuid`; um item com erro não impede os restantes.
+    """
+    data = _json_body(request)
+    items = data.get("items")
+    if not isinstance(items, list):
+        return JsonResponse(
+            {"success": False, "error": "`items` deve ser uma lista."},
+            status=400,
+        )
+    results = sync_batch(
+        items, request.driver_profile,
+        origin=PudoTransaction.Origin.DRIVER_APP,
+    )
+    ok = sum(1 for r in results if r.get("success"))
+    return JsonResponse({
+        "success": True, "processed": len(results), "ok": ok,
+        "results": results,
     }, status=200)

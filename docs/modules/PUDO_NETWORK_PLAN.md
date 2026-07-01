@@ -180,7 +180,13 @@ Migração aditiva no app `sorting` (campos nullable, sem risco de dados).
   que compõe e persiste o payload de cada devolução. O envio real (`_send_upstream`)
   fica por ligar até o spec do carrier estar fechado (Q1) — registos ficam PENDENTE
   com o payload pronto.
-- **Fase 4 (condicional/futura):** offline-first do estafeta + APK; nonce+TTL+uso-único.
+- **Fase 4 — Offline-first do estafeta — FEITA (backend + protocolo):** fila offline
+  com sync em lote idempotente (`POST /api/app/v1/pudo/sync`), QR assinado
+  HMAC-SHA256 com **nonce + TTL curto (≤300 s) + uso-único** validado no servidor
+  (`PudoDeviceKey`, `PudoHandshakeNonce`, `process_signed_handshake`), endpoints
+  `device-key`/`handshake-signed`/`sync` e receção offline no portal do lojista
+  (`/pudo/rececao-offline/`). Contrato em `docs/api/PUDO_OFFLINE.md`. A app Android
+  (APK) que consome isto fica por construir — só documentada.
 
 ---
 

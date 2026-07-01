@@ -26,6 +26,7 @@ from .services import (
     deliver_with_otp,
     mark_for_return,
     process_handshake,
+    process_signed_handshake,
     send_pickup_otp,
 )
 
@@ -287,4 +288,52 @@ def pudo_billing(request):
         "lines": lines.order_by("-emitted_at")[:500],
         "total": agg["total"] or 0, "n": agg["n"] or 0,
         "desde": desde, "ate": ate,
+    })
+
+
+@pudo_login_required
+def pudo_scan_offline(request):
+    """Receção de um QR offline ASSINADO pelo estafeta (redundância/sem rede).
+
+    O PUDO lê o QR (que o estafeta gerou offline) e submete o JSON. O servidor
+    verifica assinatura + TTL + nonce (uso-único) e processa. O estafeta é
+    identificado pelo próprio payload (o PUDO não tem o token dele).
+
+    GET  → ecrã de leitura.
+    POST → verifica e processa; devolve JSON.
+    """
+    store = _require_store(request)
+    if request.method == "POST":
+        import json as _json
+        raw = (request.POST.get("payload") or "").strip()
+        try:
+            data = _json.loads(raw) if raw else {}
+        except ValueError:
+            return JsonResponse(
+                {"success": False, "error": "QR inválido (JSON)."}, status=400,
+            )
+        # O PUDO só pode rececionar para a SUA loja.
+        if str(data.get("pudo") or "").strip() not in (
+            store.numero, str(store.id),
+        ):
+            return JsonResponse(
+                {"success": False, "error": "QR destinado a outro PUDO."},
+                status=409,
+            )
+        try:
+            res = process_signed_handshake(
+                data, origin=PudoTransaction.Origin.PUDO_WEB,
+            )
+        except PudoServiceError as exc:
+            return JsonResponse(
+                {"success": False, "error": exc.message}, status=exc.status,
+            )
+        return JsonResponse({
+            "success": True, "idempotent": res.idempotent,
+            "tracking_ref": res.package.tracking_ref if res.package else None,
+            "status": res.package.status if res.package else None,
+        }, status=200)
+
+    return render(request, "pudo_network/scan_offline.html", {
+        "store": store, "access": request.pudo_access,
     })

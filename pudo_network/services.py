@@ -8,18 +8,22 @@ receção no portal do lojista. Garantias:
   (`store`, `tracking_ref`); se ambos os lados reportam o mesmo pacote, o
   segundo é um no-op de estado (regista transação/evento, não duplica).
 """
+import hashlib
+import hmac
 from dataclasses import dataclass
 from datetime import timedelta
 from decimal import Decimal
 from typing import Optional
 
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import Count, DecimalField, ExpressionWrapper, F, Sum
 from django.utils import timezone
 
 from .models import (
     PudoCustodyPackage,
     PudoDeliveryProof,
+    PudoDeviceKey,
+    PudoHandshakeNonce,
     PudoPickupOTP,
     PudoStore,
     PudoStoreBillingLine,
@@ -27,6 +31,9 @@ from .models import (
     PudoTransaction,
     PudoUpstreamReconciliation,
 )
+
+# TTL máximo aceite para um QR offline assinado (segundos) — curto p/ replay.
+SIGNED_QR_MAX_TTL = 300
 
 # Validade do OTP de levantamento (minutos).
 PICKUP_OTP_TTL_MIN = 10
@@ -482,3 +489,175 @@ def process_upstream_reconciliations(limit=200):
             rec.last_error = str(exc)[:255]
             rec.save(update_fields=["status", "last_error"])
     return preparados, enviados
+
+
+# ─────────────────────────────────────────────────────────────────────
+# Fase 4 — Offline-first: chave de dispositivo, assinatura e sync em lote
+# ─────────────────────────────────────────────────────────────────────
+
+
+def issue_device_key(driver, *, rotate=False):
+    """Devolve (criando se preciso) o segredo de assinatura do estafeta."""
+    key, _created = PudoDeviceKey.objects.get_or_create(
+        driver_profile=driver,
+        defaults={"secret": PudoDeviceKey.generate_secret()},
+    )
+    if rotate:
+        key.secret = PudoDeviceKey.generate_secret()
+        key.is_active = True
+        key.rotated_at = timezone.now()
+        key.save(update_fields=["secret", "is_active", "rotated_at"])
+    return key
+
+
+def signing_string(*, uuid, pudo, tracking_ref, tipo, nonce, exp):
+    """Canonicaliza os campos a assinar. Tem de bater com o lado do device."""
+    return "|".join([
+        str(uuid), str(pudo), str(tracking_ref), str(tipo),
+        str(nonce), str(exp),
+    ])
+
+
+def sign_payload(secret, *, uuid, pudo, tracking_ref, tipo, nonce, exp):
+    """Assinatura HMAC-SHA256 (hex) — usada em testes e como referência do
+    algoritmo que o device implementa."""
+    msg = signing_string(
+        uuid=uuid, pudo=pudo, tracking_ref=tracking_ref, tipo=tipo,
+        nonce=nonce, exp=exp,
+    )
+    return hmac.new(
+        secret.encode(), msg.encode(), hashlib.sha256,
+    ).hexdigest()
+
+
+def _consume_nonce(nonce, driver, exp_ts):
+    """Regista o nonce (uso-único). Levanta PudoServiceError em replay."""
+    try:
+        PudoHandshakeNonce.objects.create(
+            nonce=nonce, driver_profile=driver,
+            expires_at=timezone.datetime.fromtimestamp(
+                exp_ts, tz=timezone.get_current_timezone(),
+            ),
+        )
+    except IntegrityError:
+        raise PudoServiceError("Nonce já usado (replay).", status=409)
+
+
+@transaction.atomic
+def process_signed_handshake(payload, *, origin, expected_driver=None):
+    """Verifica um handshake offline assinado e processa-o.
+
+    Verifica: assinatura HMAC (chave do estafeta), TTL curto (`exp`), e
+    consome o `nonce` (uso-único, anti-replay). Depois delega em
+    `process_handshake` (que é idempotente pela `uuid`).
+
+    `payload` deve conter: uuid, pudo, tracking_ref, tipo, nonce, exp, sig,
+    driver (id do estafeta; obrigatório quando `expected_driver` é None,
+    ex.: leitura pelo PUDO que não tem o token do estafeta).
+    """
+    required = ["uuid", "pudo", "tracking_ref", "nonce", "exp", "sig"]
+    faltam = [k for k in required if not str(payload.get(k) or "").strip()]
+    if faltam:
+        raise PudoServiceError("Campos em falta: " + ", ".join(faltam))
+
+    tipo = (payload.get("tipo") or PudoTransaction.Tipo.ENTREGA).upper()
+    if tipo not in PudoTransaction.Tipo.values:
+        raise PudoServiceError(f"tipo inválido: {tipo}")
+
+    # Resolver o estafeta e a sua chave
+    driver = expected_driver
+    if driver is None:
+        from drivers_app.models import DriverProfile
+        driver = DriverProfile.objects.filter(
+            id=payload.get("driver"),
+        ).first()
+    if driver is None:
+        raise PudoServiceError("Estafeta não identificado.", status=404)
+    key = PudoDeviceKey.objects.filter(
+        driver_profile=driver, is_active=True,
+    ).first()
+    if not key:
+        raise PudoServiceError("Sem chave de dispositivo ativa.", status=409)
+
+    # TTL curto (exp é epoch em segundos)
+    try:
+        exp_ts = int(payload["exp"])
+    except (TypeError, ValueError):
+        raise PudoServiceError("exp inválido.")
+    now_ts = int(timezone.now().timestamp())
+    if exp_ts < now_ts:
+        raise PudoServiceError("QR expirado.", status=409)
+    if exp_ts - now_ts > SIGNED_QR_MAX_TTL:
+        raise PudoServiceError("TTL do QR demasiado longo.", status=400)
+
+    # Assinatura
+    expected_sig = sign_payload(
+        key.secret, uuid=payload["uuid"], pudo=payload["pudo"],
+        tracking_ref=payload["tracking_ref"], tipo=tipo,
+        nonce=payload["nonce"], exp=exp_ts,
+    )
+    if not hmac.compare_digest(expected_sig, str(payload["sig"])):
+        raise PudoServiceError("Assinatura inválida.", status=401)
+
+    # Uso-único (anti-replay) — depois da assinatura estar validada
+    _consume_nonce(payload["nonce"], driver, exp_ts)
+
+    store = PudoStore.objects.filter(numero__iexact=str(payload["pudo"])).first()
+    if store is None and str(payload["pudo"]).isdigit():
+        store = PudoStore.objects.filter(id=int(payload["pudo"])).first()
+    if store is None:
+        raise PudoServiceError("PUDO não encontrado.", status=404)
+
+    result = process_handshake(
+        uuid=payload["uuid"], tipo=tipo, store=store,
+        tracking_ref=payload["tracking_ref"], origin=origin,
+        actor=str(driver.id), actor_type="DRIVER", driver=driver,
+        payload={"offline": True, "nonce": payload["nonce"]},
+    )
+    return result
+
+
+def sync_batch(items, driver, *, origin):
+    """Drena a fila offline do dispositivo: uma lista de handshakes.
+
+    Cada item é processado de forma independente e idempotente; um item com
+    erro não impede os restantes. Devolve a lista de resultados por item.
+    """
+    out = []
+    for i, item in enumerate(items or []):
+        ref = str((item or {}).get("uuid") or i)
+        try:
+            if item.get("sig"):
+                res = process_signed_handshake(
+                    item, origin=origin, expected_driver=driver,
+                )
+            else:
+                store = PudoStore.objects.filter(
+                    numero__iexact=str(item.get("pudo")),
+                ).first()
+                if store is None:
+                    raise PudoServiceError("PUDO não encontrado.", status=404)
+                res = process_handshake(
+                    uuid=item.get("uuid"),
+                    tipo=(item.get("tipo") or PudoTransaction.Tipo.ENTREGA),
+                    store=store, tracking_ref=item.get("tracking_ref", ""),
+                    origin=origin, actor=str(driver.id), actor_type="DRIVER",
+                    driver=driver, payload=item.get("payload") or {},
+                )
+            out.append({
+                "ref": ref, "success": True,
+                "idempotent": res.idempotent,
+                "status": res.package.status if res.package else None,
+            })
+        except PudoServiceError as exc:
+            out.append({"ref": ref, "success": False, "error": exc.message})
+        except Exception as exc:  # noqa: BLE001
+            out.append({"ref": ref, "success": False, "error": str(exc)})
+    return out
+
+
+def purge_expired_nonces():
+    """Limpa nonces expirados (housekeeping opcional)."""
+    return PudoHandshakeNonce.objects.filter(
+        expires_at__lt=timezone.now(),
+    ).delete()[0]

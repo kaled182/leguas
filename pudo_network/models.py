@@ -755,3 +755,61 @@ class PudoStoreStatement(models.Model):
             f"{self.store.numero} · {self.periodo_inicio}–{self.periodo_fim} "
             f"· {self.total_valor}€"
         )
+
+
+# ─────────────────────────────────────────────────────────────────────
+# Fase 4 — Offline-first do estafeta (fila + QR assinado anti-replay)
+# ─────────────────────────────────────────────────────────────────────
+
+
+class PudoDeviceKey(models.Model):
+    """Segredo de assinatura por dispositivo/estafeta para handshakes offline.
+
+    O estafeta obtém o segredo (autenticado por token) e assina localmente o
+    QR offline com HMAC-SHA256. O servidor verifica a assinatura com este
+    segredo — permite validar QR gerado sem rede, e que o PUDO (que não tem o
+    token do estafeta) leia e submeta com verificação a montante.
+    """
+
+    driver_profile = models.OneToOneField(
+        "drivers_app.DriverProfile", on_delete=models.CASCADE,
+        related_name="pudo_device_key",
+    )
+    secret = models.CharField(max_length=64)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    rotated_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Chave de dispositivo (PUDO)"
+        verbose_name_plural = "Chaves de dispositivo (PUDO)"
+
+    def __str__(self):
+        return f"DeviceKey driver={self.driver_profile_id}"
+
+    @staticmethod
+    def generate_secret():
+        return secrets.token_hex(32)
+
+
+class PudoHandshakeNonce(models.Model):
+    """Nonce de uso único para handshakes offline assinados (anti-replay).
+
+    A `unique` no nonce garante uso-único de forma atómica; `expires_at`
+    impõe o TTL curto. Um cron pode limpar os expirados."""
+
+    nonce = models.CharField(max_length=64, unique=True, db_index=True)
+    driver_profile = models.ForeignKey(
+        "drivers_app.DriverProfile", null=True, blank=True,
+        on_delete=models.SET_NULL, related_name="pudo_nonces",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+
+    class Meta:
+        verbose_name = "Nonce de handshake (PUDO)"
+        verbose_name_plural = "Nonces de handshake (PUDO)"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"nonce {self.nonce[:12]}…"

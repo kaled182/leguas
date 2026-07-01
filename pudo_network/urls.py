@@ -12,4 +12,5 @@ urlpatterns = [
     path("stock/", views.pudo_stock, name="stock"),
     path("pacote/<int:pk>/", views.pudo_pickup, name="pickup"),
     path("extrato/", views.pudo_billing, name="billing"),
+    path("rececao-offline/", views.pudo_scan_offline, name="scan_offline"),
 ]

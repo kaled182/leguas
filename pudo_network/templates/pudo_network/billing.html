@@ -1,0 +1,76 @@
+{% load static %}<!DOCTYPE html>
+<html lang="pt-PT" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Extrato · {{ store.numero }}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>body { font-family: 'Inter', sans-serif; }</style>
+</head>
+<body class="h-full bg-slate-50">
+  <header class="bg-white border-b border-slate-200">
+    <div class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+      <a href="{% url 'pudo_network:dashboard' %}" class="flex items-center gap-2 text-slate-600 hover:text-slate-900">
+        <i data-lucide="arrow-left" class="w-4 h-4"></i>
+        <span class="text-sm">{{ store.numero }} · {{ store.nome }}</span>
+      </a>
+      <span class="text-xs font-semibold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-full">Extrato</span>
+    </div>
+  </header>
+
+  <main class="max-w-4xl mx-auto px-4 py-8">
+    <div class="grid sm:grid-cols-2 gap-4 mb-6">
+      <div class="bg-white rounded-2xl border border-slate-200 p-6">
+        <div class="text-3xl font-extrabold text-slate-900">{{ total|floatformat:2 }} €</div>
+        <div class="text-sm text-slate-500">Total no período (s/ IVA)</div>
+      </div>
+      <div class="bg-white rounded-2xl border border-slate-200 p-6">
+        <div class="text-3xl font-extrabold text-slate-900">{{ n }}</div>
+        <div class="text-sm text-slate-500">Entregas faturadas</div>
+      </div>
+    </div>
+
+    <form method="get" class="flex flex-wrap items-end gap-3 mb-4">
+      <div>
+        <label class="block text-xs text-slate-500 mb-1">Desde</label>
+        <input type="date" name="desde" value="{{ desde }}"
+               class="px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm">
+      </div>
+      <div>
+        <label class="block text-xs text-slate-500 mb-1">Até</label>
+        <input type="date" name="ate" value="{{ ate }}"
+               class="px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm">
+      </div>
+      <button class="px-4 py-2 bg-slate-800 text-white rounded-xl text-sm font-semibold">Filtrar</button>
+    </form>
+
+    <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50 text-slate-500 text-left">
+          <tr>
+            <th class="px-4 py-2 font-semibold">Data</th>
+            <th class="px-4 py-2 font-semibold">Pacote</th>
+            <th class="px-4 py-2 font-semibold text-right">Valor</th>
+            <th class="px-4 py-2 font-semibold text-right">IVA</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          {% for l in lines %}
+          <tr>
+            <td class="px-4 py-2 text-slate-500">{{ l.emitted_at|date:"d/m/Y H:i" }}</td>
+            <td class="px-4 py-2 font-medium text-slate-900">{{ l.tracking_ref }}</td>
+            <td class="px-4 py-2 text-right">{{ l.valor|floatformat:2 }} €</td>
+            <td class="px-4 py-2 text-right text-slate-400">{{ l.iva_pct|floatformat:0 }}%</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4" class="px-4 py-8 text-center text-slate-400">Sem faturação no período.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </main>
+  <script>lucide.createIcons();</script>
+</body>
+</html>

@@ -83,6 +83,7 @@ urlpatterns = [
     # path('delnext/', include('delnext_dashboard.urls')),
     path("driversapp/", include("drivers_app.urls")),
     path("api/app/v1/", include("app_api.urls")),  # API da app do motorista
+    path("api/app/v1/pudo/", include("pudo_network.api_urls")),  # Handshake PUDO
     path("sendpaackreports/", include("send_paack_reports.urls")),
     # path('mixed/', include('mixed_dashboard.urls')),
     path("converter/", include("converter.urls")),  # Conversor de listas para XLSX
@@ -105,6 +106,7 @@ urlpatterns = [
     path("orders/", include("orders_manager.urls")),  # APP para gestão de pedidos
     path("geozonas/", include("geozonas.urls")),  # Mapa de Códigos Postais e Zonas
     path("sorting/", include("sorting.urls")),  # Sorting de pacotes em bigbags
+    path("pudo/", include("pudo_network.urls")),  # Rede PUDO: portal do lojista
     path("system/", include("system_config.urls")),  # Configurações do Sistema
     path(
         "analytics/", include("analytics.urls")

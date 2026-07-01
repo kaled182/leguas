@@ -182,6 +182,14 @@ app.conf.beat_schedule = {
         'options': {'expires': 3600},
     },
 
+    # Aging da Rede PUDO — marca EXPIRADO os pacotes cujo prazo de
+    # levantamento venceu. Corre 1x/dia às 7:30.
+    'pudo-mark-expired': {
+        'task': 'pudo_network.mark_expired',
+        'schedule': crontab(hour=7, minute=30),
+        'options': {'expires': 3600},
+    },
+
     # Tarefa de teste a cada 5 minutos (pode remover em produção)
     # 'test-celery-every-5min': {
     #     'task': 'core.test_task',

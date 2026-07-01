@@ -1,0 +1,100 @@
+{% load static %}<!DOCTYPE html>
+<html lang="pt-PT" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% if store %}{{ store.numero }} · {% endif %}Portal PUDO</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>body { font-family: 'Inter', sans-serif; }</style>
+</head>
+<body class="h-full bg-slate-50">
+
+  <header class="bg-white border-b border-slate-200">
+    <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-600 to-teal-600 flex items-center justify-center">
+          <i data-lucide="store" class="w-5 h-5 text-white"></i>
+        </div>
+        <div>
+          <div class="font-bold text-slate-900">
+            {% if store %}{{ store.numero }} · {{ store.nome }}{% else %}Portal PUDO (admin){% endif %}
+          </div>
+          <div class="text-xs text-slate-500">
+            {% if access %}{{ access.get_papel_display }}{% else %}Sessão de administrador{% endif %}
+          </div>
+        </div>
+      </div>
+      <a href="{% url 'pudo_network:logout' %}"
+         class="text-sm text-slate-500 hover:text-slate-900 flex items-center gap-1.5">
+        <i data-lucide="log-out" class="w-4 h-4"></i> Sair
+      </a>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto px-4 py-10">
+    {% if messages %}
+      {% for m in messages %}
+        <div class="mb-4 px-4 py-3 rounded-xl text-sm bg-emerald-50 text-emerald-700 border border-emerald-200">{{ m }}</div>
+      {% endfor %}
+    {% endif %}
+
+    {% if store %}
+    <div class="grid sm:grid-cols-3 gap-4 mb-6">
+      <a href="{% url 'pudo_network:reception' %}"
+         class="bg-white rounded-2xl border border-slate-200 p-6 hover:border-sky-400 hover:shadow-sm transition flex items-center gap-4">
+        <div class="w-12 h-12 rounded-xl bg-sky-50 flex items-center justify-center">
+          <i data-lucide="scan-barcode" class="w-6 h-6 text-sky-600"></i>
+        </div>
+        <div>
+          <div class="font-bold text-slate-900">Rececionar</div>
+          <div class="text-sm text-slate-500">Leitor ou câmara</div>
+        </div>
+      </a>
+      <a href="{% url 'pudo_network:stock' %}"
+         class="bg-white rounded-2xl border border-slate-200 p-6 hover:border-emerald-400 hover:shadow-sm transition flex items-center gap-4">
+        <div class="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center">
+          <i data-lucide="package" class="w-6 h-6 text-emerald-600"></i>
+        </div>
+        <div>
+          <div class="text-2xl font-extrabold text-slate-900">{{ em_stock }}</div>
+          <div class="text-sm text-slate-500">Em stock · levantar</div>
+        </div>
+      </a>
+      {% if ganhos_mes is not None %}
+      <a href="{% url 'pudo_network:billing' %}"
+         class="bg-white rounded-2xl border border-slate-200 p-6 hover:border-indigo-400 hover:shadow-sm transition flex items-center gap-4">
+        <div class="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center">
+          <i data-lucide="receipt" class="w-6 h-6 text-indigo-600"></i>
+        </div>
+        <div>
+          <div class="text-2xl font-extrabold text-slate-900">{{ ganhos_mes|floatformat:2 }} €</div>
+          <div class="text-sm text-slate-500">Ganhos este mês</div>
+        </div>
+      </a>
+      {% endif %}
+    </div>
+
+    <div class="grid sm:grid-cols-3 gap-4 mb-6">
+      <div class="bg-white rounded-xl border border-slate-200 px-4 py-3">
+        <div class="text-lg font-bold text-slate-900">
+          {% if ocupacao_pct is not None %}{{ ocupacao_pct }}%{% else %}—{% endif %}
+        </div>
+        <div class="text-xs text-slate-500">Ocupação</div>
+      </div>
+      <div class="bg-white rounded-xl border border-slate-200 px-4 py-3">
+        <div class="text-lg font-bold {% if aguarda_dev %}text-amber-600{% else %}text-slate-900{% endif %}">{{ aguarda_dev }}</div>
+        <div class="text-xs text-slate-500">Aguarda devolução</div>
+      </div>
+      <div class="bg-white rounded-xl border border-slate-200 px-4 py-3">
+        <div class="text-lg font-bold {% if expirados %}text-rose-600{% else %}text-slate-900{% endif %}">{{ expirados }}</div>
+        <div class="text-xs text-slate-500">Expirados</div>
+      </div>
+    </div>
+    {% endif %}
+  </main>
+
+  <script>lucide.createIcons();</script>
+</body>
+</html>

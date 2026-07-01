@@ -169,6 +169,7 @@ INSTALLED_APPS = [
     "route_allocation",  # Atribuição de Rotas e Turnos
     "geozonas",  # Catálogo de Códigos Postais (GeoAPI) e Zonas de Entrega
     "sorting",  # Sorting de pacotes em bigbags virtuais por CP/geozona
+    "pudo_network",  # Rede PUDO: lojas de recolha geridas (custódia, portal, faturação)
     # Analytics (Fase 2)
     "analytics",  # Métricas, Forecasting e Dashboards
     # Contratos

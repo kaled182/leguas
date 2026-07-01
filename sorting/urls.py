@@ -35,11 +35,23 @@ urlpatterns = [
         "api/session/<int:session_id>/export/xlsx/",
         views.session_export_xlsx, name="session_export_xlsx",
     ),
+    path(
+        "api/session/<int:session_id>/labels/pdf/",
+        views.session_labels_pdf, name="session_labels_pdf",
+    ),
 
     # API — bigbags / pacotes
     path(
         "api/bigbag/<int:bigbag_id>/update/",
         views.bigbag_update, name="bigbag_update",
+    ),
+    path(
+        "api/bigbag/<int:bigbag_id>/export/xlsx/",
+        views.bigbag_export_xlsx, name="bigbag_export_xlsx",
+    ),
+    path(
+        "api/bigbag/<int:bigbag_id>/label/pdf/",
+        views.bigbag_label_pdf, name="bigbag_label_pdf",
     ),
     path(
         "api/parcel/<int:parcel_id>/delete/",

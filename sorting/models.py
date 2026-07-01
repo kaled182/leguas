@@ -34,6 +34,10 @@ class SortingSession(models.Model):
         default=STATUS_OPEN, db_index=True,
     )
     observacao = models.TextField("Observação", blank=True)
+    target_cps = models.CharField(
+        "CP4 alvo", max_length=255, blank=True,
+        help_text="CP4 esperados nesta sessão (vírgulas). Vazio = aceita todos.",
+    )
 
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, null=True, blank=True,
@@ -118,10 +122,17 @@ class SortingParcel(models.Model):
     zona_nome = models.CharField("Zona", max_length=120, blank=True)
     localidade = models.CharField("Localidade", max_length=160, blank=True)
 
+    # Dados do destinatário (snapshot da BD ao ler — para a folha do motorista)
+    nome_cliente = models.CharField("Cliente", max_length=200, blank=True)
+    telefone_cliente = models.CharField("Telefone", max_length=40, blank=True)
+    morada = models.CharField("Morada", max_length=255, blank=True)
+
     status = models.CharField(
         "Estado", max_length=20, choices=STATUS_CHOICES, default=STATUS_OK,
         db_index=True,
     )
+    # Lido mas fora dos CP4 alvo da sessão (aceite, mas sinalizado).
+    divergent = models.BooleanField("Divergente", default=False, db_index=True)
     note = models.CharField("Nota", max_length=200, blank=True)
 
     scanned_by = models.ForeignKey(

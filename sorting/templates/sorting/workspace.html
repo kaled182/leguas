@@ -41,6 +41,10 @@
     <input x-model="form.hub" list="hublist" placeholder="HUB"
            class="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 mb-3">
     <datalist id="hublist">{% for h in hubs %}<option value="{{ h }}">{% endfor %}</datalist>
+    <label class="block text-xs text-gray-500 mb-1">CP4 alvo (opcional, separados por vírgula)</label>
+    <input x-model="form.target_cps" placeholder="Ex.: 4740, 4900, 4990"
+           class="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 mb-1">
+    <p class="text-[11px] text-gray-400 mb-3">Se preencheres, pacotes de outro CP4 tocam som de alerta (mas são aceites).</p>
     <label class="block text-xs text-gray-500 mb-1">Observação (opcional)</label>
     <textarea x-model="form.observacao" rows="2"
               class="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 mb-4"></textarea>
@@ -67,7 +71,8 @@
         <div><div class="text-xl font-bold text-rose-500" x-text="session?.n_unresolved||0"></div><div class="text-[10px] text-gray-400">não class.</div></div>
       </div>
       <div class="ml-auto flex items-center gap-2">
-        <a :href="'/sorting/api/session/'+session?.id+'/export/xlsx/'" class="px-3 py-2 text-sm rounded-lg bg-emerald-600 text-white font-semibold"><i data-lucide="table" class="w-4 h-4 inline"></i> Excel</a>
+        <a :href="'/sorting/api/session/'+session?.id+'/export/xlsx/'" class="px-3 py-2 text-sm rounded-lg bg-emerald-600 text-white font-semibold"><i data-lucide="table" class="w-4 h-4 inline"></i> Excel total</a>
+        <a :href="'/sorting/api/session/'+session?.id+'/labels/pdf/'" target="_blank" class="px-3 py-2 text-sm rounded-lg bg-fuchsia-600 text-white font-semibold"><i data-lucide="tags" class="w-4 h-4 inline"></i> Etiquetas</a>
         <button x-show="session?.status!=='FINALIZADO'" @click="finishSession()" class="px-3 py-2 text-sm rounded-lg bg-orange-600 text-white font-semibold"><i data-lucide="check-circle" class="w-4 h-4 inline"></i> Finalizar e Salvar</button>
         <button x-show="session?.status==='FINALIZADO'" @click="reopenSession()" class="px-3 py-2 text-sm rounded-lg bg-amber-600 text-white font-semibold">Reabrir</button>
         <button @click="closeSession()" class="px-3 py-2 text-sm rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200">Nova sessão</button>
@@ -101,7 +106,11 @@
             <span class="text-sm" :class="b.driver_id ? 'text-gray-800 dark:text-gray-200 font-semibold':'text-rose-500'" x-text="b.driver_nome || 'sem motorista'"></span>
             <button x-show="session?.status!=='FINALIZADO'" @click="openDriverPicker(b)" class="text-[11px] text-indigo-500 underline ml-auto">alterar</button>
           </div>
-          <button @click="viewParcels(b)" class="text-xs text-sky-500 underline">ver pacotes</button>
+          <div class="flex items-center gap-3 flex-wrap">
+            <button @click="viewParcels(b)" class="text-xs text-sky-500 underline">ver pacotes</button>
+            <a :href="'/sorting/api/bigbag/'+b.id+'/export/xlsx/'" class="text-xs text-emerald-500 underline">excel</a>
+            <a :href="'/sorting/api/bigbag/'+b.id+'/label/pdf/'" target="_blank" class="text-xs text-fuchsia-500 underline">etiqueta</a>
+          </div>
         </div>
       </template>
     </div>
@@ -168,7 +177,7 @@ function sortingPanel() {
   const POST = body => ({ method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':csrf()}, body: JSON.stringify(body||{}) });
   return {
     session: null, bigbags: [], unresolved: [],
-    form: { nome:'', mode:'CP4', hub:'', observacao:'' },
+    form: { nome:'', mode:'CP4', hub:'', target_cps:'', observacao:'' },
     scanValue:'', lastScan:null, lastScanMsg:'', scanClass:'border-gray-200 dark:border-gray-700',
     busy:false, toast:'',
     parcelsModal:false, parcelsBigbag:null, parcelsList:[],
@@ -180,6 +189,33 @@ function sortingPanel() {
       this.$nextTick(()=>window.lucide&&window.lucide.createIcons());
     },
     showToast(m){ this.toast=m; setTimeout(()=>this.toast='',3000); },
+
+    // ── Avisos sonoros (Web Audio — sem ficheiros) ──
+    _audio: null,
+    _beep(freq, dur, type, when, gain) {
+      const ctx = this._audio; if (!ctx) return;
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = type || 'sine'; o.frequency.value = freq;
+      o.connect(g); g.connect(ctx.destination);
+      const t = ctx.currentTime + (when || 0);
+      g.gain.setValueAtTime(gain || 0.18, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.start(t); o.stop(t + dur);
+    },
+    playSound(kind) {
+      try {
+        if (!this._audio) this._audio = new (window.AudioContext||window.webkitAudioContext)();
+        if (this._audio.state === 'suspended') this._audio.resume();
+        if (kind === 'ok') {                 // sucesso: bip agudo curto
+          this._beep(1046, 0.12, 'sine', 0, 0.2);
+        } else if (kind === 'wrong') {       // CP/zona errado: 2 bips médios
+          this._beep(440, 0.13, 'square', 0, 0.15);
+          this._beep(440, 0.13, 'square', 0.16, 0.15);
+        } else {                              // não reconhecido: buzzer grave
+          this._beep(180, 0.45, 'sawtooth', 0, 0.22);
+        }
+      } catch (e) { /* áudio indisponível */ }
+    },
 
     async createSession() {
       this.busy=true;
@@ -209,14 +245,20 @@ function sortingPanel() {
       const r = await fetch('/sorting/api/session/'+this.session.id+'/scan/', POST({waybill:wb}));
       const j = await r.json();
       this.focusScan();
-      if (!j.success) { this.flash('err', j.error||'Erro'); return; }
+      if (!j.success) { this.flash('err', j.error||'Erro'); this.playSound('unknown'); return; }
       this.lastScan = j;
-      if (j.status==='OK') {
+      if (j.status==='OK' && !j.divergent) {
         this.flash(j.created_bigbag?'new':'ok', wb+' → '+(j.bigbag?.label||'')+(j.created_bigbag?'  (nova bigbag)':'')+(j.bigbag?.driver_nome?('  · '+j.bigbag.driver_nome):''));
+        this.playSound('ok');
+      } else if (j.status==='OK' && j.divergent) {
+        this.flash('dup', wb+' → '+(j.bigbag?.label||'')+'  ⚠ '+j.message);
+        this.playSound('wrong');
       } else if (j.status==='DUP') {
         this.flash('dup', wb+' — '+j.message);
+        this.playSound('wrong');
       } else {
         this.flash('err', wb+' — '+j.message);
+        this.playSound('unknown');
       }
       await this.refresh();
     },

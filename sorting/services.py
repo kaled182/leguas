@@ -57,15 +57,21 @@ def scan_parcel(session, waybill, user=None):
     localidade = res.get("localidade") or ""
     zona = res.get("zona")  # dict {id,nome,cor,motorista} ou None
 
+    # Dados do destinatário (para a folha do motorista)
+    cust = _customer_data(wb)
+
     # Sem CP → não classificado (divergência)
     if not cp4:
         parcel = SortingParcel.objects.create(
             session=session, waybill_number=wb,
+            localidade=localidade,
+            nome_cliente=cust["nome"], telefone_cliente=cust["telefone"],
+            morada=cust["morada"],
             status=SortingParcel.STATUS_UNRESOLVED,
             note="Sem CP/zona resolvida", scanned_by=user,
         )
         return {
-            "status": "UNRESOLVED",
+            "status": "UNRESOLVED", "sound": "unknown",
             "message": "Não foi possível resolver o CP deste pacote.",
             "parcel": parcel_to_dict(parcel),
             "bigbag": None, "created_bigbag": False,
@@ -79,21 +85,53 @@ def scan_parcel(session, waybill, user=None):
             .select_related("motorista_default").first()
         )
 
+    # Divergência: fora dos CP4 alvo (se definidos)
+    targets = _target_set(session)
+    divergent = bool(targets) and cp4 not in targets
+
     bigbag, created = _get_or_create_bigbag(session, cp4, zona_obj)
 
     parcel = SortingParcel.objects.create(
         session=session, bigbag=bigbag, waybill_number=wb,
         cp=cp, cp4=cp4, zona_nome=(zona_obj.nome if zona_obj else ""),
-        localidade=localidade, status=SortingParcel.STATUS_OK,
+        localidade=localidade,
+        nome_cliente=cust["nome"], telefone_cliente=cust["telefone"],
+        morada=cust["morada"],
+        status=SortingParcel.STATUS_OK, divergent=divergent,
         scanned_by=user,
     )
     return {
         "status": "OK",
-        "message": "Classificado.",
+        "sound": "wrong" if divergent else "ok",
+        "divergent": divergent,
+        "message": (
+            f"CP {cp4} fora dos alvos da sessão." if divergent
+            else "Classificado."
+        ),
         "parcel": parcel_to_dict(parcel),
         "bigbag": bigbag_to_dict(bigbag),
         "created_bigbag": created,
     }
+
+
+def _target_set(session):
+    """Conjunto de CP4 alvo da sessão (normalizados)."""
+    raw = (session.target_cps or "").replace(";", ",")
+    return {c.strip()[:4] for c in raw.split(",") if c.strip()}
+
+
+def _customer_data(waybill):
+    """Nome/telefone/morada do destinatário (reutiliza o lookup dos tickets)."""
+    try:
+        from drivers_app.services_ticket_import import lookup_customer_data
+        d = lookup_customer_data(waybill)
+        return {
+            "nome": (d.get("nome_cliente") or "")[:200],
+            "telefone": (d.get("telefone_cliente") or "")[:40],
+            "morada": (d.get("morada") or "")[:255],
+        }
+    except Exception:
+        return {"nome": "", "telefone": "", "morada": ""}
 
 
 # ─────────────────────────────────────────────────────────────────────────
@@ -107,7 +145,11 @@ def parcel_to_dict(p):
         "cp4": p.cp4,
         "zona_nome": p.zona_nome,
         "localidade": p.localidade,
+        "nome_cliente": p.nome_cliente,
+        "telefone_cliente": p.telefone_cliente,
+        "morada": p.morada,
         "status": p.status,
+        "divergent": p.divergent,
         "bigbag_id": p.bigbag_id,
         "scanned_at": p.scanned_at.isoformat() if p.scanned_at else None,
     }
@@ -125,6 +167,16 @@ def bigbag_to_dict(b):
         "observacao": b.observacao,
         "parcel_count": b.parcels.count(),
     }
+
+
+def bigbag_cp7_list(bigbag):
+    """CP7 (código postal completo) distintos dentro da bigbag — para a
+    etiqueta de fecho (estilo Cainiao 'Zip Code')."""
+    cps = (
+        bigbag.parcels.exclude(cp="")
+        .values_list("cp", flat=True).distinct().order_by("cp")
+    )
+    return list(cps)
 
 
 def session_summary(session):

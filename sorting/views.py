@@ -101,6 +101,7 @@ def session_create(request):
         nome=(data.get("nome") or "").strip()[:160],
         hub=(data.get("hub") or "").strip()[:120],
         mode=mode,
+        target_cps=(data.get("target_cps") or "").strip()[:255],
         observacao=(data.get("observacao") or "").strip(),
         created_by=request.user,
     )
@@ -238,49 +239,181 @@ def driver_search(request):
 
 
 # ─────────────────────────────────────────────────────────────────────────
-# Export — Excel da sessão (uma folha por sessão; uma linha por pacote)
+# Export — Excel (total da sessão ou por bigbag/CP4)
 # ─────────────────────────────────────────────────────────────────────────
-@login_required
-def session_export_xlsx(request, session_id):
-    import openpyxl
+_XLSX_CT = (
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+)
 
-    session = get_object_or_404(SortingSession, id=session_id)
+
+def _parcels_xlsx(parcels, sheet_title="Sorting"):
+    import openpyxl
     wb = openpyxl.Workbook()
     ws = wb.active
-    ws.title = "Sorting"
+    ws.title = sheet_title[:31]
     ws.append([
         "Bigbag", "CP4", "Zona", "Motorista", "Waybill", "Código Postal",
-        "Localidade", "Estado", "Lido em",
+        "Localidade", "Cliente", "Telefone", "Morada", "Estado", "Lido em",
     ])
-    parcels = (
-        session.parcels.select_related("bigbag", "bigbag__driver")
-        .order_by("cp4", "zona_nome", "scanned_at")
-    )
     for p in parcels:
         b = p.bigbag
         ws.append([
             b.codigo if b else "(não classificado)",
-            p.cp4,
-            p.zona_nome,
+            p.cp4, p.zona_nome,
             (b.driver.nome_completo if b and b.driver else ""),
-            p.waybill_number,
-            p.cp,
-            p.localidade,
+            p.waybill_number, p.cp, p.localidade,
+            p.nome_cliente, p.telefone_cliente, p.morada,
             p.get_status_display(),
             p.scanned_at.strftime("%Y-%m-%d %H:%M") if p.scanned_at else "",
         ])
-
     buf = BytesIO()
     wb.save(buf)
     buf.seek(0)
-    resp = HttpResponse(
-        buf.getvalue(),
-        content_type=(
-            "application/vnd.openxmlformats-officedocument."
-            "spreadsheetml.sheet"
-        ),
+    return buf.getvalue()
+
+
+@login_required
+def session_export_xlsx(request, session_id):
+    session = get_object_or_404(SortingSession, id=session_id)
+    parcels = (
+        session.parcels.select_related("bigbag", "bigbag__driver")
+        .order_by("cp4", "zona_nome", "scanned_at")
     )
+    content = _parcels_xlsx(parcels, "Sorting")
+    resp = HttpResponse(content, content_type=_XLSX_CT)
     resp["Content-Disposition"] = (
         f'attachment; filename="sorting_sessao_{session.id}.xlsx"'
     )
     return resp
+
+
+@login_required
+def bigbag_export_xlsx(request, bigbag_id):
+    bigbag = get_object_or_404(
+        SortingBigbag.objects.select_related("driver"), id=bigbag_id,
+    )
+    parcels = bigbag.parcels.order_by("scanned_at")
+    content = _parcels_xlsx(parcels, f"BB {bigbag.cp4}")
+    resp = HttpResponse(content, content_type=_XLSX_CT)
+    safe = (bigbag.codigo or f"bigbag_{bigbag.id}").replace("/", "-")
+    resp["Content-Disposition"] = f'attachment; filename="{safe}.xlsx"'
+    return resp
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Etiqueta de fecho/despacho (PDF) — por bigbag ou todas da sessão
+# ─────────────────────────────────────────────────────────────────────────
+def _build_label_flowables(bigbag, styles):
+    """Constrói os elementos de uma etiqueta (para 1 bigbag)."""
+    from reportlab.lib import colors
+    from reportlab.lib.units import cm
+    from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
+    from reportlab.graphics.barcode import code128
+    from reportlab.graphics.shapes import Drawing
+
+    session = bigbag.session
+    cp7 = svc.bigbag_cp7_list(bigbag)
+    n = bigbag.parcels.count()
+    driver = bigbag.driver.nome_completo if bigbag.driver else "— (sem motorista)"
+    mode = session.get_mode_display()
+    grouping = (
+        f"GEOZONA: {bigbag.zona_nome}" if bigbag.zona_nome
+        else f"CP4: {bigbag.cp4}"
+    )
+
+    title = Paragraph(
+        "<b>LÉGUAS FRANZINAS — ETIQUETA DE DESPACHO</b>", styles["h"],
+    )
+    big = Paragraph(f"<b>{bigbag.label}</b>", styles["big"])
+
+    rows = [
+        ["HUB", session.hub or "—"],
+        ["Modo", mode],
+        ["Agrupamento", grouping],
+        ["Motorista", driver],
+        ["Nº de Pacotes", str(n)],
+        ["Bigbag", bigbag.codigo or f"BB-{bigbag.id}"],
+        ["Sessão", f"#{session.id} — {session.nome or ''}"],
+        ["Códigos Postais", ", ".join(cp7) if cp7 else "—"],
+    ]
+    if bigbag.observacao:
+        rows.append(["Observação", bigbag.observacao])
+
+    tbl = Table(rows, colWidths=[3.2 * cm, 11.5 * cm])
+    tbl.setStyle(TableStyle([
+        ("FONTSIZE", (0, 0), (-1, -1), 9),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("TEXTCOLOR", (0, 0), (0, -1), colors.HexColor("#6B7280")),
+        ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+        ("LINEBELOW", (0, 0), (-1, -2), 0.4, colors.HexColor("#E5E7EB")),
+    ]))
+
+    # Código de barras do código da bigbag
+    bc_value = bigbag.codigo or f"BB-{bigbag.id}"
+    bc = code128.Code128(bc_value, barHeight=1.4 * cm, barWidth=1.0)
+    d = Drawing(bc.width, 1.4 * cm)
+    d.add(bc)
+
+    return [
+        title, Spacer(1, 0.2 * cm), big, Spacer(1, 0.3 * cm),
+        tbl, Spacer(1, 0.4 * cm), d,
+        Paragraph(bc_value, styles["mono"]),
+    ]
+
+
+def _labels_pdf(bigbags, filename):
+    from reportlab.lib.enums import TA_CENTER
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+    from reportlab.lib.units import cm
+    from reportlab.platypus import PageBreak, SimpleDocTemplate
+
+    base = getSampleStyleSheet()["Normal"]
+    styles = {
+        "h": ParagraphStyle("h", parent=base, fontSize=11, leading=14),
+        "big": ParagraphStyle(
+            "big", parent=base, fontSize=22, leading=24,
+        ),
+        "mono": ParagraphStyle(
+            "mono", parent=base, fontSize=9, alignment=TA_CENTER,
+            fontName="Helvetica",
+        ),
+    }
+    buf = BytesIO()
+    doc = SimpleDocTemplate(
+        buf, pagesize=A4, topMargin=1.5 * cm, bottomMargin=1.5 * cm,
+        leftMargin=1.8 * cm, rightMargin=1.8 * cm,
+    )
+    story = []
+    for i, b in enumerate(bigbags):
+        if i > 0:
+            story.append(PageBreak())
+        story.extend(_build_label_flowables(b, styles))
+    if not story:
+        story.append(getSampleStyleSheet()["Normal"].clone("x"))
+    doc.build(story)
+    buf.seek(0)
+    resp = HttpResponse(buf.getvalue(), content_type="application/pdf")
+    resp["Content-Disposition"] = f'attachment; filename="{filename}"'
+    return resp
+
+
+@login_required
+def bigbag_label_pdf(request, bigbag_id):
+    bigbag = get_object_or_404(
+        SortingBigbag.objects.select_related("driver", "session"),
+        id=bigbag_id,
+    )
+    safe = (bigbag.codigo or f"bigbag_{bigbag.id}").replace("/", "-")
+    return _labels_pdf([bigbag], f"etiqueta_{safe}.pdf")
+
+
+@login_required
+def session_labels_pdf(request, session_id):
+    session = get_object_or_404(SortingSession, id=session_id)
+    bigbags = list(
+        session.bigbags.select_related("driver", "session")
+        .order_by("cp4", "zona_nome")
+    )
+    return _labels_pdf(bigbags, f"etiquetas_sessao_{session.id}.pdf")

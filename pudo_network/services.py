@@ -10,16 +10,22 @@ receção no portal do lojista. Garantias:
 """
 from dataclasses import dataclass
 from datetime import timedelta
+from decimal import Decimal
 from typing import Optional
 
 from django.db import transaction
+from django.db.models import Count, DecimalField, ExpressionWrapper, F, Sum
 from django.utils import timezone
 
 from .models import (
     PudoCustodyPackage,
     PudoDeliveryProof,
     PudoPickupOTP,
+    PudoStore,
+    PudoStoreBillingLine,
+    PudoStoreStatement,
     PudoTransaction,
+    PudoUpstreamReconciliation,
 )
 
 # Validade do OTP de levantamento (minutos).
@@ -322,3 +328,157 @@ def mark_expired_packages():
         except ValueError:
             continue
     return n
+
+
+# ─────────────────────────────────────────────────────────────────────
+# Fase 3 — Fecho periódico de extratos (snapshot)
+# ─────────────────────────────────────────────────────────────────────
+
+_IVA_EXPR = ExpressionWrapper(
+    F("valor") * (Decimal("1") + F("iva_pct") / Decimal("100")),
+    output_field=DecimalField(max_digits=14, decimal_places=6),
+)
+
+
+def _prev_month_bounds(today):
+    first_this = today.replace(day=1)
+    last_prev = first_this - timedelta(days=1)
+    first_prev = last_prev.replace(day=1)
+    return first_prev, last_prev
+
+
+@transaction.atomic
+def close_period(store, periodo_inicio, periodo_fim):
+    """Fecha (snapshot) o extrato de uma loja para o período. Idempotente."""
+    existing = PudoStoreStatement.objects.filter(
+        store=store, periodo_inicio=periodo_inicio, periodo_fim=periodo_fim,
+    ).first()
+    if existing:
+        return existing
+
+    lines = PudoStoreBillingLine.objects.filter(
+        store=store, statement__isnull=True,
+        emitted_at__date__gte=periodo_inicio,
+        emitted_at__date__lte=periodo_fim,
+    )
+    agg = lines.aggregate(
+        total=Sum("valor"), com_iva=Sum(_IVA_EXPR), n=Count("id"),
+    )
+    if not agg["n"]:
+        return None
+
+    stmt = PudoStoreStatement.objects.create(
+        store=store, ciclo_pagamento=store.ciclo_pagamento,
+        periodo_inicio=periodo_inicio, periodo_fim=periodo_fim,
+        total_valor=agg["total"] or Decimal("0"),
+        total_com_iva=agg["com_iva"] or Decimal("0"),
+        n_linhas=agg["n"],
+    )
+    # Linka as linhas via update() (não passa pelo save() imutável do ledger).
+    lines.update(statement=stmt)
+    return stmt
+
+
+def emit_due_statements(today=None):
+    """Emite os extratos cujo período fecha HOJE, conforme o ciclo da loja.
+
+    - MENSAL: fecha o mês anterior no dia 1.
+    - SEMANAL: fecha a semana anterior (seg–dom) à segunda-feira.
+
+    Corrida diária (task `pudo_network.emit_statements`); idempotente.
+    Devolve a lista de statements criados.
+    """
+    today = today or timezone.localdate()
+    created = []
+
+    if today.day == 1:
+        ini, fim = _prev_month_bounds(today)
+        for store in PudoStore.objects.filter(
+            ciclo_pagamento=PudoStore.CicloPagamento.MENSAL,
+        ):
+            stmt = close_period(store, ini, fim)
+            if stmt:
+                created.append(stmt)
+
+    if today.weekday() == 0:  # segunda-feira
+        fim = today - timedelta(days=1)
+        ini = today - timedelta(days=7)
+        for store in PudoStore.objects.filter(
+            ciclo_pagamento=PudoStore.CicloPagamento.SEMANAL,
+        ):
+            stmt = close_period(store, ini, fim)
+            if stmt:
+                created.append(stmt)
+
+    return created
+
+
+# ─────────────────────────────────────────────────────────────────────
+# Fase 2 — Reconciliação a montante (devoluções → carrier)
+# ─────────────────────────────────────────────────────────────────────
+
+
+def build_upstream_payload(record):
+    """Compõe o payload de devolução a enviar a montante.
+
+    Estrutura estável e legível; o mapeamento para o formato final do
+    carrier (Cainiao/Ecoscooting) faz-se no `_send_upstream` quando o spec
+    estiver fechado (Q1).
+    """
+    pkg = record.package
+    return {
+        "tracking_ref": pkg.tracking_ref,
+        "pudo": pkg.store.numero,
+        "carrier": pkg.partner.name if pkg.partner_id else None,
+        "source_kind": pkg.source_kind,
+        "source_ref": pkg.source_ref,
+        "motivo": record.motivo,
+        "returned_at": (
+            pkg.updated_at.isoformat() if pkg.updated_at else None
+        ),
+    }
+
+
+def _send_upstream(record, payload):
+    """Envio real a montante — POR CONFIGURAR (aguarda spec do carrier).
+
+    Levanta NotImplementedError de propósito: até o endpoint/formato estarem
+    definidos, o registo fica PENDENTE com o payload já composto e pronto.
+    """
+    raise NotImplementedError("Envio a montante por configurar (spec Q1).")
+
+
+def process_upstream_reconciliations(limit=200):
+    """Prepara/drena a fila de reconciliação a montante.
+
+    Enquanto o `_send_upstream` não estiver ligado, compõe e persiste o
+    payload de cada registo PENDENTE (deixando-o pronto a enviar) e regista
+    a razão. Quando o spec chegar, passa a marcar ENVIADO. Idempotente.
+    Devolve (preparados, enviados).
+    """
+    qs = PudoUpstreamReconciliation.objects.filter(
+        status=PudoUpstreamReconciliation.Status.PENDENTE,
+    ).select_related("package", "package__store", "package__partner")[:limit]
+
+    preparados = enviados = 0
+    for rec in qs:
+        payload = build_upstream_payload(rec)
+        try:
+            _send_upstream(rec, payload)
+            rec.status = PudoUpstreamReconciliation.Status.ENVIADO
+            rec.sent_at = timezone.now()
+            rec.payload = payload
+            rec.last_error = ""
+            rec.save(update_fields=["status", "sent_at", "payload", "last_error"])
+            enviados += 1
+        except NotImplementedError as exc:
+            # Ainda sem spec: guarda o payload composto, mantém PENDENTE.
+            rec.payload = payload
+            rec.last_error = str(exc)
+            rec.save(update_fields=["payload", "last_error"])
+            preparados += 1
+        except Exception as exc:  # noqa: BLE001
+            rec.status = PudoUpstreamReconciliation.Status.ERRO
+            rec.last_error = str(exc)[:255]
+            rec.save(update_fields=["status", "last_error"])
+    return preparados, enviados

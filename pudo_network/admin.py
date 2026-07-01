@@ -11,6 +11,7 @@ from .models import (
     PudoDeliveryProof,
     PudoStore,
     PudoStoreBillingLine,
+    PudoStoreStatement,
     PudoTransaction,
     PudoUpstreamReconciliation,
 )
@@ -198,3 +199,24 @@ class PudoUpstreamReconciliationAdmin(admin.ModelAdmin):
     list_filter = ("status", "tipo")
     search_fields = ("package__tracking_ref", "motivo")
     readonly_fields = ("package", "tipo", "created_at", "payload")
+
+
+@admin.register(PudoStoreStatement)
+class PudoStoreStatementAdmin(admin.ModelAdmin):
+    list_display = (
+        "emitted_at", "store", "periodo_inicio", "periodo_fim",
+        "n_linhas", "total_valor", "total_com_iva",
+    )
+    list_filter = ("ciclo_pagamento", "store")
+    search_fields = ("store__numero", "store__nome")
+    readonly_fields = (
+        "store", "ciclo_pagamento", "periodo_inicio", "periodo_fim",
+        "total_valor", "total_com_iva", "n_linhas", "emitted_at",
+    )
+    date_hierarchy = "periodo_fim"
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False

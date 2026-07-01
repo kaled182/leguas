@@ -692,6 +692,10 @@ class PudoStoreBillingLine(models.Model):
     package = models.OneToOneField(
         PudoCustodyPackage, on_delete=models.PROTECT, related_name="billing_line",
     )
+    statement = models.ForeignKey(
+        "PudoStoreStatement", null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="lines",
+    )
     tracking_ref = models.CharField(max_length=120, db_index=True)
     valor = models.DecimalField(max_digits=8, decimal_places=4)
     iva_pct = models.DecimalField(max_digits=5, decimal_places=2)
@@ -712,7 +716,42 @@ class PudoStoreBillingLine(models.Model):
         return self.valor * (Decimal("1") + self.iva_pct / Decimal("100"))
 
     def save(self, *args, **kwargs):
-        # Imutável: uma vez criada, não permite update do valor/estado.
+        # Imutável: uma vez criada, não permite update dos campos financeiros.
+        # (O link `statement` é definido via queryset.update(), que não passa
+        # por aqui — só a grelha de agrupamento muda, nunca o valor.)
         if self.pk:
             raise ValueError("PudoStoreBillingLine é imutável (ledger).")
         super().save(*args, **kwargs)
+
+
+class PudoStoreStatement(models.Model):
+    """Snapshot periódico (fecho) do extrato de uma loja.
+
+    Auto-emitido pela task `pudo_network.emit_statements` conforme o
+    `ciclo_pagamento` da loja (SEMANAL/MENSAL). Agrega as linhas do ledger do
+    período — que continua a ser a fonte-de-verdade; isto é um congelamento
+    para faturação/pagamento. Imutável após criação.
+    """
+
+    store = models.ForeignKey(
+        PudoStore, on_delete=models.PROTECT, related_name="statements",
+    )
+    ciclo_pagamento = models.CharField(max_length=10)
+    periodo_inicio = models.DateField()
+    periodo_fim = models.DateField()
+    total_valor = models.DecimalField(max_digits=12, decimal_places=4)
+    total_com_iva = models.DecimalField(max_digits=12, decimal_places=4)
+    n_linhas = models.PositiveIntegerField(default=0)
+    emitted_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Extrato periódico (PUDO)"
+        verbose_name_plural = "Extratos periódicos (PUDO)"
+        ordering = ["-periodo_fim", "store__numero"]
+        unique_together = [("store", "periodo_inicio", "periodo_fim")]
+
+    def __str__(self):
+        return (
+            f"{self.store.numero} · {self.periodo_inicio}–{self.periodo_fim} "
+            f"· {self.total_valor}€"
+        )

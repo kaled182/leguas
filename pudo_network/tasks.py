@@ -17,3 +17,26 @@ def mark_expired():
     if n:
         logger.info("PUDO aging: %s pacote(s) marcados como EXPIRADO.", n)
     return n
+
+
+@shared_task(name="pudo_network.emit_statements")
+def emit_statements():
+    """Fecho periódico de extratos por loja (mensal/semanal)."""
+    from .services import emit_due_statements
+    stmts = emit_due_statements()
+    if stmts:
+        logger.info("PUDO: %s extrato(s) periódico(s) emitido(s).", len(stmts))
+    return len(stmts)
+
+
+@shared_task(name="pudo_network.process_upstream")
+def process_upstream():
+    """Prepara/drena a fila de reconciliação a montante (devoluções)."""
+    from .services import process_upstream_reconciliations
+    preparados, enviados = process_upstream_reconciliations()
+    if preparados or enviados:
+        logger.info(
+            "PUDO upstream: %s preparado(s), %s enviado(s).",
+            preparados, enviados,
+        )
+    return {"preparados": preparados, "enviados": enviados}

@@ -190,6 +190,22 @@ app.conf.beat_schedule = {
         'options': {'expires': 3600},
     },
 
+    # Fecho periódico de extratos por loja PUDO — corre todo dia 06:40 e
+    # decide internamente (mensal no dia 1; semanal à segunda-feira).
+    'pudo-emit-statements': {
+        'task': 'pudo_network.emit_statements',
+        'schedule': crontab(hour=6, minute=40),
+        'options': {'expires': 3600},
+    },
+
+    # Reconciliação a montante das devoluções PUDO — prepara/drena a fila.
+    # Corre 1x/dia às 7:40 (o envio real fica ativo quando o spec chegar).
+    'pudo-process-upstream': {
+        'task': 'pudo_network.process_upstream',
+        'schedule': crontab(hour=7, minute=40),
+        'options': {'expires': 3600},
+    },
+
     # Tarefa de teste a cada 5 minutos (pode remover em produção)
     # 'test-celery-every-5min': {
     #     'task': 'core.test_task',

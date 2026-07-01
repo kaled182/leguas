@@ -170,8 +170,16 @@ Migração aditiva no app `sorting` (campos nullable, sem risco de dados).
 - **Fase 3 — Faturação à loja + dashboard — FEITA:** `PudoStoreBillingLine` (ledger
   IMUTÁVEL, emitido no POD por `_emit_billing_line`, `save()` bloqueia updates),
   extrato do lojista `/pudo/extrato/` (lê o ledger, só papel DONO), dashboard com
-  ganhos/ocupação/ações. **Nota:** valor por pacote = `preco_1a_entrega` (a lógica
-  1ª+adicionais e a auto-emissão periódica ficam para refinamento — ver Decisões).
+  ganhos/ocupação/ações. **Faturação FLAT por pacote** (decidido): cada entrega =
+  `preco_1a_entrega`, sem lógica 1ª+adicionais. Auto-emissão periódica de extratos
+  (`PudoStoreStatement`) via task `pudo_network.emit_statements` (Beat 06:40),
+  fechando o mês anterior (dia 1) ou a semana anterior (segunda) conforme o
+  `ciclo_pagamento` da loja; snapshot imutável que congela e linka as linhas.
+- **Reconciliação a montante (devoluções) — infra FEITA:** fila
+  `PudoUpstreamReconciliation` + task `pudo_network.process_upstream` (Beat 07:40)
+  que compõe e persiste o payload de cada devolução. O envio real (`_send_upstream`)
+  fica por ligar até o spec do carrier estar fechado (Q1) — registos ficam PENDENTE
+  com o payload pronto.
 - **Fase 4 (condicional/futura):** offline-first do estafeta + APK; nonce+TTL+uso-único.
 
 ---

@@ -1,0 +1,132 @@
+{
+  "info": {
+    "name": "Léguas Franzinas — Rede PUDO (App do Estafeta)",
+    "description": "Endpoints do módulo PUDO em /api/app/v1/pudo/. Auth OTP partilhada com a app do motorista (telemóvel + código WhatsApp) → token Bearer. Fluxo: Pedir código → Validar código (guarda o token) → handshake / offline. Ver docs/api/PUDO_APP_GUIDE.md.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://89.153.26.181:8090/api/app/v1", "type": "string" },
+    { "key": "phone", "value": "912345678", "type": "string" },
+    { "key": "code", "value": "", "type": "string" },
+    { "key": "token", "value": "", "type": "string" },
+    { "key": "pudo", "value": "PUDO-0001", "type": "string" },
+    { "key": "tracking_ref", "value": "LP00812345678PT", "type": "string" },
+    { "key": "device_secret", "value": "", "type": "string" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Pedir código OTP",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/auth/request-code", "host": ["{{base_url}}"], "path": ["auth", "request-code"] },
+            "body": { "mode": "raw", "raw": "{\n  \"phone\": \"{{phone}}\"\n}" }
+          }
+        },
+        {
+          "name": "Validar código (guarda o token)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const d = pm.response.json();",
+                  "if (d.token) { pm.collectionVariables.set('token', d.token); }"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/auth/verify-code", "host": ["{{base_url}}"], "path": ["auth", "verify-code"] },
+            "body": { "mode": "raw", "raw": "{\n  \"phone\": \"{{phone}}\",\n  \"code\": \"{{code}}\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Handshake (online)",
+      "item": [
+        {
+          "name": "Handshake — ENTREGA",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/pudo/handshake", "host": ["{{base_url}}"], "path": ["pudo", "handshake"] },
+            "body": { "mode": "raw", "raw": "{\n  \"uuid\": \"{{$guid}}\",\n  \"pudo\": \"{{pudo}}\",\n  \"tracking_ref\": \"{{tracking_ref}}\",\n  \"tipo\": \"ENTREGA\",\n  \"payload\": { \"client_phone\": \"+351912345678\" }\n}" }
+          }
+        },
+        {
+          "name": "Handshake — DEVOLUCAO",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/pudo/handshake", "host": ["{{base_url}}"], "path": ["pudo", "handshake"] },
+            "body": { "mode": "raw", "raw": "{\n  \"uuid\": \"{{$guid}}\",\n  \"pudo\": \"{{pudo}}\",\n  \"tracking_ref\": \"{{tracking_ref}}\",\n  \"tipo\": \"DEVOLUCAO\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Offline-first",
+      "item": [
+        {
+          "name": "Obter chave de dispositivo (GET)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const d = pm.response.json();",
+                  "if (d.secret) { pm.collectionVariables.set('device_secret', d.secret); }"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/pudo/device-key", "host": ["{{base_url}}"], "path": ["pudo", "device-key"] }
+          }
+        },
+        {
+          "name": "Rodar chave de dispositivo (POST)",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{base_url}}/pudo/device-key", "host": ["{{base_url}}"], "path": ["pudo", "device-key"] }
+          }
+        },
+        {
+          "name": "Handshake assinado (offline)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/pudo/handshake-signed", "host": ["{{base_url}}"], "path": ["pudo", "handshake-signed"] },
+            "body": { "mode": "raw", "raw": "{\n  \"uuid\": \"{{$guid}}\",\n  \"pudo\": \"{{pudo}}\",\n  \"tracking_ref\": \"{{tracking_ref}}\",\n  \"tipo\": \"ENTREGA\",\n  \"nonce\": \"{{$guid}}\",\n  \"exp\": 0,\n  \"sig\": \"<hex HMAC-SHA256 de uuid|pudo|tracking_ref|tipo|nonce|exp>\",\n  \"driver\": 0\n}" },
+            "description": "exp = epoch agora+<=300s; sig calculada com o device_secret. Preencher no cliente."
+          }
+        },
+        {
+          "name": "Sync (fila offline em lote)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/pudo/sync", "host": ["{{base_url}}"], "path": ["pudo", "sync"] },
+            "body": { "mode": "raw", "raw": "{\n  \"items\": [\n    {\n      \"uuid\": \"{{$guid}}\",\n      \"pudo\": \"{{pudo}}\",\n      \"tracking_ref\": \"{{tracking_ref}}\",\n      \"tipo\": \"ENTREGA\"\n    }\n  ]\n}" }
+          }
+        }
+      ]
+    }
+  ]
+}

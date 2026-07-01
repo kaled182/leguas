@@ -317,8 +317,12 @@ def _build_label_flowables(bigbag, styles):
     from reportlab.platypus import Paragraph, Spacer, Table, TableStyle
 
     session = bigbag.session
-    cp7 = svc.bigbag_cp7_list(bigbag)
     n = bigbag.parcels.count()
+    criada = ""
+    if bigbag.created_at:
+        criada = timezone.localtime(bigbag.created_at).strftime(
+            "%d/%m/%Y %H:%M",
+        )
     driver = (
         bigbag.driver.nome_completo if bigbag.driver else "— sem motorista"
     )
@@ -335,9 +339,10 @@ def _build_label_flowables(bigbag, styles):
         ["HUB", session.hub or "—"],
         ["Agrupamento", grouping],
         ["Nº Pacotes", str(n)],
+        ["CP4", bigbag.cp4 or "—"],
         ["Bigbag", bigbag.codigo or f"BB-{bigbag.id}"],
         ["Sessão", f"#{session.id} {session.nome or ''}".strip()],
-        ["Cód. Postais", ", ".join(cp7) if cp7 else "—"],
+        ["Criada em", criada or "—"],
     ]
     if bigbag.observacao:
         rows.append(["Obs.", bigbag.observacao])
@@ -448,6 +453,11 @@ def session_labels_pdf(request, session_id):
 # ─────────────────────────────────────────────────────────────────────────
 def _label_context(bigbag):
     session = bigbag.session
+    criada = ""
+    if bigbag.created_at:
+        criada = timezone.localtime(bigbag.created_at).strftime(
+            "%d/%m/%Y %H:%M",
+        )
     return {
         "label": bigbag.label,
         "driver": bigbag.driver.nome_completo if bigbag.driver else "",
@@ -459,7 +469,8 @@ def _label_context(bigbag):
         "n": bigbag.parcels.count(),
         "codigo": bigbag.codigo or f"BB-{bigbag.id}",
         "sessao": f"#{session.id} {session.nome or ''}".strip(),
-        "cp7": ", ".join(svc.bigbag_cp7_list(bigbag)),
+        "cp4": bigbag.cp4 or "—",
+        "criada": criada,
         "obs": bigbag.observacao,
     }
 

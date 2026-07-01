@@ -51,10 +51,11 @@
       <tr><td class="k">HUB</td><td>{{ L.hub|default:"—" }}</td></tr>
       <tr><td class="k">Agrupamento</td><td>{{ L.grouping }}</td></tr>
       <tr><td class="k">Nº Pacotes</td><td>{{ L.n }}</td></tr>
+      <tr><td class="k">CP4</td><td>{{ L.cp4 }}</td></tr>
       <tr><td class="k">Bigbag</td><td>{{ L.codigo }}</td></tr>
       <tr><td class="k">Sessão</td><td>{{ L.sessao }}</td></tr>
+      <tr><td class="k">Criada em</td><td>{{ L.criada|default:"—" }}</td></tr>
       {% if L.obs %}<tr><td class="k">Obs.</td><td>{{ L.obs }}</td></tr>{% endif %}
-      <tr><td class="k">Cód. Postais</td><td class="cps">{{ L.cp7|default:"—" }}</td></tr>
     </table>
 
     <div class="barcode-wrap">

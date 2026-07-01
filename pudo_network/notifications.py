@@ -8,11 +8,11 @@ Reutiliza a infra WhatsApp já usada nos OTP/lembretes
 def notify_client_arrived(package):
     """Avisa o cliente final que o pacote chegou ao PUDO e pode levantar.
 
-    Fase 1: o número/nome do cliente vem do `payload` da transação ou do
-    soft-link do pacote. Enquanto não houver contacto do destinatário
-    modelado, esta função é um no-op silencioso — o gancho fica pronto.
+    Corre após o commit do handshake. O contacto vem do campo
+    `cliente_telefone` do pacote ou do `payload` das transações. Sem contacto,
+    é um no-op silencioso.
     """
-    phone = _client_phone(package)
+    phone = (package.cliente_telefone or "").strip() or _client_phone(package)
     if not phone:
         return  # sem contacto do cliente ainda → gancho preparado, no-op
 
@@ -33,11 +33,16 @@ def notify_client_arrived(package):
 
 
 def _client_phone(package):
-    """Extrai o telefone do cliente das transações do pacote, se existir."""
-    txn = package.transactions.exclude(payload={}).order_by("-synced_at").first()
-    if txn and isinstance(txn.payload, dict):
-        for key in ("client_phone", "telefone_cliente", "phone"):
-            val = (txn.payload.get(key) or "").strip()
-            if val:
-                return val
+    """Extrai o telefone do cliente das transações do pacote, se existir.
+
+    Itera em Python (evita comparações JSON tipo `exclude(payload={})` que
+    podem falhar em MySQL).
+    """
+    for txn in package.transactions.order_by("-synced_at"):
+        payload = txn.payload
+        if isinstance(payload, dict):
+            for key in ("client_phone", "telefone_cliente", "phone"):
+                val = (payload.get(key) or "").strip()
+                if val:
+                    return val
     return ""

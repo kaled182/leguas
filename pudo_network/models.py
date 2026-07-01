@@ -403,8 +403,10 @@ class PudoCustodyPackage(models.Model):
                 self.received_at = now
             if not self.aging_deadline:
                 self.aging_deadline = now + timedelta(days=DEFAULT_AGING_DAYS)
-            # Notificação ao cliente é best-effort (nunca quebra a transição).
-            self._notify_client_arrived()
+            # Notificação ao cliente é best-effort e corre SÓ APÓS o commit —
+            # nunca dentro da transação (uma query/erro na notificação não pode
+            # corromper o handshake nem fazer rollback da custódia).
+            transaction.on_commit(self._notify_client_arrived)
         elif new_status == self.ENTREGUE_CLIENTE:
             self.delivered_at = now
             # Ponto ÚNICO da faturação à loja (ledger imutável) — Fase 3.

@@ -209,19 +209,28 @@ custódia liga a um pacote genérico (Q3), não a um `CainiaoOperationTask` fixo
 
 ---
 
-## 8. Decisões em aberto (precisam do Paulo)
+## 8. Decisões
+
+> **Estado: FASE DE DISCUSSÃO.** Nada se constrói até o escopo estar todo
+> fechado. Este documento é o caderno vivo dessa discussão.
+
+**Decididas:**
+
+- **Q2 — POD (DECIDIDO): solução híbrida.** OTP + NIF/CC conforme o caso, com
+  desenho preparado para evoluir no futuro. *(A detalhar: quando cada método se
+  aplica — valor, tipo de carrier, exigência do shipper.)*
+- **Q3 — Pivô do pacote (DECIDIDO): camada de ligação genérica.**
+  `PudoCustodyPackage` aponta para qualquer pacote via referência genérica
+  (carrier-agnostic), não amarrado a `CainiaoOperationTask`. Alinha com o reframe
+  B2B (§7).
+
+**Em aberto (a discutir):**
 
 - **Q1 — Reconciliação a montante.** Para a Cainiao, largar no PUDO já conta como
   *delivered* (é o que paga o motorista hoje). Então: o **levantamento pelo
   cliente** precisa de ir de volta à Cainiao, ou é interno? E as **devoluções/não
   levantados** — como e em que formato a Cainiao/Ecoscooting espera receber?
-  *(Provavelmente: levantamento = interno; devolução = precisa de callback.)*
-- **Q2 — POD: OTP vs NIF.** Padrão da indústria (CTT, pickup points) é **OTP por
-  SMS** (mais leve em RGPD, menos atrito). NIF dá prova mais forte mas carrega
-  compliance. Recomendação: **OTP default, NIF só para valor alto/contestado.**
-- **Q3 — A que pacote liga a custódia?** `orders_manager.Order` (moderno, com
-  histórico + `delivery_proof`) ou `settlements.CainiaoOperationTask` (por onde o
-  fluxo Cainiao entra hoje)? Arquitetura dupla — decidir o pivô.
+  *(Hipótese: levantamento = interno; devolução = precisa de callback.)*
 - **Q4 — App novo `pudo_network` vs estender `sorting`.** Recomendação: app novo.
 - **Q5 — App móvel do estafeta:** com que stack foi feita? Define se o handshake
   offline (Fase 2) é viável e como.

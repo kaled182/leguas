@@ -1,0 +1,76 @@
+{% extends 'paack_dashboard/base.html' %}
+{% block title %}{% if modo == 'novo' %}Novo PUDO{% else %}Editar PUDO{% endif %}{% endblock %}
+
+{% block content %}
+<div class="p-2 sm:p-4 max-w-3xl">
+
+  <div class="mb-6 flex items-center gap-3">
+    <a href="{% if store %}{% url 'pudo_network:gestao_detail' store.pk %}{% else %}{% url 'pudo_network:gestao_list' %}{% endif %}"
+       class="text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white">
+      <i data-lucide="arrow-left" class="w-5 h-5"></i>
+    </a>
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
+      {% if modo == 'novo' %}Novo PUDO{% else %}Editar {{ store.numero }}{% endif %}
+    </h1>
+  </div>
+
+  <form method="post" class="space-y-6">
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+      <div class="p-3 rounded-lg bg-danger-50 text-danger-700 text-sm">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+      <h2 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-4">Identidade & contacto</h2>
+      <div class="grid sm:grid-cols-2 gap-4">
+        {% for field in form %}
+          {% if field.name in 'nome,status,nif,cidade,codigo_postal,email,telefone,contacto_nome,iban,taxa_iva' %}
+          <div {% if field.name == 'nome' %}class="sm:col-span-2"{% endif %}>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}<p class="text-xs text-danger-600 mt-1">{{ field.errors|striptags }}</p>{% endif %}
+          </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+      <div class="mt-4">
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ form.morada.label }}</label>
+        {{ form.morada }}
+      </div>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+      <h2 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-4">Operação & preços</h2>
+      <div class="grid sm:grid-cols-2 gap-4">
+        {% for field in form %}
+          {% if field.name in 'capacidade_max,ciclo_pagamento,preco_1a_entrega,preco_adicional,latitude,longitude,partner' %}
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ field.label }}</label>
+            {{ field }}
+            {% if field.help_text %}<p class="text-xs text-gray-400 mt-1">{{ field.help_text }}</p>{% endif %}
+            {% if field.errors %}<p class="text-xs text-danger-600 mt-1">{{ field.errors|striptags }}</p>{% endif %}
+          </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+      <div class="mt-4">
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ form.notas.label }}</label>
+        {{ form.notas }}
+      </div>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <button type="submit" class="px-5 py-2.5 rounded-lg bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold shadow">
+        {% if modo == 'novo' %}Criar PUDO{% else %}Guardar alterações{% endif %}
+      </button>
+      <a href="{% if store %}{% url 'pudo_network:gestao_detail' store.pk %}{% else %}{% url 'pudo_network:gestao_list' %}{% endif %}"
+         class="px-5 py-2.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm">Cancelar</a>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>lucide.createIcons();</script>
+{% endblock %}

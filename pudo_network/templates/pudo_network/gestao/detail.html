@@ -1,0 +1,137 @@
+{% extends 'paack_dashboard/base.html' %}
+{% block title %}{{ store.numero }}{% endblock %}
+
+{% block content %}
+<div class="p-2 sm:p-4">
+
+  <!-- Header -->
+  <div class="mb-6 flex items-center justify-between flex-wrap gap-3">
+    <div class="flex items-center gap-3">
+      <a href="{% url 'pudo_network:gestao_list' %}" class="text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white">
+        <i data-lucide="arrow-left" class="w-5 h-5"></i>
+      </a>
+      <div class="w-11 h-11 bg-gradient-to-br from-sky-500 to-teal-600 rounded-xl flex items-center justify-center">
+        <i data-lucide="store" class="w-5 h-5 text-white"></i>
+      </div>
+      <div>
+        <h1 class="text-xl font-bold text-gray-900 dark:text-white font-mono">{{ store.numero }}</h1>
+        <p class="text-sm text-gray-500 dark:text-gray-400">{{ store.nome }}</p>
+      </div>
+    </div>
+    <a href="{% url 'pudo_network:gestao_edit' store.pk %}"
+       class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm font-semibold">
+      <i data-lucide="pencil" class="w-4 h-4"></i> Editar
+    </a>
+  </div>
+
+  <!-- KPIs -->
+  <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-6">
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+      <div class="text-2xl font-extrabold text-sky-600 dark:text-sky-400">{{ em_stock }}</div>
+      <div class="text-xs text-gray-500 dark:text-gray-400">Em stock</div>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+      <div class="text-2xl font-extrabold text-success-600 dark:text-success-400">{{ entregues }}</div>
+      <div class="text-xs text-gray-500 dark:text-gray-400">Entregues</div>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+      <div class="text-2xl font-extrabold text-warning-600 dark:text-warning-400">{{ aguarda_dev }}</div>
+      <div class="text-xs text-gray-500 dark:text-gray-400">Aguarda devolução</div>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+      <div class="text-2xl font-extrabold text-danger-600 dark:text-danger-400">{{ expirados }}</div>
+      <div class="text-xs text-gray-500 dark:text-gray-400">Expirados</div>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+      <div class="text-2xl font-extrabold text-gray-900 dark:text-white">{{ ganhos_mes|floatformat:2 }} €</div>
+      <div class="text-xs text-gray-500 dark:text-gray-400">Ganhos (mês)</div>
+    </div>
+  </div>
+
+  <div class="grid lg:grid-cols-3 gap-6">
+    <!-- Dados -->
+    <div class="lg:col-span-2 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+      <h2 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-4">Dados</h2>
+      <dl class="grid sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+        <div><dt class="text-gray-400">Estado</dt><dd class="text-gray-900 dark:text-white">{{ store.get_status_display }}</dd></div>
+        <div><dt class="text-gray-400">Ciclo pagamento</dt><dd class="text-gray-900 dark:text-white">{{ store.get_ciclo_pagamento_display }}</dd></div>
+        <div><dt class="text-gray-400">NIF</dt><dd class="text-gray-900 dark:text-white">{{ store.nif|default:"—" }}</dd></div>
+        <div><dt class="text-gray-400">IBAN</dt><dd class="text-gray-900 dark:text-white">{{ store.iban|default:"—" }}</dd></div>
+        <div><dt class="text-gray-400">Capacidade</dt><dd class="text-gray-900 dark:text-white">{{ store.capacidade_max }}</dd></div>
+        <div><dt class="text-gray-400">Preço 1ª / adic.</dt><dd class="text-gray-900 dark:text-white">{{ store.preco_1a_entrega }} € / {{ store.preco_adicional }} €</dd></div>
+        <div class="sm:col-span-2"><dt class="text-gray-400">Morada</dt><dd class="text-gray-900 dark:text-white">{{ store.morada|default:"—" }} {{ store.codigo_postal }} {{ store.cidade }}</dd></div>
+      </dl>
+    </div>
+
+    <!-- Acesso do lojista -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+      <h2 class="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-4">Acesso do lojista</h2>
+      {% if access %}
+        <div class="text-sm space-y-1 mb-4">
+          <div class="flex items-center gap-2">
+            <i data-lucide="user" class="w-4 h-4 text-gray-400"></i>
+            <span class="font-semibold text-gray-900 dark:text-white">{{ access.username }}</span>
+          </div>
+          <div class="text-gray-500 dark:text-gray-400">{{ access.get_papel_display }} ·
+            {% if access.is_active %}<span class="text-success-600">ativo</span>{% else %}<span class="text-danger-600">inativo</span>{% endif %}
+          </div>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <form method="post" action="{% url 'pudo_network:gestao_access' store.pk %}">{% csrf_token %}
+            <input type="hidden" name="action" value="reset">
+            <button class="px-3 py-1.5 rounded-lg bg-primary-600 hover:bg-primary-700 text-white text-xs font-semibold">Nova password</button>
+          </form>
+          <form method="post" action="{% url 'pudo_network:gestao_access' store.pk %}">{% csrf_token %}
+            <input type="hidden" name="action" value="toggle">
+            <button class="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-xs">{% if access.is_active %}Desativar{% else %}Ativar{% endif %}</button>
+          </form>
+          <form method="post" action="{% url 'pudo_network:gestao_access' store.pk %}" onsubmit="return confirm('Remover o acesso?')">{% csrf_token %}
+            <input type="hidden" name="action" value="delete">
+            <button class="px-3 py-1.5 rounded-lg bg-danger-50 text-danger-700 text-xs">Remover</button>
+          </form>
+        </div>
+      {% else %}
+        <form method="post" action="{% url 'pudo_network:gestao_access' store.pk %}" class="space-y-3">{% csrf_token %}
+          <input type="hidden" name="action" value="create">
+          <div>
+            <label class="block text-xs text-gray-500 mb-1">Username</label>
+            <input name="username" required class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100">
+          </div>
+          <div>
+            <label class="block text-xs text-gray-500 mb-1">Papel</label>
+            <select name="papel" class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100">
+              {% for val, label in papeis %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+            </select>
+          </div>
+          <button class="w-full px-3 py-2 rounded-lg bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold">Criar acesso</button>
+        </form>
+      {% endif %}
+      <a href="{% url 'pudo_network:login' %}" target="_blank" class="mt-4 inline-flex items-center gap-1 text-xs text-primary-600 dark:text-primary-400 hover:underline">
+        <i data-lucide="external-link" class="w-3.5 h-3.5"></i> Portal do lojista
+      </a>
+    </div>
+  </div>
+
+  <!-- Pacotes recentes -->
+  <div class="mt-6 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <div class="px-6 py-3 border-b border-gray-200 dark:border-gray-700 text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Pacotes recentes</div>
+    <table class="w-full text-sm">
+      <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+        {% for p in recentes %}
+        <tr>
+          <td class="px-6 py-2.5 font-mono text-gray-900 dark:text-white">{{ p.tracking_ref }}</td>
+          <td class="px-6 py-2.5 text-gray-500 dark:text-gray-400">{{ p.get_status_display }}</td>
+          <td class="px-6 py-2.5 text-right text-gray-400">{{ p.created_at|date:"d/m H:i" }}</td>
+        </tr>
+        {% empty %}
+        <tr><td class="px-6 py-8 text-center text-gray-400">Sem pacotes ainda.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>lucide.createIcons();</script>
+{% endblock %}

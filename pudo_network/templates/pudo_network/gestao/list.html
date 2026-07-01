@@ -1,0 +1,100 @@
+{% extends 'paack_dashboard/base.html' %}
+{% block title %}Rede PUDO{% endblock %}
+
+{% block content %}
+<div class="p-2 sm:p-4">
+
+  <!-- Header -->
+  <div class="mb-6 flex items-center justify-between flex-wrap gap-3">
+    <div class="flex items-center gap-3">
+      <div class="w-12 h-12 bg-gradient-to-br from-sky-500 to-teal-600 rounded-xl flex items-center justify-center">
+        <i data-lucide="store" class="w-6 h-6 text-white"></i>
+      </div>
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Rede PUDO</h1>
+        <p class="text-sm text-gray-500 dark:text-gray-400">Lojas de recolha geridas — custódia, POD e faturação.</p>
+      </div>
+    </div>
+    <a href="{% url 'pudo_network:gestao_create' %}"
+       class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold shadow">
+      <i data-lucide="plus" class="w-4 h-4"></i> Adicionar PUDO
+    </a>
+  </div>
+
+  <!-- KPIs -->
+  <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+      <div class="text-2xl font-extrabold text-gray-900 dark:text-white">{{ total }}</div>
+      <div class="text-xs text-gray-500 dark:text-gray-400">PUDOs registados</div>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+      <div class="text-2xl font-extrabold text-success-600 dark:text-success-400">{{ ativos }}</div>
+      <div class="text-xs text-gray-500 dark:text-gray-400">Ativos</div>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+      <div class="text-2xl font-extrabold text-sky-600 dark:text-sky-400">{{ em_stock_total }}</div>
+      <div class="text-xs text-gray-500 dark:text-gray-400">Pacotes em stock</div>
+    </div>
+  </div>
+
+  <!-- Filtros -->
+  <form method="get" class="flex flex-wrap items-center gap-3 mb-4">
+    <div class="relative flex-1 min-w-[200px]">
+      <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"></i>
+      <input type="text" name="q" value="{{ q }}" placeholder="Procurar por número ou nome…"
+             class="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100">
+    </div>
+    <select name="estado" class="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100">
+      <option value="">Todos os estados</option>
+      {% for val, label in status_choices %}
+        <option value="{{ val }}" {% if estado == val %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+    <button class="px-4 py-2 rounded-lg bg-gray-800 dark:bg-gray-700 text-white text-sm font-semibold">Filtrar</button>
+  </form>
+
+  <!-- Tabela -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-gray-50 dark:bg-gray-700/50 text-gray-500 dark:text-gray-400 text-left">
+        <tr>
+          <th class="px-4 py-3 font-semibold">Número</th>
+          <th class="px-4 py-3 font-semibold">Nome</th>
+          <th class="px-4 py-3 font-semibold">Estado</th>
+          <th class="px-4 py-3 font-semibold">Ciclo</th>
+          <th class="px-4 py-3 font-semibold text-right">Em stock</th>
+          <th class="px-4 py-3 font-semibold text-right">Ações</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+        {% for s in stores %}
+        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+          <td class="px-4 py-3 font-mono font-semibold text-gray-900 dark:text-white">{{ s.numero }}</td>
+          <td class="px-4 py-3 text-gray-700 dark:text-gray-200">{{ s.nome }}</td>
+          <td class="px-4 py-3">
+            {% if s.status == 'ATIVO' %}
+              <span class="px-2 py-0.5 rounded-full text-xs bg-success-100 text-success-700 dark:bg-success-900/40 dark:text-success-300">Ativo</span>
+            {% elif s.status == 'PAUSADO' %}
+              <span class="px-2 py-0.5 rounded-full text-xs bg-warning-100 text-warning-700 dark:bg-warning-900/40 dark:text-warning-300">Pausado</span>
+            {% else %}
+              <span class="px-2 py-0.5 rounded-full text-xs bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300">Inativo</span>
+            {% endif %}
+          </td>
+          <td class="px-4 py-3 text-gray-500 dark:text-gray-400">{{ s.get_ciclo_pagamento_display }}</td>
+          <td class="px-4 py-3 text-right font-semibold text-gray-900 dark:text-white">{{ s.em_stock }}</td>
+          <td class="px-4 py-3 text-right">
+            <a href="{% url 'pudo_network:gestao_detail' s.pk %}" class="text-primary-600 dark:text-primary-400 hover:underline">Abrir</a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="px-4 py-10 text-center text-gray-400">Sem PUDOs. Clique em "Adicionar PUDO".</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>lucide.createIcons();</script>
+{% endblock %}

@@ -6,6 +6,7 @@ import logging
 import os
 import re
 from typing import Dict, List, Optional, Sequence, Tuple
+from urllib.parse import urlparse, urlunparse
 
 import requests
 from PIL import Image
@@ -124,11 +125,6 @@ class WhatsAppWPPConnectAPI:
         if require_enabled and not config.whatsapp_enabled:
             raise ValueError("WhatsApp não está habilitado nas configurações")
 
-        base_url = (
-            (config.whatsapp_evolution_api_url or "").strip()
-            or cls._first_env_value(["WPPCONNECT_URL"])
-            or ""
-        )
         session_name = (
             (config.whatsapp_instance_name or "").strip()
             or cls._first_env_value(
@@ -136,6 +132,15 @@ class WhatsAppWPPConnectAPI:
             )
             or ""
         )
+
+        base_url = cls._first_valid_base_url(
+            candidates=[
+                (config.whatsapp_evolution_api_url or "").strip(),
+                cls._first_env_value(["WPPCONNECT_URL"]),
+                cls._first_env_value(["WHATSAPP_API_URL"]),
+            ],
+            session_name=session_name,
+        ) or ""
 
         token = (
             cls._first_env_value(
@@ -161,7 +166,10 @@ class WhatsAppWPPConnectAPI:
         )
 
         if not base_url:
-            raise ValueError("URL do WPPConnect não configurada")
+            raise ValueError(
+                "URL do WPPConnect nao configurada ou invalida "
+                "(esperado: http(s)://host[:porta])"
+            )
         if not session_name:
             raise ValueError("Nome da sessão do WhatsApp não configurado")
         if not token:
@@ -175,6 +183,44 @@ class WhatsAppWPPConnectAPI:
             auth_token=token,
             secret_key=secret_key,
         )
+
+    @staticmethod
+    def _normalize_base_url(raw_value: Optional[str], session_name: str) -> Optional[str]:
+        value = (raw_value or "").strip()
+        if not value:
+            return None
+
+        parsed = urlparse(value)
+        if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+            return None
+
+        path = (parsed.path or "").rstrip("/")
+
+        # Accept legacy values accidentally saved as full endpoint URL,
+        # e.g. https://host/api/<session>/send-file-base64
+        if session_name:
+            marker = f"/api/{session_name}"
+            idx = path.find(marker)
+            if idx != -1:
+                path = path[:idx]
+
+        normalized = urlunparse(
+            (parsed.scheme, parsed.netloc, path, "", "", "")
+        ).rstrip("/")
+
+        return normalized or None
+
+    @classmethod
+    def _first_valid_base_url(
+        cls,
+        candidates: Sequence[Optional[str]],
+        session_name: str,
+    ) -> Optional[str]:
+        for candidate in candidates:
+            normalized = cls._normalize_base_url(candidate, session_name)
+            if normalized:
+                return normalized
+        return None
 
     @staticmethod
     def _first_env_value(keys: Sequence[str]) -> Optional[str]:

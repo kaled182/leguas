@@ -16,9 +16,10 @@ SECRET_KEY = env("SECRET_KEY")
 DEBUG = env.bool("DEBUG", default=False)
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=[])
 CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[])
+CORS_ALLOW_ALL_ORIGINS = True
 
 if DEBUG:
-    for host in ("localhost", "127.0.0.1", "testserver"):
+    for host in ("localhost", "127.0.0.1", "gestao.leguasfranzinas.pt", "testserver"):
         if host not in ALLOWED_HOSTS:
             ALLOWED_HOSTS.append(host)
 
@@ -178,11 +179,13 @@ INSTALLED_APPS = [
     "app_api",
     #Dashboard Atualizado
     "dashboard_leguas",
+    "corsheaders",
 ]
 
 # Middleware
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",

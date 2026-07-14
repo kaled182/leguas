@@ -16,7 +16,7 @@ from django.views.decorators.http import (
 
 from .models import ConfigurationAudit, SystemConfiguration
 from .token_utils import propagate_whatsapp_token
-from .whatsapp_helper import WhatsAppWPPConnectAPI, format_phone_number
+from .whatsapp_helper import WhatsAppWPPConnectAPI, to_whatsapp_number
 
 logger = logging.getLogger(__name__)
 
@@ -672,7 +672,7 @@ def whatsapp_send_test(request):
                 status=400,
             )
 
-        formatted = format_phone_number(phone)
+        formatted = to_whatsapp_number(phone)
         response = api.send_text(formatted, message)
         return JsonResponse(
             {

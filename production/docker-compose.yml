@@ -184,8 +184,8 @@ services:
     container_name: leguas_caddy
     restart: unless-stopped
     ports:
-      - "8090:80"
-      - "8453:443"
+      - "80:80"
+      - "443:443"
       - "443:443/udp"
     environment:
       DOMAIN: ${DOMAIN:-:80}

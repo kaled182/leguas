@@ -1752,13 +1752,32 @@ def _find_header_row(all_rows, required_col):
     return None, -1
 
 
+# Nomes novos das colunas no export EPOD_TASK_LIST_V2 (Cainiao mudou o
+# layout em Set/2026). Só usados em match exacto — "Driver" em substring
+# apanharia "Pre-assigned driver".
+_CAINIAO_HEADER_ALIASES = {
+    "courier name":        ("Driver",),
+    "order type":          ("Order Source",),
+    "task group order":    ("Stop Number",),
+    "sitecode":            ("Plan Station",),
+    "area of destination": ("Destination Region",),
+    "detailed address":    ("Address",),
+    "receipt time":        ("Inbound Time",),
+    "exception type":      ("Task Fail Reason",),
+    "exception detail":    ("Delivery Fail Detail",),
+    "task id":             ("Task Code",),
+    "zone":                ("Relate Zone",),
+}
+
+
 def _col_idx(header, *names):
     """Devolve índice da coluna cujo nome corresponde a `names`.
 
     Estratégia:
     1. Match exacto (case/whitespace-insensitive) — PREFERIDO, evita que
        "Delivery Time" case com "Start Delivery Time".
-    2. Fallback para substring match se não houver exacto.
+    2. Match exacto pelos aliases do layout novo (_CAINIAO_HEADER_ALIASES).
+    3. Fallback para substring match se não houver exacto.
     """
     # 1) exact (case-insensitive, stripped)
     for name in names:
@@ -1766,7 +1785,14 @@ def _col_idx(header, *names):
         for i, h in enumerate(header):
             if h and str(h).strip().lower() == target:
                 return i
-    # 2) substring fallback
+    # 2) aliases (exact)
+    for name in names:
+        for alias in _CAINIAO_HEADER_ALIASES.get(name.strip().lower(), ()):
+            target = alias.lower()
+            for i, h in enumerate(header):
+                if h and str(h).strip().lower() == target:
+                    return i
+    # 3) substring fallback
     for name in names:
         nl = name.strip().lower()
         for i, h in enumerate(header):

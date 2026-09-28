@@ -3504,6 +3504,7 @@ window.appPrompt = function(msg, defaultValue, opts) {
             class="w-full px-2.5 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
           <input type="password" id="reliable-sync-key" autocomplete="new-password" placeholder="Chave de integração (vazio mantém a atual)"
             class="w-full px-2.5 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+          <label class="flex items-center gap-2"><input type="checkbox" id="reliable-claims-enabled"> Descontos pelo julgamento da Cainiao (reclamações geridas no ReliableMaps)</label>
           <div class="flex items-center justify-between">
             <label class="flex items-center gap-2"><input type="checkbox" id="reliable-sync-enabled"> Sincronizar a cada 30 min (7h–23h)</label>
             <button type="button" onclick="reliableSyncSave()" class="px-2.5 py-1 rounded-md bg-gray-800 dark:bg-gray-600 text-white font-semibold">Guardar</button>
@@ -3747,6 +3748,10 @@ function renderReliableSync(d) {
   else if (!d.enabled) txt = 'Desligada.';
   else txt = 'Ligada.';
   txt += ' Último import: ' + _fmtDataHora(d.last_import_at);
+  if (d.claims_enabled) {
+    const v = d.verdicts || {};
+    txt += ` · Julgamentos: ${v.claim_created || 0} descontos, ${v.no_liability || 0} sem responsabilidade, ${v.no_driver || 0} login sem motorista`;
+  }
   status.textContent = txt;
   const ul = document.getElementById('reliable-sync-recent');
   ul.innerHTML = '';
@@ -3765,6 +3770,7 @@ function renderReliableSync(d) {
     document.getElementById('reliable-sync-key').placeholder = d.key_masked
       ? `Chave atual ${d.key_masked} (vazio mantém)` : 'Chave de integração';
     document.getElementById('reliable-sync-enabled').checked = !!d.enabled;
+    document.getElementById('reliable-claims-enabled').checked = !!d.claims_enabled;
   }
 }
 
@@ -3799,6 +3805,7 @@ function reliableSyncSave() {
     url: document.getElementById('reliable-sync-url').value,
     key: document.getElementById('reliable-sync-key').value,
     enabled: document.getElementById('reliable-sync-enabled').checked,
+    claims_enabled: document.getElementById('reliable-claims-enabled').checked,
   }).then(d => {
     document.getElementById('reliable-sync-key').value = '';
     renderReliableSync(d);

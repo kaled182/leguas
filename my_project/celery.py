@@ -94,13 +94,10 @@ app.conf.beat_schedule = {
         'options': {'expires': 3600},
     },
 
-    # Reclamações de clientes: quando o driver não responde até ao
-    # deadline, cria/aprova o DriverClaim e fecha o chamado.
-    'auto-close-expired-complaints': {
-        'task': 'drivers_app.auto_close_expired_complaints',
-        'schedule': crontab(hour=7, minute=5),
-        'options': {'expires': 3600},
-    },
+    # Reclamações de clientes: DESACTIVADO (28/09/2026). As reclamações são
+    # geridas no ReliableMaps e o desconto nasce do julgamento da Cainiao
+    # (settlements.sync_claim_verdicts_from_reliable). O auto-fecho local
+    # criava um claim de €30 a quem "não respondeu" cá — agora responde-se lá.
 
     # Relatório semanal de Pacotes Not Arrived — sextas às 18h
     'not-arrived-weekly-report': {
@@ -142,6 +139,15 @@ app.conf.beat_schedule = {
         'options': {'expires': 1500},
     },
 
+    # Julgamentos da Cainiao das reclamações (geridas no ReliableMaps) →
+    # DriverClaim aprovado quando é responsabilidade nossa. Liga/desliga em
+    # SystemConfiguration.reliable_claims_sync_enabled.
+    'cainiao-sync-claim-verdicts-reliable': {
+        'task': 'settlements.sync_claim_verdicts_from_reliable',
+        'schedule': crontab(minute=20),
+        'options': {'expires': 3000},
+    },
+
     # NOTA: agendamento da auto-geração de contas recorrentes
     # DESACTIVADO — estava a duplicar Bills quando o mesmo fornecedor
     # tinha recorrência configurada nos dois lados (template + cadastro
@@ -181,14 +187,6 @@ app.conf.beat_schedule = {
         'options': {'expires': 3600},
     },
 
-    # Auto-fecho de reclamações com prazo expirado (cenário 3):
-    # cria DriverClaim automático e fecha a reclamação.
-    # Corre 1x/dia às 8:00 para apanhar reclamações expiradas no dia anterior.
-    'drivers-auto-close-expired-complaints': {
-        'task': 'drivers_app.auto_close_expired_complaints',
-        'schedule': crontab(hour=8, minute=0),
-        'options': {'expires': 3600},
-    },
 
     # Aging da Rede PUDO — marca EXPIRADO os pacotes cujo prazo de
     # levantamento venceu. Corre 1x/dia às 7:30.

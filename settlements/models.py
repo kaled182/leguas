@@ -2801,6 +2801,66 @@ class ReliableEpodSync(models.Model):
         return f"{self.filename} ({self.get_status_display()})"
 
 
+class ReliableClaimVerdict(models.Model):
+    """Julgamento da Cainiao de uma reclamação, lido do ReliableMaps.
+
+    As reclamações são geridas no ReliableMaps; aqui só se consome o veredicto
+    (/api/integracoes/v1/reclamacoes/). "contra" (Liability established) cria um
+    DriverClaim aprovado para o motorista do login; "a_favor" não desconta e
+    estorna um desconto que esta sincronização tenha criado para o ticket.
+    """
+
+    VERDICT_CHOICES = [
+        ("contra", "Responsabilidade nossa"),
+        ("a_favor", "Responsabilidade não é nossa"),
+    ]
+    OUTCOME_CLAIM_CREATED = "claim_created"
+    OUTCOME_NO_DRIVER = "no_driver"
+    OUTCOME_DUPLICATE = "duplicate"
+    OUTCOME_NO_LIABILITY = "no_liability"
+    OUTCOME_REVERTED = "reverted"
+    OUTCOME_CHOICES = [
+        (OUTCOME_CLAIM_CREATED, "Desconto criado"),
+        (OUTCOME_NO_DRIVER, "Login sem motorista"),
+        (OUTCOME_DUPLICATE, "Já havia desconto para o pacote"),
+        (OUTCOME_NO_LIABILITY, "Sem desconto (não é responsabilidade nossa)"),
+        (OUTCOME_REVERTED, "Desconto estornado"),
+    ]
+
+    ticket = models.CharField("Ticket", max_length=40, unique=True)
+    waybill = models.CharField("Waybill", max_length=100, db_index=True)
+    login = models.CharField("Login Cainiao", max_length=255, db_index=True)
+    exception_name = models.CharField("Reclamação", max_length=100, blank=True)
+    hub = models.CharField("Hub", max_length=40, blank=True)
+    verdict = models.CharField("Veredicto", max_length=10, choices=VERDICT_CHOICES)
+    verdict_raw = models.CharField("Veredicto (Cainiao)", max_length=60, blank=True)
+    verdict_note = models.TextField("Nota do veredicto", blank=True)
+    verdict_at = models.DateTimeField("Veredicto em", null=True, blank=True, db_index=True)
+    opened_at = models.DateTimeField("Aberta em", null=True, blank=True)
+    answered_in_ces_by = models.CharField("Quem respondeu no CES", max_length=20, blank=True)
+    driver_answer = models.TextField("Resposta do motorista", blank=True)
+    driver = models.ForeignKey(
+        "drivers_app.DriverProfile", on_delete=models.SET_NULL,
+        null=True, blank=True, related_name="cainiao_verdicts",
+    )
+    claim = models.ForeignKey(
+        "settlements.DriverClaim", on_delete=models.SET_NULL,
+        null=True, blank=True, related_name="cainiao_verdicts",
+    )
+    outcome = models.CharField("Resultado", max_length=16, choices=OUTCOME_CHOICES, db_index=True)
+    message = models.TextField("Mensagem", blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Veredicto Cainiao (ReliableMaps)"
+        verbose_name_plural = "Veredictos Cainiao (ReliableMaps)"
+        ordering = ["-verdict_at"]
+
+    def __str__(self):
+        return f"{self.ticket} {self.login} {self.get_verdict_display()} ({self.get_outcome_display()})"
+
+
 # ============================================================================
 # CAINIAO — PLANILHA DRIVER STATISTIC (resumo por motorista)
 # ============================================================================

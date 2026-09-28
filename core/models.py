@@ -125,6 +125,16 @@ class Partner(models.Model):
             "PUDO é entregue em mãos do cliente em vez do PUDO."
         ),
     )
+    verdict_claim_amount = models.DecimalField(
+        "Desconto por reclamação julgada contra o DSP (€)",
+        max_digits=8, decimal_places=2,
+        default=Decimal("30.00"),
+        help_text=(
+            "Valor por omissão do desconto criado quando a Cainiao julga uma "
+            "reclamação como responsabilidade nossa (via ReliableMaps). "
+            "Cada desconto pode ser editado depois em Claims."
+        ),
+    )
     pudo_geo_tolerance_meters = models.PositiveIntegerField(
         "PUDO — tolerância geo (metros)",
         default=200,

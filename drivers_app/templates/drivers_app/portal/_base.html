@@ -142,13 +142,6 @@
             <i data-lucide="users" class="w-4 h-4 inline -mt-0.5"></i>
             <span class="hidden lg:inline ml-1">Helpers</span>
           </a>
-          <a href="{% url 'drivers_app:driver_complaints' driver.id %}"
-             title="Reclamações"
-             class="px-3 py-1.5 rounded-lg text-sm font-medium transition
-               {% if request.resolver_match.url_name == 'driver_complaints' %}bg-white text-indigo-700 shadow{% else %}text-white/90 hover:bg-white/10{% endif %}">
-            <i data-lucide="alert-octagon" class="w-4 h-4 inline -mt-0.5"></i>
-            <span class="hidden lg:inline ml-1">Reclamações</span>
-          </a>
           <a href="{% url 'drivers_app:driver_claims' driver.id %}"
              title="Descontos / DriverClaim — recurso e prova de entrega"
              class="px-3 py-1.5 rounded-lg text-sm font-medium transition

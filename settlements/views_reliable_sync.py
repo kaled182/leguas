@@ -42,12 +42,18 @@ def api_reliable_sync(request):
             elif (data.get("key") or "").strip():
                 cfg.reliable_api_key = data["key"].strip()
             cfg.reliable_epod_sync_enabled = bool(data.get("enabled"))
+            cfg.reliable_claims_sync_enabled = bool(data.get("claims_enabled"))
             # update_fields: um save completo re-encripta todos os campos e
             # falha se algum antigo já não se consegue desencriptar.
-            cfg.save(update_fields=["reliable_api_url", "reliable_api_key", "reliable_epod_sync_enabled"])
+            cfg.save(update_fields=[
+                "reliable_api_url", "reliable_api_key",
+                "reliable_epod_sync_enabled", "reliable_claims_sync_enabled",
+            ])
         elif action == "sync":
-            from .tasks import sync_epod_from_reliable
+            from .tasks import sync_claim_verdicts_from_reliable, sync_epod_from_reliable
             sync_epod_from_reliable.delay(triggered_by=f"manual:{request.user.username}")
+            if cfg.reliable_claims_sync_enabled:
+                sync_claim_verdicts_from_reliable.delay(triggered_by=f"manual:{request.user.username}")
         else:
             return JsonResponse({"ok": False, "erro": "Ação desconhecida"}, status=400)
 
@@ -69,9 +75,18 @@ def api_reliable_sync(request):
         ReliableEpodSync.objects.filter(status=ReliableEpodSync.STATUS_IMPORTED)
         .order_by("-created_at").values_list("created_at", flat=True).first()
     )
+    from django.db.models import Count
+
+    from .models import ReliableClaimVerdict
+
+    verdicts = dict(
+        ReliableClaimVerdict.objects.values_list("outcome").annotate(n=Count("id")).values_list("outcome", "n")
+    )
     return JsonResponse({
         "ok": True,
         "enabled": cfg.reliable_epod_sync_enabled,
+        "claims_enabled": cfg.reliable_claims_sync_enabled,
+        "verdicts": verdicts,
         "configured": bool((cfg.reliable_api_url or "").strip() and (cfg.reliable_api_key or "").strip()),
         "is_admin": is_admin,
         "url": (cfg.reliable_api_url or "") if is_admin else "",

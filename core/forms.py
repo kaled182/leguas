@@ -28,6 +28,7 @@ class PartnerForm(forms.ModelForm):
             "pudo_additional_delivery_price",
             "pudo_fake_delivery_penalty",
             "pudo_geo_tolerance_meters",
+            "verdict_claim_amount",
             # Fiscal
             "vat_regime",
             "vat_rate_override",
@@ -122,6 +123,13 @@ class PartnerForm(forms.ModelForm):
                     "class": "w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-violet-500 dark:bg-gray-700 dark:text-white",
                     "step": "0.0001",
                     "placeholder": "0.2000",
+                }
+            ),
+            "verdict_claim_amount": forms.NumberInput(
+                attrs={
+                    "class": "w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-rose-500 dark:bg-gray-700 dark:text-white",
+                    "step": "0.01",
+                    "placeholder": "30.00",
                 }
             ),
             "pudo_fake_delivery_penalty": forms.NumberInput(

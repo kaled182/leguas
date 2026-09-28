@@ -98,6 +98,9 @@ class SystemConfiguration(models.Model):
     reliable_epod_sync_enabled = models.BooleanField(
         "Sincronizar EPOD do ReliableMaps", default=False,
     )
+    reliable_claims_sync_enabled = models.BooleanField(
+        "Descontos pelo julgamento da Cainiao (ReliableMaps)", default=False,
+    )
 
     # Maps - Common Settings
     map_language = models.CharField("Idioma do Mapa", max_length=10, default="pt-PT")

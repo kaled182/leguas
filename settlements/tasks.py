@@ -464,3 +464,17 @@ def sync_epod_from_reliable(triggered_by="cron"):
     if not result.get("ok"):
         logger.warning("sync_epod_from_reliable: %s", result.get("error"))
     return result
+
+
+@shared_task(name="settlements.sync_claim_verdicts_from_reliable")
+def sync_claim_verdicts_from_reliable(triggered_by="cron"):
+    """Descontos a partir do julgamento da Cainiao lido do ReliableMaps.
+
+    Ver settlements/services_reliable_claims.py.
+    """
+    from .services_reliable_claims import sync_claim_verdicts
+
+    result = sync_claim_verdicts(triggered_by=triggered_by)
+    if not result.get("ok"):
+        logger.warning("sync_claim_verdicts_from_reliable: %s", result.get("error"))
+    return result

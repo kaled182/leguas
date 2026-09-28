@@ -137,12 +137,6 @@
             <span>Lista clássica (legacy)</span>
           </a>
 
-          <a href="{% url 'drivers_app:admin_complaints_dashboard' %}"
-            class="flex items-center gap-2 p-2 rounded-lg text-sm transition-all {% if request.resolver_match.url_name == 'admin_complaints_dashboard' %}bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 font-medium{% else %}text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-100{% endif %}">
-            <i data-lucide="message-circle-warning" class="w-4 h-4"></i>
-            <span>Reclamações</span>
-          </a>
-
           <a href="{% url 'drivers_app:change_requests_list' %}"
             class="flex items-center gap-2 p-2 rounded-lg text-sm transition-all {% if request.resolver_match.url_name == 'change_requests_list' %}bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 font-medium{% else %}text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-100{% endif %}">
             <i data-lucide="user-check" class="w-4 h-4"></i>
@@ -176,16 +170,6 @@
             class="flex items-center gap-2 p-2 rounded-lg text-sm transition-all {% if 'packages' in request.resolver_match.url_name|default:'' %}bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 font-medium{% else %}text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:text-orange-600 dark:hover:text-orange-400{% endif %}">
             <i data-lucide="search" class="w-4 h-4"></i>
             <span>Pesquisa Global</span>
-          </a>
-          <a href="{% url 'drivers_app:admin_complaints_dashboard' %}"
-            class="flex items-center gap-2 p-2 rounded-lg text-sm transition-all {% if request.resolver_match.url_name == 'admin_complaints_dashboard' %}bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 font-medium{% else %}text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:text-orange-600 dark:hover:text-orange-400{% endif %}">
-            <i data-lucide="message-circle-warning" class="w-4 h-4"></i>
-            <span>Reclamações (Kanban)</span>
-          </a>
-          <a href="{% url 'drivers_app:admin_tickets_cainiao' %}"
-            class="flex items-center gap-2 p-2 rounded-lg text-sm transition-all {% if request.resolver_match.url_name == 'admin_tickets_cainiao' %}bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 font-medium{% else %}text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:text-orange-600 dark:hover:text-orange-400{% endif %}">
-            <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
-            <span>Tickets Cainiao (Massa)</span>
           </a>
           <a href="{% url 'claim-list' %}"
             class="flex items-center gap-2 p-2 rounded-lg text-sm transition-all {% if request.resolver_match.url_name == 'claim-list' or request.resolver_match.url_name == 'claim-detail' %}bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 font-medium{% else %}text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:text-orange-600 dark:hover:text-orange-400{% endif %}">

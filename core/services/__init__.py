@@ -8,7 +8,6 @@ from django.utils import timezone
 
 from orders_manager.adapters import DelnextAdapter
 from .partner_sync_service import PartnerSyncService
-from .paack_api_connector import PaackAPIConnector
 from .partner_data_processor import PartnerDataProcessor
 
 logger = logging.getLogger(__name__)
@@ -229,7 +228,6 @@ def get_sync_service(integration):
 
 __all__ = [
     "PartnerSyncService", 
-    "PaackAPIConnector", 
     "PartnerDataProcessor",
     "DelnextSyncService",
     "get_sync_service",

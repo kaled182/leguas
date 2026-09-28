@@ -73,9 +73,6 @@ FERNET_KEYS = [
 ]
 
 # Constantes customizadas
-COOKIE_KEY = env("COOKIE_KEY")
-SYNC_TOKEN = env("SYNC_TOKEN")
-API_URL = env("API_URL")
 GEOAPI_TOKEN = os.getenv("GEOAPI_TOKEN")
 
 # WhatsApp Reports
@@ -149,11 +146,6 @@ INSTALLED_APPS = [
     "tailwind",
     "theme",
     "customauth",
-    # Legacy Apps (Paack-only - serão descontinuados)
-    "ordersmanager_paack",
-    "send_paack_reports",
-    "paack_dashboard",
-    "manualorders_paack",
     # Core Apps
     "management",
     "drivers_app",
@@ -331,10 +323,6 @@ LOGGING = {
             "format": "{levelname} {message}",
             "style": "{",
         },
-        "sync_format": {
-            "format": "[{asctime}] {levelname} - {name} - {message}",
-            "style": "{",
-        },
     },
     "handlers": {
         "console": {
@@ -342,39 +330,8 @@ LOGGING = {
             "class": "logging.StreamHandler",
             "formatter": "simple",
         },
-        "sync_console": {
-            "level": "INFO",
-            "class": "logging.StreamHandler",
-            "formatter": "sync_format",
-        },
     },
-    "loggers": {
-        "dashboard_paack": {
-            "handlers": ["console"],
-            "level": "INFO",
-            "propagate": True,
-        },
-        "ordersmanager_paack": {
-            "handlers": ["sync_console"],
-            "level": "INFO",
-            "propagate": False,
-        },
-        "ordersmanager_paack.sync_service": {
-            "handlers": ["sync_console"],
-            "level": "INFO",
-            "propagate": False,
-        },
-        "ordersmanager_paack.data_processor": {
-            "handlers": ["sync_console"],
-            "level": "INFO",
-            "propagate": False,
-        },
-        "ordersmanager_paack.APIConnect": {
-            "handlers": ["sync_console"],
-            "level": "INFO",
-            "propagate": False,
-        },
-    },
+    "loggers": {},
 }
 
 MEDIA_URL = "/media/"
@@ -387,13 +344,6 @@ MESSAGE_TAGS = {
     messages.WARNING: "bg-yellow-500",
     messages.ERROR: "bg-red-500",
 }
-
-# ============================================================================
-# FEATURE FLAGS - Multi-Partner Architecture
-# ============================================================================
-# Importa feature flags para controlar rollout gradual da nova arquitetura
-# Referência: system_config/feature_flags.py e docs/MIGRATION_GUIDE.md
-
 
 # ============================================================================
 # CELERY CONFIGURATION

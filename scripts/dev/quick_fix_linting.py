@@ -26,8 +26,7 @@ def run_formatters():
                 "core/ customauth/ drivers_app/ fleet_management/ "
                 "pricing/ route_allocation/ orders_manager/ analytics/ "
                 "settlements/ accounting/ converter/ system_config/ "
-                "paack_dashboard/ ordersmanager_paack/ manualorders_paack/ "
-                "send_paack_reports/ management/"
+                "management/"
             ),
         },
         {

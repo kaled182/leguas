@@ -3,7 +3,6 @@ Management command para criar zonas postais de Portugal e tarifas de exemplo.
 
 Uso:
     python manage.py seed_postal_zones
-    python manage.py seed_postal_zones --with-tariffs  # Criar tarifas também
 """
 
 from decimal import Decimal
@@ -11,19 +10,11 @@ from decimal import Decimal
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
-from core.models import Partner
-from pricing.models import PartnerTariff, PostalZone
+from pricing.models import PostalZone
 
 
 class Command(BaseCommand):
-    help = "Cria zonas postais de Portugal e tarifas de exemplo"
-
-    def add_arguments(self, parser):
-        parser.add_argument(
-            "--with-tariffs",
-            action="store_true",
-            help="Criar tarifas de exemplo para parceiros",
-        )
+    help = "Cria zonas postais de Portugal"
 
     def handle(self, *args, **options):
         self.stdout.write(self.style.SUCCESS("=" * 60))
@@ -31,7 +22,6 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS("=" * 60 + "\n"))
 
         created_zones = 0
-        created_tariffs = 0
 
         with transaction.atomic():
             # Criar zonas postais principais de Portugal
@@ -54,52 +44,12 @@ class Command(BaseCommand):
                         )
                     )
 
-            # Criar tarifas se solicitado
-            if options["with_tariffs"]:
-                self.stdout.write("\n🏷️ Criando tarifas de exemplo...\n")
-
-                try:
-                    paack = Partner.objects.get(name="Paack")
-
-                    for zone in PostalZone.objects.all():
-                        # Criar tarifa base para Paack
-                        tariff, created = PartnerTariff.objects.get_or_create(
-                            partner=paack,
-                            postal_zone=zone,
-                            defaults={
-                                "base_price": self._calculate_base_price(zone),
-                                "success_bonus": Decimal("0.50"),
-                                "failure_penalty": Decimal("1.00"),
-                                "late_delivery_penalty": Decimal("0.50"),
-                                "weekend_multiplier": Decimal("1.5"),
-                                "express_multiplier": Decimal("1.8"),
-                                "is_active": True,
-                            },
-                        )
-
-                        if created:
-                            created_tariffs += 1
-                            self.stdout.write(
-                                self.style.SUCCESS(
-                                    f"  ✓ Tarifa para {zone.name}: €{tariff.base_price}"
-                                )
-                            )
-
-                except Partner.DoesNotExist:
-                    self.stdout.write(
-                        self.style.WARNING(
-                            '\n⚠ Partner "Paack" não encontrado. Execute primeiro:\n'
-                            "   python manage.py create_initial_partners"
-                        )
-                    )
-
         # Resumo
         self.stdout.write("\n" + "=" * 60)
         self.stdout.write(
             self.style.SUCCESS(
                 f"✅ Criação concluída!\n"
-                f"   • Zonas criadas: {created_zones}\n"
-                f"   • Tarifas criadas: {created_tariffs}"
+                f"   • Zonas criadas: {created_zones}"
             )
         )
         self.stdout.write("=" * 60)

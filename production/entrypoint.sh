@@ -104,10 +104,6 @@ else:
 " || log_warn "Falha a criar superuser (não fatal)"
     fi
 
-    # ── Garantir partner CAINIAO existe (idempotente) ────────────────
-    log_info "A garantir partners iniciais…"
-    python manage.py create_initial_partners 2>/dev/null \
-        || log_warn "create_initial_partners não rodou (não fatal)"
 fi
 
 log_info "Tudo pronto. Arranca: $@"

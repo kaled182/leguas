@@ -1623,16 +1623,8 @@ def retry_failed_sync(request, log_id):
             },
         )
 
-        # TODO: Aqui você implementaria a lógica específica de retry
-        # baseada no tipo de integração (Paack, etc.)
-        # Por agora, vamos simular um retry
-
-        # Exemplo: se fosse Paack
-        if integration.partner.name == "Paack":
-            # from ordersmanager_paack.sync_service import SyncService
-            # sync_service = SyncService()
-            # result = sync_service.sync_data(force_refresh=True)
-            pass
+        # TODO: lógica de retry específica por tipo de integração.
+        # Por agora, simula-se o retry.
 
         # Marcar como parcialmente bem-sucedido (já que é simulado)
         new_log.mark_completed(

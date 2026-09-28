@@ -11,7 +11,6 @@ class Migration(migrations.Migration):
 
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ('ordersmanager_paack', '0001_initial'),
     ]
 
     operations = [
@@ -27,7 +26,6 @@ class Migration(migrations.Migration):
                 ('password', models.CharField(max_length=128)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
-                ('driver', models.ForeignKey(blank=True, help_text='Motorista do sistema de pedidos', null=True, on_delete=django.db.models.deletion.CASCADE, related_name='driver_accesses', to='ordersmanager_paack.driver')),
                 ('user', models.ForeignKey(help_text='Gestor responsável', on_delete=django.db.models.deletion.CASCADE, related_name='drivers', to=settings.AUTH_USER_MODEL)),
             ],
             options={

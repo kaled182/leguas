@@ -30,15 +30,6 @@ class DriverAccess(models.Model):
         verbose_name="Gestor Responsável",
         help_text="Gestor responsável por este motorista",
     )
-    driver = models.ForeignKey(
-        "ordersmanager_paack.Driver",
-        on_delete=models.CASCADE,
-        related_name="driver_accesses",
-        null=True,
-        blank=True,
-        verbose_name="Motorista (Paack legacy)",
-        help_text="Motorista do sistema de pedidos Paack — legacy",
-    )
     driver_profile = models.OneToOneField(
         "drivers_app.DriverProfile",
         on_delete=models.CASCADE,
@@ -124,10 +115,6 @@ class DriverAccess(models.Model):
     def check_password(self, raw_password):
         """Verifica se a senha está correta."""
         return check_password(raw_password, self.password)
-
-    def get_route(self, date=None):
-        """Retorna o objeto DriverRoute para este motorista."""
-        return DriverRoute(self.driver) if self.driver else None
 
 
 class DriverLoginOTP(models.Model):
@@ -221,88 +208,3 @@ class EmpresaAccess(models.Model):
 
     def check_password(self, raw_password):
         return check_password(raw_password, self.password)
-
-
-class DriverRoute:
-    """
-    Classe utilitária para montar e gerenciar a rota de um motorista.
-
-    Esta classe fornece métodos para acessar os pedidos atribuídos
-    a um motorista específico, com filtros opcionais por data.
-    """
-
-    def __init__(self, driver):
-        """
-        Inicializa a rota para um Driver específico.
-
-        Args:
-            driver: Instância do modelo Driver
-        """
-        self.driver = driver
-
-    def get_orders(self, date=None):
-        """
-        Retorna os pedidos atribuídos ao motorista.
-
-        Args:
-            date (date, optional): Data para filtrar pedidos
-
-        Returns:
-            QuerySet: Pedidos do motorista
-        """
-        if not self.driver:
-            from ordersmanager_paack.models import Order
-
-            return Order.objects.none()
-
-        # Importação local para evitar import circular
-        from ordersmanager_paack.models import Order
-
-        qs = Order.objects.filter(dispatch__driver=self.driver)
-
-        if date:
-            qs = qs.filter(intended_delivery_date=date)
-
-        return qs.order_by("intended_delivery_date", "created_at")
-
-    def get_orders_count(self, date=None):
-        """Retorna o número total de pedidos."""
-        return self.get_orders(date).count()
-
-    def get_delivered_count(self, date=None):
-        """Retorna o número de pedidos entregues."""
-        return self.get_orders(date).filter(is_delivered=True).count()
-
-    def get_failed_count(self, date=None):
-        """Retorna o número de pedidos falhados."""
-        return self.get_orders(date).filter(is_failed=True).count()
-
-    def get_pending_count(self, date=None):
-        """Retorna o número de pedidos pendentes."""
-        orders = self.get_orders(date)
-        return orders.filter(is_delivered=False, is_failed=False).count()
-
-    def as_dict(self, date=None):
-        """
-        Retorna a rota como uma lista de dicionários com informações dos pedidos.
-
-        Args:
-            date (date, optional): Data para filtrar pedidos
-
-        Returns:
-            list: Lista de dicionários com dados dos pedidos
-        """
-        orders = self.get_orders(date)
-        return [
-            {
-                "order_id": order.order_id,
-                "retailer": order.retailer,
-                "client_address": order.client_address,
-                "intended_delivery_date": order.intended_delivery_date,
-                "actual_delivery_date": order.actual_delivery_date,
-                "status": order.simplified_order_status,
-                "is_delivered": order.is_delivered,
-                "is_failed": order.is_failed,
-            }
-            for order in orders
-        ]

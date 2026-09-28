@@ -1,7 +1,7 @@
 """Gestão interna da Rede PUDO (staff) — no padrão visual do dashboard.
 
 Substitui o uso do Django admin para o fluxo do dia-a-dia: listar/criar/editar
-PUDOs e gerir credenciais do lojista. Páginas herdam `paack_dashboard/base.html`.
+PUDOs e gerir credenciais do lojista. Páginas herdam `layouts/admin_base.html`.
 """
 import secrets
 import string

@@ -9,7 +9,7 @@ from core.models import Partner
 class Order(models.Model):
     """
     Representa um pedido de entrega de qualquer parceiro.
-    Este é o modelo central que substitui PaackOrder.
+    Modelo central de pedidos, genérico para qualquer parceiro.
     """
 
     # Status possíveis do pedido

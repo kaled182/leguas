@@ -8,7 +8,6 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('drivers_app', '0016_driverprofile_daily_capacity'),
-        ('ordersmanager_paack', '0002_alter_order_client_address'),
         ('customauth', '0004_alter_driveraccess_profile_picture'),
     ]
 
@@ -32,10 +31,5 @@ class Migration(migrations.Migration):
             model_name='driveraccess',
             name='username',
             field=models.CharField(blank=True, help_text='Username único de login (default: email).', max_length=100, null=True, unique=True, verbose_name='Username'),
-        ),
-        migrations.AlterField(
-            model_name='driveraccess',
-            name='driver',
-            field=models.ForeignKey(blank=True, help_text='Motorista do sistema de pedidos Paack — legacy', null=True, on_delete=django.db.models.deletion.CASCADE, related_name='driver_accesses', to='ordersmanager_paack.driver', verbose_name='Motorista (Paack legacy)'),
         ),
     ]

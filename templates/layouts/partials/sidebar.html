@@ -29,20 +29,15 @@
         Dashboard
       </div>
       
-      <a href="{% url 'paack_dashboard:dashboard_paack' %}"
-        class="nav-link flex items-center gap-3 p-3 rounded-lg transition-all duration-200 group {% if request.resolver_match.url_name == 'dashboard_paack' %}bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 border-r-2 border-primary-500{% else %}text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:text-primary-600 dark:hover:text-primary-400{% endif %}">
+      <a href="{% url 'dashboard_leguas:home' %}"
+        class="nav-link flex items-center gap-3 p-3 rounded-lg transition-all duration-200 group {% if request.resolver_match.url_name == 'home' %}bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 border-r-2 border-primary-500{% else %}text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:text-primary-600 dark:hover:text-primary-400{% endif %}">
         <i data-lucide="layout-dashboard" class="w-5 h-5 text-current group-hover:scale-110 transition-transform flex-shrink-0"></i>
         <span class="sidebar-text font-medium">Dashboard Principal</span>
-        {% if request.resolver_match.url_name == 'dashboard_paack' %}
+        {% if request.resolver_match.url_name == 'home' %}
           <div class="ml-auto w-2 h-2 bg-primary-500 rounded-full"></div>
         {% endif %}
       </a>
 
-      <a href="{% url 'paack_dashboard:debug_week_efficiency' %}"
-        class="nav-link flex items-center gap-3 p-3 rounded-lg transition-all duration-200 group text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:text-primary-600 dark:hover:text-primary-400">
-        <i data-lucide="bug" class="w-5 h-5 text-current group-hover:scale-110 transition-transform flex-shrink-0"></i>
-        <span class="sidebar-text font-medium">Debug Eficiência</span>
-      </a>
     </div>
 
     <!-- Seção Mapas -->
@@ -727,23 +722,6 @@
       </a>
     </div>
 
-    <!-- Seção Ações -->
-    <div class="mb-6">
-      <div class="px-3 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
-        Ações Rápidas
-      </div>
-
-      <button id="syncButtonaApiPaack" type="button"
-        data-sync-url="{% url 'ordersmanager_paack:sync_data_paack' %}"
-        data-csrf="{{ csrf_token }}"
-        class="nav-link flex items-center gap-3 p-3 rounded-lg transition-all duration-200 group w-full text-left text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:text-emerald-700 dark:hover:text-emerald-300 disabled:opacity-50 disabled:cursor-not-allowed">
-        <i data-lucide="refresh-cw" class="w-5 h-5 text-current group-hover:rotate-180 transition-transform duration-500 flex-shrink-0"></i>
-        <span class="sidebar-text font-medium sync-text">Sincronizar</span>
-        <div class="ml-auto">
-          <div class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
-        </div>
-      </button>
-    </div>
   </nav>
 
   <!-- Footer da sidebar -->

@@ -638,7 +638,6 @@ function openDriverModal(driverId = null) {
     document.getElementById('driver_name').value = 'Nome do Motorista';
     document.getElementById('driver_email').value = 'email@exemplo.com';
     document.getElementById('driver_phone').value = '(11) 98765-4321';
-    document.getElementById('driver_paack_id').value = 'PAACK123';
     document.getElementById('driver_status').value = 'active';
   } else {
     // Novo motorista

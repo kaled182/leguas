@@ -50,7 +50,7 @@ class DriverAccessAdmin(admin.ModelAdmin):
                 )
             },
         ),
-        ("Relacionamentos", {"fields": ("user", "driver")}),
+        ("Relacionamentos", {"fields": ("user", "driver_profile")}),
         ("Autenticação", {"fields": ("password",), "classes": ("collapse",)}),
         (
             "Timestamps",
@@ -59,18 +59,16 @@ class DriverAccessAdmin(admin.ModelAdmin):
     )
 
     def driver_display(self, obj):
-        """Exibe informações do motorista associado."""
-        if obj.driver:
-            return format_html(
-                '<span style="color: green;">✓ {}</span>', obj.driver.name
-            )
+        """Exibe o motorista associado."""
+        if obj.driver_profile_id:
+            return format_html('<span style="color: green;">✓ {}</span>', obj.driver_profile)
         return format_html('<span style="color: orange;">⚠ Não vinculado</span>')
 
     driver_display.short_description = "Motorista"
 
     def get_queryset(self, request):
         """Otimiza consultas do admin."""
-        return super().get_queryset(request).select_related("user", "driver")
+        return super().get_queryset(request).select_related("user", "driver_profile")
 
 
 @admin.register(DriverLoginOTP)

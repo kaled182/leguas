@@ -114,7 +114,6 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <!-- Custom CSS -->
-    <!--<link rel="stylesheet" href="{% static 'paack_dashboard/css/paack_dashboard.css' %}" />-->
     
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚚</text></svg>">
 
@@ -164,7 +163,7 @@
       <div id="sidebar-overlay" class="fixed inset-0 bg-black/50 dark:bg-black/70 z-30 lg:hidden hidden transition-opacity duration-300 backdrop-blur-sm"></div>
       
       <!-- Sidebar -->
-      {% include 'paack_dashboard/partials/sidebar.html' %}
+      {% include 'layouts/partials/sidebar.html' %}
       
       <!-- Botão de toggle da sidebar (mobile) -->
       <button id="sidebar-toggle" class="fixed top-4 left-4 z-40 lg:hidden bg-primary-600 hover:bg-primary-700 text-white p-3 rounded-lg shadow-lg transition-colors duration-200">
@@ -186,12 +185,10 @@
       </div>
     </div>
 
-    {% include 'paack_dashboard/partials/loader_apisync.html' %}
 
     <!-- Scripts -->
-    <script src="{% static 'paack_dashboard/js/sidebar.js' %}"></script>
+    <script src="{% static 'js/sidebar.js' %}"></script>
 
-    <script src="{% static 'paack_dashboard/js/script_loader_api_sync.js' %}"></script>
 
     <!-- Dados do gráfico movidos para o template dashboard.html para evitar duplicação -->
 

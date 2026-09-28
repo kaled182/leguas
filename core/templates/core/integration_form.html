@@ -157,49 +157,6 @@
             </div>
           </div>
           
-          <!-- Campos Paack/AppSheet -->
-          <div id="paack-auth-fields" style="display:none;">
-            <div class="space-y-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-              <div class="flex items-start gap-2 mb-2">
-                <i data-lucide="info" class="w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5"></i>
-                <p class="text-xs text-blue-800 dark:text-blue-200">
-                  Configuração específica para integração Paack via AppSheet. Obtenha as credenciais no <a href="https://www.appsheet.com" target="_blank" class="underline">AppSheet Portal</a>.
-                </p>
-              </div>
-              
-              <div>
-                <label for="{{ form.paack_api_url.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  API URL (AppSheet)
-                </label>
-                {{ form.paack_api_url }}
-                {% if form.paack_api_url.errors %}
-                <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ form.paack_api_url.errors.0 }}</p>
-                {% endif %}
-              </div>
-              
-              <div>
-                <label for="{{ form.paack_cookie_key.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Cookie Key
-                </label>
-                {{ form.paack_cookie_key }}
-                {% if form.paack_cookie_key.errors %}
-                <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ form.paack_cookie_key.errors.0 }}</p>
-                {% endif %}
-                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Cookie de autenticação (.JEENEEATH-3P=...)</p>
-              </div>
-              
-              <div>
-                <label for="{{ form.paack_sync_token.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Sync Token (JWT)
-                </label>
-                {{ form.paack_sync_token }}
-                {% if form.paack_sync_token.errors %}
-                <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ form.paack_sync_token.errors.0 }}</p>
-                {% endif %}
-                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Token JWT para sincronização (eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...)</p>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
       
@@ -234,15 +191,12 @@
     // Esconder todos os campos primeiro
     document.getElementById('generic-auth-fields').style.display = 'none';
     document.getElementById('basic-auth-fields').style.display = 'none';
-    document.getElementById('paack-auth-fields').style.display = 'none';
     
     // Mostrar campos específicos baseado no tipo
     if (authType === 'bearer' || authType === 'api_key') {
       document.getElementById('generic-auth-fields').style.display = 'block';
     } else if (authType === 'basic') {
       document.getElementById('basic-auth-fields').style.display = 'block';
-    } else if (authType === 'custom_paack') {
-      document.getElementById('paack-auth-fields').style.display = 'block';
     }
   }
   

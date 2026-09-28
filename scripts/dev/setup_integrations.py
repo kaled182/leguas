@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Ativar integração PAACK e criar integrações para outros parceiros
+Criar integrações de exemplo para parceiros (dev)
 """
 import django
 import os
@@ -13,27 +13,6 @@ from core.models import Partner, PartnerIntegration
 print("=" * 60)
 print("ATIVANDO INTEGRAÇÕES")
 print("=" * 60)
-
-# Ativar integração PAACK existente
-paack = Partner.objects.filter(name__icontains="paack").first()
-if paack:
-    paack_integration = paack.integrations.first()
-    if paack_integration:
-        paack_integration.is_active = True
-        paack_integration.endpoint_url = "https://api.paack.co/api/v1"
-        paack_integration.sync_frequency_minutes = 15
-        paack_integration.save()
-        print(f"✓ Integração PAACK ativada")
-    else:
-        # Criar integração se não existir
-        paack_integration = PartnerIntegration.objects.create(
-            partner=paack,
-            integration_type="API",
-            endpoint_url="https://api.paack.co/api/v1",
-            sync_frequency_minutes=15,
-            is_active=True,
-        )
-        print(f"✓ Integração PAACK criada e ativada")
 
 # Criar integrações para outros parceiros (exemplo)
 partners_config = [

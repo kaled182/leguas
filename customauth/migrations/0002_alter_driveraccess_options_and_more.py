@@ -9,7 +9,6 @@ class Migration(migrations.Migration):
 
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ('ordersmanager_paack', '0001_initial'),
         ('customauth', '0001_initial'),
     ]
 
@@ -22,11 +21,6 @@ class Migration(migrations.Migration):
             model_name='driveraccess',
             name='created_at',
             field=models.DateTimeField(auto_now_add=True, verbose_name='Criado em'),
-        ),
-        migrations.AlterField(
-            model_name='driveraccess',
-            name='driver',
-            field=models.ForeignKey(blank=True, help_text='Motorista do sistema de pedidos', null=True, on_delete=django.db.models.deletion.CASCADE, related_name='driver_accesses', to='ordersmanager_paack.driver', verbose_name='Motorista'),
         ),
         migrations.AlterField(
             model_name='driveraccess',

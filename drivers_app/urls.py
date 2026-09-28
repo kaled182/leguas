@@ -14,8 +14,6 @@ urlpatterns = [
         name="public_register_full",
     ),
     # Dashboard de motoristas
-    path("dashboard/", views.driver_dashboard_view, name="driver_dashboard"),
-    path("export/xlsx/", views.driver_export_xlsx, name="driver_export_xlsx"),
     path("logout/", views.driver_logout_view, name="driver_logout"),
 
     # ─── Portal do Driver (Fase 1: KPIs + relatórios + faturas) ───
@@ -238,12 +236,6 @@ urlpatterns = [
         "admin/get-driver-data/<int:driver_id>/",
         views.admin_get_driver_data,
         name="admin_get_driver_data",
-    ),
-    # API endpoints
-    path(
-        "api/register-typebot/",
-        views.register_driver_typebot,
-        name="register_driver_typebot",
     ),
     # Indicações / Referrals
     path("api/referrals/search/", views.referral_search_drivers, name="referral-search"),

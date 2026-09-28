@@ -77,21 +77,13 @@ urlpatterns = [
     # path('old/', include('management.urls')),  # Para acessar na raiz
     path("auth/", include("customauth.urls")),  # Para autenticação
     path("management/", include("management.urls")),  # Para /management/
-    path("paackos/", include("ordersmanager_paack.urls")),
     # path('delnextos/', include('ordersmanager_delnext.urls')),
-    path("", include("paack_dashboard.urls")),  # Dashboard para visualizar dados
     # path('delnext/', include('delnext_dashboard.urls')),
     path("driversapp/", include("drivers_app.urls")),
     path("api/app/v1/", include("app_api.urls")),  # API da app do motorista
     path("api/app/v1/pudo/", include("pudo_network.api_urls")),  # Handshake PUDO
-    path("sendpaackreports/", include("send_paack_reports.urls")),
     # path('mixed/', include('mixed_dashboard.urls')),
     path("converter/", include("converter.urls")),  # Conversor de listas para XLSX
-    # path('api/', include('api_paack.urls')),  # APP responsavel por trazer dados da Paack
-    # path('paack/', include('dashboard_paack.urls')),  # Dashboard para visualizar dados
-    path(
-        "manualorders_paack/", include("manualorders_paack.urls")
-    ),  # APP para correção manual de encomendas Paack
     path("settlements/", include("settlements.urls")),  # APP para gestão de settlements
     path("accounting/", include("accounting.urls")),
     path("payroll/", include("payroll.urls")),

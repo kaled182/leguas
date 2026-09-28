@@ -104,67 +104,6 @@ class BaseOrderImporter(ABC):
         return (success_count, error_count, errors)
 
 
-class PaackOrderImporter(BaseOrderImporter):
-    """
-    Importador específico para Paack.
-    """
-
-    def fetch_orders(self, start_date=None, end_date=None):
-        """Busca pedidos da API da Paack"""
-
-        endpoint = f"{self.integration.endpoint_url}/orders"
-
-        # Headers de autenticação
-        headers = {
-            "Authorization": f"Bearer {self.partner.api_credentials.get('api_key')}",
-            "Content-Type": "application/json",
-        }
-
-        # Parâmetros de query
-        params = {}
-        if start_date:
-            params["start_date"] = start_date.isoformat()
-        if end_date:
-            params["end_date"] = end_date.isoformat()
-
-        # Fazer request
-        response = requests.get(endpoint, headers=headers, params=params, timeout=30)
-
-        response.raise_for_status()
-
-        data = response.json()
-        return data.get("orders", [])
-
-    def normalize_order_data(self, raw_order):
-        """Normaliza dados da Paack para formato interno"""
-
-        return {
-            "external_reference": raw_order["tracking_code"],
-            "recipient_name": raw_order["recipient"]["name"],
-            "recipient_address": raw_order["recipient"]["address"],
-            "postal_code": raw_order["recipient"]["postal_code"],
-            "recipient_phone": raw_order["recipient"].get("phone", ""),
-            "recipient_email": raw_order["recipient"].get("email", ""),
-            "declared_value": raw_order.get("declared_value", 0),
-            "weight_kg": raw_order.get("weight", None),
-            "scheduled_delivery": raw_order.get("delivery_date"),
-            "current_status": self._map_paack_status(raw_order["status"]),
-            "special_instructions": raw_order.get("notes", ""),
-        }
-
-    def _map_paack_status(self, paack_status):
-        """Mapeia status da Paack para status interno"""
-        mapping = {
-            "pending": "PENDING",
-            "assigned": "ASSIGNED",
-            "in_transit": "IN_TRANSIT",
-            "delivered": "DELIVERED",
-            "returned": "RETURNED",
-            "incident": "INCIDENT",
-        }
-        return mapping.get(paack_status.lower(), "PENDING")
-
-
 class AmazonOrderImporter(BaseOrderImporter):
     """
     Importador específico para Amazon Logistics.
@@ -192,7 +131,6 @@ class OrderImporterFactory:
     """
 
     _importers = {
-        "Paack": PaackOrderImporter,
         "Amazon": AmazonOrderImporter,
         # Adicionar outros parceiros conforme necessário
     }

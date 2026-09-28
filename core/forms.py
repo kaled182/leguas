@@ -39,7 +39,7 @@ class PartnerForm(forms.ModelForm):
             "name": forms.TextInput(
                 attrs={
                     "class": "w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white",
-                    "placeholder": "Ex: Paack, Amazon Logistics, DPD",
+                    "placeholder": "Ex: Amazon Logistics, DPD",
                 }
             ),
             "nif": forms.TextInput(
@@ -181,7 +181,6 @@ class PartnerIntegrationForm(forms.ModelForm):
             ("basic", "Basic Auth"),
             ("oauth2", "OAuth 2.0"),
             ("api_key", "API Key"),
-            ("custom_paack", "Paack/AppSheet (Custom)"),
         ],
         required=False,
         widget=forms.Select(
@@ -237,42 +236,6 @@ class PartnerIntegrationForm(forms.ModelForm):
         ),
     )
     
-    # Campos específicos para Paack/AppSheet
-    paack_api_url = forms.URLField(
-        label="API URL (AppSheet)",
-        required=False,
-        widget=forms.URLInput(
-            attrs={
-                "class": "w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white",
-                "placeholder": "https://www.appsheet.com/api/template/...",
-            }
-        ),
-    )
-    
-    paack_cookie_key = forms.CharField(
-        label="Cookie Key",
-        required=False,
-        widget=forms.Textarea(
-            attrs={
-                "class": "w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white font-mono text-xs",
-                "placeholder": ".JEENEEATH-3P=...",
-                "rows": "3",
-            }
-        ),
-    )
-    
-    paack_sync_token = forms.CharField(
-        label="Sync Token (JWT)",
-        required=False,
-        widget=forms.Textarea(
-            attrs={
-                "class": "w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white font-mono text-xs",
-                "placeholder": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-                "rows": "3",
-            }
-        ),
-    )
-
     class Meta:
         model = PartnerIntegration
         fields = [
@@ -320,11 +283,6 @@ class PartnerIntegrationForm(forms.ModelForm):
             self.fields["api_secret"].initial = auth_config.get("api_secret", "")
             self.fields["username"].initial = auth_config.get("username", "")
             
-            # Campos específicos Paack
-            self.fields["paack_api_url"].initial = auth_config.get("api_url", "")
-            self.fields["paack_cookie_key"].initial = auth_config.get("cookie_key", "")
-            self.fields["paack_sync_token"].initial = auth_config.get("sync_token", "")
-            
             # Não preenche password por segurança
 
     def save(self, commit=True):
@@ -345,21 +303,6 @@ class PartnerIntegrationForm(forms.ModelForm):
                 api_secret = self.cleaned_data.get("api_secret")
                 if api_secret:
                     auth_config["api_secret"] = api_secret
-                    
-            elif auth_type == "custom_paack":
-                # Configuração específica Paack/AppSheet
-                api_url = self.cleaned_data.get("paack_api_url")
-                cookie_key = self.cleaned_data.get("paack_cookie_key")
-                sync_token = self.cleaned_data.get("paack_sync_token")
-                
-                if api_url:
-                    auth_config["api_url"] = api_url
-                if cookie_key:
-                    auth_config["cookie_key"] = cookie_key
-                if sync_token:
-                    auth_config["sync_token"] = sync_token
-                    
-                auth_config["description"] = "AppSheet API - Paack Integration"
                     
             elif auth_type == "basic":
                 username = self.cleaned_data.get("username")

@@ -3,18 +3,14 @@
  * Moderno, responsivo, clean, integrado ao design customauth
  * - Sidebar funcional (desktop/mobile)
  * - Darkmode independente
- * - Botão de sincronização funcional
  * - Notificações toast
  */
-
-let syncInProgress = false;
 
 document.addEventListener('DOMContentLoaded', function() {
     initializeLucideIcons();
     initializeSidebar();
     initializeMobileMenu();
     initializeDarkMode();
-    initializeSyncButton();
 });
 
 // ========== DARK MODE ========== //
@@ -51,48 +47,6 @@ function initializeMobileMenu() {
             mobileBackdrop.classList.add('hidden');
         };
     }
-}
-
-// ========== SYNC FUNCTIONALITY ========== //
-function initializeSyncButton() {
-    const syncButton = document.getElementById('syncButton');
-    const syncButtonMobile = document.getElementById('syncButtonMobile');
-    function syncAction(btn, iconId) {
-        if (!btn) return;
-        btn.onclick = function(e) {
-            e.preventDefault();
-            if (syncInProgress) return;
-            syncInProgress = true;
-            const icon = document.getElementById(iconId);
-            if (icon) icon.classList.remove('hidden');
-            btn.disabled = true;
-            fetch('/paack/sync/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': (document.cookie.match(/csrftoken=([^;]+)/)||[])[1] || ''
-                },
-                body: JSON.stringify({ force_refresh: true })
-            })
-            .then(res => res.json())
-            .then(result => {
-                if (result.success) {
-                    showNotification('Sincronização concluída!', 'success');
-                    setTimeout(() => window.location.reload(), 1200);
-                } else {
-                    showNotification('Erro: ' + (result.message || 'Falha na sincronização'), 'error');
-                }
-            })
-            .catch(err => showNotification('Erro de rede: ' + err.message, 'error'))
-            .finally(() => {
-                if (icon) icon.classList.add('hidden');
-                btn.disabled = false;
-                syncInProgress = false;
-            });
-        };
-    }
-    syncAction(syncButton, 'syncIcon');
-    syncAction(syncButtonMobile, 'syncIconMobile');
 }
 
 // ========== NOTIFICAÇÕES ========== //

@@ -199,7 +199,7 @@
       <div id="sidebar-overlay" class="fixed inset-0 bg-black/50 dark:bg-black/70 z-30 lg:hidden hidden transition-opacity duration-300 backdrop-blur-sm"></div>
       
       <!-- Sidebar -->
-      {% include 'paack_dashboard/partials/sidebar.html' %}
+      {% include 'layouts/partials/sidebar.html' %}
       
       <!-- Botão de toggle da sidebar (mobile) -->
       <button id="sidebar-toggle" class="fixed top-4 left-4 z-40 lg:hidden bg-primary-600 hover:bg-primary-700 text-white p-3 rounded-lg shadow-lg transition-colors duration-200">
@@ -222,7 +222,7 @@
     </div>
 
     <!-- Scripts -->
-    <script src="{% static 'paack_dashboard/js/sidebar.js' %}"></script>
+    <script src="{% static 'js/sidebar.js' %}"></script>
 
     <script>
       // Dark mode toggle

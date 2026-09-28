@@ -1,4 +1,4 @@
-﻿{% extends 'paack_dashboard/base.html' %}
+﻿{% extends 'layouts/admin_base.html' %}
 {% load static %}
 
 {% block title %}Motoristas Ativos{% endblock %}
@@ -1882,7 +1882,7 @@
                         <!-- Formulário de nova pré-fatura — só cabeçalho; linhas adicionam-se depois -->
                         <div x-show="showForm && !isFleetDriver" x-cloak class="bg-purple-50 dark:bg-purple-900/20 border-2 border-dashed border-purple-300 dark:border-purple-700 rounded-lg p-5 space-y-4">
                             <h4 class="font-semibold text-purple-900 dark:text-purple-300">Nova Pré-Fatura</h4>
-                            <p class="text-xs text-purple-700 dark:text-purple-400">Crie a pré-fatura com o período. Depois adicione as linhas de trabalho por parceiro (Paack, Delnext, Cainiao…).</p>
+                            <p class="text-xs text-purple-700 dark:text-purple-400">Crie a pré-fatura com o período. Depois adicione as linhas de trabalho por parceiro (Cainiao, Delnext…).</p>
                             <div class="grid grid-cols-2 gap-3">
                                 <div>
                                     <label class="text-xs text-gray-500 dark:text-gray-400 block mb-1">Período Início <span class="text-red-500">*</span></label>

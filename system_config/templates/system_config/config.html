@@ -1,4 +1,4 @@
-{% extends 'paack_dashboard/base.html' %}
+{% extends 'layouts/admin_base.html' %}
 
 {% block title %}Configurações do Sistema{% endblock %}
 {% block sidebar_title %}Configurações{% endblock %}
@@ -123,7 +123,7 @@
                         <i data-lucide="save" class="w-4 h-4"></i>
                         Guardar
                     </button>
-                    <a href="{% url 'paack_dashboard:dashboard_paack' %}"
+                    <a href="{% url 'dashboard_leguas:home' %}"
                        class="w-full flex items-center justify-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm font-medium">
                         Cancelar
                     </a>

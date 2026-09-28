@@ -67,11 +67,8 @@ def main():
         "management",
         "my_project",
         "orders_manager",
-        "ordersmanager_paack",
-        "paack_dashboard",
         "pricing",
         "route_allocation",
-        "send_paack_reports",
         "settlements",
         "system_config",
     ]

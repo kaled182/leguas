@@ -50,22 +50,13 @@ def authenticate_view(request):
     if user and user.is_staff:
         login(request, user)
         messages.success(request, f"Bem-vindo, {user.first_name or user.username}!")
-        return redirect("paack_dashboard:dashboard_paack")
+        return redirect("dashboard_leguas:home")
 
-    # Tentar autenticar como motorista (DriverAccess)
-    try:
-        driver = DriverAccess.objects.get(Q(email=email_or_nif) | Q(nif=email_or_nif))
-        if driver.check_password(password):
-            # Criar sessão customizada para motorista
-            request.session["driver_access_id"] = driver.id
-            request.session["driver_name"] = driver.full_name
-            request.session["is_driver_authenticated"] = True
-
-            messages.success(request, f"Bem-vindo, {driver.first_name}!")
-            return redirect("drivers_app:driver_dashboard")
-        else:
-            messages.error(request, "Credenciais inválidas.")
-    except DriverAccess.DoesNotExist:
+    # O acesso antigo de motorista (DriverAccess) levava ao painel de pedidos
+    # da Paack, que foi removida: os motoristas entram pela app Léguas.
+    if DriverAccess.objects.filter(Q(email=email_or_nif) | Q(nif=email_or_nif)).exists():
+        messages.error(request, "Motoristas: entrem pela app Léguas.")
+    else:
         messages.error(request, "Credenciais inválidas.")
 
     return render(request, "customauth/login.html")

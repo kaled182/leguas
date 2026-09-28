@@ -1,6 +1,6 @@
 """
 Serviço principal de sincronização com parceiros.
-Adaptado de ordersmanager_paack/sync_service.py para sistema genérico.
+Base genérica; cada parceiro com conector próprio herda daqui (ex.: DelnextSyncService).
 """
 
 import logging
@@ -10,7 +10,6 @@ from django.db import transaction
 from django.utils import timezone
 
 from core.models import SyncLog
-from .paack_api_connector import PaackAPIConnector
 from .partner_data_processor import PartnerDataProcessor
 
 logger = logging.getLogger(__name__)
@@ -36,18 +35,10 @@ class PartnerSyncService:
         self.partner = partner_integration.partner
         self.cache_key = f"partner_sync_data_{self.partner.id}"
 
-        # Inicializar conectores baseados no tipo de integração
-        # Por enquanto apenas Paack (AppSheet), mas extensível para outros
+        # Conectores por tipo de integração. A Paack (custom_paack) foi removida;
+        # os parceiros com conector próprio (Delnext) têm subclasse e __init__ próprios.
         auth_type = partner_integration.auth_config.get("type", "")
-        
-        if auth_type == "custom_paack":
-            self.api_connector = PaackAPIConnector(partner_integration)
-        else:
-            # TODO: Adicionar outros conectores (Amazon, DPD, etc.)
-            raise ValueError(
-                f"Tipo de integração não suportado: {auth_type}. "
-                f"Tipos disponíveis: custom_paack"
-            )
+        raise ValueError(f"Tipo de integração sem conector: {auth_type or '(vazio)'}.")
 
         self.data_processor = PartnerDataProcessor(partner_integration)
 

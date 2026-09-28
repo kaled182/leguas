@@ -8,7 +8,7 @@ from .models import DriverProfile, DriverProfileChangeRequest
 
 def portal_layout(request):
     """Define qual layout o portal do driver deve estender:
-    - Admin Django (staff/superuser) → estende paack_dashboard/base.html (com sidebar)
+    - Admin Django (staff/superuser) → estende layouts/admin_base.html (com sidebar)
     - Driver via DriverAccess → estende _layout.html (limpo)
     """
     is_admin = (
@@ -17,7 +17,7 @@ def portal_layout(request):
     )
     return {
         "portal_layout": (
-            "paack_dashboard/base.html"
+            "layouts/admin_base.html"
             if is_admin
             else "drivers_app/portal/_layout.html"
         ),

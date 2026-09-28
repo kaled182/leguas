@@ -56,8 +56,6 @@ def main():
         "fleet_management",
         "my_project",
         "orders_manager",
-        "ordersmanager_paack",
-        "paack_dashboard",
         "pricing",
         "route_allocation",
         "settlements",

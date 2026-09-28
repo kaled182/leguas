@@ -2677,15 +2677,24 @@ def _cainiao_operation_import_impl(request):
     ficheiro = request.FILES.get("ficheiro")
     if not ficheiro:
         return JsonResponse({"success": False, "error": "Nenhum ficheiro enviado."}, status=400)
+    payload, status = import_operation_file(ficheiro.read(), ficheiro.name, user=request.user)
+    return JsonResponse(payload, status=status)
 
+
+def import_operation_file(content, filename, user=None):
+    """Importa uma planilha Operation Update (EPOD_TASK_LIST) a partir dos bytes.
+
+    Usado pelo upload manual e pela sincronização automática com o ReliableMaps
+    (settlements.tasks.sync_epod_from_reliable). Devolve (payload, http_status).
+    """
     try:
-        all_rows = _load_workbook_rows(ficheiro.read())
+        all_rows = _load_workbook_rows(content)
     except Exception as e:
-        return JsonResponse({"success": False, "error": f"Erro ao ler ficheiro: {e}"}, status=400)
+        return {"success": False, "error": f"Erro ao ler ficheiro: {e}"}, 400
 
     header, header_idx = _find_header_row(all_rows, "Waybill Number")
     if header is None:
-        return JsonResponse({"success": False, "error": "Coluna 'Waybill Number' não encontrada."}, status=400)
+        return {"success": False, "error": "Coluna 'Waybill Number' não encontrada."}, 400
 
     ci = {
         "waybill":       _col_idx(header, "Waybill Number"),
@@ -2842,10 +2851,7 @@ def _cainiao_operation_import_impl(request):
     audit["dsp_in_file"] = dict(audit["dsp_in_file"])
 
     if not wb_rows:
-        return JsonResponse(
-            {"success": False, "error": "Nenhuma linha com Waybill Number válido."},
-            status=400,
-        )
+        return {"success": False, "error": "Nenhuma linha com Waybill Number válido."}, 400
 
     # NOTE: courier_id_cainiao é EXCLUÍDO de update_fields porque é definido
     # apenas no INSERT (via resolver). Em re-imports queremos preservar
@@ -2875,7 +2881,6 @@ def _cainiao_operation_import_impl(request):
     }
     update_fields_no_status = [f for f in update_fields_all if f not in _status_time_fields]
 
-    filename = ficheiro.name
 
     # Pre-load courier_name → courier_id resolver
     from .models import DriverCourierMapping, CourierNameAlias
@@ -3005,10 +3010,7 @@ def _cainiao_operation_import_impl(request):
     audit["waybills_unique"] = len(best_row_per_wb)
 
     if not best_row_per_wb:
-        return JsonResponse(
-            {"success": False, "error": "Nenhum waybill processável."},
-            status=400,
-        )
+        return {"success": False, "error": "Nenhum waybill processável."}, 400
 
     # ─── 3. Lookup global por waybill (sem filtrar por data) ─
     # Pré-carregamos o estado COMPLETO de cada waybill já em BD, incluindo
@@ -3282,7 +3284,7 @@ def _cainiao_operation_import_impl(request):
         batch = CainiaoOperationBatch.objects.create(
             filename=filename,
             task_date=target_date,
-            created_by=request.user,
+            created_by=user,
         )
         batch_ids.append(batch.id)
         batch_by_date[target_date] = batch
@@ -3394,7 +3396,7 @@ def _cainiao_operation_import_impl(request):
 
     audit["rows_by_status"] = dict(audit["rows_by_status"])
 
-    return JsonResponse({
+    return {
         "success": True,
         "total_novos": total_novos,
         "total_atualizados": total_atualizados,
@@ -3404,7 +3406,7 @@ def _cainiao_operation_import_impl(request):
         "most_recent_date": most_recent_date,
         "batch_ids": batch_ids,
         "audit": audit,
-    })
+    }, 200
 
 
 # ============================================================================

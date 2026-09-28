@@ -134,6 +134,14 @@ app.conf.beat_schedule = {
         'options': {'expires': 3600},
     },
 
+    # Task list (EPOD) da Cainiao lida do ReliableMaps — o robô de lá exporta
+    # do CES a cada 30 min. Liga/desliga em SystemConfiguration.
+    'cainiao-sync-epod-reliable': {
+        'task': 'settlements.sync_epod_from_reliable',
+        'schedule': crontab(minute='5,35', hour='7-23'),
+        'options': {'expires': 1500},
+    },
+
     # NOTA: agendamento da auto-geração de contas recorrentes
     # DESACTIVADO — estava a duplicar Bills quando o mesmo fornecedor
     # tinha recorrência configurada nos dois lados (template + cadastro

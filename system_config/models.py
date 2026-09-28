@@ -86,6 +86,19 @@ class SystemConfiguration(models.Model):
         help_text="Chave da GeoAPI.pt usada pelo Mapa de Códigos Postais.",
     )
 
+    # ReliableMaps — task list (EPOD) da Cainiao lida pela API de integrações
+    reliable_api_url = models.CharField(
+        "ReliableMaps URL", max_length=255, blank=True, null=True,
+        help_text="Ex.: https://reliable.exemplo.pt (sem /api/...).",
+    )
+    reliable_api_key = EncryptedCharField(
+        "ReliableMaps Chave de Integração", max_length=512, blank=True, null=True,
+        help_text="Chave criada no ReliableMaps com manage.py criar_chave_de_integracao.",
+    )
+    reliable_epod_sync_enabled = models.BooleanField(
+        "Sincronizar EPOD do ReliableMaps", default=False,
+    )
+
     # Maps - Common Settings
     map_language = models.CharField("Idioma do Mapa", max_length=10, default="pt-PT")
     map_theme = models.CharField(

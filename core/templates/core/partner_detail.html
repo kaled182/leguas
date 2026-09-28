@@ -3478,6 +3478,40 @@ window.appPrompt = function(msg, defaultValue, opts) {
 
     <!-- Body -->
     <div class="px-6 py-5 space-y-4">
+      <!-- Sincronização automática do EPOD (ReliableMaps) -->
+      <div id="reliable-sync-box" class="rounded-lg border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 px-4 py-3 text-xs text-emerald-800 dark:text-emerald-300">
+        <div class="flex items-center justify-between gap-2">
+          <div class="flex items-center gap-2">
+            <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+            <span class="font-semibold">Task list automática (ReliableMaps)</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="reliableSyncNow()" id="reliable-sync-btn"
+              class="px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white font-semibold disabled:opacity-50">Sincronizar agora</button>
+            {% if request.user.is_staff or request.user.is_superuser %}
+            <button type="button" onclick="document.getElementById('reliable-sync-config').classList.toggle('hidden')"
+              class="p-1 rounded-md hover:bg-emerald-100 dark:hover:bg-emerald-800/40" title="Configurar">
+              <i data-lucide="settings" class="w-4 h-4"></i>
+            </button>
+            {% endif %}
+          </div>
+        </div>
+        <div id="reliable-sync-status" class="mt-1.5">A carregar estado…</div>
+        <ul id="reliable-sync-recent" class="mt-1.5 space-y-0.5 max-h-24 overflow-y-auto"></ul>
+        {% if request.user.is_staff or request.user.is_superuser %}
+        <div id="reliable-sync-config" class="hidden mt-3 pt-3 border-t border-emerald-200 dark:border-emerald-800 space-y-2">
+          <input type="url" id="reliable-sync-url" placeholder="https://reliable.exemplo.pt"
+            class="w-full px-2.5 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+          <input type="password" id="reliable-sync-key" autocomplete="new-password" placeholder="Chave de integração (vazio mantém a atual)"
+            class="w-full px-2.5 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+          <div class="flex items-center justify-between">
+            <label class="flex items-center gap-2"><input type="checkbox" id="reliable-sync-enabled"> Sincronizar a cada 30 min (7h–23h)</label>
+            <button type="button" onclick="reliableSyncSave()" class="px-2.5 py-1 rounded-md bg-gray-800 dark:bg-gray-600 text-white font-semibold">Guardar</button>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+
       <!-- Description -->
       <div id="import-type-desc" class="bg-purple-50 dark:bg-purple-900/20 rounded-lg px-4 py-3 text-xs text-purple-700 dark:text-purple-300 space-y-1">
         <div class="font-semibold" id="import-type-title">Planilha Forecast (Previsão de Volume)</div>
@@ -3696,6 +3730,82 @@ function selectImportType(type) {
   document.getElementById('import-result').classList.add('hidden');
   document.getElementById('import-result').innerHTML = '';
 }
+
+// ── Sincronização automática do EPOD (ReliableMaps) ──
+const RELIABLE_SYNC_URL = "{% url 'cainiao-reliable-sync' %}";
+
+function _fmtDataHora(iso) {
+  return iso ? new Date(iso).toLocaleString('pt-PT', {day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'}) : '—';
+}
+
+function renderReliableSync(d) {
+  const status = document.getElementById('reliable-sync-status');
+  if (!status) return;
+  if (!d.ok) { status.textContent = d.erro || 'Erro ao obter estado.'; return; }
+  let txt;
+  if (!d.configured) txt = 'Não configurada.';
+  else if (!d.enabled) txt = 'Desligada.';
+  else txt = 'Ligada.';
+  txt += ' Último import: ' + _fmtDataHora(d.last_import_at);
+  status.textContent = txt;
+  const ul = document.getElementById('reliable-sync-recent');
+  ul.innerHTML = '';
+  (d.recent || []).forEach(r => {
+    const li = document.createElement('li');
+    const extra = r.estado === 'imported'
+      ? ` · ${r.resumo.total_novos ?? 0} novos, ${r.resumo.total_atualizados ?? 0} atualizados`
+      : (r.mensagem ? ` · ${r.mensagem}` : '');
+    li.textContent = `${_fmtDataHora(r.sincronizado_em)} · ${r.hub || '—'} · ${r.estado_display}${extra}`;
+    if (r.estado === 'failed') li.className = 'text-red-600 dark:text-red-400';
+    ul.appendChild(li);
+  });
+  const url = document.getElementById('reliable-sync-url');
+  if (url && d.is_admin) {
+    url.value = d.url || '';
+    document.getElementById('reliable-sync-key').placeholder = d.key_masked
+      ? `Chave atual ${d.key_masked} (vazio mantém)` : 'Chave de integração';
+    document.getElementById('reliable-sync-enabled').checked = !!d.enabled;
+  }
+}
+
+function loadReliableSync() {
+  if (!document.getElementById('reliable-sync-box')) return;
+  fetch(RELIABLE_SYNC_URL, {credentials: 'same-origin'})
+    .then(r => r.json()).then(renderReliableSync)
+    .catch(() => { document.getElementById('reliable-sync-status').textContent = 'Erro ao obter estado.'; });
+}
+
+function _postReliableSync(body) {
+  return fetch(RELIABLE_SYNC_URL, {
+    method: 'POST', credentials: 'same-origin',
+    headers: {'Content-Type': 'application/json', 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value},
+    body: JSON.stringify(body),
+  }).then(r => r.json());
+}
+
+function reliableSyncNow() {
+  const btn = document.getElementById('reliable-sync-btn');
+  btn.disabled = true;
+  _postReliableSync({action: 'sync'}).then(d => {
+    renderReliableSync(d);
+    document.getElementById('reliable-sync-status').textContent += ' · Sincronização agendada, a atualizar em 30 s…';
+    setTimeout(() => { loadReliableSync(); btn.disabled = false; }, 30000);
+  }).catch(() => { btn.disabled = false; });
+}
+
+function reliableSyncSave() {
+  _postReliableSync({
+    action: 'save',
+    url: document.getElementById('reliable-sync-url').value,
+    key: document.getElementById('reliable-sync-key').value,
+    enabled: document.getElementById('reliable-sync-enabled').checked,
+  }).then(d => {
+    document.getElementById('reliable-sync-key').value = '';
+    renderReliableSync(d);
+  });
+}
+
+document.addEventListener('DOMContentLoaded', loadReliableSync);
 
 function closeImportModal() {
   document.getElementById('importModal').classList.add('hidden');

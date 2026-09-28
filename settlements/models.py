@@ -2762,6 +2762,45 @@ class CainiaoOperationTaskHistory(models.Model):
         )
 
 
+class ReliableEpodSync(models.Model):
+    """Um ficheiro EPOD_TASK_LIST visto na API de integrações do ReliableMaps.
+
+    O robô do ReliableMaps exporta a task list do CES a cada 30 min; a task
+    settlements.sync_epod_from_reliable descarrega-a daí e importa-a com a
+    mesma lógica do upload manual (import_operation_file). O sha256 evita
+    importar o mesmo ficheiro duas vezes.
+    """
+
+    STATUS_IMPORTED = "imported"
+    STATUS_FAILED = "failed"
+    STATUS_SUPERSEDED = "superseded"
+    STATUS_SKIPPED = "skipped"
+    STATUS_CHOICES = [
+        (STATUS_IMPORTED, "Importado"),
+        (STATUS_FAILED, "Falhou"),
+        (STATUS_SUPERSEDED, "Substituído por export mais recente"),
+        (STATUS_SKIPPED, "Ignorado"),
+    ]
+
+    remote_id = models.PositiveIntegerField("ID no ReliableMaps", db_index=True)
+    sha256 = models.CharField("SHA-256", max_length=64, unique=True)
+    filename = models.CharField("Ficheiro", max_length=255)
+    hub = models.CharField("Hub", max_length=40, blank=True)
+    remote_loaded_at = models.DateTimeField("Carregado no ReliableMaps", db_index=True)
+    status = models.CharField("Estado", max_length=12, choices=STATUS_CHOICES)
+    message = models.TextField("Mensagem", blank=True)
+    summary = models.JSONField("Resumo", default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        verbose_name = "Sync EPOD ReliableMaps"
+        verbose_name_plural = "Syncs EPOD ReliableMaps"
+        ordering = ["-remote_loaded_at"]
+
+    def __str__(self):
+        return f"{self.filename} ({self.get_status_display()})"
+
+
 # ============================================================================
 # CAINIAO — PLANILHA DRIVER STATISTIC (resumo por motorista)
 # ============================================================================

@@ -449,3 +449,18 @@ def mark_stale_armazem(threshold_days=None, dry_run=False):
         "cutoff": str(cutoff),
         "history_created": len(history_objs),
     }
+
+
+@shared_task(name="settlements.sync_epod_from_reliable")
+def sync_epod_from_reliable(triggered_by="cron"):
+    """Importa a task list (EPOD) da Cainiao a partir do ReliableMaps.
+
+    Corre a cada 30 min das 7h às 23h (celery beat). Ver
+    settlements/services_reliable_sync.py.
+    """
+    from .services_reliable_sync import sync_epod_from_reliable as _sync
+
+    result = _sync(triggered_by=triggered_by)
+    if not result.get("ok"):
+        logger.warning("sync_epod_from_reliable: %s", result.get("error"))
+    return result

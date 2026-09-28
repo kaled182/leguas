@@ -3,7 +3,7 @@
 from . import (
     cainiao_views, forecast_plan_views, holiday_views, plan_api,
     views, views_cash_entries, views_fleet_portal, views_pudo,
-    views_shareholder, views_cainiao_billing,
+    views_shareholder, views_cainiao_billing, views_reliable_sync,
 )
 
 urlpatterns = [
@@ -799,6 +799,11 @@ urlpatterns = [
         "cainiao/operation/import/",
         cainiao_views.cainiao_operation_import,
         name="cainiao-operation-import",
+    ),
+    path(
+        "cainiao/reliable-sync/",
+        views_reliable_sync.api_reliable_sync,
+        name="cainiao-reliable-sync",
     ),
     path(
         "cainiao/operation/audit/",

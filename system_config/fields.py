@@ -39,6 +39,27 @@ def decrypt_string(value: str) -> str:
     return value
 
 
+class UndecryptableSecret(str):
+    """Token Fernet guardado que nenhuma chave de FERNET_KEYS abre.
+
+    É falso em contexto booleano, para quem lê (`valor or fallback`) cair no
+    fallback em vez de usar o token cru como se fosse a chave; e ao gravar
+    volta tal e qual, sem re-encriptar nem falhar o limite de tamanho — assim
+    um save() do modelo não parte e o valor fica recuperável se a chave antiga
+    reaparecer.
+    """
+
+    def __bool__(self):
+        return False
+
+
+def _decrypt_or_mark(value: str) -> str:
+    plain = decrypt_string(value)
+    if plain == value and value.startswith("gAAAA"):
+        return UndecryptableSecret(value)
+    return plain
+
+
 class EncryptedCharField(models.TextField):
     """Field that stores values encrypted with Fernet."""
 
@@ -62,6 +83,8 @@ class EncryptedCharField(models.TextField):
         return errors
 
     def get_prep_value(self, value):
+        if isinstance(value, UndecryptableSecret):
+            return str(value)
         value = super().get_prep_value(value)
         if value in (None, ""):
             return value
@@ -74,9 +97,11 @@ class EncryptedCharField(models.TextField):
     def to_python(self, value):
         if value in (None, ""):
             return value
+        if isinstance(value, UndecryptableSecret):
+            return value
         if isinstance(value, str):
             try:
-                return decrypt_string(value)
+                return _decrypt_or_mark(value)
             except (InvalidToken, ValueError):
                 return value
         return value
@@ -85,6 +110,6 @@ class EncryptedCharField(models.TextField):
         if value in (None, ""):
             return value
         try:
-            return decrypt_string(value)
+            return _decrypt_or_mark(value)
         except (InvalidToken, ValueError):
             return value

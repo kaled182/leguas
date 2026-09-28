@@ -6591,6 +6591,9 @@ function _showUnmappedNames() {
         usa esta tabela para <strong>marcar as entregas antigas</strong> com o Courier ID actual.
         <br>Apenas faz UPDATE nas <code>CainiaoOperationTask</code> — não cria mappings novos
         nem altera motoristas.
+        <br>Se o login é de um motorista que ainda não existe, usa <strong>+ Novo motorista</strong>:
+        cria-o como PENDENTE, ligado a este login tal como vem da planilha e ao seu Courier ID,
+        e marca as entregas.
       </p>
     </div>
     <p class="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
@@ -6615,11 +6618,40 @@ function _showUnmappedNames() {
               <div id="unm-results-${i}" class="hidden mt-1 max-h-40 overflow-y-auto bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow text-xs"></div>
               <div id="unm-selected-${i}" class="hidden mt-1 text-[11px]"></div>
             </td>
-            <td class="py-1.5 px-2 text-right">
+            <td class="py-1.5 px-2 text-right whitespace-nowrap">
               <button id="unm-btn-${i}" disabled onclick="_unmMarkDeliveries(${i})"
                 class="px-2.5 py-1 text-[11px] font-medium rounded bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white">
                 Marcar entregas
               </button>
+              <button onclick="_unmToggleNewDriver(${i})"
+                class="ml-1 px-2.5 py-1 text-[11px] font-medium rounded bg-indigo-600 hover:bg-indigo-700 text-white">
+                + Novo motorista
+              </button>
+            </td>
+          </tr>
+          <tr id="unm-new-row-${i}" class="hidden bg-indigo-50/50 dark:bg-indigo-900/10">
+            <td colspan="4" class="py-2 px-2">
+              <div id="unm-new-info-${i}" class="text-[11px] text-gray-600 dark:text-gray-400 mb-2"></div>
+              <div class="grid grid-cols-2 md:grid-cols-5 gap-2">
+                <input id="unm-new-cid-${i}" placeholder="Courier ID *" inputmode="numeric"
+                  class="text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded font-mono">
+                <input id="unm-new-nome-${i}" placeholder="Nome completo"
+                  class="text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded">
+                <input id="unm-new-nif-${i}" placeholder="NIF (opcional)"
+                  class="text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded">
+                <input id="unm-new-tel-${i}" placeholder="Telefone (opcional)"
+                  class="text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded">
+                <input id="unm-new-email-${i}" placeholder="Email (opcional)"
+                  class="text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded">
+              </div>
+              <div class="flex items-center justify-between mt-2">
+                <span class="text-[11px] text-gray-500">Login Cainiao (identifica entregas, incidências e claims):
+                  <span class="font-mono text-gray-800 dark:text-gray-200">${_escapeHtml(n.courier_name)}</span></span>
+                <button id="unm-new-save-${i}" onclick="_unmCreateDriver(${i})"
+                  class="px-2.5 py-1 text-[11px] font-medium rounded bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white">
+                  Criar motorista e marcar entregas
+                </button>
+              </div>
             </td>
           </tr>`).join('')}
       </tbody>
@@ -6674,6 +6706,70 @@ function _unmPickLogin(idx, courierId, courierName, driverName) {
   sel.classList.remove('hidden');
   document.getElementById(`unm-results-${idx}`).classList.add('hidden');
   document.getElementById(`unm-btn-${idx}`).disabled = false;
+}
+
+async function _unmToggleNewDriver(idx) {
+  const row = document.getElementById(`unm-new-row-${idx}`);
+  row.classList.toggle('hidden');
+  if (row.classList.contains('hidden') || row.dataset.loaded) return;
+  row.dataset.loaded = '1';
+  const courierName = document.querySelector(`tr[data-idx="${idx}"]`).getAttribute('data-courier-name');
+  const info = document.getElementById(`unm-new-info-${idx}`);
+  info.textContent = 'A procurar o Courier ID deste login…';
+  try {
+    const r = await fetch(`/settlements/cainiao/unmapped/lookup/?courier_name=${encodeURIComponent(courierName)}`);
+    const d = await r.json();
+    document.getElementById(`unm-new-nome-${idx}`).value = d.suggested_name || '';
+    const f = d.found;
+    if (!f) {
+      info.textContent = '⚠ Nenhum Courier ID encontrado para este login exacto (Driver Statistic / User List do CES). Consulta-o no CES e escreve-o à mão.';
+      return;
+    }
+    document.getElementById(`unm-new-cid-${idx}`).value = f.courier_id;
+    const src = f.source === 'ces' ? 'User List do CES' : 'Driver Statistic';
+    let txt = `✓ Courier ID <span class="font-mono">${_escapeHtml(f.courier_id)}</span> (${src}${f.hub ? ' · ' + _escapeHtml(f.hub) : ''}).`;
+    if (f.tipo === 'COURIER_HELPER') {
+      txt += ` <strong class="text-amber-700 dark:text-amber-400">É um helper${f.principal ? ' de ' + _escapeHtml(f.principal) : ''}</strong> — confirma se deve ser um motorista próprio.`;
+    }
+    info.innerHTML = txt;
+  } catch (e) {
+    info.textContent = 'Erro a procurar o Courier ID. Escreve-o à mão.';
+  }
+}
+
+async function _unmCreateDriver(idx) {
+  const tr = document.querySelector(`tr[data-idx="${idx}"]`);
+  const oldCourierName = tr.getAttribute('data-courier-name');
+  const val = id => document.getElementById(`unm-new-${id}-${idx}`).value.trim();
+  if (!val('cid')) { alert('Courier ID obrigatório.'); return; }
+  const btn = document.getElementById(`unm-new-save-${idx}`);
+  btn.disabled = true;
+  const csrf = document.querySelector('input[name=csrfmiddlewaretoken]')?.value || '{{ csrf_token }}';
+  try {
+    const r = await fetch('/settlements/cainiao/unmapped/create-driver/', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrf},
+      body: JSON.stringify({
+        old_courier_name: oldCourierName, courier_id: val('cid'), nome: val('nome'),
+        nif: val('nif'), telefone: val('tel'), email: val('email'),
+      }),
+    });
+    const d = await r.json();
+    if (!d.success) { btn.disabled = false; alert('Erro: ' + (d.error || 'desconhecido')); return; }
+    document.getElementById(`unm-new-row-${idx}`).remove();
+    tr.innerHTML = `
+      <td class="py-1.5 px-2 font-mono text-gray-400 line-through">${_escapeHtml(oldCourierName)}</td>
+      <td colspan="3" class="py-1.5 px-2 text-indigo-600 dark:text-indigo-400 text-[11px]">
+        ✓ Motorista ${_escapeHtml(d.driver_name)} criado como PENDENTE
+        (<a class="underline" href="{% url 'admin_approve_drivers' %}">aprovar</a>)
+        · ${d.updated.toLocaleString()} entregas marcadas com
+        <span class="font-mono px-1.5 py-0.5 rounded bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300">${_escapeHtml(d.courier_id)}</span>
+      </td>`;
+    setTimeout(_checkCourierIdStatus, 500);
+  } catch (e) {
+    btn.disabled = false;
+    alert('Erro: ' + e.message);
+  }
 }
 
 async function _unmMarkDeliveries(idx) {

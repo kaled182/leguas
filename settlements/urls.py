@@ -4,6 +4,7 @@ from . import (
     cainiao_views, forecast_plan_views, holiday_views, plan_api,
     views, views_cash_entries, views_fleet_portal, views_pudo,
     views_shareholder, views_cainiao_billing, views_reliable_sync,
+    views_courier_onboarding,
 )
 
 urlpatterns = [
@@ -870,6 +871,16 @@ urlpatterns = [
         "cainiao/mark-deliveries-courier-id/",
         cainiao_views.cainiao_mark_deliveries_courier_id,
         name="cainiao-mark-deliveries-courier-id",
+    ),
+    path(
+        "cainiao/unmapped/lookup/",
+        views_courier_onboarding.cainiao_unmapped_lookup,
+        name="cainiao-unmapped-lookup",
+    ),
+    path(
+        "cainiao/unmapped/create-driver/",
+        views_courier_onboarding.cainiao_unmapped_create_driver,
+        name="cainiao-unmapped-create-driver",
     ),
     path(
         "cainiao/existing-logins/",

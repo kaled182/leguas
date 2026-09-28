@@ -6761,7 +6761,7 @@ async function _unmCreateDriver(idx) {
       <td class="py-1.5 px-2 font-mono text-gray-400 line-through">${_escapeHtml(oldCourierName)}</td>
       <td colspan="3" class="py-1.5 px-2 text-indigo-600 dark:text-indigo-400 text-[11px]">
         ✓ Motorista ${_escapeHtml(d.driver_name)} criado como PENDENTE
-        (<a class="underline" href="{% url 'admin_approve_drivers' %}">aprovar</a>)
+        (<a class="underline" href="{% url 'drivers_app:admin_approve_drivers' %}">aprovar</a>)
         · ${d.updated.toLocaleString()} entregas marcadas com
         <span class="font-mono px-1.5 py-0.5 rounded bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300">${_escapeHtml(d.courier_id)}</span>
       </td>`;

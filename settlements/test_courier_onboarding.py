@@ -118,3 +118,16 @@ class ViewsTests(TestCase):
             "old_courier_name": "X_LF", "courier_id": "1576538111111",
         }), content_type="application/json", secure=True)
         self.assertEqual(d.status_code, 400)
+
+
+@override_settings(CACHES=LOCMEM)
+class PartnerPageRendersTests(TestCase):
+    """A página do parceiro renderiza o painel (os {% url %} só falham ao renderizar)."""
+
+    def test_pagina_do_parceiro_abre(self):
+        partner = Partner.objects.create(name="CAINIAO", nif="514154411", contact_email="c@x.pt")
+        admin = get_user_model().objects.create_superuser("admin", "a@x.pt", "x")
+        self.client.force_login(admin)
+        r = self.client.get(f"/core/partners/{partner.id}/", secure=True)
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, "_unmToggleNewDriver")

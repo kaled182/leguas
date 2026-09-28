@@ -11,7 +11,7 @@ veredicto (/api/integracoes/v1/reclamacoes/?julgadas_desde=…):
     sincronização já tinha criado um para o ticket, estorna-o.
 
 O login, exactamente como vem, identifica o motorista (DriverCourierMapping /
-CourierNameAlias / apelido). Um login sem motorista fica "no_driver" e é
+CourierNameAlias / apelido); um login de helper desconta ao motorista principal. Um login sem motorista fica "no_driver" e é
 retentado em cada volta até ser ligado. Nunca se toca num claim que não tenha
 sido criado aqui, nem se muda o valor de um claim já criado (pode ter sido
 editado à mão).
@@ -60,6 +60,28 @@ def resolve_driver_for_login(login):
     return drivers[0] if len(drivers) == 1 else None
 
 
+def resolve_responsible_driver(login):
+    """(DriverProfile que responde pelo login, nota) — o helper responde pelo principal.
+
+    Um login de helper desconta sempre ao motorista principal (Paulo, 28/09/2026).
+    O principal vem da User List do CES (tipo COURIER_HELPER + principal, via
+    ReliableMaps); sem isso, de um DriverHelper activo com esse nome. Senão, o
+    próprio login.
+    """
+    from .models import DriverHelper
+    from .services_courier_onboarding import _ces_users
+
+    login = (login or "").strip()
+    ces = next((u for u in _ces_users() if (u.get("login") or "").strip() == login), None)
+    if ces and ces.get("tipo") == "COURIER_HELPER" and (ces.get("principal") or "").strip():
+        principal = ces["principal"].strip()
+        return resolve_driver_for_login(principal), f"helper de {principal}"
+    helpers = list(DriverHelper.objects.filter(helper_name=login, is_active=True).select_related("driver")[:2])
+    if len(helpers) == 1:
+        return helpers[0].driver, f"helper de {helpers[0].driver.nome_completo}"
+    return resolve_driver_for_login(login), ""
+
+
 def _list_verdicts(base, key, since):
     rows, desde = [], since
     for _ in range(MAX_PAGES):
@@ -80,7 +102,7 @@ def _task_date_for(waybill):
             .order_by("-task_date").values_list("task_date", flat=True).first())
 
 
-def _create_claim(record, driver, partner):
+def _create_claim(record, driver, partner, helper_note=""):
     from .models import DriverClaim
 
     task_date = _task_date_for(record.waybill)
@@ -98,7 +120,10 @@ def _create_claim(record, driver, partner):
         operation_task_date=task_date,
         occurred_at=record.verdict_at or timezone.now(),
         auto_detected=True,
-        dsp_observation=f"Veredicto Cainiao via ReliableMaps (login {record.login}).",
+        dsp_observation=(
+            f"Veredicto Cainiao via ReliableMaps (login {record.login}"
+            + (f", {helper_note}" if helper_note else "") + ")."
+        ),
     )
     claim.approve(None, notes="Aprovado automaticamente: veredicto da Cainiao (ReliableMaps).")
     return claim
@@ -125,11 +150,12 @@ def _apply(record, partner):
     # contra
     if own_claim or record.outcome == V.OUTCOME_DUPLICATE:
         return
-    driver = resolve_driver_for_login(record.login)
+    driver, helper_note = resolve_responsible_driver(record.login)
     record.driver = driver
     if driver is None:
         record.outcome = V.OUTCOME_NO_DRIVER
-        record.message = f"Login {record.login!r} sem motorista: liga-o em 'names sem mapping' / Logins."
+        who = f" ({helper_note}, sem motorista)" if helper_note else ""
+        record.message = f"Login {record.login!r}{who} sem motorista: liga-o em 'names sem mapping' / Logins."
         return
     existing = DriverClaim.active_claim_for_waybill(record.waybill)
     if existing:
@@ -137,8 +163,8 @@ def _apply(record, partner):
         record.outcome = V.OUTCOME_DUPLICATE
         record.message = f"Já existia o claim #{existing.id} ({existing.get_status_display()}) para o pacote."
         return
-    record.claim = _create_claim(record, driver, partner)
-    record.outcome, record.message = V.OUTCOME_CLAIM_CREATED, ""
+    record.claim = _create_claim(record, driver, partner, helper_note)
+    record.outcome, record.message = V.OUTCOME_CLAIM_CREATED, (f"Login {helper_note}." if helper_note else "")
 
 
 def sync_claim_verdicts(triggered_by="cron"):

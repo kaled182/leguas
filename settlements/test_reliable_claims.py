@@ -36,6 +36,8 @@ class VerdictSyncTests(TestCase):
 
     def _run(self):
         def get(url, params=None, headers=None, timeout=None):
+            if url.endswith("/utilizadores/"):
+                return mock.Mock(status_code=200, json=mock.Mock(return_value={"utilizadores": []}))
             assert url.endswith("/reclamacoes/") and "julgadas_desde" in params
             return mock.Mock(status_code=200, json=mock.Mock(return_value={"limite": 500, "reclamacoes": self.rows}))
 
@@ -86,6 +88,25 @@ class VerdictSyncTests(TestCase):
         self.rows = []  # já não vem na janela: a volta retenta os no_driver
         self.assertEqual(self._run()["claim_created"], 1)
         self.assertEqual(DriverClaim.objects.get().driver.courier_id_cainiao, "1576539999999")
+
+    def test_helper_desconta_ao_motorista_principal(self):
+        ces = [{"login": "Helper-MELAO-LF", "courier_id": "1576538274974", "tipo": "COURIER_HELPER",
+                "principal": "Josuel Lobato_LF", "hub": "viana", "estado": "ENABLE"}]
+        self.rows = [_row("T1", "CNPRT111", "Helper-MELAO-LF", "contra")]
+        with mock.patch("settlements.services_courier_onboarding._ces_users", return_value=ces):
+            self.assertEqual(self._run()["claim_created"], 1)
+        claim = DriverClaim.objects.get()
+        self.assertEqual(claim.driver_id, self.driver_id)
+        self.assertIn("helper de Josuel Lobato_LF", claim.dsp_observation)
+
+    def test_helper_conhecido_so_no_leguas_desconta_ao_principal(self):
+        from .models import DriverHelper
+
+        DriverHelper.objects.create(driver_id=self.driver_id, helper_name="Helper-X-LF")
+        self.rows = [_row("T1", "CNPRT111", "Helper-X-LF", "contra")]
+        with mock.patch("settlements.services_courier_onboarding._ces_users", return_value=[]):
+            self.assertEqual(self._run()["claim_created"], 1)
+        self.assertEqual(DriverClaim.objects.get().driver_id, self.driver_id)
 
     def test_nao_duplica_se_ja_ha_desconto_para_o_pacote(self):
         existing = DriverClaim.objects.create(

@@ -42,7 +42,9 @@ def api_reliable_sync(request):
             elif (data.get("key") or "").strip():
                 cfg.reliable_api_key = data["key"].strip()
             cfg.reliable_epod_sync_enabled = bool(data.get("enabled"))
-            cfg.save()
+            # update_fields: um save completo re-encripta todos os campos e
+            # falha se algum antigo já não se consegue desencriptar.
+            cfg.save(update_fields=["reliable_api_url", "reliable_api_key", "reliable_epod_sync_enabled"])
         elif action == "sync":
             from .tasks import sync_epod_from_reliable
             sync_epod_from_reliable.delay(triggered_by=f"manual:{request.user.username}")

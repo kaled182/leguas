@@ -197,6 +197,16 @@ class ReliableSyncViewTests(TestCase):
         cfg = SystemConfiguration.get_config()
         self.assertEqual(cfg.reliable_api_key, "abcdefgh")
 
+        # Outro campo encriptado ilegível (chave Fernet antiga) não impede guardar.
+        from django.db import connection
+        with connection.cursor() as cur:
+            cur.execute(
+                "UPDATE system_config_systemconfiguration SET ocr_gemini_api_key=%s WHERE id=1",
+                ["gAAAA" + "x" * 263],
+            )
+        d = self._post({"action": "save", "url": "https://r.test", "key": "", "enabled": True})
+        self.assertEqual(d.status_code, 200)
+
         # Chave vazia mantém a atual.
         self._post({"action": "save", "url": "https://r.test", "key": "", "enabled": False})
         self.assertEqual(SystemConfiguration.get_config().reliable_api_key, "abcdefgh")

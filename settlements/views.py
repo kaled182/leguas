@@ -901,17 +901,26 @@ def claim_update(request, claim_id):
         )
         return redirect("claim-detail", claim_id=claim.id)
 
-    # amount
+    # amount — pelo serviço, que mantém a pré-fatura certa e nunca altera
+    # uma PF paga (a diferença entra como ajuste na PF aberta).
     raw_amount = (request.POST.get("amount") or "").replace(",", ".").strip()
+    amount_msg = ""
     if raw_amount:
+        from .services_claim_actions import ClaimActionError, change_claim_amount
         try:
             new_amount = Decimal(raw_amount)
-            if new_amount < 0:
-                raise ValueError("negativo")
-            claim.amount = new_amount
-        except (InvalidOperation, ValueError):
+        except InvalidOperation:
             messages.error(request, f"Valor inválido: {raw_amount}")
             return redirect("claim-detail", claim_id=claim.id)
+        if new_amount != claim.amount:
+            try:
+                amount_msg = change_claim_amount(
+                    claim, new_amount, request.user,
+                    request.POST.get("reason") or "Editado no detalhe do claim.",
+                )["message"]
+            except ClaimActionError as e:
+                messages.error(request, str(e))
+                return redirect("claim-detail", claim_id=claim.id)
 
     # claim_type
     new_type = (request.POST.get("claim_type") or "").strip()
@@ -923,26 +932,11 @@ def claim_update(request, claim_id):
     if new_desc is not None:
         claim.description = new_desc.strip()[:2000]
 
-    claim.save(update_fields=[
-        "amount", "claim_type", "description", "updated_at",
-    ])
-
-    # Se o claim já estava APPROVED e o valor mudou, propagar para
-    # qualquer PreInvoiceLostPackage gerado a partir deste claim.
-    if claim.status == "APPROVED":
-        from .models import PreInvoiceLostPackage
-        marker = f"auto:driver_claim:{claim.id}"
-        affected_pfs = []
-        for pkg in PreInvoiceLostPackage.objects.filter(api_source=marker):
-            pkg.valor = claim.amount
-            pkg.save(update_fields=["valor"])
-            affected_pfs.append(pkg.pre_invoice)
-        for pf in {p.id: p for p in affected_pfs}.values():
-            pf.recalcular()
+    claim.save(update_fields=["claim_type", "description", "updated_at"])
 
     messages.success(
         request,
-        f"Reclamação #{claim.id} atualizada para €{claim.amount:.2f}.",
+        f"Reclamação #{claim.id} atualizada (€{claim.amount:.2f}). {amount_msg}".strip(),
     )
     return redirect("claim-detail", claim_id=claim.id)
 
@@ -969,6 +963,19 @@ def claim_delete(request, claim_id):
             "Desvincule do acerto primeiro.",
         )
         return redirect("claim-detail", claim_id=claim.id)
+
+    from decimal import Decimal
+
+    from .services_claim_actions import _lines, _set_open_line
+    if any(_lines(claim, kind, paid=True) for kind in ("main", "adjust", "credit")):
+        messages.error(
+            request,
+            f"Não é possível apagar — o desconto #{claim.id} já foi pago numa "
+            "pré-fatura. Usa \"Remover desconto\" para o devolver ao motorista.",
+        )
+        return redirect("claim-detail", claim_id=claim.id)
+    for kind in ("main", "adjust", "credit"):
+        _set_open_line(claim, kind, Decimal("0"), "")
 
     cainiao_lines = claim.cainiao_billing_lines.all()
     if cainiao_lines.exists():
@@ -1006,10 +1013,11 @@ def claim_detail(request, claim_id):
             claim.approve(request.user, notes)
             messages.success(request, f"Reclamação #{claim.id} aprovada.")
         elif action == "accept_appeal" and claim.status == "APPEALED":
-            claim.reject(request.user, notes or "Recurso aceite.")
+            from .services_claim_actions import remove_claim
+            result = remove_claim(claim, request.user, notes or "Recurso aceite.")
             messages.success(
                 request,
-                f"Recurso #{claim.id} aceite — desconto CANCELADO (motorista não paga).",
+                f"Recurso #{claim.id} aceite — desconto CANCELADO. {result['message']}",
             )
         elif action == "reject_appeal" and claim.status == "APPEALED":
             claim.approve(request.user, notes or "Recurso rejeitado.")
@@ -1017,9 +1025,10 @@ def claim_detail(request, claim_id):
                 request,
                 f"Recurso #{claim.id} rejeitado — desconto MANTIDO (aplicado na PF).",
             )
-        elif action == "reject" and claim.status in ("PENDING", "APPEALED"):
-            claim.reject(request.user, notes)
-            messages.success(request, f"Reclamação #{claim.id} rejeitada.")
+        elif action == "reject" and claim.status in ("PENDING", "APPEALED", "APPROVED"):
+            from .services_claim_actions import remove_claim
+            result = remove_claim(claim, request.user, notes or "Rejeitado no detalhe do claim.")
+            messages.success(request, f"Reclamação #{claim.id} rejeitada. {result['message']}")
         elif action == "send_appeal" and claim.status in ("APPEALED", "APPROVED"):
             from .services_appeals import send_appeals_to_partner
             _, summary = send_appeals_to_partner([claim.id], request.user)
@@ -2308,8 +2317,10 @@ def driver_pre_invoice_create(request, driver_id):
         auto_include_approved_claims,
         carry_forward_unapplied_claims,
     )
+    from .services_claim_actions import carry_forward_pending_credits
     claims_result = auto_include_approved_claims(pf)
     carry_result = carry_forward_unapplied_claims(pf)
+    carry_forward_pending_credits(pf)
     if claims_result["included"] or carry_result["included"]:
         pf.recalcular()  # recalcular para somar os novos pacotes perdidos
 

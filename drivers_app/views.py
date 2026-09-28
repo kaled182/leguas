@@ -4081,6 +4081,7 @@ from .portal_admin_views import (
     driver_complaints,
     driver_claims,
     driver_claim_appeal,
+    driver_claim_action,
     driver_claim_apply_now,
     driver_claims_apply_all,
     driver_complaint_apply_claim,

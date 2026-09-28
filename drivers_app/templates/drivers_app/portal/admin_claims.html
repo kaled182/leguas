@@ -59,125 +59,177 @@
       <h3 class="font-bold text-gray-900 dark:text-white">Descontos deste Motorista</h3>
     </div>
     <div class="text-xs text-gray-500">
-      Aprovadas serão automaticamente incluídas como "Pacotes Perdidos" na próxima Pré-Fatura
+      Aprovados descontam na pré-fatura. Para cada um: alterar valor ou remover da fatura.
     </div>
   </div>
   <div class="divide-y divide-gray-100 dark:divide-gray-700">
     {% for claim in claims %}
-    <div class="px-5 py-4 hover:bg-gray-50 dark:hover:bg-gray-700/30">
+    <div class="px-5 py-4 hover:bg-gray-50 dark:hover:bg-gray-700/30 {% if claim.status == 'REJECTED' %}opacity-70{% endif %}">
       <div class="flex items-start justify-between flex-wrap gap-3">
         <div class="flex-1 min-w-0">
           <div class="flex items-center gap-2 flex-wrap">
             <span class="font-mono text-xs text-gray-500">#{{ claim.id }}</span>
             <span class="font-semibold text-gray-900 dark:text-white">{{ claim.get_claim_type_display }}</span>
-            <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold {{ claim.situacao.classes }}">{{ claim.situacao.label }}</span>
-            {% if claim.aplicado is False %}
-              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300 inline-flex items-center gap-1">
-                <i data-lucide="alert-triangle" class="w-3 h-3"></i> Sem desconto em fatura
-              </span>
-            {% elif claim.aplicado is True %}
-              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 inline-flex items-center gap-1">
-                <i data-lucide="check" class="w-3 h-3"></i> Descontado em fatura
-              </span>
-            {% endif %}
             <span class="text-xs text-gray-500">{{ claim.occurred_at|date:"d/m/Y H:i" }}</span>
+          </div>
+          <div class="flex items-center gap-2 flex-wrap mt-1.5">
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 inline-flex items-center gap-1">
+              <i data-lucide="tag" class="w-3 h-3"></i> {{ claim.origem }}
+            </span>
+            {% with b=claim.billing %}
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold inline-flex items-center gap-1
+              {% if b.code == 'em_fatura' %}bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300
+              {% elif b.code == 'pago' %}bg-rose-200 text-rose-800 dark:bg-rose-900/60 dark:text-rose-200
+              {% elif b.code == 'a_espera' %}bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300
+              {% elif b.code == 'removido' %}bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300
+              {% elif b.code == 'recurso' %}bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300
+              {% else %}bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300{% endif %}">
+              {{ b.label }}{% if b.pf %} · {{ b.pf }}{% endif %}
+            </span>
+            {% endwith %}
           </div>
           {% if claim.waybill_number %}
             <div class="text-[11px] font-mono text-gray-500 mt-1">Waybill: {{ claim.waybill_number }}</div>
           {% endif %}
-          {% if claim.customer_complaint %}
-            <div class="mt-2 bg-amber-50 dark:bg-amber-900/10 border-l-4 border-amber-400 px-3 py-2 rounded text-xs">
-              <div class="font-semibold text-amber-700 dark:text-amber-300 flex items-center gap-1">
-                <i data-lucide="alert-octagon" class="w-3 h-3"></i>
-                Reclamação Cliente #{{ claim.customer_complaint.id }} · {{ claim.customer_complaint.get_tipo_display }}
-                <span class="ml-2 px-1.5 py-0.5 rounded text-[10px] font-bold bg-white dark:bg-gray-800">{{ claim.customer_complaint.get_status_display }}</span>
-              </div>
-              <div class="text-gray-700 dark:text-gray-300 mt-1 grid grid-cols-1 md:grid-cols-2 gap-x-4">
-                <div><strong>Cliente:</strong> {{ claim.customer_complaint.nome_cliente }}</div>
-                <div><strong>Telefone:</strong> {{ claim.customer_complaint.telefone_cliente }}</div>
-                <div><strong>Cidade:</strong> {{ claim.customer_complaint.cidade }}</div>
-                {% if claim.customer_complaint.data_entrega %}
-                  <div><strong>Entrega:</strong> {{ claim.customer_complaint.data_entrega|date:"d/m/Y H:i" }}</div>
-                {% endif %}
-                {% if claim.customer_complaint.deadline %}
-                  <div class="text-amber-600"><strong>Deadline:</strong> {{ claim.customer_complaint.deadline|date:"d/m/Y H:i" }}</div>
-                {% endif %}
-              </div>
-              <a href="{% url 'drivers_app:driver_complaints' driver.id %}" class="text-violet-600 hover:underline mt-1 inline-block">→ Ver reclamação completa</a>
-            </div>
-          {% endif %}
-          <p class="text-sm text-gray-700 dark:text-gray-300 mt-1">{{ claim.description|truncatewords:30 }}</p>
+          <p class="text-sm text-gray-700 dark:text-gray-300 mt-1">{{ claim.description|truncatewords:40 }}</p>
           {% if claim.justification %}
             <div class="mt-2 bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-400 px-3 py-2 rounded text-xs">
-              <span class="font-semibold text-blue-700 dark:text-blue-300">Justificação do recurso:</span>
               <span class="text-gray-700 dark:text-gray-300">{{ claim.justification|truncatewords:40 }}</span>
             </div>
           {% endif %}
           {% if claim.evidence_file %}
             <a href="{{ claim.evidence_file.url }}" target="_blank"
                class="text-[11px] text-violet-600 hover:underline mt-1 inline-flex items-center gap-1">
-              <i data-lucide="paperclip" class="w-3 h-3"></i>
-              Prova anexada
+              <i data-lucide="paperclip" class="w-3 h-3"></i> Prova anexada
             </a>
+          {% endif %}
+          {% if claim.review_notes %}
+            <details class="mt-2 text-[11px] text-gray-500">
+              <summary class="cursor-pointer select-none">Histórico de decisões</summary>
+              <pre class="whitespace-pre-wrap font-sans mt-1">{{ claim.review_notes }}</pre>
+            </details>
           {% endif %}
         </div>
         <div class="text-right flex-shrink-0">
-          <div class="text-xl font-extrabold text-rose-600 dark:text-rose-400">- € {{ claim.amount|floatformat:2 }}</div>
+          <div class="text-xl font-extrabold {% if claim.status == 'REJECTED' %}text-gray-400 line-through{% else %}text-rose-600 dark:text-rose-400{% endif %}">- € {{ claim.amount|floatformat:2 }}</div>
           <div class="mt-2 flex flex-col gap-1.5 items-end">
+            {% if claim.status == 'PENDING' or claim.status == 'APPROVED' %}
+              <button type="button" onclick="claimPanel({{ claim.id }}, 'amount')"
+                      class="px-3 py-1 bg-gray-800 hover:bg-gray-900 dark:bg-gray-600 text-white rounded text-[11px] font-semibold inline-flex items-center gap-1">
+                <i data-lucide="pencil" class="w-3 h-3"></i> Alterar valor
+              </button>
+              <button type="button" onclick="claimPanel({{ claim.id }}, 'remove')"
+                      class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[11px] font-semibold inline-flex items-center gap-1">
+                <i data-lucide="undo-2" class="w-3 h-3"></i> Remover desconto
+              </button>
+            {% endif %}
+            {% if claim.status == 'PENDING' %}
+              <form method="post" action="{% url 'drivers_app:driver_claim_action' driver.id claim.id %}">
+                {% csrf_token %}<input type="hidden" name="action" value="approve">
+                <button class="px-3 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded text-[11px] font-semibold inline-flex items-center gap-1">
+                  <i data-lucide="check" class="w-3 h-3"></i> Aprovar e descontar
+                </button>
+              </form>
+            {% endif %}
+            {% if claim.status == 'REJECTED' %}
+              <button type="button" onclick="claimPanel({{ claim.id }}, 'restore')"
+                      class="px-3 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded text-[11px] font-semibold inline-flex items-center gap-1">
+                <i data-lucide="rotate-ccw" class="w-3 h-3"></i> Repor desconto
+              </button>
+            {% endif %}
+            {% if claim.billing.code == 'a_espera' %}
+              <button type="button" onclick="aplicarDesconto(this, {{ driver.id }}, {{ claim.id }})"
+                      class="px-3 py-1 bg-orange-600 hover:bg-orange-700 text-white rounded text-[11px] font-semibold inline-flex items-center gap-1">
+                <i data-lucide="check-check" class="w-3 h-3"></i> Lançar já na pré-fatura
+              </button>
+            {% endif %}
+            {% if claim.status == 'PENDING' or claim.status == 'APPROVED' %}
+              <button type="button" onclick="claimPanel({{ claim.id }}, 'appeal')"
+                      class="text-[11px] text-blue-600 hover:underline inline-flex items-center gap-1">
+                <i data-lucide="shield" class="w-3 h-3"></i> Recorrer à Cainiao
+              </button>
+            {% endif %}
             <a href="/settlements/claims/{{ claim.id }}/" target="_blank"
                class="text-[11px] text-gray-600 hover:text-violet-600 inline-flex items-center gap-1">
               <i data-lucide="external-link" class="w-3 h-3"></i> Detalhes
             </a>
-            {% if claim.aplicado is False %}
-              <button type="button"
-                      onclick="aplicarDesconto(this, {{ driver.id }}, {{ claim.id }})"
-                      class="px-3 py-1 bg-orange-600 hover:bg-orange-700 text-white rounded text-[11px] font-semibold inline-flex items-center gap-1">
-                <i data-lucide="check-check" class="w-3 h-3"></i> Aplicar desconto
-              </button>
-            {% endif %}
-            {% if claim.status == 'PENDING' or claim.status == 'APPROVED' %}
-              <button type="button"
-                      onclick="document.getElementById('appeal-{{ claim.id }}').classList.toggle('hidden')"
-                      class="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-[11px] font-semibold inline-flex items-center gap-1">
-                <i data-lucide="shield" class="w-3 h-3"></i> Recorrer
-              </button>
-            {% endif %}
           </div>
         </div>
       </div>
 
-      {# Form de recurso (oculto por defeito) #}
+      {# Alterar valor #}
+      <div id="panel-amount-{{ claim.id }}" class="claim-panel hidden mt-3 bg-gray-50 dark:bg-gray-900/40 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+        <form method="post" action="{% url 'drivers_app:driver_claim_action' driver.id claim.id %}" class="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+          {% csrf_token %}<input type="hidden" name="action" value="change_amount">
+          <div>
+            <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 mb-1">Novo valor (€)</label>
+            <input name="amount" type="number" step="0.01" min="0" required value="{{ claim.amount|stringformat:'.2f' }}"
+                   class="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
+          </div>
+          <div class="md:col-span-2">
+            <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 mb-1">Motivo (obrigatório)</label>
+            <input name="reason" required placeholder="Ex.: valor real do pacote cobrado pela Cainiao"
+                   class="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
+          </div>
+          <button class="px-3 py-2 bg-gray-800 hover:bg-gray-900 dark:bg-gray-600 text-white rounded-lg text-xs font-semibold">Guardar valor</button>
+          <p class="md:col-span-4 text-[11px] text-gray-500">
+            {% if claim.billing.code == 'em_fatura' %}A linha na pré-fatura {{ claim.billing.pf }} é atualizada.
+            {% elif claim.billing.code == 'pago' %}Já foi pago na {{ claim.billing.pf }}: essa fatura não muda, a diferença entra como ajuste na pré-fatura aberta.
+            {% else %}Entra com o novo valor quando for descontado.{% endif %}
+          </p>
+        </form>
+      </div>
+
+      {# Remover desconto #}
+      <div id="panel-remove-{{ claim.id }}" class="claim-panel hidden mt-3 bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-200 dark:border-emerald-700/40 rounded-lg p-4">
+        <form method="post" action="{% url 'drivers_app:driver_claim_action' driver.id claim.id %}" class="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+          {% csrf_token %}<input type="hidden" name="action" value="remove">
+          <div class="md:col-span-3">
+            <label class="block text-xs font-bold text-emerald-700 dark:text-emerald-300 mb-1">Motivo (obrigatório)</label>
+            <input name="reason" required placeholder="Ex.: prova de entrega válida; decisão da gestão"
+                   class="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-emerald-300 dark:border-emerald-600 rounded-lg text-gray-900 dark:text-white">
+          </div>
+          <button class="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold">Remover da fatura</button>
+          <p class="md:col-span-4 text-[11px] text-emerald-700 dark:text-emerald-400">
+            {% if claim.billing.code == 'em_fatura' %}Sai da pré-fatura {{ claim.billing.pf }} (ainda não paga).
+            {% elif claim.billing.code == 'pago' %}Já foi pago na {{ claim.billing.pf }}: os € {{ claim.amount|floatformat:2 }} voltam ao motorista em crédito na pré-fatura aberta.
+            {% else %}Deixa de descontar. Não mexe em nenhuma fatura.{% endif %}
+          </p>
+        </form>
+      </div>
+
+      {# Repor desconto #}
+      <div id="panel-restore-{{ claim.id }}" class="claim-panel hidden mt-3 bg-rose-50 dark:bg-rose-900/10 border border-rose-200 dark:border-rose-700/40 rounded-lg p-4">
+        <form method="post" action="{% url 'drivers_app:driver_claim_action' driver.id claim.id %}" class="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+          {% csrf_token %}<input type="hidden" name="action" value="restore">
+          <div class="md:col-span-3">
+            <label class="block text-xs font-bold text-rose-700 dark:text-rose-300 mb-1">Motivo (obrigatório)</label>
+            <input name="reason" required placeholder="Ex.: removido por engano"
+                   class="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-rose-300 dark:border-rose-600 rounded-lg text-gray-900 dark:text-white">
+          </div>
+          <button class="px-3 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-semibold">Repor desconto</button>
+        </form>
+      </div>
+
+      {# Recurso à Cainiao #}
       {% if claim.status == 'PENDING' or claim.status == 'APPROVED' %}
-      <div id="appeal-{{ claim.id }}" class="hidden mt-3 bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-700/40 rounded-lg p-4">
+      <div id="panel-appeal-{{ claim.id }}" class="claim-panel hidden mt-3 bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-700/40 rounded-lg p-4">
         <form method="post" action="{% url 'drivers_app:driver_claim_appeal' driver.id claim.id %}"
               enctype="multipart/form-data" class="space-y-3">
           {% csrf_token %}
           <div>
-            <label class="block text-xs uppercase font-bold text-blue-700 dark:text-blue-300 mb-1">
-              Justificação do Recurso (obrigatório)
-            </label>
+            <label class="block text-xs uppercase font-bold text-blue-700 dark:text-blue-300 mb-1">Justificação do recurso (obrigatório)</label>
             <textarea name="justification" rows="3" required
-                      placeholder="Ex: Pacote foi entregue ao cliente em mãos com assinatura. Anexo foto do POD com timestamp e localização."
+                      placeholder="Ex: Pacote foi entregue ao cliente em mãos com assinatura. Anexo foto do POD."
                       class="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-blue-300 dark:border-blue-600 rounded-lg text-gray-900 dark:text-white"></textarea>
           </div>
           <div>
-            <label class="block text-xs uppercase font-bold text-blue-700 dark:text-blue-300 mb-1">
-              Prova de Entrega (foto/PDF — opcional)
-            </label>
-            <input type="file" name="evidence_file" accept="image/*,.pdf"
-                   class="block text-sm text-gray-600 dark:text-gray-400">
-            <p class="text-[10px] text-gray-500 mt-1">Anexar POD, foto da entrega, comprovativo do cliente, etc.</p>
+            <label class="block text-xs uppercase font-bold text-blue-700 dark:text-blue-300 mb-1">Prova de entrega (opcional)</label>
+            <input type="file" name="evidence_file" accept="image/*,.pdf" class="block text-sm text-gray-600 dark:text-gray-400">
           </div>
-          <div class="flex justify-end gap-2">
-            <button type="button"
-                    onclick="document.getElementById('appeal-{{ claim.id }}').classList.add('hidden')"
-                    class="px-3 py-1.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded text-xs font-semibold">
-              Cancelar
-            </button>
-            <button type="submit"
-                    class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-semibold inline-flex items-center gap-1">
-              <i data-lucide="shield" class="w-3.5 h-3.5"></i>
-              Abrir Recurso
+          <div class="flex justify-end">
+            <button type="submit" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-semibold inline-flex items-center gap-1">
+              <i data-lucide="shield" class="w-3.5 h-3.5"></i> Abrir recurso
             </button>
           </div>
         </form>
@@ -195,6 +247,13 @@
 </div>
 
 <script>
+function claimPanel(id, kind) {
+  const el = document.getElementById(`panel-${kind}-${id}`);
+  const open = el.classList.contains('hidden');
+  document.querySelectorAll(`[id$="-${id}"].claim-panel`).forEach(p => p.classList.add('hidden'));
+  if (open) { el.classList.remove('hidden'); const i = el.querySelector('input[name=reason], textarea'); if (i) i.focus(); }
+}
+
 function _csrf() {
   const m = document.cookie.match(/csrftoken=([^;]+)/);
   return m ? m[1] : '';

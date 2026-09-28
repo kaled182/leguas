@@ -637,10 +637,25 @@ def driver_claims(request, driver_id):
     from settlements.models import DriverClaim
     from settlements.services_claims_in_pf import claim_is_applied
 
+    from settlements.services_claim_actions import claim_billing_state
+
     driver = get_object_or_404(DriverProfile, pk=driver_id)
     claims = list(
-        DriverClaim.objects.filter(driver=driver).order_by("-occurred_at")
+        DriverClaim.objects.filter(driver=driver)
+        .prefetch_related("cainiao_verdicts", "cainiao_billing_lines")
+        .order_by("-occurred_at")
     )
+    for claim in claims:
+        claim.billing = claim_billing_state(claim)
+        verdict = next(iter(claim.cainiao_verdicts.all()), None)
+        if verdict:
+            claim.origem = f"Julgamento Cainiao · ticket {verdict.ticket}"
+        elif claim.cainiao_billing_lines.all():
+            claim.origem = "Fatura Cainiao (compensación)"
+        elif claim.customer_complaint_id:
+            claim.origem = "Reclamação (sistema antigo)"
+        else:
+            claim.origem = "Manual"
 
     # Marca cada claim com a verdade financeira: o desconto APROVADO já
     # entrou (foi lançado) numa fatura? O estado APPROVED por si só não
@@ -677,6 +692,39 @@ def driver_claims(request, driver_id):
         "total_approved_value": total_approved_value,
         "valor_nao_aplicado": valor_nao_aplicado,
     })
+
+
+@admin_required
+@require_http_methods(["POST"])
+def driver_claim_action(request, driver_id, claim_id):
+    """Decisão do operador sobre um desconto: alterar valor, remover da
+    fatura, repor, ou aprovar um pendente. Ver services_claim_actions."""
+    from settlements.models import DriverClaim
+    from settlements.services_claim_actions import (
+        ClaimActionError, change_claim_amount, remove_claim, restore_claim,
+    )
+
+    driver = get_object_or_404(DriverProfile, pk=driver_id)
+    claim = get_object_or_404(DriverClaim, pk=claim_id, driver=driver)
+    action = request.POST.get("action")
+    reason = request.POST.get("reason", "")
+    try:
+        if action == "change_amount":
+            result = change_claim_amount(claim, request.POST.get("amount", ""), request.user, reason)
+        elif action == "remove":
+            result = remove_claim(claim, request.user, reason)
+        elif action == "restore":
+            result = restore_claim(claim, request.user, reason)
+        elif action == "approve" and claim.status == "PENDING":
+            claim.approve(request.user, reason or "Aprovado no portal do motorista.")
+            result = {"message": "Desconto aprovado."}
+        else:
+            raise ClaimActionError("Acção inválida para este desconto.")
+    except ClaimActionError as e:
+        messages.error(request, f"Desconto #{claim.id}: {e}")
+    else:
+        messages.success(request, f"Desconto #{claim.id}: {result['message']}")
+    return redirect("drivers_app:driver_claims", driver_id=driver.id)
 
 
 @admin_required

@@ -125,6 +125,49 @@ class ReliableEpodSyncTests(TestCase):
         self.assertEqual(result["failed"], 1)
         self.assertIn("Erro ao ler ficheiro", ReliableEpodSync.objects.get().message)
 
+    def test_ficheiro_que_ja_nao_existe_fica_falhado_e_usa_o_anterior(self):
+        antigo = _epod_xlsx([["WB1", "LP1", "Driver_received", "Joao_LF", "2026-09-28", None, "4740-001"]])
+        apagado = _epod_xlsx([["WB1", "LP1", "Delivered", "Joao_LF", "2026-09-28", None, "4740-001"]])
+        fake = _FakeReliable([
+            (_meta(1, antigo, loaded="2026-09-28T09:00:00+01:00"), antigo),
+            (_meta(2, apagado, loaded="2026-09-28T09:30:00+01:00"), apagado),
+        ])
+        real_get = fake.get
+
+        def get(url, **kw):
+            if url.endswith("/epod/2/ficheiro/"):
+                return mock.Mock(status_code=404)
+            return real_get(url, **kw)
+
+        with mock.patch("settlements.services_reliable_sync.requests.get", side_effect=get):
+            first = sync_epod_from_reliable()
+            second = sync_epod_from_reliable()
+        self.assertEqual((first["failed"], first["imported"]), (1, 0))
+        self.assertEqual(second["imported"], 1)
+        self.assertEqual(
+            dict(ReliableEpodSync.objects.values_list("remote_id", "status")),
+            {1: "imported", 2: "failed"},
+        )
+
+    def test_pagina_ate_ao_fim(self):
+        page1 = [{"id": i, "ficheiro": f"f{i}_atribuidas.xlsx", "sha256": f"{i:064d}", "hub": "viana",
+                  "atribuidas": True, "exportado_em": None,
+                  "carregado_em": f"2026-09-28T09:{i:02d}:00+01:00"} for i in range(3)]
+        page2 = [page1[-1]] + [{**page1[0], "id": 9, "sha256": "9" * 64, "ficheiro": "f9_atribuidas.xlsx",
+                                "carregado_em": "2026-09-28T10:00:00+01:00"}]
+        calls = []
+
+        def get(url, params=None, **kw):
+            calls.append(params["desde"])
+            page = page1 if len(calls) == 1 else page2
+            return mock.Mock(status_code=200, json=mock.Mock(return_value={"limite": 3, "ficheiros": page}))
+
+        with mock.patch("settlements.services_reliable_sync.requests.get", side_effect=get):
+            result = sync_epod_from_reliable()
+        self.assertEqual(len(calls), 2)
+        self.assertTrue(calls[1].startswith("2026-09-28T09:02:00"), "a 2.ª página começa no último carregado_em")
+        self.assertEqual((result["found"], result["skipped"]), (4, 4), "o repetido conta uma vez")
+
     def test_chave_errada(self):
         with mock.patch("settlements.services_reliable_sync.requests.get",
                         return_value=mock.Mock(status_code=401)):

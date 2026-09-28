@@ -33,6 +33,10 @@ class ReliableSyncError(Exception):
     pass
 
 
+class ReliableFileGone(ReliableSyncError):
+    """O ReliableMaps já não tem o ficheiro (404): não adianta tentar de novo."""
+
+
 def _config():
     from system_config.models import SystemConfiguration
 
@@ -54,6 +58,8 @@ def _get(base, key, path, params=None, timeout=LIST_TIMEOUT):
         raise ReliableSyncError(f"Sem ligação ao ReliableMaps: {e}") from e
     if resp.status_code == 401:
         raise ReliableSyncError("Chave de integração inválida ou desativada (401).")
+    if resp.status_code == 404:
+        raise ReliableFileGone(f"Ficheiro já não disponível no ReliableMaps ({path}).")
     if resp.status_code != 200:
         raise ReliableSyncError(f"ReliableMaps respondeu {resp.status_code} em {path}.")
     return resp
@@ -141,6 +147,11 @@ def _sync(base, key):
         latest = files[-1]
         try:
             resp = _get(base, key, f"epod/{latest['id']}/ficheiro/", timeout=DOWNLOAD_TIMEOUT)
+        except ReliableFileGone as e:
+            # Na próxima volta o anterior do mesmo grupo passa a ser o mais recente.
+            record(latest, ReliableEpodSync.STATUS_FAILED, str(e))
+            result["failed"] += 1
+            continue
         except ReliableSyncError as e:
             # Erro de rede: não se regista, tenta-se na próxima volta.
             result["ok"] = False

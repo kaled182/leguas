@@ -77,6 +77,8 @@ GEOAPI_TOKEN = os.getenv("GEOAPI_TOKEN")
 
 # WhatsApp Reports
 AUTHENTICATION_API_KEY = env("AUTHENTICATION_API_KEY", default="")
+# Chave do export das zonas para o ReliableMaps (geozonas/api/zonas/export/)
+ZONAS_EXPORT_KEY = env("ZONAS_EXPORT_KEY", default="")
 WHATSAPP_API_URL = env("WHATSAPP_API_URL", default="")
 WHATSAPP_REPORT_GROUP = env("WHATSAPP_REPORT_GROUP", default="")
 

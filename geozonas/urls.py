@@ -12,6 +12,7 @@ urlpatterns = [
     path("api/freguesias/", views.api_freguesias, name="api-freguesias"),
     path("api/selecionar/", views.api_selecionar, name="api-selecionar"),
     path("api/zonas/", views.api_zonas, name="api-zonas"),
+    path("api/zonas/export/", views.api_zonas_export, name="api-zonas-export"),
     path("api/zonas/criar/", views.api_criar_zona, name="api-criar-zona"),
     path("api/zonas/update/", views.api_zona_update, name="api-zona-update"),
     path("api/zonas/delete/", views.api_zona_delete, name="api-zona-delete"),

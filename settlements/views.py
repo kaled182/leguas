@@ -296,19 +296,8 @@ def invoice_detail(request, invoice_id):
         PartnerInvoice.objects.select_related("partner"), id=invoice_id
     )
 
-    # Pedidos relacionados (sample - pode precisar de ajuste conforme seu modelo Order)
-    from orders_manager.models import Order
-
-    related_orders = Order.objects.filter(
-        partner=invoice.partner,
-        created_at__gte=invoice.period_start,
-        created_at__lte=invoice.period_end,
-        current_status="DELIVERED",
-    ).select_related("assigned_driver")[:50]
-
     context = {
         "invoice": invoice,
-        "related_orders": related_orders,
     }
 
     return render(request, "settlements/invoice_detail.html", context)
@@ -548,18 +537,13 @@ def claim_list(request):
             errors.append("Descrição é obrigatória.")
 
         if not errors:
-            from orders_manager.models import Order
-            order = None
-            if tracking_code:
-                order = Order.objects.filter(tracking_code__iexact=tracking_code).first()
-
             claim = DriverClaim.objects.create(
                 driver_id=driver_id,
                 claim_type=claim_type,
                 amount=amount,
                 description=description,
                 occurred_at=occurred_at or timezone.now(),
-                order=order,
+                waybill_number=tracking_code.upper(),
                 created_by=request.user,
                 status="PENDING",
             )
@@ -573,7 +557,7 @@ def claim_list(request):
             return redirect("claim-list")
 
     base_claims = DriverClaim.objects.select_related(
-        "driver", "settlement", "order", "vehicle_incident",
+        "driver", "settlement", "vehicle_incident",
         "customer_complaint",
     ).all()
 
@@ -771,7 +755,7 @@ def claim_detail(request, claim_id):
 
     claim = get_object_or_404(
         DriverClaim.objects.select_related(
-            "driver", "settlement", "order", "vehicle_incident"
+            "driver", "settlement", "vehicle_incident"
         ),
         id=claim_id,
     )

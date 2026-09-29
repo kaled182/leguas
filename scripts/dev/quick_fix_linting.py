@@ -24,7 +24,7 @@ def run_formatters():
                 "--exclude=migrations,staticfiles,media,.venv,__pycache__,files,debug_files "
                 "--ignore-init-module-imports "
                 "core/ customauth/ drivers_app/ fleet_management/ "
-                "pricing/ route_allocation/ orders_manager/ analytics/ "
+                "pricing/ analytics/ "
                 "settlements/ accounting/ converter/ system_config/ "
                 "management/"
             ),
@@ -55,7 +55,7 @@ def run_formatters():
                 "--recursive --exclude=migrations,staticfiles,media,"
                 ".venv,__pycache__,files,debug_files "
                 "core/ customauth/ drivers_app/ fleet_management/ "
-                "pricing/ route_allocation/ orders_manager/ analytics/ "
+                "pricing/ analytics/ "
                 "settlements/ accounting/ converter/ system_config/"
             ),
         },

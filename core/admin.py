@@ -11,7 +11,6 @@ class PartnerAdmin(admin.ModelAdmin):
         "name",
         "nif",
         "formatted_status",
-        "active_orders_count",
         "has_integrations",
         "contact_email",
         "created_at",
@@ -33,7 +32,6 @@ class PartnerAdmin(admin.ModelAdmin):
     readonly_fields = [
         "created_at",
         "updated_at",
-        "active_orders_count",
         "has_active_integration",
     ]
 
@@ -64,7 +62,6 @@ class PartnerAdmin(admin.ModelAdmin):
                 "fields": (
                     "created_at",
                     "updated_at",
-                    "active_orders_count",
                     "has_active_integration",
                 ),
                 "classes": ("collapse",),

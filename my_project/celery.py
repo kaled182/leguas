@@ -42,24 +42,6 @@ app.conf.update(
 
 # Agendamento de tarefas periódicas (Celery Beat)
 app.conf.beat_schedule = {
-    # Sincronização diária do Delnext às 6h da manhã
-    'sync-delnext-daily': {
-        'task': 'core.sync_delnext_last_weekday',
-        'schedule': crontab(hour=6, minute=0),  # 6:00 AM todos os dias
-        'options': {
-            'expires': 3600,  # Expirar após 1 hora se não executar
-        }
-    },
-    
-    # Sincronização de todos os parceiros às 7h da manhã
-    'sync-all-partners-daily': {
-        'task': 'core.sync_all_active_integrations',
-        'schedule': crontab(hour=7, minute=0),  # 7:00 AM todos os dias
-        'options': {
-            'expires': 3600,
-        }
-    },
-    
     # Limpeza de dados antigos toda Segunda às 3h da manhã
     'cleanup-old-data-weekly': {
         'task': 'core.cleanup_old_partner_data',
@@ -187,30 +169,6 @@ app.conf.beat_schedule = {
         'options': {'expires': 3600},
     },
 
-
-    # Aging da Rede PUDO — marca EXPIRADO os pacotes cujo prazo de
-    # levantamento venceu. Corre 1x/dia às 7:30.
-    'pudo-mark-expired': {
-        'task': 'pudo_network.mark_expired',
-        'schedule': crontab(hour=7, minute=30),
-        'options': {'expires': 3600},
-    },
-
-    # Fecho periódico de extratos por loja PUDO — corre todo dia 06:40 e
-    # decide internamente (mensal no dia 1; semanal à segunda-feira).
-    'pudo-emit-statements': {
-        'task': 'pudo_network.emit_statements',
-        'schedule': crontab(hour=6, minute=40),
-        'options': {'expires': 3600},
-    },
-
-    # Reconciliação a montante das devoluções PUDO — prepara/drena a fila.
-    # Corre 1x/dia às 7:40 (o envio real fica ativo quando o spec chegar).
-    'pudo-process-upstream': {
-        'task': 'pudo_network.process_upstream',
-        'schedule': crontab(hour=7, minute=40),
-        'options': {'expires': 3600},
-    },
 
     # Tarefa de teste a cada 5 minutos (pode remover em produção)
     # 'test-celery-every-5min': {

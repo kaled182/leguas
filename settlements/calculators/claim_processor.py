@@ -20,42 +20,6 @@ class ClaimProcessor:
     def __init__(self):
         self.notifications = []
 
-    def create_claim_from_order(
-        self, order, claim_type, amount, description, created_by=None
-    ):
-        """
-        Cria claim automaticamente a partir de um pedido falhado.
-
-        Args:
-            order: Order instance
-            claim_type: 'ORDER_LOSS', 'ORDER_DAMAGE', etc.
-            amount: Decimal
-            description: str
-            created_by: User instance
-
-        Returns:
-            DriverClaim instance
-        """
-        from settlements.models import DriverClaim
-
-        if not order.assigned_driver:
-            raise ValueError("Pedido não tem motorista atribuído")
-
-        claim = DriverClaim.objects.create(
-            driver=order.assigned_driver,
-            order=order,
-            claim_type=claim_type,
-            amount=amount,
-            description=description,
-            occurred_at=order.updated_at,
-            created_by=created_by,
-            status="PENDING",
-        )
-
-        self.notifications.append(f"Claim criado: {claim}")
-
-        return claim
-
     def create_claim_from_vehicle_incident(self, incident, created_by=None):
         """
         Cria claim a partir de incidente de veículo.
@@ -229,60 +193,6 @@ class ClaimProcessor:
             }
 
         return summary
-
-    def auto_create_claims_from_failed_orders(self, start_date, end_date):
-        """
-        Cria claims automaticamente para pedidos falhados no período.
-
-        Args:
-            start_date: date
-            end_date: date
-
-        Returns:
-            list of created DriverClaim instances
-        """
-        from orders_manager.models import Order, OrderIncident
-        from settlements.models import DriverClaim
-
-        failed_orders = Order.objects.filter(
-            current_status__in=["FAILED", "INCIDENT"],
-            assigned_driver__isnull=False,
-            created_at__date__gte=start_date,
-            created_at__date__lte=end_date,
-        )
-
-        claims_created = []
-
-        for order in failed_orders:
-            # Verificar se já existe claim
-            existing = DriverClaim.objects.filter(order=order).exists()
-            if existing:
-                continue
-
-            # Buscar incidente associado
-            incident = OrderIncident.objects.filter(order=order).first()
-
-            if incident and incident.driver_responsible:
-                # Criar claim
-                claim_type = "ORDER_LOSS"  # Padrão
-                amount = order.declared_value * Decimal(
-                    "0.50"
-                )  # 50% do valor declarado
-
-                claim = DriverClaim.objects.create(
-                    driver=order.assigned_driver,
-                    order=order,
-                    claim_type=claim_type,
-                    amount=amount,
-                    description=f"Pedido falhado: {incident.reason}. {incident.description}",
-                    occurred_at=incident.occurred_at,
-                    status="PENDING",
-                )
-
-                claims_created.append(claim)
-                self.notifications.append(f"Claim auto-criado: {claim}")
-
-        return claims_created
 
     def get_notifications(self):
         """Retorna notificações geradas"""

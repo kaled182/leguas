@@ -172,48 +172,6 @@ class PartnerInvoice(models.Model):
     def __str__(self):
         return f"{self.invoice_number} - {self.partner.name} ({self.period_start} → {self.period_end})"
 
-    def calculate_totals(self):
-        """Calcula valores baseado em pedidos do período"""
-        from orders_manager.models import Order
-
-        orders = Order.objects.filter(
-            partner=self.partner,
-            current_status="DELIVERED",
-            created_at__date__gte=self.period_start,
-            created_at__date__lte=self.period_end,
-        )
-
-        self.total_orders = orders.count()
-        self.total_delivered = orders.filter(current_status="DELIVERED").count()
-
-        # Calcular valor bruto baseado em tarifas
-        from pricing.models import PartnerTariff
-
-        gross = Decimal("0.00")
-
-        for order in orders:
-            # Buscar tarifa aplicável
-            try:
-                tariff = PartnerTariff.objects.get(
-                    partner=self.partner,
-                    postal_zone__code=order.postal_code[:4],  # Primeiros 4 dígitos
-                    valid_from__lte=order.created_at.date(),
-                    valid_until__gte=order.created_at.date(),
-                )
-
-                if order.current_status == "DELIVERED":
-                    gross += tariff.base_price + tariff.success_bonus
-                else:
-                    gross += tariff.base_price - tariff.failure_penalty
-
-            except PartnerTariff.DoesNotExist:
-                # Fallback para preço base
-                gross += Decimal("5.00")
-
-        self.gross_amount = gross
-        self.tax_amount = gross * Decimal("0.23")  # IVA 23%
-        self.net_amount = gross + self.tax_amount
-
     def mark_as_paid(self, paid_amount=None, paid_date=None):
         """Marca fatura como paga"""
         self.status = "PAID"
@@ -515,83 +473,6 @@ class DriverSettlement(models.Model):
             return f"{self.driver.nome_completo} - {partner_name} - Semana {self.week_number}/{self.year}"
         return f"{self.driver.nome_completo} - {partner_name} - {self.month_number}/{self.year}"
 
-    def calculate_settlement(self):
-        """Calcula valores do settlement baseado em pedidos e tarifas"""
-        from orders_manager.models import Order
-        from pricing.models import PartnerTariff
-
-        # Buscar pedidos do motorista no período
-        orders_query = Order.objects.filter(
-            assigned_driver=self.driver,
-            created_at__date__gte=self.period_start,
-            created_at__date__lte=self.period_end,
-        )
-
-        if self.partner:
-            orders_query = orders_query.filter(partner=self.partner)
-
-        orders = orders_query.select_related("partner")
-
-        # Estatísticas
-        self.total_orders = orders.count()
-        self.delivered_orders = orders.filter(current_status="DELIVERED").count()
-        self.failed_orders = self.total_orders - self.delivered_orders
-
-        if self.total_orders > 0:
-            self.success_rate = (
-                Decimal(self.delivered_orders) / Decimal(self.total_orders)
-            ) * Decimal("100.00")
-
-        # Calcular valor bruto
-        gross = Decimal("0.00")
-
-        for order in orders:
-            try:
-                # Buscar tarifa aplicável
-                tariff = PartnerTariff.objects.get(
-                    partner=order.partner,
-                    postal_zone__code=order.postal_code[:4],
-                    valid_from__lte=order.created_at.date(),
-                    valid_until__gte=order.created_at.date(),
-                )
-
-                if order.current_status == "DELIVERED":
-                    gross += tariff.base_price + tariff.success_bonus
-                else:
-                    gross += tariff.base_price - tariff.failure_penalty
-
-            except PartnerTariff.DoesNotExist:
-                # Fallback
-                gross += (
-                    Decimal("5.00")
-                    if order.current_status == "DELIVERED"
-                    else Decimal("2.00")
-                )
-
-        self.gross_amount = gross
-
-        # Calcular bônus por performance
-        if self.success_rate >= Decimal("95.00"):
-            self.bonus_amount = gross * Decimal("0.10")  # 10% de bônus
-        elif self.success_rate >= Decimal("90.00"):
-            self.bonus_amount = gross * Decimal("0.05")  # 5% de bônus
-
-        # Buscar claims pendentes
-        pending_claims = self.claims.filter(status="APPROVED")
-        self.claims_deducted = sum(claim.amount for claim in pending_claims)
-
-        # Calcular valor líquido
-        total_deductions = (
-            self.fuel_deduction + self.claims_deducted + self.other_deductions
-        )
-
-        self.net_amount = self.gross_amount + self.bonus_amount - total_deductions
-
-        # Atualizar status e timestamp
-        self.status = "CALCULATED"
-        self.calculated_at = timezone.now()
-        self.save()
-
     def approve(self, user):
         """Aprova o settlement"""
         if self.status != "CALCULATED":
@@ -691,14 +572,6 @@ class DriverClaim(models.Model):
     )
 
     # Referências
-    order = models.ForeignKey(
-        "orders_manager.Order",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="claims",
-        verbose_name="Pedido Relacionado",
-    )
 
     vehicle_incident = models.ForeignKey(
         "fleet_management.VehicleIncident",

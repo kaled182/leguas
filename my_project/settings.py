@@ -158,15 +158,12 @@ INSTALLED_APPS = [
     "system_config",
     # New Multi-Partner Architecture (Fase 1)
     "core",  # Gestão de Parceiros
-    "orders_manager",  # Gestão de Pedidos (genérico)
     "fleet_management",  # Gestão de Frota
     "pricing",  # Tarifação e Zonas Postais
-    "route_allocation",  # Atribuição de Rotas e Turnos
     "geozonas",  # Catálogo de Códigos Postais (GeoAPI) e Zonas de Entrega
     "sorting",  # Sorting de pacotes em bigbags virtuais por CP/geozona
-    "pudo_network",  # Rede PUDO: lojas de recolha geridas (custódia, portal, faturação)
     # Analytics (Fase 2)
-    "analytics",  # Métricas, Forecasting e Dashboards
+    "analytics",  # Relatórios de frota e estado das integrações
     # Contratos
     "contracts",
     # API da app do motorista (token Bearer sobre OTP)

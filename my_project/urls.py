@@ -77,11 +77,8 @@ urlpatterns = [
     # path('old/', include('management.urls')),  # Para acessar na raiz
     path("auth/", include("customauth.urls")),  # Para autenticação
     path("management/", include("management.urls")),  # Para /management/
-    # path('delnextos/', include('ordersmanager_delnext.urls')),
-    # path('delnext/', include('delnext_dashboard.urls')),
     path("driversapp/", include("drivers_app.urls")),
     path("api/app/v1/", include("app_api.urls")),  # API da app do motorista
-    path("api/app/v1/pudo/", include("pudo_network.api_urls")),  # Handshake PUDO
     # path('mixed/', include('mixed_dashboard.urls')),
     path("converter/", include("converter.urls")),  # Conversor de listas para XLSX
     path("settlements/", include("settlements.urls")),  # APP para gestão de settlements
@@ -92,13 +89,8 @@ urlpatterns = [
         "pricing/", include("pricing.urls")
     ),  # APP para gestão de zonas postais e tarifas
     path("fleet/", include("fleet_management.urls")),  # APP para gestão de frota
-    path(
-        "routes/", include("route_allocation.urls")
-    ),  # APP para alocação de rotas e turnos
-    path("orders/", include("orders_manager.urls")),  # APP para gestão de pedidos
     path("geozonas/", include("geozonas.urls")),  # Mapa de Códigos Postais e Zonas
     path("sorting/", include("sorting.urls")),  # Sorting de pacotes em bigbags
-    path("pudo/", include("pudo_network.urls")),  # Rede PUDO: portal do lojista
     path("system/", include("system_config.urls")),  # Configurações do Sistema
     path(
         "analytics/", include("analytics.urls")

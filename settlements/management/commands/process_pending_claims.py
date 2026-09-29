@@ -10,24 +10,9 @@ from settlements.calculators import ClaimProcessor
 
 
 class Command(BaseCommand):
-    help = "Processa claims pendentes e auto-cria claims de pedidos falhados"
+    help = "Lista os claims pendentes e estatísticas por motorista"
 
     def add_arguments(self, parser):
-        parser.add_argument(
-            "--auto-create",
-            action="store_true",
-            help="Criar claims automaticamente para pedidos falhados",
-        )
-        parser.add_argument(
-            "--start-date",
-            type=str,
-            help="Data inicial (YYYY-MM-DD) para auto-criação",
-        )
-        parser.add_argument(
-            "--end-date",
-            type=str,
-            help="Data final (YYYY-MM-DD) para auto-criação",
-        )
         parser.add_argument(
             "--driver-id",
             type=int,
@@ -53,46 +38,6 @@ class Command(BaseCommand):
 
         processor = ClaimProcessor()
 
-        # Auto-criar claims de pedidos falhados
-        if options["auto_create"]:
-            self.stdout.write(
-                self.style.SUCCESS("🤖 Auto-criando claims de pedidos falhados...\n")
-            )
-
-            # Determinar datas
-            if options["start_date"]:
-                start_date = datetime.strptime(options["start_date"], "%Y-%m-%d").date()
-            else:
-                start_date = (
-                    timezone.now() - timedelta(days=7)
-                ).date()  # Última semana
-
-            if options["end_date"]:
-                end_date = datetime.strptime(options["end_date"], "%Y-%m-%d").date()
-            else:
-                end_date = timezone.now().date()
-
-            self.stdout.write(f"Período: {start_date} → {end_date}")
-
-            if not dry_run:
-                claims_created = processor.auto_create_claims_from_failed_orders(
-                    start_date, end_date
-                )
-
-                self.stdout.write(
-                    self.style.SUCCESS(f"✅ {len(claims_created)} claims auto-criados")
-                )
-
-                for claim in claims_created:
-                    self.stdout.write(
-                        f"  • {claim.driver.nome_completo}: {claim.get_claim_type_display()} - "
-                        f"€{claim.amount} (Order: {claim.order.tracking_code})"
-                    )
-            else:
-                self.stdout.write(
-                    self.style.WARNING("[DRY RUN] Claims seriam auto-criados")
-                )
-
         # Processar claims pendentes
         self.stdout.write("\n" + "=" * 60)
         self.stdout.write("📋 Claims pendentes:\n")
@@ -102,7 +47,7 @@ class Command(BaseCommand):
         if options["driver_id"]:
             pending_claims = pending_claims.filter(driver_id=options["driver_id"])
 
-        pending_claims = pending_claims.select_related("driver", "order").order_by(
+        pending_claims = pending_claims.select_related("driver").order_by(
             "-occurred_at"
         )
 
@@ -114,8 +59,6 @@ class Command(BaseCommand):
                     f"  • #{claim.id} - {claim.driver.nome_completo}: "
                     f"{claim.get_claim_type_display()} - €{claim.amount}"
                 )
-                if claim.order:
-                    self.stdout.write(f"    Order: {claim.order.tracking_code}")
                 self.stdout.write(f"    Descrição: {claim.description[:80]}...")
                 self.stdout.write("")
 

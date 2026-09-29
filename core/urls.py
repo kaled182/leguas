@@ -136,19 +136,8 @@ urlpatterns = [
         name="integration-toggle-status",
     ),
     path(
-        "integrations/<int:integration_id>/sync/",
-        views.partner_sync_manual,
-        name="partner-sync-manual",
-    ),
-    path(
         "integrations/dashboard/",
         views.integrations_dashboard,
         name="integrations-dashboard",
-    ),
-    # Dashboards específicos
-    path(
-        "delnext/dashboard/",
-        views.delnext_dashboard,
-        name="delnext-dashboard",
     ),
 ]

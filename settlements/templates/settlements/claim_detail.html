@@ -209,16 +209,6 @@
           {% endif %}
         </div>
         
-        {% if claim.order %}
-        <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-          <label class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Pedido Relacionado</label>
-          <p class="mt-1 text-sm">
-            <a href="/admin/orders_manager/order/{{ claim.order.id }}/change/" target="_blank" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium">
-              {{ claim.order.tracking_code|default:"#"|add:claim.order.id|stringformat:"s" }}
-            </a>
-          </p>
-        </div>
-        {% endif %}
         
         {% if claim.vehicle_incident %}
         <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">

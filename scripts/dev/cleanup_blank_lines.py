@@ -66,9 +66,7 @@ def main():
         "fleet_management",
         "management",
         "my_project",
-        "orders_manager",
         "pricing",
-        "route_allocation",
         "settlements",
         "system_config",
     ]

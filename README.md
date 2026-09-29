@@ -1,6 +1,6 @@
 # Léguas Franzinas
 
-Sistema de gestão logística para operadores de última-milha em Portugal. Gere motoristas, entregas, pré-faturas, frotas parceiras e integra-se com Cainiao, Delnext e Paack.
+Sistema de gestão logística para operadores de última-milha em Portugal. Gere motoristas, entregas, pré-faturas, frotas parceiras e integra-se com Cainiao e Paack.
 
 [![Production Ready](https://img.shields.io/badge/production-ready-success)](production/DEPLOYMENT.md)
 [![Docker](https://img.shields.io/badge/docker-compose%20v2-blue)](production/docker-compose.yml)
@@ -109,7 +109,7 @@ App em `http://localhost:8000`.
 - 🚚 **Frotas parceiras** — empresas subcontratantes com pricing diferenciado
 - 📦 **Pacotes** — importação de planilhas Cainiao (PARCEL_LIST), forecast, planning
 - 🗺️ **Geocodificação** — endereços via GeoAPI.pt + cache local
-- 📊 **Dashboard analytics** — performance motoristas, métricas diárias, alertas
+- 📊 **Relatórios de frota** — veículos, custos de manutenção, incidentes
 
 ### Financeiro
 - 💰 **Pré-Faturas (PFs)** — geração mensal por motorista com bónus domingo/feriado, ajustes, indicações
@@ -122,14 +122,11 @@ App em `http://localhost:8000`.
 ### Integrações
 - 📱 **WhatsApp** (WPPConnect) — relatórios automáticos, lembretes pagamentos
 - 🚛 **Cainiao** — import Excel + sincronização API
-- 📦 **Delnext** — sync diário via Playwright scraping
 - 📮 **Paack** — sync API diário (legacy, descontinuação planeada)
 - ☁️ **Backup** — Google Drive ou FTP
 
 ### Tarefas agendadas (Celery Beat)
-- 06:00 — Sync Delnext
 - 06:30 — Auto-emissão Fleet Invoices
-- 07:00 — Sync todos parceiros
 - 09:00 — Lembretes WhatsApp contas vencidas
 - 18:00 — Snapshot Not-Arrived + relatório semanal (sex)
 - 19:00 — Alerta break-even
@@ -173,15 +170,13 @@ leguas/
 ├── my_project/                  ← Settings Django, urls, ASGI/WSGI
 │
 ├── customauth/                  ← Autenticação custom
-├── core/                        ← Partners (Cainiao, Delnext, Paack)
+├── core/                        ← Partners (Cainiao, Paack)
 ├── drivers_app/                 ← Motoristas + Empresas Parceiras
 ├── settlements/                 ← PFs, Fleet Invoices, Cash Entries
 ├── accounting/                  ← Contas a pagar, DRE, Fluxo Caixa
-├── analytics/                   ← Dashboards de performance
-├── orders_manager/              ← Gestão de pedidos genérica
+├── analytics/                   ← Relatórios de frota + estado das integrações
 ├── fleet_management/            ← Veículos + manutenções
 ├── pricing/                     ← Tarifas + zonas postais
-├── route_allocation/            ← Turnos + rotas
 ├── system_config/               ← Configurações + WhatsApp + Backup
 ├── converter/                   ← Conversão XLSX
 ├── management/                  ← Ferramentas (gerador QR, etc.)
@@ -200,7 +195,7 @@ leguas/
 │
 ├── docs/
 │   ├── ARCHITECTURE.md, DOCKER.md, ROADMAP.md
-│   ├── integrations/   (DELNEXT, PAACK, WHATSAPP, OMNICHANNEL, TYPEBOT)
+│   ├── integrations/   (PAACK, WHATSAPP, OMNICHANNEL, TYPEBOT)
 │   ├── runbook/        (TROUBLESHOOTING, CRON_JOBS, INSTALL_CHECKLIST)
 │   └── archive/        (snapshots históricos de evolução)
 │

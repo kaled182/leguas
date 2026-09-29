@@ -9,7 +9,6 @@ urlpatterns = [
     path("zones/", views.zone_list, name="zone-list"),
     path("zones/create/", views.zone_create, name="zone-create"),
     path("zones/import/", views.zone_import_csv, name="zone-import"),
-    path("zones/map/", views.zones_map, name="zones-map"),
     path("zones/<int:pk>/", views.zone_detail, name="zone-detail"),
     path("zones/<int:pk>/edit/", views.zone_edit, name="zone-edit"),
     path(

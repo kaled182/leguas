@@ -222,11 +222,6 @@ class Partner(models.Model):
         super().save(*args, **kwargs)
 
     @property
-    def active_orders_count(self):
-        """Conta pedidos ativos deste parceiro"""
-        return self.orders.exclude(current_status="DELIVERED").count()
-
-    @property
     def has_active_integration(self):
         """Verifica se tem integração API ativa"""
         return self.integrations.filter(is_active=True).exists()

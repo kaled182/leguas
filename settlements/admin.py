@@ -80,7 +80,7 @@ class PartnerInvoiceAdmin(admin.ModelAdmin):
         ),
     )
 
-    actions = ["mark_as_paid", "check_overdue", "recalculate_totals"]
+    actions = ["mark_as_paid", "check_overdue"]
 
     def partner_badge(self, obj):
         if obj.partner:
@@ -144,18 +144,6 @@ class PartnerInvoiceAdmin(admin.ModelAdmin):
         self.message_user(request, f"{count} invoice(s) marcado(s) como atrasado(s).")
 
     check_overdue.short_description = "Verificar atrasos"
-
-    def recalculate_totals(self, request, queryset):
-        count = 0
-        for invoice in queryset:
-            invoice.calculate_totals()
-            invoice.save()
-            count += 1
-
-        self.message_user(request, f"{count} invoice(s) recalculado(s).")
-
-    recalculate_totals.short_description = "Recalcular valores"
-
 
 class DriverClaimInline(admin.TabularInline):
     model = DriverClaim
@@ -264,7 +252,7 @@ class DriverSettlementAdmin(admin.ModelAdmin):
 
     inlines = [DriverClaimInline]
 
-    actions = ["recalculate_settlement", "approve_settlement", "mark_as_paid"]
+    actions = ["approve_settlement", "mark_as_paid"]
 
     def settlement_display(self, obj):
         if obj.period_type == "WEEKLY":
@@ -329,16 +317,6 @@ class DriverSettlementAdmin(admin.ModelAdmin):
 
     status_badge.short_description = "Status"
 
-    def recalculate_settlement(self, request, queryset):
-        count = 0
-        for settlement in queryset:
-            settlement.calculate_settlement()
-            count += 1
-
-        self.message_user(request, f"{count} settlement(s) recalculado(s).")
-
-    recalculate_settlement.short_description = "Recalcular valores"
-
     def approve_settlement(self, request, queryset):
         count = 0
         for settlement in queryset:
@@ -369,7 +347,6 @@ class DriverClaimAdmin(admin.ModelAdmin):
         "driver_name",
         "claim_type_badge",
         "amount_display",
-        "order_link",
         "status_badge",
         "occurred_at",
     )
@@ -384,7 +361,6 @@ class DriverClaimAdmin(admin.ModelAdmin):
     search_fields = (
         "driver__nome_completo",
         "description",
-        "order__tracking_code",
     )
 
     date_hierarchy = "occurred_at"
@@ -399,7 +375,7 @@ class DriverClaimAdmin(admin.ModelAdmin):
 
     fieldsets = (
         ("Motorista e Settlement", {"fields": ("driver", "settlement")}),
-        ("Referências", {"fields": ("order", "vehicle_incident")}),
+        ("Referências", {"fields": ("vehicle_incident",)}),
         (
             "Detalhes do Claim",
             {
@@ -456,14 +432,6 @@ class DriverClaimAdmin(admin.ModelAdmin):
         )
 
     amount_display.short_description = "Valor"
-
-    def order_link(self, obj):
-        if obj.order:
-            url = reverse("admin:orders_manager_order_change", args=[obj.order.id])
-            return format_html('<a href="{}">{}</a>', url, obj.order.tracking_code)
-        return "-"
-
-    order_link.short_description = "Pedido"
 
     def status_badge(self, obj):
         colors = {

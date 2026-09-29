@@ -13,7 +13,6 @@ class Migration(migrations.Migration):
     dependencies = [
         ('fleet_management', '0001_initial'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ('orders_manager', '0001_initial'),
         ('core', '0001_initial'),
         ('drivers_app', '0001_initial'),
         ('settlements', '0001_initial'),
@@ -79,7 +78,6 @@ class Migration(migrations.Migration):
                 ('updated_at', models.DateTimeField(auto_now=True)),
                 ('created_by', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='created_claims', to=settings.AUTH_USER_MODEL)),
                 ('driver', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='claims', to='drivers_app.driverprofile', verbose_name='Motorista')),
-                ('order', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='claims', to='orders_manager.order', verbose_name='Pedido Relacionado')),
                 ('reviewed_by', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='reviewed_claims', to=settings.AUTH_USER_MODEL, verbose_name='Revisado por')),
                 ('settlement', models.ForeignKey(blank=True, help_text='Settlement onde o desconto foi aplicado', null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='claims', to='settlements.driversettlement', verbose_name='Acerto')),
                 ('vehicle_incident', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='claims', to='fleet_management.vehicleincident', verbose_name='Incidente de Veículo')),

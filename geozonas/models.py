@@ -138,8 +138,7 @@ class CodigoPostal(models.Model):
 class ZonaGeo(models.Model):
     """
     Zona de entrega desenhada no mapa (Zona A/B/C/D...).
-    Espelha-se opcionalmente numa pricing.PostalZone para o route_allocation
-    continuar a atribuir motoristas sem alterações.
+    Espelha-se opcionalmente numa pricing.PostalZone.
     """
 
     nome = models.CharField("Nome da Zona", max_length=100, help_text='Ex.: "Zona A"')

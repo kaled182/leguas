@@ -55,9 +55,7 @@ def main():
         "drivers_app",
         "fleet_management",
         "my_project",
-        "orders_manager",
         "pricing",
-        "route_allocation",
         "settlements",
         "system_config",
     ]

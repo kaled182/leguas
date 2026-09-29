@@ -791,6 +791,14 @@ class DriverClaim(models.Model):
         null=True, blank=True, db_index=True,
         help_text="Data do CainiaoOperationTask (em conjunto com waybill dá a chave única).",
     )
+    billing_after = models.DateField(
+        "Descontar só depois de",
+        null=True, blank=True,
+        help_text=(
+            "Passado para a próxima fatura: só entra em pré-faturas que "
+            "começam depois desta data (o fim da pré-fatura de onde saiu)."
+        ),
+    )
     auto_detected = models.BooleanField(
         "Detetado Automaticamente",
         default=False,

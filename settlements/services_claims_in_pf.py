@@ -20,6 +20,12 @@ import logging
 log = logging.getLogger(__name__)
 
 
+def pf_allowed_for_claim(claim, pre_invoice):
+    """Um claim passado para a próxima fatura (billing_after) só entra em
+    pré-faturas que começam depois dessa data."""
+    return claim.billing_after is None or pre_invoice.periodo_inicio > claim.billing_after
+
+
 def auto_include_approved_claims(pre_invoice):
     """Para um DriverPreInvoice, cria PreInvoiceLostPackage para cada
     DriverClaim APPROVED do mesmo driver no período.
@@ -58,6 +64,9 @@ def auto_include_approved_claims(pre_invoice):
             skipped += 1
             continue
         if not (period_start <= ref_date <= period_end):
+            skipped += 1
+            continue
+        if not pf_allowed_for_claim(claim, pre_invoice):
             skipped += 1
             continue
 
@@ -158,27 +167,21 @@ def apply_claim_now(claim):
         or (claim.occurred_at.date() if claim.occurred_at else None)
     )
 
+    open_pfs = DriverPreInvoice.objects.filter(
+        driver_id=claim.driver_id,
+        status__in=EDITABLE_PF_STATES,
+    )
+    if claim.billing_after:
+        open_pfs = open_pfs.filter(periodo_inicio__gt=claim.billing_after)
     pf = None
     if ref_date:
         pf = (
-            DriverPreInvoice.objects.filter(
-                driver_id=claim.driver_id,
-                periodo_inicio__lte=ref_date,
-                periodo_fim__gte=ref_date,
-                status__in=EDITABLE_PF_STATES,
-            )
+            open_pfs.filter(periodo_inicio__lte=ref_date, periodo_fim__gte=ref_date)
             .order_by("-periodo_fim")
             .first()
         )
     if pf is None:
-        pf = (
-            DriverPreInvoice.objects.filter(
-                driver_id=claim.driver_id,
-                status__in=EDITABLE_PF_STATES,
-            )
-            .order_by("-periodo_fim")
-            .first()
-        )
+        pf = open_pfs.order_by("-periodo_fim").first()
     if pf is None:
         return {
             "applied": False, "pf": None,
@@ -236,6 +239,9 @@ def carry_forward_unapplied_claims(pre_invoice):
             continue
         # entrega futura → não pertence a esta PF
         if ref_date > period_end:
+            continue
+        # passado para uma fatura seguinte a esta → ainda não
+        if not pf_allowed_for_claim(claim, pre_invoice):
             continue
         # já lançado nalguma fatura → nada a fazer
         if claim_is_applied(claim):

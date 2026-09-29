@@ -9,9 +9,11 @@ from core.models import Partner
 from .models import DriverClaim, DriverPreInvoice, PreInvoiceLostPackage
 from .services_claim_actions import (
     ClaimActionError, carry_forward_pending_credits, change_claim_amount, claim_billing_state,
-    remove_claim, restore_claim,
+    defer_claim, remove_claim, restore_claim, undefer_claim,
 )
-from .services_claims_in_pf import apply_claim_now
+from .services_claims_in_pf import (
+    apply_claim_now, auto_include_approved_claims, carry_forward_unapplied_claims,
+)
 from .services_courier_onboarding import create_driver_for_courier_name
 
 LOCMEM = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}}
@@ -103,6 +105,58 @@ class ClaimActionsTests(TestCase):
         with self.assertRaises(ClaimActionError):
             restore_claim(self.claim, self.user, "x")
 
+    def test_passar_para_a_proxima_sem_pf_aberta_entra_na_seguinte(self):
+        # Claim do dia 18 que foi parar à PF de 1 a 15.
+        self.claim.operation_task_date = date(2026, 9, 18)
+        self.claim.save()
+        r = defer_claim(self.claim, self.user, "claim do dia 18")
+        self.assertEqual(_lines(self.claim), [])
+        self.assertEqual(self.claim.billing_after, date(2026, 9, 15))
+        self.assertIn("PF-1", r["message"])
+        self.assertEqual(claim_billing_state(self.claim)["code"], "adiado")
+        self.pf.refresh_from_db()
+
+        # Recalcular a PF de 1 a 15 ou lançar já não o volta a meter lá.
+        self.assertEqual(auto_include_approved_claims(self.pf)["included"], 0)
+        self.assertFalse(apply_claim_now(self.claim)["applied"])
+        self.assertEqual(_lines(self.claim), [])
+
+        nova = self._pf("PF-2", date(2026, 9, 16), date(2026, 9, 30), "RASCUNHO")
+        self.assertEqual(auto_include_approved_claims(nova)["included"], 1)
+        (line,) = _lines(self.claim)
+        self.assertEqual(line.pre_invoice_id, nova.id)
+        self.assertEqual(claim_billing_state(self.claim)["code"], "em_fatura")
+
+    def test_passar_para_a_proxima_com_pf_seguinte_aberta_vai_ja_para_ela(self):
+        nova = self._pf("PF-2", date(2026, 9, 16), date(2026, 9, 30), "CALCULADO")
+        r = defer_claim(self.claim, self.user, "fica para a próxima")
+        (line,) = _lines(self.claim)
+        self.assertEqual(line.pre_invoice_id, nova.id)
+        self.assertIn("PF-2", r["message"])
+
+    def test_passado_de_dia_10_entra_pelo_carry_forward_da_seguinte(self):
+        defer_claim(self.claim, self.user, "fica para a próxima")
+        self.assertEqual(carry_forward_unapplied_claims(self.pf)["included"], 0)
+        nova = self._pf("PF-2", date(2026, 9, 16), date(2026, 9, 30), "RASCUNHO")
+        self.assertEqual(carry_forward_unapplied_claims(nova)["included"], 1)
+        self.assertEqual(_lines(self.claim)[0].pre_invoice_id, nova.id)
+
+    def test_anular_adiamento_volta_a_descontar_ja(self):
+        defer_claim(self.claim, self.user, "engano")
+        r = undefer_claim(self.claim, self.user, "afinal fica nesta")
+        self.assertIsNone(self.claim.billing_after)
+        self.assertEqual(_lines(self.claim)[0].pre_invoice_id, self.pf.id)
+        self.assertIn("PF-1", r["message"])
+
+    def test_passar_para_a_proxima_recusa_pago_e_sem_motivo(self):
+        with self.assertRaises(ClaimActionError):
+            defer_claim(self.claim, self.user, "")
+        self._pay(self.pf)
+        with self.assertRaisesMessage(ClaimActionError, "Já foi pago na PF-1"):
+            defer_claim(self.claim, self.user, "tarde demais")
+        with self.assertRaises(ClaimActionError):
+            undefer_claim(self.claim, self.user, "não estava adiado")
+
 
 @override_settings(CACHES=LOCMEM)
 class PortalAndDetailViewsTests(TestCase):
@@ -132,6 +186,13 @@ class PortalAndDetailViewsTests(TestCase):
         url = f"/driversapp/portal/{self.driver_id}/descontos/{self.claim.id}/decidir/"
         self.client.post(url, {"action": "change_amount", "amount": "45", "reason": "valor real"}, secure=True)
         self.assertEqual(_lines(self.claim)[0].valor, Decimal("45.00"))
+        self.assertContains(self.client.get(page, secure=True), "Passar para a próxima fatura")
+        self.client.post(url, {"action": "defer", "reason": "claim fora do período"}, secure=True)
+        self.claim.refresh_from_db()
+        self.assertEqual((self.claim.billing_after, _lines(self.claim)), (date(2026, 9, 15), []))
+        self.assertContains(self.client.get(page, secure=True), "Anular o adiamento")
+        self.client.post(url, {"action": "undefer", "reason": "engano"}, secure=True)
+        self.assertEqual(len(_lines(self.claim)), 1)
         r = self.client.post(url, {"action": "remove", "reason": ""}, secure=True, follow=True)
         self.assertContains(r, "Indica o motivo")
         self.client.post(url, {"action": "remove", "reason": "prova válida"}, secure=True)

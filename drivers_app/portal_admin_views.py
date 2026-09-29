@@ -698,10 +698,11 @@ def driver_claims(request, driver_id):
 @require_http_methods(["POST"])
 def driver_claim_action(request, driver_id, claim_id):
     """Decisão do operador sobre um desconto: alterar valor, remover da
-    fatura, repor, ou aprovar um pendente. Ver services_claim_actions."""
+    fatura, repor, passar para a próxima fatura, ou aprovar um pendente. Ver services_claim_actions."""
     from settlements.models import DriverClaim
     from settlements.services_claim_actions import (
-        ClaimActionError, change_claim_amount, remove_claim, restore_claim,
+        ClaimActionError, change_claim_amount, defer_claim, remove_claim, restore_claim,
+        undefer_claim,
     )
 
     driver = get_object_or_404(DriverProfile, pk=driver_id)
@@ -715,6 +716,10 @@ def driver_claim_action(request, driver_id, claim_id):
             result = remove_claim(claim, request.user, reason)
         elif action == "restore":
             result = restore_claim(claim, request.user, reason)
+        elif action == "defer":
+            result = defer_claim(claim, request.user, reason)
+        elif action == "undefer":
+            result = undefer_claim(claim, request.user, reason)
         elif action == "approve" and claim.status == "PENDING":
             claim.approve(request.user, reason or "Aprovado no portal do motorista.")
             result = {"message": "Desconto aprovado."}

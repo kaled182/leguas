@@ -9,6 +9,9 @@ Três acções, sempre com motivo e registo de quem/quando:
     PF aberta saem; o que já foi pago volta como crédito na PF aberta mais
     recente (auto:driver_claim_credit:<id>) ou na próxima gerada.
   • restore_claim — desfaz uma remoção: volta a APPROVED e a descontar.
+  • defer_claim — passa para a próxima fatura: sai da PF aberta onde está e
+    só entra numa PF que comece depois do fim dessa (claim.billing_after).
+  • undefer_claim — desfaz o adiamento: volta a poder descontar já.
 
 Uma PF paga nunca é alterada. Todas as linhas deste claim vivem nos markers
 auto:driver_claim:<id> (o desconto), …_adjust:<id> e …_credit:<id>.
@@ -149,6 +152,10 @@ def claim_billing_state(claim):
     paid_main = _lines(claim, "main", paid=True)
     if paid_main:
         return {"code": "pago", "label": "Descontado em pré-fatura paga", "pf": paid_main[0].pre_invoice.numero}
+    if claim.billing_after:
+        return {"code": "adiado",
+                "label": f"Passado para a próxima fatura (depois de {claim.billing_after:%d/%m/%Y})",
+                "pf": ""}
     return {"code": "a_espera", "label": "À espera da próxima pré-fatura", "pf": ""}
 
 
@@ -231,3 +238,47 @@ def carry_forward_pending_credits(pre_invoice):
         if paid > 0 and _set_open_line(claim, "credit", -paid, f"Devolução do desconto removido — claim #{claim.id}"):
             added += 1
     return added
+
+
+@transaction.atomic
+def defer_claim(claim, user=None, reason=""):
+    """Passa o desconto para a próxima fatura: sai da PF aberta onde está e
+    fica marcado para só entrar numa PF que comece depois do fim dessa."""
+    reason = _need_reason(reason)
+    if claim.status != "APPROVED":
+        raise ClaimActionError("Só se passa para a próxima fatura um desconto aprovado.")
+    open_main = _lines(claim, "main", paid=False)
+    if not open_main:
+        paid_main = _lines(claim, "main", paid=True)
+        if paid_main:
+            raise ClaimActionError(
+                f"Já foi pago na {paid_main[0].pre_invoice.numero}: essa fatura não muda. "
+                "Para o devolver ao motorista, usa Remover desconto."
+            )
+        raise ClaimActionError("Não está em nenhuma pré-fatura por pagar: já entra na próxima.")
+    pf = max((line.pre_invoice for line in open_main), key=lambda p: p.periodo_fim)
+    _set_open_line(claim, "main", Decimal("0"), "")
+    claim.billing_after = max(pf.periodo_fim, claim.billing_after or pf.periodo_fim)
+    _log(claim, user, f"Passado da pré-fatura {pf.numero} para a próxima fatura. Motivo: {reason}")
+    claim.save(update_fields=["billing_after", "review_notes", "reviewed_at", "reviewed_by", "updated_at"])
+    r = apply_claim_now(claim)
+    if r.get("applied"):
+        return {"message": f"Saiu da pré-fatura {pf.numero} e passou para a {r['pf']}."}
+    return {"message": f"Saiu da pré-fatura {pf.numero}. Entra na próxima pré-fatura gerada "
+                       f"(a começar depois de {claim.billing_after:%d/%m/%Y})."}
+
+
+@transaction.atomic
+def undefer_claim(claim, user=None, reason=""):
+    """Desfaz o adiamento: o desconto volta a poder entrar já."""
+    reason = _need_reason(reason)
+    if not claim.billing_after:
+        raise ClaimActionError("Este desconto não está passado para a próxima fatura.")
+    claim.billing_after = None
+    _log(claim, user, f"Deixou de estar adiado. Motivo: {reason}")
+    claim.save(update_fields=["billing_after", "review_notes", "reviewed_at", "reviewed_by", "updated_at"])
+    if claim.status != "APPROVED" or claim_is_applied(claim):
+        return {"message": "Deixou de estar adiado."}
+    r = apply_claim_now(claim)
+    return {"message": f"Deixou de estar adiado e entrou na pré-fatura {r['pf']}." if r.get("applied")
+            else "Deixou de estar adiado; entra na próxima pré-fatura."}

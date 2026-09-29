@@ -59,7 +59,7 @@
       <h3 class="font-bold text-gray-900 dark:text-white">Descontos deste Motorista</h3>
     </div>
     <div class="text-xs text-gray-500">
-      Aprovados descontam na pré-fatura. Para cada um: alterar valor ou remover da fatura.
+      Aprovados descontam na pré-fatura. Para cada um: alterar valor, passar para a próxima fatura ou remover da fatura.
     </div>
   </div>
   <div class="divide-y divide-gray-100 dark:divide-gray-700">
@@ -80,7 +80,7 @@
             <span class="px-2 py-0.5 rounded-full text-[10px] font-bold inline-flex items-center gap-1
               {% if b.code == 'em_fatura' %}bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300
               {% elif b.code == 'pago' %}bg-rose-200 text-rose-800 dark:bg-rose-900/60 dark:text-rose-200
-              {% elif b.code == 'a_espera' %}bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300
+              {% elif b.code == 'a_espera' or b.code == 'adiado' %}bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300
               {% elif b.code == 'removido' %}bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300
               {% elif b.code == 'recurso' %}bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300
               {% else %}bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300{% endif %}">
@@ -121,6 +121,18 @@
               <button type="button" onclick="claimPanel({{ claim.id }}, 'remove')"
                       class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[11px] font-semibold inline-flex items-center gap-1">
                 <i data-lucide="undo-2" class="w-3 h-3"></i> Remover desconto
+              </button>
+            {% endif %}
+            {% if claim.status == 'APPROVED' and claim.billing.code == 'em_fatura' %}
+              <button type="button" onclick="claimPanel({{ claim.id }}, 'defer')"
+                      class="px-3 py-1 bg-orange-600 hover:bg-orange-700 text-white rounded text-[11px] font-semibold inline-flex items-center gap-1">
+                <i data-lucide="calendar-clock" class="w-3 h-3"></i> Passar para a próxima fatura
+              </button>
+            {% endif %}
+            {% if claim.billing.code == 'adiado' %}
+              <button type="button" onclick="claimPanel({{ claim.id }}, 'undefer')"
+                      class="px-3 py-1 bg-gray-800 hover:bg-gray-900 dark:bg-gray-600 text-white rounded text-[11px] font-semibold inline-flex items-center gap-1">
+                <i data-lucide="undo-2" class="w-3 h-3"></i> Anular o adiamento
               </button>
             {% endif %}
             {% if claim.status == 'PENDING' %}
@@ -195,6 +207,37 @@
             {% elif claim.billing.code == 'pago' %}Já foi pago na {{ claim.billing.pf }}: os € {{ claim.amount|floatformat:2 }} voltam ao motorista em crédito na pré-fatura aberta.
             {% else %}Deixa de descontar. Não mexe em nenhuma fatura.{% endif %}
           </p>
+        </form>
+      </div>
+
+      {# Passar para a próxima fatura #}
+      <div id="panel-defer-{{ claim.id }}" class="claim-panel hidden mt-3 bg-orange-50 dark:bg-orange-900/10 border border-orange-200 dark:border-orange-700/40 rounded-lg p-4">
+        <form method="post" action="{% url 'drivers_app:driver_claim_action' driver.id claim.id %}" class="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+          {% csrf_token %}<input type="hidden" name="action" value="defer">
+          <div class="md:col-span-3">
+            <label class="block text-xs font-bold text-orange-700 dark:text-orange-300 mb-1">Motivo (obrigatório)</label>
+            <input name="reason" required placeholder="Ex.: claim do dia 18, fora do período desta fatura"
+                   class="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-orange-300 dark:border-orange-600 rounded-lg text-gray-900 dark:text-white">
+          </div>
+          <button class="px-3 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-xs font-semibold">Passar para a próxima</button>
+          <p class="md:col-span-4 text-[11px] text-orange-700 dark:text-orange-400">
+            Sai da pré-fatura {{ claim.billing.pf }} e continua a descontar: entra na primeira pré-fatura que comece depois do fim desta
+            (se já houver uma aberta, vai já para ela).
+          </p>
+        </form>
+      </div>
+
+      {# Anular o adiamento #}
+      <div id="panel-undefer-{{ claim.id }}" class="claim-panel hidden mt-3 bg-gray-50 dark:bg-gray-900/40 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+        <form method="post" action="{% url 'drivers_app:driver_claim_action' driver.id claim.id %}" class="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+          {% csrf_token %}<input type="hidden" name="action" value="undefer">
+          <div class="md:col-span-3">
+            <label class="block text-xs font-bold text-gray-600 dark:text-gray-300 mb-1">Motivo (obrigatório)</label>
+            <input name="reason" required placeholder="Ex.: passado por engano"
+                   class="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
+          </div>
+          <button class="px-3 py-2 bg-gray-800 hover:bg-gray-900 dark:bg-gray-600 text-white rounded-lg text-xs font-semibold">Anular adiamento</button>
+          <p class="md:col-span-4 text-[11px] text-gray-500">Volta a descontar já, na pré-fatura aberta que cubra a data (ou na mais recente).</p>
         </form>
       </div>
 

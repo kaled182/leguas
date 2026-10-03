@@ -1751,6 +1751,12 @@ def driver_pre_invoice_create(request, driver_id):
             from core.finance import resolve_driver_price
             price, _src = resolve_driver_price(driver, cainiao_partner)
 
+            # Mesma porta: pacotes adicionais na mesma morada/dia pagos
+            # a cainiao_partner.same_door_additional_price.
+            from .services_same_door import same_door_extra_ids
+            sd_price = cainiao_partner.same_door_additional_price
+            SD_REASON = "Pacote adicional na mesma porta"
+
             # PUDO: se activo, tasks com delivery_type=PUDO são pagas
             # pela fórmula 1ª + (N-1) × adicional por PUDO distinto.
             # São acumuladas em pudo_tasks_global e calculadas no fim
@@ -1842,10 +1848,16 @@ def driver_pre_invoice_create(request, driver_id):
                     continue
 
                 # Agrupar por preço (base + cada override) — só Door
+                sd_extras = same_door_extra_ids(
+                    [r["id"] for r in rows_door], cainiao_partner,
+                )
                 price_groups = {}
                 for r in rows_door:
                     po = price_overrides_map.get(r["waybill_number"])
-                    unit_price = po.price if po else price
+                    is_sd = not po and r["id"] in sd_extras
+                    unit_price = (
+                        po.price if po else sd_price if is_sd else price
+                    )
                     if unit_price not in price_groups:
                         price_groups[unit_price] = {
                             "n": 0, "reasons": set(),
@@ -1853,6 +1865,8 @@ def driver_pre_invoice_create(request, driver_id):
                     price_groups[unit_price]["n"] += 1
                     if po and po.reason:
                         price_groups[unit_price]["reasons"].add(po.reason)
+                    if is_sd:
+                        price_groups[unit_price]["reasons"].add(SD_REASON)
 
                 # Criar 1 PreInvoiceLine por grupo de preço
                 for unit_price, info in sorted(
@@ -1949,10 +1963,16 @@ def driver_pre_invoice_create(request, driver_id):
                         rows_inc_door = rows_inc
 
                     # Agrupar por preço (base + cada override) — só Door
+                    sd_extras_inc = same_door_extra_ids(
+                        [r["id"] for r in rows_inc_door], cainiao_partner,
+                    )
                     price_groups_inc = {}
                     for r in rows_inc_door:
                         po = price_overrides_map.get(r["waybill_number"])
-                        unit_price = po.price if po else price
+                        is_sd = not po and r["id"] in sd_extras_inc
+                        unit_price = (
+                            po.price if po else sd_price if is_sd else price
+                        )
                         if unit_price not in price_groups_inc:
                             price_groups_inc[unit_price] = {
                                 "n": 0, "reasons": set(),
@@ -1961,6 +1981,10 @@ def driver_pre_invoice_create(request, driver_id):
                         if po and po.reason:
                             price_groups_inc[unit_price]["reasons"].add(
                                 po.reason,
+                            )
+                        if is_sd:
+                            price_groups_inc[unit_price]["reasons"].add(
+                                SD_REASON,
                             )
 
                     # Criar 1 PreInvoiceLine por grupo de preço
@@ -4687,6 +4711,10 @@ def driver_pre_invoice_preview(request, driver_id):
     from core.finance import resolve_driver_price
     cainiao_partner = Partner.objects.filter(name__iexact="CAINIAO").first()
     price, price_source = resolve_driver_price(driver, cainiao_partner)
+    from .services_same_door import same_door_extra_ids
+    sd_price = (
+        cainiao_partner.same_door_additional_price if cainiao_partner else None
+    )
 
     # Para cada login, calcular entregas + bónus
     base_qs = CainiaoOperationTask.objects.filter(
@@ -4785,16 +4813,22 @@ def driver_pre_invoice_preview(request, driver_id):
         n_login = len(ids_this)
 
         # Agrupar por preço (base + cada override distinto)
+        sd_extras = same_door_extra_ids(ids_this, cainiao_partner)
         price_groups = {}  # price → {n, waybills}
         for r in rows_this:
             po = price_overrides_map.get(r["waybill_number"])
-            unit_price = po.price if po else price
+            is_sd = not po and r["id"] in sd_extras
+            unit_price = po.price if po else sd_price if is_sd else price
             key = unit_price
             if key not in price_groups:
                 price_groups[key] = {"n": 0, "reasons": set()}
             price_groups[key]["n"] += 1
             if po and po.reason:
                 price_groups[key]["reasons"].add(po.reason)
+            if is_sd:
+                price_groups[key]["reasons"].add(
+                    "Pacote adicional na mesma porta",
+                )
 
         # Linhas de preço (uma por grupo)
         price_breakdown_lines = []
@@ -4847,10 +4881,12 @@ def driver_pre_invoice_preview(request, driver_id):
             n_inc = len(ids_inc)
 
             # Aplicar overrides de preço também nos transferidos
+            sd_extras_inc = same_door_extra_ids(ids_inc, cainiao_partner)
             price_groups_inc = {}
             for r in rows_inc:
                 po = price_overrides_map.get(r["waybill_number"])
-                unit_price = po.price if po else price
+                is_sd = not po and r["id"] in sd_extras_inc
+                unit_price = po.price if po else sd_price if is_sd else price
                 if unit_price not in price_groups_inc:
                     price_groups_inc[unit_price] = {
                         "n": 0, "reasons": set(),
@@ -4858,6 +4894,10 @@ def driver_pre_invoice_preview(request, driver_id):
                 price_groups_inc[unit_price]["n"] += 1
                 if po and po.reason:
                     price_groups_inc[unit_price]["reasons"].add(po.reason)
+                if is_sd:
+                    price_groups_inc[unit_price]["reasons"].add(
+                        "Pacote adicional na mesma porta",
+                    )
 
             price_breakdown_inc = []
             base_inc = Decimal("0")
@@ -5199,7 +5239,12 @@ def _empresa_lote_compute(empresa, date_from, date_to):
                     bonus_amount += PreInvoiceBonus.BONUS_30
                     bonus_days += 1
 
-        base = price * n_delivered
+        # Mesma porta: pacotes adicionais pagos ao valor do parceiro
+        from .services_same_door import same_door_extra_ids
+        n_sd = len(same_door_extra_ids(final_ids, cainiao_partner))
+        base = price * (n_delivered - n_sd) + (
+            cainiao_partner.same_door_additional_price * n_sd if n_sd else 0
+        )
 
         # Claims APROVADOS do driver ainda não cobrados em fatura activa.
         # Inclui claims antigos esquecidos em faturas anteriores
@@ -5526,7 +5571,12 @@ def empresa_lote_emit(request, empresa_id):
             continue
 
         price, src = resolve_driver_price(d, cainiao_partner)
-        base = price * n_delivered
+        # Mesma porta: pacotes adicionais pagos ao valor do parceiro
+        from .services_same_door import same_door_extra_ids
+        n_sd = len(same_door_extra_ids(final_ids, cainiao_partner))
+        base = price * (n_delivered - n_sd) + (
+            cainiao_partner.same_door_additional_price * n_sd if n_sd else 0
+        )
         ids = all_ids
         names = all_names
 

@@ -157,9 +157,12 @@ def _is_admin(u):
 admin_required = user_passes_test(_is_admin, login_url="/auth/login/")
 
 
-def _generate_password(length=10):
-    """Gera password aleatória legível."""
-    alphabet = string.ascii_letters + string.digits
+MIN_DRIVER_PASSWORD = 4
+
+
+def _generate_password(length=6):
+    """Gera password aleatória simples (minúsculas + dígitos, sem 0/o/1/l)."""
+    alphabet = "abcdefghjkmnpqrstuvwxyz23456789"
     return "".join(secrets.choice(alphabet) for _ in range(length))
 
 
@@ -185,6 +188,9 @@ def admin_driver_credentials(request, driver_id):
             if email and DriverAccess.objects.filter(email__iexact=email).exists():
                 errors.append(f"Email '{email}' já existe.")
 
+            if len(password) < MIN_DRIVER_PASSWORD:
+                errors.append(f"A password tem de ter pelo menos {MIN_DRIVER_PASSWORD} caracteres.")
+
             if errors:
                 for e in errors:
                     messages.error(request, e)
@@ -204,7 +210,10 @@ def admin_driver_credentials(request, driver_id):
                 messages.success(request, f"Credenciais criadas. Username: {username}, Password: {password}")
 
         elif action == "regenerate" and access:
-            new_password = _generate_password()
+            new_password = request.POST.get("password", "").strip() or _generate_password()
+            if len(new_password) < MIN_DRIVER_PASSWORD:
+                messages.error(request, f"A password tem de ter pelo menos {MIN_DRIVER_PASSWORD} caracteres.")
+                return redirect("customauth:admin_driver_credentials", driver_id=driver.id)
             access.set_password(new_password)
             access.save(update_fields=["password", "updated_at"])
             messages.success(request, f"Nova password: {new_password}")

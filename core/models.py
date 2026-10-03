@@ -125,6 +125,30 @@ class Partner(models.Model):
             "PUDO é entregue em mãos do cliente em vez do PUDO."
         ),
     )
+    # ── Vários pacotes na mesma porta (Cainiao "Modelo AA") ─────────
+    same_door_enabled = models.BooleanField(
+        "Vários pacotes na mesma porta — activo",
+        default=False,
+        help_text=(
+            "Se ativo, quando o motorista entrega mais do que um pacote "
+            "(não-PUDO) na mesma morada no mesmo dia, o 1º pacote é pago "
+            "ao preço normal e cada adicional ao valor configurado."
+        ),
+    )
+    same_door_additional_price = models.DecimalField(
+        "Mesma porta — valor por pacote adicional ao driver (€)",
+        max_digits=6, decimal_places=4,
+        default=Decimal("0.3500"),
+        help_text="Pago ao motorista por cada pacote adicional na mesma porta.",
+    )
+    same_door_start_date = models.DateField(
+        "Mesma porta — em vigor desde",
+        null=True, blank=True,
+        help_text=(
+            "Só se aplica a entregas a partir desta data (vazio = todas). "
+            "Vale para pré-faturas geradas depois de activar."
+        ),
+    )
     verdict_claim_amount = models.DecimalField(
         "Desconto por reclamação julgada contra o DSP (€)",
         max_digits=8, decimal_places=2,

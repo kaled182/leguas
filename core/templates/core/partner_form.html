@@ -248,6 +248,39 @@
         </div>
       </div>
 
+      <!-- Vários pacotes na mesma porta (Cainiao "Modelo AA") -->
+      <div class="space-y-4 bg-teal-50 dark:bg-teal-900/10 rounded-xl p-4 border border-teal-200 dark:border-teal-700/40">
+        <h2 class="text-lg font-semibold text-teal-700 dark:text-teal-300 flex items-center gap-2 pb-2 border-b border-teal-200 dark:border-teal-700/40">
+          <i data-lucide="home" class="w-5 h-5"></i>
+          Vários pacotes na mesma porta
+        </h2>
+        <p class="text-xs text-teal-700/80 dark:text-teal-300/70">
+          Quando o motorista entrega mais do que um pacote na mesma morada no mesmo dia (entregas à porta, não PUDO), o 1º pacote é pago ao preço normal do motorista e cada pacote adicional ao valor abaixo. Preços especiais definidos por pacote continuam a ter prioridade.
+        </p>
+
+        <label class="flex items-center gap-2 cursor-pointer pt-1">
+          {{ form.same_door_enabled }}
+          <span class="text-sm font-semibold text-gray-900 dark:text-white">Activar regra da mesma porta</span>
+        </label>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+          <div>
+            <label for="{{ form.same_door_additional_price.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Cada pacote adicional na mesma porta — ao driver (€)
+            </label>
+            {{ form.same_door_additional_price }}
+            <p class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">Fórmula: 1º ao preço normal + (N-1) × adicional</p>
+          </div>
+          <div>
+            <label for="{{ form.same_door_start_date.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Em vigor desde
+            </label>
+            {{ form.same_door_start_date }}
+            <p class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">{{ form.same_door_start_date.help_text }}</p>
+          </div>
+        </div>
+      </div>
+
       <!-- Observações e Status -->
       <div class="space-y-4">
         <h2 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2 pb-2 border-b border-gray-200 dark:border-gray-700">

@@ -219,6 +219,7 @@ def find_drivers_without_pf(date_from, date_to, min_gap_days=MIN_GAP_DAYS,
 
         # Preço base do driver (cascata: override → frota → parceiro)
         base_price, _src = resolve_driver_price(driver, cainiao)
+        from settlements.services_same_door import same_door_extra_ids
         base_price = base_price or Decimal("0")
 
         # Acumuladores
@@ -245,6 +246,7 @@ def find_drivers_without_pf(date_from, date_to, min_gap_days=MIN_GAP_DAYS,
             if not rows:
                 return
             day_count = defaultdict(int)
+            sd_extras = same_door_extra_ids([r["id"] for r in rows], cainiao)
             for r in rows:
                 wb = r["waybill_number"]
                 d = r["task_date"]
@@ -268,7 +270,12 @@ def find_drivers_without_pf(date_from, date_to, min_gap_days=MIN_GAP_DAYS,
                 else:
                     # Door normal: aplica preço base + override.
                     po = price_overrides_map.get(wb)
-                    unit = po.price if po else base_price
+                    if po:
+                        unit = po.price
+                    elif r["id"] in sd_extras:
+                        unit = cainiao.same_door_additional_price
+                    else:
+                        unit = base_price
                     base_amount += unit
 
                 day_count[d] += 1

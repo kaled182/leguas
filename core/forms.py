@@ -29,6 +29,10 @@ class PartnerForm(forms.ModelForm):
             "pudo_fake_delivery_penalty",
             "pudo_geo_tolerance_meters",
             "verdict_claim_amount",
+            # Mesma porta
+            "same_door_enabled",
+            "same_door_additional_price",
+            "same_door_start_date",
             # Fiscal
             "vat_regime",
             "vat_rate_override",
@@ -145,6 +149,23 @@ class PartnerForm(forms.ModelForm):
                     "step": "10",
                     "min": "10",
                     "placeholder": "200",
+                }
+            ),
+            "same_door_enabled": forms.CheckboxInput(
+                attrs={"class": "w-4 h-4 text-teal-600 rounded focus:ring-2 dark:bg-gray-700 dark:border-gray-600"}
+            ),
+            "same_door_additional_price": forms.NumberInput(
+                attrs={
+                    "class": "w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-teal-500 dark:bg-gray-700 dark:text-white",
+                    "step": "0.0001",
+                    "placeholder": "0.3500",
+                }
+            ),
+            "same_door_start_date": forms.DateInput(
+                format="%Y-%m-%d",
+                attrs={
+                    "type": "date",
+                    "class": "w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-teal-500 dark:bg-gray-700 dark:text-white",
                 }
             ),
             "vat_regime": forms.Select(

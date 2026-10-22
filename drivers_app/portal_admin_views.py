@@ -586,7 +586,22 @@ def driver_pre_invoice_detail(request, driver_id, pre_invoice_id):
 
     partners = Partner.objects.all().order_by("name")
 
+    # ─── Total do motorista (porta + mesma porta + PUDO) e conferência ───
+    from settlements.services_driver_breakdown import driver_breakdown
+    bd = driver_breakdown(driver, pf.periodo_inicio, pf.periodo_fim)
+    n_lines = sum(
+        l.total_pacotes for l in linhas
+        if (l.parceiro.name if l.parceiro else "").upper() == "CAINIAO"
+    )
+    n_pudo = sum(p.n_pacotes for p in pudos)
+    pf_check = {
+        "lines": n_lines, "pudo": n_pudo, "total": n_lines + n_pudo,
+        "ok": n_lines + n_pudo == bd["totals"]["delivered"],
+    }
+
     return render(request, "drivers_app/portal/admin_pf_detail.html", {
+        "bd": bd,
+        "pf_check": pf_check,
         "driver": driver,
         "pf": pf,
         "linhas": linhas,

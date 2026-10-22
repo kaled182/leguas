@@ -275,6 +275,15 @@ def driver_portal(request, driver_id):
     kpis_month = _kpi_for_period(driver, month_start, today)
     kpis_year = _kpi_for_period(driver, year_start, today)
 
+    # Divisão do total entregue (porta / mesma porta / PUDO) por janela
+    from settlements.services_driver_breakdown import driver_breakdown
+    for _k, _start in ((kpis_today, today), (kpis_week, week_start),
+                       (kpis_month, month_start), (kpis_year, year_start)):
+        _bd = driver_breakdown(driver, _start, today)
+        _k["split"] = _bd["totals"]
+        if _k is kpis_month:
+            month_bd = _bd
+
     courier_ids, courier_names = _driver_courier_keys(driver)
     has_keys = bool(courier_ids or courier_names)
 
@@ -293,21 +302,34 @@ def driver_portal(request, driver_id):
         chart_end = today
     chart_start = chart_end - timedelta(days=29)
 
+    # Uma só leitura para a janela: total entregue dividido em porta /
+    # mesma porta / PUDO (mesma fonte da pré-fatura).
+    from settlements.services_driver_breakdown import driver_breakdown
+    chart_bd = driver_breakdown(driver, chart_start, chart_end)
+    chart_days = {d["date"]: d for d in chart_bd["days"]}
     history_30d = []
     for i in range(30):
         d = chart_start + timedelta(days=i)
-        k = _kpi_for_period(driver, d, d)
+        k = chart_days.get(d, {})
         h = Holiday.get_holiday(d)
         history_30d.append({
             "date": d,
             "label": d.strftime("%d/%m"),
-            "total": k["total"],
-            "delivered": k["delivered"],
-            "failures": k["failures"],
+            "total": k.get("total", 0),
+            "delivered": k.get("delivered", 0),
+            "door_normal": k.get("door_normal", 0),
+            "same_door": k.get("same_door", 0),
+            "pudo": k.get("pudo", 0),
+            "failures": k.get("failures", 0),
             "is_sunday": d.weekday() == 6,
             "is_holiday": bool(h),
             "holiday_name": h.name if h else "",
         })
+    # Escala do gráfico: altura em px proporcional ao maior dia (máx 112px)
+    chart_max = max((x["delivered"] + x["failures"] for x in history_30d), default=0) or 1
+    for x in history_30d:
+        for key in ("door_normal", "same_door", "pudo", "failures"):
+            x[f"h_{key}"] = round(x[key] * 112 / chart_max)
 
     # Âncoras de navegação do gráfico
     chart_prev_end = chart_start - timedelta(days=1)  # janela anterior
@@ -444,6 +466,7 @@ def driver_portal(request, driver_id):
         "top_cp4": top_cp4,
         "waybills_page": waybills_page,
         "pudo_kpi": pudo_kpi,
+        "bd": month_bd,
     })
 
 
@@ -596,8 +619,12 @@ def driver_portal_invoices(request, driver_id):
     price_per_pkg, price_source = resolve_driver_price(driver, cainiao)
     receita_per_pkg = resolve_partner_price(cainiao)
     margem_per_pkg = receita_per_pkg - price_per_pkg
-    custo_motorista = price_per_pkg * kpis_period["delivered"]
-    receita_estimada = receita_per_pkg * kpis_period["delivered"]
+    # Total do motorista dividido em porta / mesma porta / PUDO, com o
+    # valor calculado pelas mesmas regras da pré-fatura.
+    from settlements.services_driver_breakdown import driver_breakdown
+    bd = driver_breakdown(driver, date_from, date_to, partner=cainiao)
+    custo_motorista = bd["amounts"]["total"]
+    receita_estimada = receita_per_pkg * bd["totals"]["delivered"]
     margem = receita_estimada - custo_motorista
 
     # ─── Conta-Corrente (advances) ───
@@ -650,6 +677,7 @@ def driver_portal_invoices(request, driver_id):
         # KPIs operação no período (driver vê)
         "kpis_period": kpis_period,
         "pudo_kpi": pudo_kpi,
+        "bd": bd,
         # Cálculos financeiros (só admin)
         "price_per_pkg": price_per_pkg,
         "price_source": price_source,

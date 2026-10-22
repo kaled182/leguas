@@ -507,6 +507,29 @@ def partner_detail(request, pk):
                     op.courier_name, op.courier_id_cainiao,
                     op.waybill_number, op.task_status,
                 )
+            # PUDO e mesma porta por courier (só entregas Delivered do
+            # estado vigente) — mesma regra da pré-fatura.
+            from settlements.services_driver_breakdown import split_counts
+            _delivered_by_key = defaultdict(list)
+            for op in period_objs:
+                if op.task_status == STATUS_DELIVERED and op.courier_name:
+                    _delivered_by_key[(op.courier_id_cainiao or "", op.courier_name)].append(op)
+            same_door_total = 0
+            for _key, _ops in _delivered_by_key.items():
+                _c = split_counts(_ops, partner)[0]
+                if _key in _drv_buckets:
+                    _drv_buckets[_key]["pudo"] = _c["pudo"]
+                    _drv_buckets[_key]["same_door"] = _c["same_door"]
+                same_door_total += _c["same_door"]
+            from decimal import Decimal as _Dec
+            _sd_price = partner.same_door_additional_price or _Dec("0")
+            same_door_kpi = {
+                "active": bool(partner.same_door_enabled),
+                "n": same_door_total,
+                "price": _sd_price,
+                "amount": _sd_price * same_door_total,
+            }
+
             # Limpar set auxiliar antes de serializar
             for b in _drv_buckets.values():
                 b.pop("_seen_waybills", None)
@@ -567,7 +590,10 @@ def partner_detail(request, pk):
                         "courier_id_cainiao": cid,
                         "total": 0, "delivered": 0,
                         "en_route": 0, "failures": 0,
+                        "pudo": 0, "same_door": 0,
                     }
+                merged_by_id[key]["pudo"]      += r.get("pudo", 0)
+                merged_by_id[key]["same_door"] += r.get("same_door", 0)
                 merged_by_id[key]["total"]     += r["total"]
                 merged_by_id[key]["delivered"] += r["delivered"]
                 merged_by_id[key]["en_route"]  += r["en_route"]
@@ -745,6 +771,7 @@ def partner_detail(request, pk):
                 "failure_rate": failure_rate,
                 "cp4_breakdown": cp4_qs,
                 "driver_breakdown": driver_qs,
+                "same_door_kpi": same_door_kpi,
                 "fleet_breakdown": fleet_breakdown,
                 "all_fleets": all_fleets,
                 "selected_fleet_id": selected_fleet_id,

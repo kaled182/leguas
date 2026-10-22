@@ -358,6 +358,21 @@
     </div>
     {% endif %}
 
+    {# Mesma porta — pacotes adicionais pagos ao valor reduzido #}
+    {% if cainiao_data.same_door_kpi.active and cainiao_data.same_door_kpi.n %}
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-l-4 border-teal-400 border-gray-200/50 dark:border-gray-700/50 p-5"
+         title="Pacotes adicionais na mesma porta (mesmo dia): pagos ao motorista a €{{ cainiao_data.same_door_kpi.price|floatformat:2 }}">
+      <div class="flex items-center gap-2 mb-3">
+        <div class="w-8 h-8 bg-teal-100 dark:bg-teal-900/30 rounded-lg flex items-center justify-center">
+          <i data-lucide="home" class="w-4 h-4 text-teal-600 dark:text-teal-400"></i>
+        </div>
+        <p class="text-xs text-teal-600 dark:text-teal-400 font-medium uppercase tracking-wide">Mesma porta</p>
+      </div>
+      <p class="text-3xl font-bold text-teal-700 dark:text-teal-300">{{ cainiao_data.same_door_kpi.n }}</p>
+      <p class="text-xs text-teal-600/70 dark:text-teal-500 mt-1">adicionais · € {{ cainiao_data.same_door_kpi.amount|floatformat:2 }} a €{{ cainiao_data.same_door_kpi.price|floatformat:2 }}</p>
+    </div>
+    {% endif %}
+
     {# Devolvidos — apenas mostrado quando há devoluções no período #}
     {% if cainiao_data.returned %}
     <div onclick="openDriversModal('returned', 'Devolvidos')"
@@ -574,6 +589,8 @@
                 <th class="px-3 py-2.5 text-right text-emerald-600 dark:text-emerald-400">✓</th>
                 <th class="px-3 py-2.5 text-right text-amber-500 dark:text-amber-400">⟳</th>
                 <th class="px-3 py-2.5 text-right text-red-500 dark:text-red-400">✗</th>
+                <th class="px-3 py-2.5 text-right text-violet-500 dark:text-violet-400" title="Entregues em PUDO">PUDO</th>
+                <th class="px-3 py-2.5 text-right text-teal-600 dark:text-teal-400" title="Pacotes adicionais na mesma porta (mesmo dia)">Mesma porta</th>
                 <th class="px-4 py-2.5 text-right">%✓</th>
               </tr>
             </thead>
@@ -599,6 +616,8 @@
                 <td class="px-3 py-2.5 text-right text-emerald-600 dark:text-emerald-400 font-medium">{{ drv.delivered }}</td>
                 <td class="px-3 py-2.5 text-right text-amber-500 dark:text-amber-400 font-medium">{{ drv.en_route }}</td>
                 <td class="px-3 py-2.5 text-right {% if drv.failures > 0 %}text-red-500 dark:text-red-400 font-medium{% else %}text-gray-300 dark:text-gray-600{% endif %}">{{ drv.failures }}</td>
+                <td class="px-3 py-2.5 text-right {% if drv.pudo %}text-violet-600 dark:text-violet-400 font-medium{% else %}text-gray-300 dark:text-gray-600{% endif %}">{{ drv.pudo|default:0 }}</td>
+                <td class="px-3 py-2.5 text-right {% if drv.same_door %}text-teal-600 dark:text-teal-400 font-medium{% else %}text-gray-300 dark:text-gray-600{% endif %}">{{ drv.same_door|default:0 }}</td>
                 <td class="px-4 py-2.5 text-right">
                   <div class="flex items-center justify-end gap-2">
                     <div class="w-14 bg-gray-100 dark:bg-gray-700 rounded-full h-1.5 overflow-hidden flex">
@@ -610,7 +629,7 @@
                 </td>
               </tr>
               {% empty %}
-              <tr><td colspan="6" class="px-5 py-8 text-sm text-gray-400 dark:text-gray-500 text-center">Sem dados de driver.</td></tr>
+              <tr><td colspan="8" class="px-5 py-8 text-sm text-gray-400 dark:text-gray-500 text-center">Sem dados de driver.</td></tr>
               {% endfor %}
             </tbody>
           </table>

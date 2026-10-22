@@ -1,0 +1,96 @@
+{# Total do motorista primeiro, depois a divisão por tipo e por dia. #}
+{# Contexto: bd = settlements.services_driver_breakdown.driver_breakdown #}
+{#           pf_check (opcional) = {lines, pudo, total, ok}            #}
+{% with t=bd.totals a=bd.amounts %}
+<div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden mb-4">
+  <div class="px-5 py-4 flex items-center gap-4 flex-wrap border-b border-gray-100 dark:border-gray-700">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+        <i data-lucide="package-check" class="w-5 h-5 text-emerald-600 dark:text-emerald-400"></i>
+      </div>
+      <div>
+        <p class="text-xs uppercase font-bold text-gray-500 dark:text-gray-400">Total entregue pelo motorista</p>
+        <p class="text-3xl font-extrabold text-gray-900 dark:text-white leading-tight">{{ t.delivered }} <span class="text-sm font-medium text-gray-500">pacotes · {{ bd.n_days }} dia{{ bd.n_days|pluralize }}</span></p>
+      </div>
+    </div>
+    {% if pf_check %}
+    <div class="ml-auto text-xs px-3 py-2 rounded-lg {% if pf_check.ok %}bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300{% else %}bg-amber-50 text-amber-800 dark:bg-amber-900/20 dark:text-amber-300{% endif %}">
+      <p class="font-bold">{% if pf_check.ok %}Pré-fatura confere{% else %}Pré-fatura não confere — recalcular{% endif %}</p>
+      <p>Na PF: {{ pf_check.lines }} porta + {{ pf_check.pudo }} PUDO = {{ pf_check.total }} · Sistema: {{ t.delivered }}</p>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-px bg-gray-100 dark:bg-gray-700">
+    <div class="bg-white dark:bg-gray-800 p-4">
+      <p class="text-xs uppercase font-bold text-indigo-700 dark:text-indigo-300">Porta</p>
+      <p class="text-2xl font-extrabold text-gray-900 dark:text-white">{{ t.door_normal }}</p>
+      <p class="text-xs text-gray-500">€ {{ a.door_normal|floatformat:2 }}{% if bd.base_price %} · {{ bd.base_price|floatformat:2 }}/pct{% endif %}</p>
+    </div>
+    <div class="bg-white dark:bg-gray-800 p-4">
+      <p class="text-xs uppercase font-bold text-teal-700 dark:text-teal-300">Mesma porta</p>
+      <p class="text-2xl font-extrabold text-gray-900 dark:text-white">{{ t.same_door }}</p>
+      <p class="text-xs text-gray-500">{% if bd.same_door_active %}€ {{ a.same_door|floatformat:2 }} · {{ bd.same_door_price|floatformat:2 }}/adicional{% else %}regra inactiva{% endif %}</p>
+    </div>
+    <div class="bg-white dark:bg-gray-800 p-4">
+      <p class="text-xs uppercase font-bold text-violet-700 dark:text-violet-300">PUDO</p>
+      <p class="text-2xl font-extrabold text-gray-900 dark:text-white">{{ t.pudo }}</p>
+      <p class="text-xs text-gray-500">€ {{ a.pudo|floatformat:2 }} · 1ª + adicionais</p>
+    </div>
+    <div class="bg-white dark:bg-gray-800 p-4">
+      <p class="text-xs uppercase font-bold text-rose-700 dark:text-rose-300">Falhas</p>
+      <p class="text-2xl font-extrabold text-gray-900 dark:text-white">{{ t.failures }}</p>
+      <p class="text-xs text-gray-500">não pagas</p>
+    </div>
+  </div>
+
+  <details class="group" {% if open_days %}open{% endif %}>
+    <summary class="px-5 py-3 cursor-pointer text-sm font-semibold text-gray-700 dark:text-gray-200 flex items-center gap-2 select-none">
+      <i data-lucide="calendar-days" class="w-4 h-4 text-gray-400"></i>
+      Resumo por dia
+      <span class="text-xs font-normal text-gray-500">— compare com os seus apontamentos</span>
+      <span class="ml-auto text-xs text-gray-500">Valor estimado: <b class="text-gray-900 dark:text-white">€ {{ a.total|floatformat:2 }}</b></span>
+    </summary>
+    <div class="overflow-x-auto border-t border-gray-100 dark:border-gray-700">
+      <table class="w-full text-sm">
+        <thead class="bg-gray-50 dark:bg-gray-900/40 text-xs uppercase text-gray-500 dark:text-gray-400">
+          <tr>
+            <th class="px-4 py-2 text-left">Dia</th>
+            <th class="px-4 py-2 text-right">Total entregue</th>
+            <th class="px-4 py-2 text-right">Porta</th>
+            <th class="px-4 py-2 text-right">Mesma porta</th>
+            <th class="px-4 py-2 text-right">PUDO</th>
+            <th class="px-4 py-2 text-right">Falhas</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-700 tabular-nums">
+          {% for d in bd.days %}
+          <tr class="text-gray-800 dark:text-gray-200">
+            <td class="px-4 py-1.5 font-mono">{{ d.date|date:"D d/m"|capfirst }}</td>
+            <td class="px-4 py-1.5 text-right font-bold">{{ d.delivered }}</td>
+            <td class="px-4 py-1.5 text-right">{{ d.door_normal }}</td>
+            <td class="px-4 py-1.5 text-right {% if d.same_door %}text-teal-600 dark:text-teal-400 font-semibold{% else %}text-gray-400{% endif %}">{{ d.same_door }}</td>
+            <td class="px-4 py-1.5 text-right {% if d.pudo %}text-violet-600 dark:text-violet-400 font-semibold{% else %}text-gray-400{% endif %}">{{ d.pudo }}</td>
+            <td class="px-4 py-1.5 text-right {% if d.failures %}text-rose-600 dark:text-rose-400{% else %}text-gray-400{% endif %}">{{ d.failures }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="6" class="px-4 py-4 text-center text-gray-500 italic">Sem entregas no período.</td></tr>
+          {% endfor %}
+        </tbody>
+        {% if bd.days %}
+        <tfoot class="bg-gray-50 dark:bg-gray-900/40 font-bold text-gray-900 dark:text-white tabular-nums">
+          <tr>
+            <td class="px-4 py-2">Total</td>
+            <td class="px-4 py-2 text-right">{{ t.delivered }}</td>
+            <td class="px-4 py-2 text-right">{{ t.door_normal }}</td>
+            <td class="px-4 py-2 text-right">{{ t.same_door }}</td>
+            <td class="px-4 py-2 text-right">{{ t.pudo }}</td>
+            <td class="px-4 py-2 text-right">{{ t.failures }}</td>
+          </tr>
+        </tfoot>
+        {% endif %}
+      </table>
+    </div>
+  </details>
+</div>
+{% endwith %}

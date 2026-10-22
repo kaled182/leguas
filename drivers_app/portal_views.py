@@ -602,23 +602,44 @@ def driver_portal_invoices(request, driver_id):
 
     today = timezone.now().date()
 
-    # ─── Filtros de período (para o KPI / relatório) ───
-    period = request.GET.get("period", "30d")
+    # ─── Filtros de período (para o KPI / relatório / emitir PF) ───
+    # Default: mês corrente (dia 1 → hoje). "mes=AAAA-MM" escolhe um mês;
+    # date_from/date_to permitem dias específicos para emitir a PF.
+    import calendar
+    period = request.GET.get("period", "month")
     custom_from = request.GET.get("date_from", "")
     custom_to = request.GET.get("date_to", "")
+    month_start = today.replace(day=1)
     if custom_from and custom_to:
         try:
             date_from = datetime.strptime(custom_from, "%Y-%m-%d").date()
             date_to = datetime.strptime(custom_to, "%Y-%m-%d").date()
             period = "custom"
         except ValueError:
-            date_from, date_to = today - timedelta(days=29), today
+            date_from, date_to, period = month_start, today, "month"
+        if date_from > date_to:
+            date_from, date_to = date_to, date_from
     elif period == "7d":
         date_from, date_to = today - timedelta(days=6), today
+    elif period == "30d":
+        date_from, date_to = today - timedelta(days=29), today
     elif period == "90d":
         date_from, date_to = today - timedelta(days=89), today
+    elif period == "prev_month":
+        date_to = month_start - timedelta(days=1)
+        date_from = date_to.replace(day=1)
     else:
-        date_from, date_to = today - timedelta(days=29), today
+        period = "month"
+        ref = month_start
+        try:
+            ref = datetime.strptime(request.GET.get("mes", ""), "%Y-%m").date()
+        except ValueError:
+            pass
+        date_from = min(ref, month_start)
+        last = date_from.replace(day=calendar.monthrange(date_from.year, date_from.month)[1])
+        date_to = min(last, today)
+        if date_from != month_start:
+            period = "custom_month"
 
     # ─── KPIs operação no período ───
     kpis_period = _kpi_for_period(driver, date_from, date_to)
@@ -691,6 +712,9 @@ def driver_portal_invoices(request, driver_id):
         "is_admin_view": is_admin_view,
         # Filtros
         "period": period,
+        "month_value": date_from.strftime("%Y-%m"),
+        "max_month": today.strftime("%Y-%m"),
+        "today": today,
         "date_from": date_from,
         "date_to": date_to,
         # KPIs operação no período (driver vê)

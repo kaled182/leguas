@@ -288,3 +288,21 @@ class PortalMonthChartTests(TestCase):
         self.assertNotContains(r, "mês corrente</span>")
         r = self.client.get(url + "?chart_end=2026-09-15")  # links antigos
         self.assertContains(r, "Setembro 2026")
+
+    def test_faturas_periodo_mes_corrente_e_dias_especificos(self):
+        from datetime import timedelta
+        from django.urls import reverse
+        today = date.today()
+        url = reverse("drivers_app:driver_portal_invoices", args=[self.d.id])
+        r = self.client.get(url)
+        self.assertEqual((r.context["period"], r.context["date_from"], r.context["date_to"]),
+                         ("month", today.replace(day=1), today))
+        r = self.client.get(url + "?period=prev_month")
+        last = today.replace(day=1) - timedelta(days=1)
+        self.assertEqual((r.context["date_from"], r.context["date_to"]), (last.replace(day=1), last))
+        r = self.client.get(url + "?period=month&mes=2026-02")
+        self.assertEqual((r.context["date_from"], r.context["date_to"]), (date(2026, 2, 1), date(2026, 2, 28)))
+        r = self.client.get(url + "?date_from=2026-09-21&date_to=2026-09-27")
+        self.assertEqual((r.context["period"], r.context["date_from"], r.context["date_to"]),
+                         ("custom", date(2026, 9, 21), date(2026, 9, 27)))
+        self.assertContains(r, "21/09/2026 → 27/09/2026")

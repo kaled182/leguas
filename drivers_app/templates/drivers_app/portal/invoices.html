@@ -2,25 +2,38 @@
 
 {% block portal_content %}
 
-{# ─── Filtros de período ─── #}
-<form method="get" class="bg-white dark:bg-gray-800 rounded-2xl p-4 border border-gray-200/50 dark:border-gray-700/50 mb-4">
+{# ─── Filtros de período: mês corrente por omissão; dias específicos para emitir a PF ─── #}
+<div class="bg-white dark:bg-gray-800 rounded-2xl p-4 border border-gray-200/50 dark:border-gray-700/50 mb-4 flex flex-col gap-3">
   <div class="flex flex-wrap items-center gap-2">
+    <a href="?period=month" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition
+       {% if period == 'month' %}bg-indigo-600 text-white{% else %}bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200{% endif %}">Mês corrente</a>
+    <a href="?period=prev_month" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition
+       {% if period == 'prev_month' %}bg-indigo-600 text-white{% else %}bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200{% endif %}">Mês anterior</a>
+    <form method="get" class="inline-flex items-center gap-1">
+      <input type="hidden" name="period" value="month">
+      <input type="month" name="mes" value="{{ month_value }}" max="{{ max_month }}" onchange="this.form.submit()"
+             title="Escolher o mês"
+             class="px-2 py-1.5 text-xs rounded-lg border {% if period == 'custom_month' %}border-indigo-500 ring-1 ring-indigo-500{% else %}border-gray-300 dark:border-gray-600{% endif %} bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white">
+    </form>
+    <span class="w-px h-5 bg-gray-200 dark:bg-gray-700 mx-1"></span>
     <a href="?period=7d" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition
        {% if period == '7d' %}bg-indigo-600 text-white{% else %}bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200{% endif %}">7 dias</a>
     <a href="?period=30d" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition
        {% if period == '30d' %}bg-indigo-600 text-white{% else %}bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200{% endif %}">30 dias</a>
     <a href="?period=90d" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition
        {% if period == '90d' %}bg-indigo-600 text-white{% else %}bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200{% endif %}">90 dias</a>
-
-    <span class="ml-2 text-xs text-gray-500">Personalizado:</span>
-    <input type="date" name="date_from" value="{{ date_from|date:'Y-m-d' }}"
+  </div>
+  <form method="get" class="flex flex-wrap items-center gap-2">
+    <span class="text-xs {% if period == 'custom' %}font-semibold text-indigo-600 dark:text-indigo-400{% else %}text-gray-500{% endif %}">Dias específicos:</span>
+    <input type="date" name="date_from" value="{{ date_from|date:'Y-m-d' }}" max="{{ today|date:'Y-m-d' }}"
            class="px-3 py-1.5 text-xs bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
     <span class="text-xs text-gray-500">→</span>
-    <input type="date" name="date_to" value="{{ date_to|date:'Y-m-d' }}"
+    <input type="date" name="date_to" value="{{ date_to|date:'Y-m-d' }}" max="{{ today|date:'Y-m-d' }}"
            class="px-3 py-1.5 text-xs bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
-    <button type="submit" class="px-3 py-1.5 text-xs bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold">Actualizar</button>
-  </div>
-</form>
+    <button type="submit" class="px-3 py-1.5 text-xs bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold">Aplicar</button>
+    <span class="ml-auto text-xs text-gray-500">Período: <b class="text-gray-900 dark:text-white">{{ date_from|date:"d/m/Y" }} → {{ date_to|date:"d/m/Y" }}</b></span>
+  </form>
+</div>
 
 {# ─── Total do motorista → porta / mesma porta / PUDO / falhas ─── #}
 {% include "drivers_app/portal/_breakdown.html" %}
@@ -53,7 +66,7 @@
 
 {# ─── KPI Indicações (só se houver indicados activos) ─── #}
 {% if referrals_summary.count > 0 %}
-<a href="{% url 'drivers_app:driver_portal_referrals' driver.id %}?period={{ period }}{% if period == 'custom' %}&date_from={{ date_from|date:'Y-m-d' }}&date_to={{ date_to|date:'Y-m-d' }}{% endif %}"
+<a href="{% url 'drivers_app:driver_portal_referrals' driver.id %}?period=custom&date_from={{ date_from|date:'Y-m-d' }}&date_to={{ date_to|date:'Y-m-d' }}"
    class="block mb-4 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 rounded-xl p-4 text-white shadow-md transition group">
   <div class="flex items-center justify-between gap-4">
     <div class="flex items-center gap-3">
@@ -136,7 +149,7 @@ async function emitirPF() {
   const ok = await window.confirmModal({
     type: 'success',
     title: 'Criar Pré-Fatura?',
-    message: 'Período: {{ date_from|date:"d/m/Y" }} → {{ date_to|date:"d/m/Y" }} · {{ kpis_period.delivered }} entregas',
+    message: 'Período: {{ date_from|date:"d/m/Y" }} → {{ date_to|date:"d/m/Y" }} · {{ bd.totals.delivered }} entregas',
     confirmText: 'Emitir', icon: 'receipt',
   });
   if (!ok) return;

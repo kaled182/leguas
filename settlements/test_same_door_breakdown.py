@@ -171,8 +171,10 @@ class BreakdownPagesTests(TestCase):
 
     def test_paginas_mostram_total_e_divisao(self):
         from django.urls import reverse
+        r = self.client.get(reverse("drivers_app:driver_portal", args=[self.d.id]))
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, "mesma porta")
         urls = [
-            reverse("drivers_app:driver_portal", args=[self.d.id]),
             reverse("drivers_app:driver_portal_invoices", args=[self.d.id]),
             reverse("drivers_app:driver_pre_invoice_detail", args=[self.d.id, self.pf.id]),
         ]
@@ -186,6 +188,32 @@ class BreakdownPagesTests(TestCase):
         r = self.client.get(reverse("core:partner-detail", args=[self.p.id]))
         self.assertEqual(r.status_code, 200)
         self.assertContains(r, "Mesma porta")
+
+    def test_paginas_tem_divs_equilibrados(self):
+        """Um </div> a mais parte o layout (aconteceu no dashboard do portal)."""
+        from html.parser import HTMLParser
+        from django.urls import reverse
+
+        class Count(HTMLParser):
+            depth, lowest = 0, 0
+
+            def handle_starttag(self, tag, attrs):
+                if tag == "div":
+                    self.depth += 1
+
+            def handle_endtag(self, tag):
+                if tag == "div":
+                    self.depth -= 1
+                    self.lowest = min(self.lowest, self.depth)
+
+        for url in (
+            reverse("drivers_app:driver_portal", args=[self.d.id]),
+            reverse("drivers_app:driver_portal_invoices", args=[self.d.id]),
+            reverse("drivers_app:driver_pre_invoice_detail", args=[self.d.id, self.pf.id]),
+        ):
+            c = Count()
+            c.feed(self.client.get(url).content.decode())
+            self.assertEqual((c.depth, c.lowest), (0, 0), url)
 
 
 @override_settings(CACHES=LOCMEM)

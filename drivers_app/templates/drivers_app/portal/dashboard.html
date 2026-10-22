@@ -18,9 +18,6 @@
       <div><div class="font-bold text-base">{{ kpis_today.split.pudo }}</div><div class="text-emerald-100">PUDO</div></div>
       <div><div class="font-bold text-base">{{ kpis_today.failures }}</div><div class="text-emerald-100">falhas</div></div>
     </div>
-      <div><div class="font-bold text-base">{{ kpis_today.failures }}</div><div class="text-emerald-100">✗</div></div>
-      <div><div class="font-bold text-base">{{ kpis_today.success_rate|floatformat:0 }}%</div><div class="text-emerald-100">sucesso</div></div>
-    </div>
   </div>
 
   <div class="bg-white dark:bg-gray-800 rounded-2xl p-5 border border-gray-200/50 dark:border-gray-700/50 shadow-sm hover:shadow-md transition">
@@ -37,9 +34,6 @@
       <div><div class="font-bold text-base text-teal-600">{{ kpis_week.split.same_door }}</div><div class="text-gray-500">mesma porta</div></div>
       <div><div class="font-bold text-base text-violet-600">{{ kpis_week.split.pudo }}</div><div class="text-gray-500">PUDO</div></div>
       <div><div class="font-bold text-base text-rose-600">{{ kpis_week.failures }}</div><div class="text-gray-500">falhas</div></div>
-    </div>
-      <div><div class="font-bold text-base text-rose-600">{{ kpis_week.failures }}</div><div class="text-gray-500">✗</div></div>
-      <div><div class="font-bold text-base text-blue-600">{{ kpis_week.success_rate|floatformat:0 }}%</div><div class="text-gray-500">sucesso</div></div>
     </div>
   </div>
 
@@ -58,9 +52,6 @@
       <div><div class="font-bold text-base text-violet-600">{{ kpis_month.split.pudo }}</div><div class="text-gray-500">PUDO</div></div>
       <div><div class="font-bold text-base text-rose-600">{{ kpis_month.failures }}</div><div class="text-gray-500">falhas</div></div>
     </div>
-      <div><div class="font-bold text-base text-rose-600">{{ kpis_month.failures }}</div><div class="text-gray-500">✗</div></div>
-      <div><div class="font-bold text-base text-purple-600">{{ kpis_month.success_rate|floatformat:0 }}%</div><div class="text-gray-500">sucesso</div></div>
-    </div>
   </div>
 
   <div class="bg-white dark:bg-gray-800 rounded-2xl p-5 border border-gray-200/50 dark:border-gray-700/50 shadow-sm hover:shadow-md transition">
@@ -78,14 +69,8 @@
       <div><div class="font-bold text-base text-violet-600">{{ kpis_year.split.pudo }}</div><div class="text-gray-500">PUDO</div></div>
       <div><div class="font-bold text-base text-rose-600">{{ kpis_year.failures }}</div><div class="text-gray-500">falhas</div></div>
     </div>
-      <div><div class="font-bold text-base text-rose-600">{{ kpis_year.failures }}</div><div class="text-gray-500">✗</div></div>
-      <div><div class="font-bold text-base text-amber-600">{{ kpis_year.success_rate|floatformat:0 }}%</div><div class="text-gray-500">sucesso</div></div>
-    </div>
   </div>
 </div>
-
-{# ─── Últimos 30 dias: total entregue → porta / mesma porta / PUDO ─── #}
-{% include "drivers_app/portal/_breakdown.html" %}
 
 {# ─── Ranking + Última PF + Contratos ─── #}
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">

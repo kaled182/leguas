@@ -59,6 +59,27 @@ def fallback_logo_path():
     return None
 
 
+def pf_rates(pre_invoice):
+    """(taxa média por pacote à porta, taxa por pacote adicional na mesma
+    porta) desta pré-fatura. Sem linhas "mesma porta", usa a taxa da porta."""
+    lines = list(pre_invoice.linhas.all())
+    sd = [l for l in lines if "mesma porta" in (l.observacoes or "").lower()]
+    door = [l for l in lines if l not in sd]
+    door_n = sum(l.total_pacotes for l in door)
+    sd_n = sum(l.total_pacotes for l in sd)
+    door_rate = (sum((l.base_entregas for l in door), Decimal("0")) / door_n) if door_n else Decimal("0")
+    sd_rate = (sum((l.base_entregas for l in sd), Decimal("0")) / sd_n) if sd_n else door_rate
+    return door_rate, sd_rate
+
+
+def hours_worked(x):
+    """Horas entre a 1ª e a última entrega do dia (None se < 30 min)."""
+    if not x.get("first") or not x.get("last"):
+        return None
+    h = Decimal((x["last"] - x["first"]).total_seconds()) / 3600
+    return h if h >= Decimal("0.5") else None
+
+
 def day_values(pre_invoice, days):
     """Valor produzido por dia, com os preços DESTA pré-fatura.
 
@@ -69,13 +90,7 @@ def day_values(pre_invoice, days):
     """
     from collections import defaultdict
 
-    lines = list(pre_invoice.linhas.all())
-    sd = [l for l in lines if "mesma porta" in (l.observacoes or "").lower()]
-    door = [l for l in lines if l not in sd]
-    door_n = sum(l.total_pacotes for l in door)
-    sd_n = sum(l.total_pacotes for l in sd)
-    door_rate = (sum((l.base_entregas for l in door), Decimal("0")) / door_n) if door_n else Decimal("0")
-    sd_rate = (sum((l.base_entregas for l in sd), Decimal("0")) / sd_n) if sd_n else door_rate
+    door_rate, sd_rate = pf_rates(pre_invoice)
 
     extra = defaultdict(Decimal)
     for p in pre_invoice.pudos.all():
@@ -194,13 +209,16 @@ def operation_summary(pre_invoice, section_header, bd):
     worked = [values[x["date"]] for x in days if x["delivered"]]
     avg_value = (sum(worked, Decimal("0")) / len(worked)) if worked else Decimal("0")
     best = max(days, key=lambda x: values[x["date"]], default=None)
+    door_rate, _sd_rate = pf_rates(pre_invoice)
+    fail_value = (t["failures"] * door_rate).quantize(Decimal("0.01"))
 
     kpis = Table([[
         _kpi_cell("ENTREGUE", t["delivered"], f"{n_days} dias · {avg}/dia", PURPLE),
         _kpi_cell("PORTA", t["door_normal"], "preço normal", DOOR),
         _kpi_cell("MESMA PORTA", t["same_door"], "adicionais", SAME_DOOR),
         _kpi_cell("PUDO", t["pudo"], "1ª + adicionais", colors.HexColor("#7C3AED")),
-        _kpi_cell("FALHAS", t["failures"], f"sucesso {rate:.0f}%", FAIL),
+        _kpi_cell("FALHAS", t["failures"],
+                  f"aprox. {eur(fail_value)} não ganhos" if fail_value else f"sucesso {rate:.0f}%", FAIL),
         _kpi_cell("€ POR DIA", eur(avg_value).replace("€ ", "€"),
                   f"melhor {best['date'].strftime('%d/%m')}" if best else "—", GREEN),
     ]], colWidths=[FULL_W / 6] * 6)
@@ -218,14 +236,27 @@ def operation_summary(pre_invoice, section_header, bd):
     if days:
         out.append(_days_chart(days, values))
 
-        head = ["Dia", "Entregue", "Porta", "Mesma porta", "PUDO", "Falhas", "Valor produzido"]
+        def per_hour(value, hours):
+            return eur(value / hours) if hours else "—"
+
+        def schedule(x):
+            if not x.get("first"):
+                return "—"
+            return f'{x["first"].strftime("%H:%M")}–{x["last"].strftime("%H:%M")}'
+
+        total_hours = sum((hours_worked(x) or 0 for x in days), Decimal("0"))
+        total_value = sum(values.values(), Decimal("0"))
+        hourly_value = sum((values[x["date"]] for x in days if hours_worked(x)), Decimal("0"))
+        head = ["Dia", "Entregue", "Porta", "Mesma porta", "PUDO", "Falhas", "Horário", "€/hora*", "Valor"]
         rows = [head] + [
             [f'{WEEKDAYS[x["date"].weekday()]} {x["date"].strftime("%d/%m")}', x["delivered"], x["door_normal"],
-             x["same_door"] or "—", x["pudo"] or "—", x["failures"] or "—", eur(values[x["date"]])]
+             x["same_door"] or "—", x["pudo"] or "—", x["failures"] or "—", schedule(x),
+             per_hour(values[x["date"]], hours_worked(x)), eur(values[x["date"]])]
             for x in days
         ] + [["Total", t["delivered"], t["door_normal"], t["same_door"], t["pudo"], t["failures"],
-              eur(sum(values.values(), Decimal("0")))]]
-        tbl = Table(rows, colWidths=[2.4 * cm, 2.2 * cm, 2.1 * cm, 2.6 * cm, 2 * cm, 2 * cm, 3.7 * cm], repeatRows=1)
+              f"{total_hours:.1f} h".replace(".", ","), per_hour(hourly_value, total_hours), eur(total_value)]]
+        tbl = Table(rows, colWidths=[2.0 * cm, 1.6 * cm, 1.4 * cm, 1.9 * cm, 1.2 * cm, 1.2 * cm,
+                                     2.6 * cm, 2.0 * cm, 3.1 * cm], repeatRows=1)
         tbl.setStyle(TableStyle([
             ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
             ("FONTSIZE", (0, 0), (-1, -1), 8),
@@ -238,6 +269,8 @@ def operation_summary(pre_invoice, section_header, bd):
             ("FONTNAME", (1, 1), (1, -1), "Helvetica-Bold"),
             ("FONTNAME", (-1, 1), (-1, -1), "Helvetica-Bold"),
             ("TEXTCOLOR", (-1, 1), (-1, -1), GREEN),
+            ("TEXTCOLOR", (-2, 1), (-2, -1), colors.HexColor("#0E7490")),
+            ("TEXTCOLOR", (-3, 1), (-3, -2), MUTED),
             ("ALIGN", (-1, 0), (-1, -1), "RIGHT"),
             ("TOPPADDING", (0, 0), (-1, -1), 3),
             ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
@@ -249,7 +282,13 @@ def operation_summary(pre_invoice, section_header, bd):
         if best:
             i = days.index(best) + 1
             tbl.setStyle(TableStyle([("BACKGROUND", (0, i), (-1, i), colors.HexColor("#DCFCE7"))]))
-        out += [Spacer(1, 0.1 * cm), tbl]
+        # Nota do €/hora fica sempre junto da tabela
+        out += [Spacer(1, 0.1 * cm), KeepTogether([tbl, Spacer(1, 0.1 * cm), Paragraph(
+            "* € por hora = valor do dia ÷ tempo entre a 1ª e a última entrega. É uma estimativa: "
+            "não inclui a carga no hub nem o regresso. Dias com menos de 30 min ficam com —.",
+            _style("fnh", fontSize=7, leading=8.5, textColor=MUTED))])]
+
+    out += previous_comparison(pre_invoice, bd, values)
 
     # Conferência: linhas da PF + PUDO da PF = total do sistema
     n_lines = sum(
@@ -271,7 +310,129 @@ def operation_summary(pre_invoice, section_header, bd):
     return out
 
 
-def financial_summary(pre_invoice, section_header, n_delivered=None, n_days=None):
+def _pct_change(new, old):
+    if not old:
+        return None
+    return (Decimal(new) - Decimal(old)) / Decimal(old) * 100
+
+
+def previous_comparison(pre_invoice, bd, values):
+    """Tabela "esta PF contra a PF anterior" do mesmo motorista.
+
+    Compara valores por dia (os períodos podem ter durações diferentes).
+    """
+    from settlements.models import DriverPreInvoice
+    from settlements.services_driver_breakdown import driver_breakdown
+
+    prev = (
+        DriverPreInvoice.objects
+        .filter(driver=pre_invoice.driver, periodo_fim__lt=pre_invoice.periodo_inicio)
+        .exclude(status__in=("RASCUNHO", "REPROVADO"))
+        .order_by("-periodo_fim").first()
+    )
+    if not prev:
+        return []
+    pbd = driver_breakdown(prev.driver, prev.periodo_inicio, prev.periodo_fim)
+
+    def metrics(pf, b):
+        t, n = b["totals"], b["n_days"] or 0
+        done = t["delivered"] + t["failures"]
+        return {
+            "delivered": t["delivered"], "days": n,
+            "per_day": Decimal(t["delivered"]) / n if n else Decimal("0"),
+            "eur_day": pf.subtotal_bruto / n if n else Decimal("0"),
+            "production": pf.subtotal_bruto,
+            "success": Decimal(t["delivered"]) / done * 100 if done else Decimal("0"),
+        }
+
+    a, b = metrics(prev, pbd), metrics(pre_invoice, bd)
+    rows_def = [
+        ("Produção por dia", "eur_day", eur),
+        ("Entregas por dia", "per_day", lambda v: f"{v:.0f}"),
+        ("Taxa de sucesso", "success", lambda v: f"{v:.1f}%".replace(".", ",")),
+        ("Dias trabalhados", "days", str),
+        ("Entregas", "delivered", str),
+        ("Produção bruta", "production", eur),
+    ]
+    head = ["", f"{prev.numero} · {prev.periodo_inicio:%d/%m}–{prev.periodo_fim:%d/%m}",
+            f"Esta PF · {pre_invoice.periodo_inicio:%d/%m}–{pre_invoice.periodo_fim:%d/%m}", "Variação"]
+    rows, styles = [head], []
+    for i, (label, key, fmt) in enumerate(rows_def, start=1):
+        ch = _pct_change(b[key], a[key])
+        if ch is None:
+            txt = "—"
+        else:
+            txt = f"{'+' if ch >= 0 else ''}{ch:.1f}%".replace(".", ",")
+            styles.append(("TEXTCOLOR", (3, i), (3, i), GREEN if ch >= 0 else FAIL))
+        rows.append([label, fmt(a[key]), fmt(b[key]), txt])
+    tbl = Table(rows, colWidths=[4.2 * cm, 4.6 * cm, 4.6 * cm, 3.6 * cm])
+    tbl.setStyle(TableStyle([
+        ("FONTSIZE", (0, 0), (-1, -1), 8),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("TEXTCOLOR", (0, 0), (-1, 0), MUTED),
+        ("ALIGN", (1, 0), (-1, -1), "CENTER"),
+        ("LINEBELOW", (0, 0), (-1, 0), 0.6, GRID),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, LIGHT]),
+        ("FONTNAME", (0, 1), (0, 2), "Helvetica-Bold"),
+        ("FONTNAME", (2, 1), (-1, -1), "Helvetica-Bold"),
+        ("TOPPADDING", (0, 0), (-1, -1), 3),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+    ] + styles))
+    title = Paragraph("<b>Comparação com a pré-fatura anterior</b> — compare os valores por dia "
+                      "(os períodos podem ter durações diferentes).",
+                      _style("cmpt", fontSize=8, textColor=MUTED))
+    return [Spacer(1, 0.3 * cm), KeepTogether([title, Spacer(1, 0.1 * cm), tbl])]
+
+
+def same_door_section(pre_invoice, section_header, bd):
+    """Lista das portas com vários pacotes no mesmo dia (como a lista PUDO)."""
+    groups = bd.get("same_door_groups") or []
+    if not groups:
+        return []
+    door_rate, sd_rate = pf_rates(pre_invoice)
+    addr_style = _style("sda", fontSize=8, leading=10)
+    wb_style = _style("sdw", fontSize=6.5, leading=8, textColor=MUTED)
+    head = ["Data", "Morada", "Pacotes", "Valor"]
+    rows = [head]
+    total = Decimal("0")
+    for g in groups:
+        value = (door_rate + (g["n"] - 1) * sd_rate).quantize(Decimal("0.01"))
+        total += value
+        addr = (g["address"] or "—").replace("&", "&amp;").replace("<", "&lt;")
+        rows.append([
+            g["date"].strftime("%d/%m/%Y"),
+            [Paragraph(f'{addr} <font color="#6B7280">{g["zip_code"]}</font>', addr_style),
+             Paragraph(" · ".join(g["waybills"]), wb_style)],
+            f'1 + {g["n"] - 1}',
+            eur(value),
+        ])
+    n_extra = sum(g["n"] - 1 for g in groups)
+    rows.append(["", f"{len(groups)} portas · {n_extra} pacotes adicionais", "", eur(total)])
+    tbl = Table(rows, colWidths=[2.4 * cm, 10.2 * cm, 1.8 * cm, 2.6 * cm], repeatRows=1)
+    tbl.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0D9488")),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("FONTSIZE", (0, 0), (-1, -1), 8),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("ALIGN", (2, 0), (-1, -1), "CENTER"),
+        ("ALIGN", (-1, 0), (-1, -1), "RIGHT"),
+        ("GRID", (0, 0), (-1, -1), 0.5, GRID),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -2), [colors.white, LIGHT]),
+        ("BACKGROUND", (0, -1), (-1, -1), colors.HexColor("#CCFBF1")),
+        ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold"),
+        ("TOPPADDING", (0, 0), (-1, -1), 4),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+    ]))
+    note = Paragraph(
+        f"Regra mesma porta: o 1º pacote de cada porta é pago a {eur(door_rate)} e cada adicional "
+        f"a {eur(sd_rate)}. A mesma porta = mesma morada ou mesma paragem Cainiao, no mesmo dia.",
+        _style("sdn", fontSize=7, leading=8.5, textColor=MUTED))
+    return [section_header("MESMA PORTA", colors.HexColor("#0D9488")), Spacer(1, 0.1 * cm),
+            tbl, Spacer(1, 0.1 * cm), note, Spacer(1, 0.5 * cm)]
+
+
+def financial_summary(pre_invoice, section_header, n_delivered=None, n_days=None, n_failures=0):
     """Resumo financeiro em 3 blocos: Produção → Ajustes → Pagamento.
 
     Só mostra linhas com valor (menos ruído). Os totais vêm dos campos da PF.
@@ -397,10 +558,14 @@ def financial_summary(pre_invoice, section_header, n_delivered=None, n_days=None
         per_day = pf.subtotal_bruto / n_days if n_days else Decimal("0")
         discounts = (pf.penalizacoes_gerais or 0) + (pf.total_pacotes_perdidos or 0)
         discount_pct = (discounts / pf.subtotal_bruto * 100) if pf.subtotal_bruto else 0
+        fail_txt = ""
+        if n_failures:
+            fail_value = n_failures * pf_rates(pf)[0]
+            fail_txt = f" · {n_failures} falhas = aprox. <b>{eur(fail_value)}</b> não ganhos"
         ind = Paragraph(
             f"<b>Indicadores:</b> produção por pacote entregue <b>{eur(per_pkg)}</b>"
             f" · produção por dia trabalhado <b>{eur(per_day)}</b>"
-            f" · descontos = <b>{discount_pct:.1f}%</b> da produção",
+            f" · descontos = <b>{discount_pct:.1f}%</b> da produção{fail_txt}",
             _style("ind", fontSize=8, textColor=MUTED, alignment=TA_LEFT),
         )
         block_items += [Spacer(1, 0.25 * cm), ind]

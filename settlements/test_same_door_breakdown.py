@@ -6,6 +6,7 @@ from unittest import mock
 from django.core.management import call_command
 from django.test import TestCase, override_settings
 from openpyxl import Workbook
+from reportlab.platypus import Spacer, Table
 
 from core.models import Partner
 from drivers_app.models import DriverProfile
@@ -100,6 +101,9 @@ class DriverBreakdownTests(TestCase):
         # 2 × 1,10 + 1 × 0,30 + PUDO 1ª entrega (1,00)
         self.assertEqual(bd["amounts"]["total"], Decimal("2.20") + Decimal("0.30") + Decimal("1.00"))
         self.assertEqual(bd["days"][0]["delivered"], 4)
+        # Horas da 1ª e última entrega do dia (ideia 1) e grupos da mesma porta (ideia 5)
+        self.assertEqual((bd["days"][0]["first"].hour, bd["days"][0]["last"].hour), (10, 11))
+        self.assertEqual([(g["n"], g["waybills"]) for g in bd["same_door_groups"]], [(2, ["W1", "W2"])])
 
 
 @override_settings(CACHES=LOCMEM)
@@ -306,3 +310,51 @@ class PortalMonthChartTests(TestCase):
         self.assertEqual((r.context["period"], r.context["date_from"], r.context["date_to"]),
                          ("custom", date(2026, 9, 21), date(2026, 9, 27)))
         self.assertContains(r, "21/09/2026 → 27/09/2026")
+
+
+@override_settings(CACHES=LOCMEM)
+class PdfIdeasTests(TestCase):
+    """Ideias 1, 2, 4 e 5 do PDF: €/hora, falhas em €, PF anterior, mesma porta."""
+
+    def setUp(self):
+        from .models import DriverPreInvoice, PreInvoiceLine
+        self.p = Partner.objects.create(name="CAINIAO", nif="514154411", contact_email="c@x.pt",
+                                        same_door_enabled=True, same_door_additional_price=Decimal("0.30"))
+        self.d = DriverProfile.objects.create(nif="123456789", nome_completo="Rui", telefone="910000000",
+                                              email="rui@x.pt", apelido="Rui_LF", price_per_package=Decimal("1.10"))
+        _task("W1", hour=9)
+        _task("W2", hour=10)
+        _task("W3", addr="Rua B 2", hour=12, status="Attempt Failure")
+        _task("OLD", day=date(2026, 9, 25), addr="Rua Z 9")
+        self.prev = DriverPreInvoice.objects.create(numero="PF-T1", driver=self.d, periodo_inicio=date(2026, 9, 21),
+                                                    periodo_fim=date(2026, 9, 27), status="PAGO")
+        PreInvoiceLine.objects.create(pre_invoice=self.prev, parceiro=self.p, total_pacotes=1,
+                                      taxa_por_entrega=Decimal("1.10"), base_entregas=Decimal("1.10"))
+        self.prev.recalcular()
+        self.pf = DriverPreInvoice.objects.create(numero="PF-T2", driver=self.d, periodo_inicio=D1, periodo_fim=D1)
+        PreInvoiceLine.objects.create(pre_invoice=self.pf, parceiro=self.p, total_pacotes=1,
+                                      taxa_por_entrega=Decimal("1.20"), base_entregas=Decimal("1.20"))
+        PreInvoiceLine.objects.create(pre_invoice=self.pf, parceiro=self.p, total_pacotes=1,
+                                      taxa_por_entrega=Decimal("0.30"), base_entregas=Decimal("0.30"),
+                                      observacoes="Preço especial: Pacote adicional na mesma porta")
+        self.pf.recalcular()
+
+    def test_horas_falhas_anterior_e_mesma_porta(self):
+        from .reports import pf_pdf_sections as s
+        from .services_driver_breakdown import driver_breakdown
+
+        bd = driver_breakdown(self.d, D1, D1)
+        day = bd["days"][0]
+        self.assertEqual(s.hours_worked(day), Decimal(1))  # 09:00 → 10:00
+        self.assertEqual(s.pf_rates(self.pf), (Decimal("1.20"), Decimal("0.30")))
+        self.assertEqual(bd["totals"]["failures"], 1)  # 1 × 1,20 não ganhos
+        comp = s.previous_comparison(self.pf, bd, s.day_values(self.pf, bd["days"]))
+        self.assertTrue(comp)
+        sd = s.same_door_section(self.pf, lambda t, c=None: Spacer(1, 1), bd)
+        tbl = next(x for x in sd if isinstance(x, Table))
+        self.assertEqual(tbl._cellvalues[1][2], "1 + 1")
+        self.assertEqual(tbl._cellvalues[1][3], "€ 1,50")  # 1,20 + 0,30
+
+    def test_pdf_completo_gera(self):
+        from .reports.pdf_generator import PDFGenerator
+        self.assertTrue(PDFGenerator().generate_pre_invoice_pdf(self.pf).getvalue().startswith(b"%PDF"))

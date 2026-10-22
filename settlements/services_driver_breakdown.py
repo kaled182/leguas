@@ -24,8 +24,8 @@ def _empty_counts():
 def split_counts(tasks, partner):
     """Conta as tasks por tipo. `tasks` são objectos com task_status,
     delivery_type, task_date, etc. Devolve (counts, extra_ids, pudo_tasks,
-    door_delivered)."""
-    from .services_same_door import extra_ids_from_tasks, is_same_door_active
+    door_delivered, same_door_groups)."""
+    from .services_same_door import is_same_door_active, sorted_same_door_groups
 
     pudo_active = bool(partner and getattr(partner, "pudo_enabled", False))
     counts = _empty_counts()
@@ -42,17 +42,18 @@ def split_counts(tasks, partner):
         else:
             door_delivered.append(t)
 
-    extra_ids = set()
+    extra_ids, groups = set(), []
     if is_same_door_active(partner):
         start = getattr(partner, "same_door_start_date", None)
         eligible = [t for t in door_delivered if not start or t.task_date >= start]
-        extra_ids = extra_ids_from_tasks(eligible)
+        groups = sorted_same_door_groups(eligible)
+        extra_ids = {t.id for g in groups for t in g[1:]}
 
     counts["pudo"] = len(pudo_tasks)
     counts["door"] = len(door_delivered)
     counts["same_door"] = len(extra_ids)
     counts["door_normal"] = counts["door"] - counts["same_door"]
-    return counts, extra_ids, pudo_tasks, door_delivered
+    return counts, extra_ids, pudo_tasks, door_delivered, groups
 
 
 def driver_breakdown(driver, date_from, date_to, partner=None):
@@ -75,7 +76,7 @@ def driver_breakdown(driver, date_from, date_to, partner=None):
             "task_group_order",
         )
     )
-    counts, extra_ids, pudo_tasks, door_delivered = split_counts(tasks, partner)
+    counts, extra_ids, pudo_tasks, door_delivered, sd_groups = split_counts(tasks, partner)
 
     # ─── Valor estimado (mesmas regras da pré-fatura) ───
     base_price, _src = resolve_driver_price(driver, partner)
@@ -110,7 +111,10 @@ def driver_breakdown(driver, date_from, date_to, partner=None):
         pudo_amount_by_day[day] += a
 
     # ─── Por dia ───
+    from django.utils import timezone
+
     by_day = defaultdict(_empty_counts)
+    first_last = {}  # dia → (1ª entrega, última entrega), hora local
     for t in tasks:
         d = by_day[t.task_date]
         d["total"] += 1
@@ -119,6 +123,10 @@ def driver_breakdown(driver, date_from, date_to, partner=None):
         if t.task_status != "Delivered":
             continue
         d["delivered"] += 1
+        if t.delivery_time:
+            ts = timezone.localtime(t.delivery_time)
+            lo, hi = first_last.get(t.task_date, (ts, ts))
+            first_last[t.task_date] = (min(lo, ts), max(hi, ts))
     for t in pudo_tasks:
         by_day[t.task_date]["pudo"] += 1
     for t in door_delivered:
@@ -129,8 +137,20 @@ def driver_breakdown(driver, date_from, date_to, partner=None):
         else:
             d["door_normal"] += 1
     days = [
-        {"date": day, **c, "pudo_amount": pudo_amount_by_day.get(day, Decimal("0"))}
+        {"date": day, **c, "pudo_amount": pudo_amount_by_day.get(day, Decimal("0")),
+         "first": first_last.get(day, (None, None))[0],
+         "last": first_last.get(day, (None, None))[1]}
         for day, c in sorted(by_day.items())
+    ]
+    same_door_groups = [
+        {
+            "date": g[0].task_date,
+            "address": (g[0].detailed_address or "").strip(),
+            "zip_code": g[0].zip_code or "",
+            "n": len(g),
+            "waybills": [t.waybill_number for t in g],
+        }
+        for g in sd_groups
     ]
 
     amount_total = amount_door_normal + amount_same_door + amount_pudo
@@ -141,6 +161,7 @@ def driver_breakdown(driver, date_from, date_to, partner=None):
         "base_price": base_price,
         "same_door_price": sd_price,
         "same_door_active": bool(partner and partner.same_door_enabled),
+        "same_door_groups": same_door_groups,
         "amounts": {
             "door_normal": amount_door_normal,
             "same_door": amount_same_door,

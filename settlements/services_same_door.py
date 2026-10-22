@@ -115,14 +115,19 @@ def group_same_door(tasks):
     return [g for g in groups.values() if len(g) > 1]
 
 
+def sorted_same_door_groups(tasks):
+    """Portas com 2+ pacotes; em cada grupo o 1º é o primeiro entregue
+    (fallback: id mais baixo). Grupos ordenados por dia."""
+    groups = group_same_door(tasks)
+    for g in groups:
+        g.sort(key=lambda t: (t.delivery_time is None, t.delivery_time or 0, t.id))
+    groups.sort(key=lambda g: (g[0].task_date, g[0].id))
+    return groups
+
+
 def extra_ids_from_tasks(tasks):
     """Ids dos pacotes adicionais (todos menos o 1º entregue de cada porta)."""
-    extras = set()
-    for g in group_same_door(tasks):
-        # 1º pacote = o primeiro entregue (fallback: id mais baixo)
-        g.sort(key=lambda t: (t.delivery_time is None, t.delivery_time or 0, t.id))
-        extras.update(t.id for t in g[1:])
-    return extras
+    return {t.id for g in sorted_same_door_groups(tasks) for t in g[1:]}
 
 
 def same_door_extra_ids(task_ids, partner):

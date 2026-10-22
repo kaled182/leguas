@@ -514,6 +514,7 @@ class PDFGenerator:
         # Logótipo configurado em falta no disco → logótipo Léguas do código
         from .pf_pdf_sections import (
             fallback_logo_path, financial_summary, operation_summary,
+            same_door_section,
         )
         if not empresa_logo_path:
             empresa_logo_path = fallback_logo_path()
@@ -1057,6 +1058,10 @@ class PDFGenerator:
             elements.append(pudo_table)
             elements.append(Spacer(1, 0.5 * cm))
 
+        # ── Mesma porta: moradas com vários pacotes no mesmo dia ──────────
+        if op_bd:
+            elements.extend(same_door_section(pre_invoice, section_header, op_bd))
+
         # ── Serviços Extra (créditos manuais, se existirem) ───────────────
         extras = list(pre_invoice.extras.all())
         if extras:
@@ -1352,6 +1357,7 @@ class PDFGenerator:
             pre_invoice, section_header,
             n_delivered=op_bd["totals"]["delivered"] if op_bd else None,
             n_days=op_bd["n_days"] if op_bd else None,
+            n_failures=op_bd["totals"]["failures"] if op_bd else 0,
         ))
 
         # ── Rodapé: nº da PF + "Página N de M" em todas as páginas ────────

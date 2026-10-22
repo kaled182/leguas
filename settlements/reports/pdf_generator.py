@@ -1196,9 +1196,7 @@ class PDFGenerator:
         # ── Adiantamentos (apenas se existirem, com quebra de página) ─────
         adiantamentos = list(pre_invoice.adiantamentos.all())
         if adiantamentos:
-            elements.append(PageBreak())
-            elements.append(section_header("ADIANTAMENTOS / COMBUSTÍVEL / ABASTECIMENTOS",
-                                           colors.HexColor("#B45309")))
+            elements.append(section_header("ADIANTAMENTOS / COMBUSTÍVEL"))
             elements.append(Spacer(1, 0.1 * cm))
 
             # Estilo da descrição com wrap (evita sobreposição ao Valor
@@ -1209,8 +1207,8 @@ class PDFGenerator:
                 fontName="Helvetica",
             )
 
-            # 4 colunas (total ≈ 16.5 cm). Descrição mais larga e com wrap.
-            adv_col_widths = [2.5 * cm, 3.5 * cm, 7.5 * cm, 3.0 * cm]
+            # 4 colunas (total = 17 cm). Descrição mais larga e com wrap.
+            adv_col_widths = [2.5 * cm, 3.5 * cm, 8.0 * cm, 3.0 * cm]
 
             adv_header = Table(
                 [[
@@ -1222,7 +1220,7 @@ class PDFGenerator:
                 colWidths=adv_col_widths,
             )
             adv_header.setStyle(TableStyle([
-                ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#D97706")),
+                ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#7C3AED")),
                 ("TOPPADDING", (0, 0), (-1, -1), 5),
                 ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
             ]))
@@ -1244,9 +1242,10 @@ class PDFGenerator:
             adv_table = Table(adv_rows, colWidths=adv_col_widths)
             adv_table.setStyle(TableStyle([
                 ("ROWBACKGROUNDS", (0, 0), (-2, -1), [colors.white, light_gray]),
-                ("BACKGROUND", (0, -1), (-1, -1), colors.HexColor("#FEF3C7")),
+                ("BACKGROUND", (0, -1), (-1, -1), colors.HexColor("#EDE9FE")),
                 ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold"),
-                ("TEXTCOLOR", (0, -1), (-1, -1), colors.HexColor("#92400E")),
+                ("TEXTCOLOR", (0, -1), (-2, -1), colors.HexColor("#5B21B6")),
+                ("TEXTCOLOR", (3, 0), (3, -1), colors.HexColor("#DC2626")),
                 ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#E5E7EB")),
                 ("FONTSIZE", (0, 0), (-1, -1), 8),
                 ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
@@ -1258,7 +1257,7 @@ class PDFGenerator:
                 ("RIGHTPADDING", (0, 0), (-1, -1), 6),
             ]))
             elements.append(adv_table)
-            elements.append(Spacer(1, 0.7 * cm))
+            elements.append(Spacer(1, 0.5 * cm))
 
         # ── Comissões de Indicação ─────────────────────────────────────────
         # Conta entregas Delivered confirmadas do indicado no período
@@ -1355,19 +1354,11 @@ class PDFGenerator:
             n_days=op_bd["n_days"] if op_bd else None,
         ))
 
-        # ── Rodapé ────────────────────────────────────────────────────────
-        elements.append(Spacer(1, 1.5 * cm))
-        footer_style = ParagraphStyle(
-            "PIFooter", parent=self.styles["Normal"],
-            fontSize=7, textColor=colors.grey, alignment=TA_CENTER,
-        )
-        elements.append(Paragraph(
-            f"Documento gerado em {datetime.now().strftime('%d/%m/%Y %H:%M')} · "
-            "Léguas Franzinas - Sistema de Gestão Logística",
-            footer_style,
+        # ── Rodapé: nº da PF + "Página N de M" em todas as páginas ────────
+        from .pf_pdf_sections import numbered_canvas
+        doc.build(elements, canvasmaker=numbered_canvas(
+            pre_invoice.numero, datetime.now().strftime("%d/%m/%Y %H:%M"),
         ))
-
-        doc.build(elements)
         self.buffer.seek(0)
         return self.buffer
 

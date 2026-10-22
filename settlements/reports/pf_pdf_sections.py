@@ -37,6 +37,7 @@ LIGHT = colors.HexColor("#F3F4F6")
 LIGHT_PURPLE = colors.HexColor("#EDE9FE")
 
 FULL_W = 17 * cm
+WEEKDAYS = ("Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom")
 
 
 def eur(v):
@@ -56,6 +57,40 @@ def fallback_logo_path():
         if p and os.path.exists(p):
             return p
     return None
+
+
+def day_values(pre_invoice, days):
+    """Valor produzido por dia, com os preços DESTA pré-fatura.
+
+    porta × taxa média das linhas de porta + mesma porta × taxa das
+    linhas "mesma porta" + PUDO do dia (PreInvoicePudo) + bónus do dia.
+    A soma dos dias = base das linhas + PUDO + bónus da PF (quando a
+    conferência confere).
+    """
+    from collections import defaultdict
+
+    lines = list(pre_invoice.linhas.all())
+    sd = [l for l in lines if "mesma porta" in (l.observacoes or "").lower()]
+    door = [l for l in lines if l not in sd]
+    door_n = sum(l.total_pacotes for l in door)
+    sd_n = sum(l.total_pacotes for l in sd)
+    door_rate = (sum((l.base_entregas for l in door), Decimal("0")) / door_n) if door_n else Decimal("0")
+    sd_rate = (sum((l.base_entregas for l in sd), Decimal("0")) / sd_n) if sd_n else door_rate
+
+    extra = defaultdict(Decimal)
+    for p in pre_invoice.pudos.all():
+        if p.data:
+            extra[p.data] += p.valor or 0
+    for b in pre_invoice.bonificacoes.all():
+        if b.data:
+            extra[b.data] += b.bonus_calculado or 0
+
+    out = {}
+    for x in days:
+        out[x["date"]] = (
+            x["door_normal"] * door_rate + x["same_door"] * sd_rate + extra.get(x["date"], 0)
+        ).quantize(Decimal("0.01"))
+    return out
 
 
 def _style(name, **kw):
@@ -82,8 +117,9 @@ def _kpi_cell(label, value, sub, color):
     return t
 
 
-def _days_chart(days):
-    """Barras empilhadas por dia: porta, mesma porta, PUDO."""
+def _days_chart(days, values=None):
+    """Barras empilhadas por dia: porta, mesma porta, PUDO. Por cima de
+    cada barra: pacotes entregues e, se houver, o valor produzido."""
     width, height = FULL_W, 5.2 * cm
     d = Drawing(width, height)
     bc = VerticalBarChart()
@@ -103,7 +139,7 @@ def _days_chart(days):
     vmax = max((x["delivered"] for x in days), default=0) or 1
     step = max(1, round(vmax / 4 / 10) * 10) if vmax > 20 else max(1, vmax // 4 or 1)
     bc.valueAxis.valueMin = 0
-    bc.valueAxis.valueMax = vmax * 1.18
+    bc.valueAxis.valueMax = vmax * (1.32 if values else 1.18)
     bc.valueAxis.valueStep = step
     bc.valueAxis.labels.fontSize = 7
     bc.valueAxis.labels.fontName = "Helvetica"
@@ -126,6 +162,9 @@ def _days_chart(days):
         cy = bc.y + x["delivered"] / bc.valueAxis.valueMax * bc.height + 2
         d.add(String(cx, cy, str(x["delivered"]), fontSize=7, fontName="Helvetica-Bold",
                      fillColor=INK, textAnchor="middle"))
+        if values and values.get(x["date"]):
+            d.add(String(cx, cy + 9, eur(values[x["date"]]), fontSize=6.5,
+                         fontName="Helvetica-Bold", fillColor=GREEN, textAnchor="middle"))
     # Legenda
     lx = bc.x
     for label, c in (("Porta", DOOR), ("Mesma porta", SAME_DOOR), ("PUDO", PUDO)):
@@ -150,14 +189,25 @@ def operation_summary(pre_invoice, section_header, bd):
     n_days = bd["n_days"] or 0
     avg = round(t["delivered"] / n_days) if n_days else 0
 
+    days = [x for x in bd["days"] if x["delivered"] or x["failures"]]
+    values = day_values(pre_invoice, days)
+    worked = [values[x["date"]] for x in days if x["delivered"]]
+    avg_value = (sum(worked, Decimal("0")) / len(worked)) if worked else Decimal("0")
+    best = max(days, key=lambda x: values[x["date"]], default=None)
+
     kpis = Table([[
-        _kpi_cell("TOTAL ENTREGUE", t["delivered"], f"{n_days} dias · média {avg}/dia", PURPLE),
+        _kpi_cell("ENTREGUE", t["delivered"], f"{n_days} dias · {avg}/dia", PURPLE),
         _kpi_cell("PORTA", t["door_normal"], "preço normal", DOOR),
-        _kpi_cell("MESMA PORTA", t["same_door"], "pacotes adicionais", SAME_DOOR),
+        _kpi_cell("MESMA PORTA", t["same_door"], "adicionais", SAME_DOOR),
         _kpi_cell("PUDO", t["pudo"], "1ª + adicionais", colors.HexColor("#7C3AED")),
-        _kpi_cell("FALHAS", t["failures"], f"sucesso {rate:.1f}%", FAIL),
-    ]], colWidths=[FULL_W / 5] * 5)
+        _kpi_cell("FALHAS", t["failures"], f"sucesso {rate:.0f}%", FAIL),
+        _kpi_cell("€ POR DIA", eur(avg_value).replace("€ ", "€"),
+                  f"melhor {best['date'].strftime('%d/%m')}" if best else "—", GREEN),
+    ]], colWidths=[FULL_W / 6] * 6)
     kpis.setStyle(TableStyle([
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("LEFTPADDING", (0, 0), (-1, -1), 3),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 3),
         ("BACKGROUND", (0, 0), (-1, -1), colors.white),
         ("BOX", (0, 0), (-1, -1), 0.5, GRID),
         ("TOPPADDING", (0, 0), (-1, -1), 6),
@@ -165,17 +215,17 @@ def operation_summary(pre_invoice, section_header, bd):
     ]))
     out += [kpis, Spacer(1, 0.2 * cm)]
 
-    days = [x for x in bd["days"] if x["delivered"] or x["failures"]]
     if days:
-        out.append(_days_chart(days))
+        out.append(_days_chart(days, values))
 
-        head = ["Dia", "Total entregue", "Porta", "Mesma porta", "PUDO", "Falhas"]
+        head = ["Dia", "Entregue", "Porta", "Mesma porta", "PUDO", "Falhas", "Valor produzido"]
         rows = [head] + [
-            [x["date"].strftime("%d/%m"), x["delivered"], x["door_normal"],
-             x["same_door"] or "—", x["pudo"] or "—", x["failures"] or "—"]
+            [f'{WEEKDAYS[x["date"].weekday()]} {x["date"].strftime("%d/%m")}', x["delivered"], x["door_normal"],
+             x["same_door"] or "—", x["pudo"] or "—", x["failures"] or "—", eur(values[x["date"]])]
             for x in days
-        ] + [["Total", t["delivered"], t["door_normal"], t["same_door"], t["pudo"], t["failures"]]]
-        tbl = Table(rows, colWidths=[2.4 * cm, 3.4 * cm, 2.8 * cm, 3 * cm, 2.6 * cm, 2.8 * cm], repeatRows=1)
+        ] + [["Total", t["delivered"], t["door_normal"], t["same_door"], t["pudo"], t["failures"],
+              eur(sum(values.values(), Decimal("0")))]]
+        tbl = Table(rows, colWidths=[2.4 * cm, 2.2 * cm, 2.1 * cm, 2.6 * cm, 2 * cm, 2 * cm, 3.7 * cm], repeatRows=1)
         tbl.setStyle(TableStyle([
             ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
             ("FONTSIZE", (0, 0), (-1, -1), 8),
@@ -186,9 +236,19 @@ def operation_summary(pre_invoice, section_header, bd):
             ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold"),
             ("BACKGROUND", (0, -1), (-1, -1), LIGHT_PURPLE),
             ("FONTNAME", (1, 1), (1, -1), "Helvetica-Bold"),
+            ("FONTNAME", (-1, 1), (-1, -1), "Helvetica-Bold"),
+            ("TEXTCOLOR", (-1, 1), (-1, -1), GREEN),
+            ("ALIGN", (-1, 0), (-1, -1), "RIGHT"),
             ("TOPPADDING", (0, 0), (-1, -1), 3),
             ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
         ]))
+        for i, x in enumerate(days, start=1):
+            if x["date"].weekday() == 6:
+                tbl.setStyle(TableStyle([("TEXTCOLOR", (0, i), (0, i), FAIL)]))
+        # Melhor dia em destaque
+        if best:
+            i = days.index(best) + 1
+            tbl.setStyle(TableStyle([("BACKGROUND", (0, i), (-1, i), colors.HexColor("#DCFCE7"))]))
         out += [Spacer(1, 0.1 * cm), tbl]
 
     # Conferência: linhas da PF + PUDO da PF = total do sistema
@@ -346,3 +406,33 @@ def financial_summary(pre_invoice, section_header, n_delivered=None, n_days=None
         block_items += [Spacer(1, 0.25 * cm), ind]
     # O resumo financeiro nunca se parte entre páginas
     return [KeepTogether(block_items)]
+
+
+def numbered_canvas(numero, generated_at):
+    """Canvas que escreve em todas as páginas: nº da PF, data de emissão e
+    "Página N de M" (precisa de duas passagens: guarda as páginas e escreve
+    o total no fim)."""
+    from reportlab.pdfgen import canvas as rl_canvas
+
+    class _Canvas(rl_canvas.Canvas):
+        def __init__(self, *a, **kw):
+            super().__init__(*a, **kw)
+            self._pages = []
+
+        def showPage(self):
+            self._pages.append(dict(self.__dict__))
+            self._startPage()
+
+        def save(self):
+            total = len(self._pages)
+            for state in self._pages:
+                self.__dict__.update(state)
+                self.setFont("Helvetica", 7)
+                self.setFillColor(MUTED)
+                w = self._pagesize[0]
+                self.drawString(2 * cm, 1.1 * cm, f"{numero} · Léguas Franzinas · emitido {generated_at}")
+                self.drawRightString(w - 2 * cm, 1.1 * cm, f"Página {self._pageNumber} de {total}")
+                super().showPage()
+            super().save()
+
+    return _Canvas

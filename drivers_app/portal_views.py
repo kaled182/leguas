@@ -287,20 +287,28 @@ def driver_portal(request, driver_id):
     courier_ids, courier_names = _driver_courier_keys(driver)
     has_keys = bool(courier_ids or courier_names)
 
-    # ─── Histórico 30 dias com flags domingo/feriado (janela navegável) ───
-    # A janela do gráfico termina em chart_end (default hoje) e cobre 30 dias.
-    # Permite recuar/avançar para escolher dias antigos e transferir pacotes.
-    from datetime import datetime as _dt
-    chart_end = today
-    _ce_raw = (request.GET.get("chart_end") or "").strip()
-    if _ce_raw:
-        try:
-            chart_end = _dt.strptime(_ce_raw, "%Y-%m-%d").date()
-        except ValueError:
-            chart_end = today
-    if chart_end > today:
-        chart_end = today
-    chart_start = chart_end - timedelta(days=29)
+    # ─── Gráfico do mês (default: mês corrente) ───
+    # ?mes=AAAA-MM escolhe outro mês. Os dias depois de hoje aparecem vazios.
+    # (?chart_end=AAAA-MM-DD, dos links antigos, abre o mês dessa data.)
+    import calendar
+    from datetime import date as _date, datetime as _dt
+    MESES = ("Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho",
+             "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro")
+    month_ref = today
+    for _param, _fmt in (("mes", "%Y-%m"), ("chart_end", "%Y-%m-%d")):
+        _raw = (request.GET.get(_param) or "").strip()
+        if _raw:
+            try:
+                month_ref = _dt.strptime(_raw, _fmt).date()
+            except ValueError:
+                pass
+            break
+    if month_ref > today:
+        month_ref = today
+    chart_start = month_ref.replace(day=1)
+    n_month_days = calendar.monthrange(chart_start.year, chart_start.month)[1]
+    month_last = chart_start.replace(day=n_month_days)
+    chart_end = min(month_last, today)
 
     # Uma só leitura para a janela: total entregue dividido em porta /
     # mesma porta / PUDO (mesma fonte da pré-fatura).
@@ -308,7 +316,7 @@ def driver_portal(request, driver_id):
     chart_bd = driver_breakdown(driver, chart_start, chart_end)
     chart_days = {d["date"]: d for d in chart_bd["days"]}
     history_30d = []
-    for i in range(30):
+    for i in range(n_month_days):
         d = chart_start + timedelta(days=i)
         k = chart_days.get(d, {})
         h = Holiday.get_holiday(d)
@@ -324,6 +332,7 @@ def driver_portal(request, driver_id):
             "is_sunday": d.weekday() == 6,
             "is_holiday": bool(h),
             "holiday_name": h.name if h else "",
+            "is_future": d > today,
         })
     # Escala do gráfico: altura em px proporcional ao maior dia (máx 112px)
     chart_max = max((x["delivered"] + x["failures"] for x in history_30d), default=0) or 1
@@ -331,10 +340,14 @@ def driver_portal(request, driver_id):
         for key in ("door_normal", "same_door", "pudo", "failures"):
             x[f"h_{key}"] = round(x[key] * 112 / chart_max)
 
-    # Âncoras de navegação do gráfico
-    chart_prev_end = chart_start - timedelta(days=1)  # janela anterior
-    chart_next_end = min(chart_end + timedelta(days=30), today)
-    chart_has_next = chart_end < today
+    # Navegação por mês
+    chart_prev_month = (chart_start - timedelta(days=1)).strftime("%Y-%m")
+    chart_next_month = (month_last + timedelta(days=1)).strftime("%Y-%m")
+    chart_has_next = month_last < today
+    chart_is_current = chart_start == today.replace(day=1)
+    chart_month_label = f"{MESES[chart_start.month - 1]} {chart_start.year}"
+    chart_totals = chart_bd["totals"]
+    chart_n_days = chart_bd["n_days"]
 
     # ─── Heatmap anual de actividade ───
     heatmap_days = []
@@ -451,9 +464,15 @@ def driver_portal(request, driver_id):
         "history_30d": history_30d,
         "chart_start": chart_start,
         "chart_end": chart_end,
-        "chart_prev_end": chart_prev_end,
-        "chart_next_end": chart_next_end,
+        "chart_prev_month": chart_prev_month,
+        "chart_next_month": chart_next_month,
         "chart_has_next": chart_has_next,
+        "chart_is_current": chart_is_current,
+        "chart_month_label": chart_month_label,
+        "chart_month_value": chart_start.strftime("%Y-%m"),
+        "chart_max_month": today.strftime("%Y-%m"),
+        "chart_totals": chart_totals,
+        "chart_n_days": chart_n_days,
         "ranking": ranking,
         "last_pf": last_pf,
         "contracts_pending": contracts_pending,

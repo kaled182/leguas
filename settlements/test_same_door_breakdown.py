@@ -263,3 +263,28 @@ class PreInvoicePdfTests(TestCase):
         fin.assert_called_once()
         self.assertEqual(fin.call_args.kwargs["n_delivered"], 2)
         self.assertIsNotNone(pf_pdf_sections.fallback_logo_path())
+
+
+@override_settings(CACHES=LOCMEM, SECURE_SSL_REDIRECT=False)
+class PortalMonthChartTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        self.d = DriverProfile.objects.create(nif="123456789", nome_completo="Rui", telefone="910000000",
+                                              email="rui@x.pt", apelido="Rui_LF")
+        self.client.force_login(get_user_model().objects.create_superuser("adm", "a@x.pt", "x"))
+
+    def test_mes_corrente_por_omissao_e_escolha_de_mes(self):
+        import calendar
+        from django.urls import reverse
+        today = date.today()
+        url = reverse("drivers_app:driver_portal", args=[self.d.id])
+        r = self.client.get(url)
+        self.assertContains(r, "mês corrente")
+        self.assertEqual(len(r.context["history_30d"]), calendar.monthrange(today.year, today.month)[1])
+        self.assertEqual(r.context["history_30d"][0]["date"], today.replace(day=1))
+        r = self.client.get(url + "?mes=2026-02")
+        self.assertContains(r, "Fevereiro 2026")
+        self.assertEqual(len(r.context["history_30d"]), 28)
+        self.assertNotContains(r, "mês corrente</span>")
+        r = self.client.get(url + "?chart_end=2026-09-15")  # links antigos
+        self.assertContains(r, "Setembro 2026")

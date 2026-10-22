@@ -210,7 +210,7 @@ leguas/
 
 | Componente | Tech |
 |---|---|
-| **Backend** | Django 4.2 + DRF |
+| **Backend** | Django 5.2 LTS + DRF |
 | **Database** | MySQL 8.0 |
 | **Cache + Queue** | Redis 7 |
 | **Async tasks** | Celery 5.4 + Beat (DatabaseScheduler) |

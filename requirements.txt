@@ -3,9 +3,9 @@
 # ════════════════════════════════════════════════════════════════════
 
 # ─── Core Framework ─────────────────────────────────────────────────
-Django==4.2.22
+Django==5.2.18  # LTS até abril de 2028 (4.2 sem suporte desde abril de 2026)
 django-environ==0.11.2
-djangorestframework==3.15.2
+djangorestframework==3.16.1
 asgiref==3.9.1
 sqlparse==0.5.3
 gunicorn==23.0.0
@@ -14,17 +14,17 @@ pytz==2025.2
 typing_extensions==4.13.2
 
 # ─── Tailwind / Theme ───────────────────────────────────────────────
-django-tailwind==3.6.0
+django-tailwind==3.8.0
 
 # ─── Cache / Queue (Redis + Celery) ─────────────────────────────────
 redis==5.0.0
-django-redis==5.4.0
+django-redis==6.0.0
 celery==5.4.0
-django-celery-beat==2.5.0
-django-celery-results==2.5.1
+django-celery-beat==2.8.1
+django-celery-results==2.6.0
 
 # ─── Import / Export / Reports ──────────────────────────────────────
-django-import-export==4.3.9
+django-import-export==4.4.3
 tablib==3.8.0
 diff-match-patch==20241021
 openpyxl==3.1.5

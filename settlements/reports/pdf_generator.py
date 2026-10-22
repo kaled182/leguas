@@ -511,6 +511,13 @@ class PDFGenerator:
             empresa_email = empresa_nif = ""
             empresa_logo_path = None
 
+        # Logótipo configurado em falta no disco → logótipo Léguas do código
+        from .pf_pdf_sections import (
+            fallback_logo_path, financial_summary, operation_summary,
+        )
+        if not empresa_logo_path:
+            empresa_logo_path = fallback_logo_path()
+
         # ── Estilos ────────────────────────────────────────────────────────
         sub_style = ParagraphStyle(
             "PISub", parent=self.styles["Normal"],
@@ -619,7 +626,7 @@ class PDFGenerator:
 
         linhas = list(pre_invoice.linhas.all())
         parceiros_nomes = ", ".join(
-            l.parceiro.name for l in linhas if l.parceiro
+            dict.fromkeys(l.parceiro.name for l in linhas if l.parceiro)
         ) or "—"
         dados = Table([
             lv("Nº Pré-Fatura", pre_invoice.numero) +
@@ -670,6 +677,19 @@ class PDFGenerator:
                 ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
             ]))
             return t
+
+        # ── Resumo da operação: total do motorista → porta / mesma porta /
+        # PUDO / falhas, gráfico e tabela por dia, conferência com a PF ──
+        from settlements.services_driver_breakdown import driver_breakdown
+        try:
+            op_bd = driver_breakdown(
+                pre_invoice.driver, pre_invoice.periodo_inicio,
+                pre_invoice.periodo_fim,
+            )
+        except Exception:
+            op_bd = None
+        if op_bd:
+            elements.extend(operation_summary(pre_invoice, section_header, op_bd))
 
         elements.append(section_header("CÁLCULO OPERACIONAL"))
         elements.append(Spacer(1, 0.1 * cm))
@@ -1117,8 +1137,8 @@ class PDFGenerator:
             # 5 colunas (sem Descrição). Total ≈ 18.0 cm dentro da margem:
             # Data 2.5 · Nº Pacote 6.5 · Valor 2.5 · IVA 3.0 · Total 3.5
             pp_col_widths = [
-                2.5 * cm, 6.5 * cm, 2.5 * cm, 3.0 * cm, 3.5 * cm,
-            ]
+                2.4 * cm, 5.6 * cm, 3.0 * cm, 2.5 * cm, 3.5 * cm,
+            ]  # soma = 17 cm (largura útil da página)
 
             pp_header = Table(
                 [[
@@ -1328,211 +1348,12 @@ class PDFGenerator:
             elements.append(com_table)
             elements.append(Spacer(1, 0.7 * cm))
 
-        # ── Resumo Financeiro ──────────────────────────────────────────────
-        elements.append(section_header("RESUMO FINANCEIRO"))
-        elements.append(Spacer(1, 0.1 * cm))
-
-        # O IVA incide SEMPRE sobre a produção bruta (base facturável), não
-        # sobre o saldo líquido de adiantamentos. A factura-recibo do
-        # motorista tem de reflectir o valor total produzido; os
-        # adiantamentos são deduzidos só DEPOIS do IVA, para se chegar ao
-        # valor a pagar. Por isso a tabela tem dois blocos distintos:
-        #   1) Produção → Base Faturável → IVA → VALOR DA FATURA-RECIBO
-        #   2) Fatura-Recibo → (-) Adiantamentos → TOTAL A RECEBER
-        vat_amount = pre_invoice.vat_amount or Decimal("0.00")
-        irs_amount = pre_invoice.irs_retention_amount or Decimal("0.00")
-        regime = getattr(
-            pre_invoice.driver, "vat_regime", "isento"
-        ) or "isento"
-
-        resumo_rows = []
-        red_rows = []       # deduções (texto a vermelho)
-        bold_rows = []      # linhas de realce (negrito)
-        color_rows = []     # (idx, cor) para texto colorido
-
-        # A 3ª coluna (descrição) tem de quebrar linha dentro da célula —
-        # strings simples não quebram no ReportLab e transbordam. Por isso
-        # é embrulhada em Paragraph; label e valor ficam string para manter
-        # o estilo (negrito/cor) aplicado via TableStyle.
-        note_style = ParagraphStyle(
-            "ResumoNote", parent=self.styles["Normal"],
-            fontSize=7, leading=8.5, wordWrap="CJK",
-            textColor=colors.HexColor("#6B7280"),
-        )
-
-        def _add(label, value, note):
-            # Espaço fixo (não-quebrável) entre o cifrão e o número: dá folga
-            # visual e impede que "€" e o valor caiam em linhas diferentes.
-            value = value.replace("€", "€ ")
-            resumo_rows.append([label, value, Paragraph(note or "", note_style)])
-            return len(resumo_rows) - 1
-
-        _add("Base Entregas", f"€{float(pre_invoice.base_entregas):.2f}",
-             "Pacotes entregues × taxa")
-        _add("Bonificações Dom/Feriado",
-             f"€{float(pre_invoice.total_bonus):.2f}",
-             "Soma das bonificações")
-        if pre_invoice.total_pudo and pre_invoice.total_pudo > 0:
-            _add("Entregas PUDO", f"€{float(pre_invoice.total_pudo):.2f}",
-                 "Fórmula PUDO (1ª + adicionais)")
-        if pre_invoice.total_extras and pre_invoice.total_extras > 0:
-            _add("Serviços Extra", f"€{float(pre_invoice.total_extras):.2f}",
-                 "Lançamentos a crédito (arrasto, etc.)")
-        _add("Ajustes Positivos", f"€{float(pre_invoice.ajuste_manual):.2f}",
-             "Correções positivas")
-
-        subtotal_idx = _add(
-            "Subtotal Bruto", f"€{float(pre_invoice.subtotal_bruto):.2f}", "")
-        bold_rows.append(subtotal_idx)
-
-        red_rows.append(_add(
-            "Penalizações Gerais",
-            f"-€{float(pre_invoice.penalizacoes_gerais):.2f}",
-            "Descontos gerais"))
-        red_rows.append(_add(
-            "Pacotes Perdidos",
-            f"-€{float(pre_invoice.total_pacotes_perdidos):.2f}",
-            "Valor base + IVA incluído"))
-        if total_comissoes > 0:
-            idx = _add("Comissões de Indicação",
-                       f"+€{float(total_comissoes):.2f}",
-                       "Bónus por motoristas indicados")
-            bold_rows.append(idx)
-            color_rows.append((idx, colors.HexColor("#0D9488")))
-
-        # ── Bloco 1: produção bruta → (IVA) → VALOR DA FATURA-RECIBO ───────
-        # A fatura-recibo assenta SEMPRE no BRUTO da produção (base
-        # facturável), tenha ou não IVA. Regime Normal soma o IVA;
-        # isento (art. 53º) / simplificado: fatura-recibo = base facturável.
-        base_idx = None
-        fatura_idx = None
-        if vat_amount > 0:
-            base_idx = _add(
-                "Base Faturável (s/ IVA)",
-                f"€{float(pre_invoice.base_faturavel):.2f}",
-                "Produção bruta — base do IVA (s/ adiantamentos)")
-            bold_rows.append(base_idx)
-            idx = _add("IVA (23%)", f"+€{float(vat_amount):.2f}",
-                       "Regime Normal — 23% sobre a produção bruta")
-            bold_rows.append(idx)
-            color_rows.append((idx, colors.HexColor("#7C3AED")))
-            fatura_nota = "Recibo a emitir — sobre o BRUTO da produção"
-        else:
-            fatura_nota = "Recibo sobre o BRUTO da produção (isento de IVA)"
-        fatura_idx = _add(
-            "VALOR DA FATURA-RECIBO",
-            f"€{float(pre_invoice.total_fatura):.2f}", fatura_nota)
-        bold_rows.append(fatura_idx)
-
-        # ── Bloco 2: Fatura-Recibo → (-) Adiantamentos → TOTAL A RECEBER ───
-        adiant_nota = (
-            "Já pago ao motorista — deduzido após o IVA" if vat_amount > 0
-            else "Já pago ao motorista — deduzido do recibo"
-        )
-        red_rows.append(_add(
-            "Adiantamentos / Combustível",
-            f"-€{float(pre_invoice.total_adiantamentos):.2f}",
-            adiant_nota))
-        if irs_amount > 0:
-            irs_pct = (
-                getattr(pre_invoice.driver, "irs_retention_pct", Decimal("0"))
-                or Decimal("0")
-            )
-            red_rows.append(_add(
-                "Retenção IRS", f"-€{float(irs_amount):.2f}",
-                f"{float(irs_pct):.2f}% sobre a produção bruta"))
-
-        res_table = Table(resumo_rows, colWidths=[6 * cm, 3.3 * cm, 7.2 * cm])
-        ts = [
-            ("ROWBACKGROUNDS", (0, 0), (-1, -1), [colors.white, light_gray]),
-            ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#E5E7EB")),
-            ("ALIGN", (1, 0), (1, -1), "CENTER"),
-            ("TOPPADDING", (0, 0), (-1, -1), 6),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-            ("LEFTPADDING", (0, 0), (-1, -1), 6),
-        ]
-        for i in bold_rows:
-            ts.append(("FONTNAME", (0, i), (-1, i), "Helvetica-Bold"))
-        for i in red_rows:
-            ts.append(("TEXTCOLOR", (1, i), (1, i), red))
-        for i, c in color_rows:
-            ts.append(("TEXTCOLOR", (1, i), (1, i), c))
-        ts.append(("BACKGROUND", (0, subtotal_idx), (-1, subtotal_idx),
-                   light_purple))
-        if base_idx is not None:
-            ts.append(("BACKGROUND", (0, base_idx), (-1, base_idx),
-                       light_purple))
-        # A fatura-recibo é o número-chave para a contabilidade: destaque.
-        if fatura_idx is not None:
-            ts.append(("BACKGROUND", (0, fatura_idx), (-1, fatura_idx),
-                       colors.HexColor("#D1FAE5")))
-            ts.append(("TEXTCOLOR", (0, fatura_idx), (1, fatura_idx),
-                       colors.HexColor("#065F46")))
-        res_table.setStyle(TableStyle(ts))
-        elements.append(res_table)
-        elements.append(Spacer(1, 0.2 * cm))
-
-        # Total final — valor que o motorista RECEBE (após adiantamentos).
-        # A fatura-recibo (sobre o bruto) está realçada na tabela acima.
-        if vat_amount > 0:
-            total_final = pre_invoice.total_com_iva
-            total_label_text = "TOTAL A RECEBER (c/ IVA, após adiantam.)"
-        else:
-            total_final = pre_invoice.total_a_receber
-            total_label_text = "TOTAL A RECEBER"
-
-        total_table = Table(
-            [[
-                Paragraph(total_label_text, ParagraphStyle(
-                    "TotalLabel", parent=self.styles["Normal"],
-                    fontSize=13, textColor=colors.whitesmoke,
-                    fontName="Helvetica-Bold",
-                )),
-                Paragraph(f"€ {float(total_final):.2f}", ParagraphStyle(
-                    "TotalVal", parent=self.styles["Normal"],
-                    fontSize=16, textColor=colors.whitesmoke,
-                    fontName="Helvetica-Bold", alignment=TA_CENTER,
-                )),
-            ]],
-            colWidths=[11 * cm, 6 * cm],
-        )
-        total_table.setStyle(TableStyle([
-            ("BACKGROUND", (0, 0), (-1, -1), green),
-            ("TOPPADDING", (0, 0), (-1, -1), 12),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 12),
-            ("LEFTPADDING", (0, 0), (0, -1), 10),
-        ]))
-        elements.append(total_table)
-
-        # Total líquido (após retenção IRS) — só se IRS aplicável
-        if irs_amount > 0:
-            elements.append(Spacer(1, 0.15 * cm))
-            liquido_table = Table(
-                [[
-                    Paragraph("TOTAL LÍQUIDO (após IRS)", ParagraphStyle(
-                        "LiqLabel", parent=self.styles["Normal"],
-                        fontSize=11, textColor=colors.whitesmoke,
-                        fontName="Helvetica-Bold",
-                    )),
-                    Paragraph(
-                        f"€{float(pre_invoice.total_liquido):.2f}",
-                        ParagraphStyle(
-                            "LiqVal", parent=self.styles["Normal"],
-                            fontSize=14, textColor=colors.whitesmoke,
-                            fontName="Helvetica-Bold", alignment=TA_CENTER,
-                        ),
-                    ),
-                ]],
-                colWidths=[11 * cm, 6 * cm],
-            )
-            liquido_table.setStyle(TableStyle([
-                ("BACKGROUND", (0, 0), (-1, -1),
-                 colors.HexColor("#0E7490")),
-                ("TOPPADDING", (0, 0), (-1, -1), 8),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
-                ("LEFTPADDING", (0, 0), (0, -1), 10),
-            ]))
-            elements.append(liquido_table)
+        # ── Resumo Financeiro: Produção → Ajustes → Pagamento ─────────────
+        elements.extend(financial_summary(
+            pre_invoice, section_header,
+            n_delivered=op_bd["totals"]["delivered"] if op_bd else None,
+            n_days=op_bd["n_days"] if op_bd else None,
+        ))
 
         # ── Rodapé ────────────────────────────────────────────────────────
         elements.append(Spacer(1, 1.5 * cm))

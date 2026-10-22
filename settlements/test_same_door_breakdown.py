@@ -205,3 +205,33 @@ class RecoverAmbiguousTests(TestCase):
         imp.assert_not_called()
         self.assertIn("revisão manual", out.getvalue())
         self.assertIn("0 em falta", out.getvalue())
+
+
+@override_settings(CACHES=LOCMEM)
+class PreInvoicePdfTests(TestCase):
+    def test_pdf_tem_resumo_da_operacao_e_3_blocos(self):
+        from .models import DriverPreInvoice, PreInvoiceLine
+        from .reports import pf_pdf_sections
+        from .reports.pdf_generator import PDFGenerator
+
+        p = Partner.objects.create(name="CAINIAO", nif="514154411", contact_email="c@x.pt",
+                                   same_door_enabled=True, same_door_additional_price=Decimal("0.30"))
+        d = DriverProfile.objects.create(nif="123456789", nome_completo="Rui", telefone="910000000",
+                                         email="rui@x.pt", apelido="Rui_LF", price_per_package=Decimal("1.10"))
+        _task("W1", hour=9)
+        _task("W2", hour=10)
+        pf = DriverPreInvoice.objects.create(driver=d, periodo_inicio=D1, periodo_fim=D1)
+        PreInvoiceLine.objects.create(pre_invoice=pf, parceiro=p, total_pacotes=2,
+                                      taxa_por_entrega=Decimal("1.10"), base_entregas=Decimal("2.20"))
+        pf.recalcular()
+        with mock.patch.object(pf_pdf_sections, "operation_summary",
+                               wraps=pf_pdf_sections.operation_summary) as op, \
+             mock.patch.object(pf_pdf_sections, "financial_summary",
+                               wraps=pf_pdf_sections.financial_summary) as fin:
+            pdf = PDFGenerator().generate_pre_invoice_pdf(pf).getvalue()
+        self.assertTrue(pdf.startswith(b"%PDF"))
+        op.assert_called_once()
+        self.assertEqual(op.call_args[0][2]["totals"]["delivered"], 2)
+        fin.assert_called_once()
+        self.assertEqual(fin.call_args.kwargs["n_delivered"], 2)
+        self.assertIsNotNone(pf_pdf_sections.fallback_logo_path())

@@ -81,6 +81,9 @@ def driver_breakdown(driver, date_from, date_to, partner=None):
     # ─── Valor estimado (mesmas regras da pré-fatura) ───
     base_price, _src = resolve_driver_price(driver, partner)
     base_price = base_price or Decimal("0")
+    # Preço por CP (valor negociado → tarifa do CP → base), como na PF.
+    from drivers_app.services_cp_pricing import CpPricer
+    pricer = CpPricer(driver, partner, date_from, date_to)
     sd_price = getattr(partner, "same_door_additional_price", None) or Decimal("0")
     overrides = dict(
         PackagePriceOverride.objects.filter(
@@ -98,7 +101,8 @@ def driver_breakdown(driver, date_from, date_to, partner=None):
             amount_same_door += sd_price
             n_same_door_paid += 1
         else:
-            amount_door_normal += base_price
+            unit, _src, _cp = pricer.price(t.zip_code)
+            amount_door_normal += unit
 
     pudo_groups = defaultdict(list)
     for t in pudo_tasks:

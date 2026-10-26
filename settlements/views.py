@@ -1750,6 +1750,9 @@ def driver_pre_invoice_create(request, driver_id):
         if logins or _tem_incoming:
             from core.finance import resolve_driver_price
             price, _src = resolve_driver_price(driver, cainiao_partner)
+            # Preço por CP (valor negociado → tarifa do CP → `price`).
+            from drivers_app.services_cp_pricing import CpPricer, SOURCE_LABELS
+            pricer = CpPricer(driver, cainiao_partner, periodo_inicio, periodo_fim)
 
             # Mesma porta: pacotes adicionais na mesma morada/dia pagos
             # a cainiao_partner.same_door_additional_price.
@@ -1855,29 +1858,40 @@ def driver_pre_invoice_create(request, driver_id):
                 for r in rows_door:
                     po = price_overrides_map.get(r["waybill_number"])
                     is_sd = not po and r["id"] in sd_extras
+                    cp_price, cp_src, cp4 = pricer.price(r.get("zip_code"))
                     unit_price = (
-                        po.price if po else sd_price if is_sd else price
+                        po.price if po else sd_price if is_sd else cp_price
                     )
-                    if unit_price not in price_groups:
-                        price_groups[unit_price] = {
-                            "n": 0, "reasons": set(),
+                    kind = "special" if (po or is_sd) else cp_src
+                    key = (unit_price, kind)
+                    if key not in price_groups:
+                        price_groups[key] = {
+                            "n": 0, "reasons": set(), "cps": set(),
                         }
-                    price_groups[unit_price]["n"] += 1
+                    price_groups[key]["n"] += 1
                     if po and po.reason:
-                        price_groups[unit_price]["reasons"].add(po.reason)
+                        price_groups[key]["reasons"].add(po.reason)
                     if is_sd:
-                        price_groups[unit_price]["reasons"].add(SD_REASON)
+                        price_groups[key]["reasons"].add(SD_REASON)
+                    if kind in ("negociado", "tarifa") and cp4:
+                        price_groups[key]["cps"].add(cp4)
 
-                # Criar 1 PreInvoiceLine por grupo de preço
-                for unit_price, info in sorted(
-                    price_groups.items(), reverse=True,
+                # Criar 1 PreInvoiceLine por grupo de preço/origem
+                for (unit_price, kind), info in sorted(
+                    price_groups.items(), key=lambda kv: (-kv[0][0], kv[0][1]),
                 ):
-                    is_special = unit_price != price
+                    is_special = kind == "special"
                     obs_extra = ""
                     if is_special:
                         reasons_txt = ", ".join(info["reasons"]) or "—"
                         obs_extra = (
                             f" · Preço especial €{unit_price}: {reasons_txt}"
+                        )
+                    elif kind in ("negociado", "tarifa"):
+                        obs_extra = (
+                            f" · {SOURCE_LABELS[kind].capitalize()} "
+                            f"({pricer.regime.lower()}) €{unit_price}: "
+                            f"CP {', '.join(sorted(info['cps']))}"
                         )
                     line = PreInvoiceLine(
                         pre_invoice=pf,
@@ -1887,8 +1901,9 @@ def driver_pre_invoice_create(request, driver_id):
                         taxa_por_entrega=unit_price,
                         dsr_percentual=Decimal("0"),
                         api_source=(
-                            "auto:per_login_special"
-                            if is_special else "auto:per_login"
+                            "auto:per_login_special" if is_special
+                            else "auto:per_login_cp" if kind != "base"
+                            else "auto:per_login"
                         ),
                         observacoes=(
                             f"Login Cainiao: {login_label} "
@@ -1970,28 +1985,30 @@ def driver_pre_invoice_create(request, driver_id):
                     for r in rows_inc_door:
                         po = price_overrides_map.get(r["waybill_number"])
                         is_sd = not po and r["id"] in sd_extras_inc
+                        cp_price, cp_src, cp4 = pricer.price(r.get("zip_code"))
                         unit_price = (
-                            po.price if po else sd_price if is_sd else price
+                            po.price if po else sd_price if is_sd else cp_price
                         )
-                        if unit_price not in price_groups_inc:
-                            price_groups_inc[unit_price] = {
-                                "n": 0, "reasons": set(),
+                        kind = "special" if (po or is_sd) else cp_src
+                        key = (unit_price, kind)
+                        if key not in price_groups_inc:
+                            price_groups_inc[key] = {
+                                "n": 0, "reasons": set(), "cps": set(),
                             }
-                        price_groups_inc[unit_price]["n"] += 1
+                        price_groups_inc[key]["n"] += 1
                         if po and po.reason:
-                            price_groups_inc[unit_price]["reasons"].add(
-                                po.reason,
-                            )
+                            price_groups_inc[key]["reasons"].add(po.reason)
                         if is_sd:
-                            price_groups_inc[unit_price]["reasons"].add(
-                                SD_REASON,
-                            )
+                            price_groups_inc[key]["reasons"].add(SD_REASON)
+                        if kind in ("negociado", "tarifa") and cp4:
+                            price_groups_inc[key]["cps"].add(cp4)
 
-                    # Criar 1 PreInvoiceLine por grupo de preço
-                    for unit_price, info in sorted(
-                        price_groups_inc.items(), reverse=True,
+                    # Criar 1 PreInvoiceLine por grupo de preço/origem
+                    for (unit_price, kind), info in sorted(
+                        price_groups_inc.items(),
+                        key=lambda kv: (-kv[0][0], kv[0][1]),
                     ):
-                        is_special = unit_price != price
+                        is_special = kind == "special"
                         obs_extra = ""
                         if is_special:
                             reasons_txt = (
@@ -2001,6 +2018,12 @@ def driver_pre_invoice_create(request, driver_id):
                                 f" · Preço especial €{unit_price}: "
                                 f"{reasons_txt}"
                             )
+                        elif kind in ("negociado", "tarifa"):
+                            obs_extra = (
+                                f" · {SOURCE_LABELS[kind].capitalize()} "
+                                f"({pricer.regime.lower()}) €{unit_price}: "
+                                f"CP {', '.join(sorted(info['cps']))}"
+                            )
                         line_inc = PreInvoiceLine(
                             pre_invoice=pf,
                             parceiro=cainiao_partner,
@@ -2009,8 +2032,9 @@ def driver_pre_invoice_create(request, driver_id):
                             taxa_por_entrega=unit_price,
                             dsr_percentual=Decimal("0"),
                             api_source=(
-                                "auto:transfer_in_special"
-                                if is_special else "auto:transfer_in"
+                                "auto:transfer_in_special" if is_special
+                                else "auto:transfer_in_cp" if kind != "base"
+                                else "auto:transfer_in"
                             ),
                             observacoes=(
                                 "Login: ↻ Transferências recebidas. "

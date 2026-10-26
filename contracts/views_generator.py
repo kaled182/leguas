@@ -41,6 +41,7 @@ def _hub_payload(driver):
         hub, terms = opt["hub"], opt["terms"]
         a = assigned.get(hub.id)
         chosen = set(a.cp4s) if a else set()
+        negotiated = (a.cp_prices or {}) if a else {}
         hubs.append({
             "id": hub.id,
             "name": hub.name,
@@ -55,17 +56,26 @@ def _hub_payload(driver):
             "weekly_payday": terms.weekly_payday if terms else 1,
             "weekly_lag_weeks": terms.weekly_lag_weeks if terms else 4,
             "min_fare": terms.min_fare_enabled if terms else False,
-            "cps": [
-                {
-                    "cp": cp["cp4"], "z": cp["zone"], "esc": cp["tier"],
-                    "p": float(cp["price_monthly"]) if cp["price_monthly"] is not None else None,
-                    "s": float(cp["price_weekly"]) if cp["price_weekly"] is not None else None,
-                    "checked": cp["cp4"] in chosen and cp["price_monthly"] is not None,
-                }
-                for cp in opt["cps"]
-            ],
+            "cps": [_cp_payload(cp, chosen, negotiated) for cp in opt["cps"]],
         })
     return hubs, primary
+
+
+def _cp_payload(cp, chosen, negotiated):
+    """Linha do Anexo I: valor negociado (só CP selecionados) substitui a
+    tarifa padrão nas duas colunas."""
+    neg = negotiated.get(cp["cp4"]) if cp["cp4"] in chosen else None
+    p = cp["price_monthly"]
+    s = cp["price_weekly"]
+    if neg:
+        p = s = neg
+    return {
+        "cp": cp["cp4"], "z": cp["zone"], "esc": cp["tier"],
+        "p": float(p) if p is not None else None,
+        "s": float(s) if s is not None else None,
+        "neg": bool(neg),
+        "checked": cp["cp4"] in chosen and p is not None,
+    }
 
 
 @admin_required

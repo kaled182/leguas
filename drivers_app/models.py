@@ -1262,6 +1262,10 @@ class DriverHubAssignment(models.Model):
         related_name="driver_assignments",
     )
     cp4s = models.JSONField("CP4 contratados", default=list, blank=True)
+    cp_prices = models.JSONField(
+        "Valor negociado por CP (€)", default=dict, blank=True,
+        help_text='{"4740": "1.10"} — só para CP selecionados. Vazio = tarifa padrão do CP.',
+    )
     is_primary = models.BooleanField("Hub principal", default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

@@ -444,3 +444,111 @@ class PaymentsTests(TestCase):
         self.assertEqual((k["overdue_n"], k["overdue_total"]), (0, 0))
         self.assertEqual(r.context["alerts"]["negativas"], 1)
         self.assertEqual([p.id for p in r.context["rows"]], [neg.id])
+
+
+class CpPricingTests(TestCase):
+    """Decisão C1: valor negociado do CP → tarifa padrão do CP → base."""
+
+    def setUp(self):
+        from datetime import date
+        from decimal import Decimal
+
+        from contracts.models import ContractSettings, HubContractTerms, HubZoneTariff
+        from core.models import Partner
+        from settlements.models import CainiaoHub
+
+        from .models import DriverHubAssignment
+
+        self.D = Decimal
+        self.date = date
+        self.partner = Partner.objects.create(
+            name="CAINIAO", nif="500000000", contact_email="c@x.pt",
+            driver_default_price_per_package=Decimal("1.00"),
+        )
+        st = ContractSettings.get()
+        st.cp_pricing_from = date(2026, 11, 1)
+        st.save()
+        self.hub = CainiaoHub.objects.create(name="Fão")
+        HubContractTerms.objects.create(hub=self.hub, allows_weekly=True)
+        for cp, pm, pw in [("4740", "0.95", "0.90"), ("4920", "1.15", "1.10"), ("4900", "1.00", "0.95")]:
+            HubZoneTariff.objects.create(
+                hub=self.hub, cp4=cp, zone_name=cp, price_monthly=Decimal(pm),
+                price_weekly=Decimal(pw), valid_from=date(2026, 1, 1),
+            )
+        self.drv = _driver("700000001", apelido="Cp_LF")
+        self.drv.price_per_package = Decimal("1.20")  # preço individual antigo
+        self.drv.save()
+        DriverHubAssignment.objects.create(
+            driver=self.drv, hub=self.hub, cp4s=["4740", "4920"], is_primary=True,
+            cp_prices={"4740": "1.10", "4900": "9.99"},  # 4900 não selecionado → ignorado
+        )
+
+    def _pricer(self, ini, fim):
+        from .services_cp_pricing import CpPricer
+
+        return CpPricer(self.drv, self.partner, ini, fim)
+
+    def test_cascade(self):
+        d = self.date
+        p = self._pricer(d(2026, 11, 1), d(2026, 11, 30))
+        self.assertEqual(p.price("4740-123")[:2], (self.D("1.10"), "negociado"))
+        self.assertEqual(p.price("4920-001")[:2], (self.D("1.15"), "tarifa"))
+        # CP não selecionado: tarifa padrão (o valor 9,99 não conta).
+        self.assertEqual(p.price("4900-001")[:2], (self.D("1.00"), "tarifa"))
+        # CP sem tarifa (ex.: Porto): preço do motorista.
+        self.assertEqual(p.price("4490-001")[:2], (self.D("1.20"), "base"))
+
+    def test_weekly_uses_weekly_column(self):
+        d = self.date
+        p = self._pricer(d(2026, 11, 2), d(2026, 11, 8))
+        self.assertEqual(p.price("4920")[:2], (self.D("1.10"), "tarifa"))
+        self.assertEqual(p.price("4740")[:2], (self.D("1.10"), "negociado"))
+
+    def test_inactive_before_start_date(self):
+        d = self.date
+        p = self._pricer(d(2026, 10, 1), d(2026, 10, 31))
+        self.assertEqual(p.price("4920")[:2], (self.D("1.20"), "base"))
+
+    def test_pre_invoice_create_uses_cp_prices(self):
+        import json
+
+        from settlements.models import DriverPreInvoice
+
+        d = self.date
+        for i, (cp, n) in enumerate([("4740", 3), ("4920", 2), ("4490", 1)]):
+            for k in range(n):
+                _task(f"W{cp}{k}", d(2026, 11, 3 + k), name="Cp_LF").__class__.objects.filter(
+                    waybill_number=f"W{cp}{k}").update(zip_code=f"{cp}-00{k}", detailed_address=f"Rua {cp} {k}")
+        admin = User.objects.create_superuser("su", "s@x.pt", "x")
+        self.client.force_login(admin)
+        r = self.client.post(
+            f"/settlements/pre-invoices/driver/{self.drv.id}/create/",
+            data=json.dumps({"periodo_inicio": "2026-11-01", "periodo_fim": "2026-11-30"}),
+            content_type="application/json",
+        )
+        self.assertEqual(r.status_code, 200, r.content[:300])
+        pf = DriverPreInvoice.objects.get(driver=self.drv)
+        lines = {(l.taxa_por_entrega, l.total_pacotes, l.api_source) for l in pf.linhas.all()}
+        self.assertEqual(lines, {
+            (self.D("1.10"), 3, "auto:per_login_cp"),
+            (self.D("1.15"), 2, "auto:per_login_cp"),
+            (self.D("1.20"), 1, "auto:per_login"),
+        })
+        self.assertEqual(pf.base_entregas, self.D("6.80"))
+        # O portal (driver_breakdown) mostra o mesmo valor à porta.
+        from settlements.services_driver_breakdown import driver_breakdown
+
+        bd = driver_breakdown(self.drv, d(2026, 11, 1), d(2026, 11, 30), partner=self.partner)
+        self.assertEqual(bd["amounts"]["door_normal"], self.D("6.80"))
+
+    def test_ficha_saves_negotiated_price_only_for_valid_values(self):
+        admin = User.objects.create_user("adm5", password="x", is_staff=True)
+        self.client.force_login(admin)
+        url = reverse("drivers_app:driver_admin_edit", args=[self.drv.id])
+        self.client.post(url, {
+            "section": "hubs", f"cp_{self.hub.id}": ["4740", "4920"],
+            "primary_hub": str(self.hub.id),
+            f"cpp_{self.hub.id}_4740": "1,05", f"cpp_{self.hub.id}_4920": "abc",
+        })
+        a = self.drv.hub_assignments.get()
+        self.assertEqual(a.cp_prices, {"4740": "1.05"})

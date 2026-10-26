@@ -195,6 +195,14 @@ class ContractSettings(models.Model):
         "Semanal: desconto por volume (€)", max_digits=6, decimal_places=4, default=0.05,
         help_text="Usado quando o CP não tem preço semanal próprio.",
     )
+    cp_pricing_from = models.DateField(
+        "Preço por CP nas PF a partir de", null=True, blank=True,
+        help_text=(
+            "PF com início nesta data ou depois usam: valor negociado do CP → "
+            "tarifa padrão do CP → preço do motorista/frota/parceiro. "
+            "Vazio = desligado (só preço do motorista/frota/parceiro)."
+        ),
+    )
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:

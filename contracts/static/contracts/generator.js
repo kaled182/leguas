@@ -85,7 +85,7 @@ function buildZoneList() {
       h += '<label class="zonerow"><input type="checkbox" class="zck" data-hub="' + hub.id + '" data-cp="' + cp.cp + '"' +
         (cp.checked ? " checked" : "") + (priced ? "" : " disabled") + '>' +
         '<span class="cpn">' + cp.cp + '</span><span class="zn">' + esc(cp.z || "") + '</span>' +
-        '<span class="esc">' + (priced ? (cp.esc ? cp.esc + ' · ' : '') + eur(cp.p) + (hub.allows_weekly ? '/' + eur(cp.s) : '') : 'sem tarifa') + '</span></label>';
+        '<span class="esc">' + (priced ? (cp.neg ? 'neg. ' : (cp.esc ? cp.esc + ' · ' : '')) + eur(cp.p) + (hub.allows_weekly ? '/' + eur(cp.s) : '') : 'sem tarifa') + '</span></label>';
     });
     h += '</div>';
   });
@@ -269,7 +269,7 @@ function renderContrato() {
     sel.hubs.forEach(x => {
       ztab += '<tr class="hubrow"><td colspan="' + (anyWeekly ? 5 : 4) + '">Hub ' + esc(x.hub.name) + (x.hub.address ? ' · ' + esc(x.hub.address) : '') + '</td></tr>';
       x.cps.forEach(z => {
-        ztab += '<tr' + (z.esc === "C" ? ' class="hl"' : '') + '><td class="strong">' + (z.esc || '—') + '</td><td class="strong">' + z.cp + '</td><td>' + esc(z.z || '') +
+        ztab += '<tr' + (z.esc === "C" ? ' class="hl"' : '') + '><td class="strong">' + (z.esc || '—') + '</td><td class="strong">' + z.cp + '</td><td>' + esc(z.z || '') + (z.neg ? ' <span style="color:var(--orange);font-weight:600">· valor negociado</span>' : '') +
           '</td><td class="num">' + eur(z.p) + '</td>' + (anyWeekly ? (x.hub.allows_weekly ? '<td class="num">' + eur(z.s) + '</td>' : '<td class="na">—</td>') : '') + '</tr>';
       });
     });

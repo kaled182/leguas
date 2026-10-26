@@ -2,6 +2,7 @@
 o seu botão Editar → Guardar / Cancelar. Grava só os campos desse bloco
 e regista quem mudou o quê."""
 from datetime import timedelta
+from decimal import Decimal, InvalidOperation
 
 from django import forms
 from django.contrib import messages
@@ -119,33 +120,59 @@ def _save_hubs(request, driver):
 
     primary = request.POST.get("primary_hub", "")
     keep = set()
-    before = {a.hub_id: (sorted(a.cp4s), a.is_primary) for a in driver.hub_assignments.all()}
+    errors = []
+
+    def snap():
+        return {
+            a.hub_id: (sorted(a.cp4s), a.is_primary, dict(sorted((a.cp_prices or {}).items())))
+            for a in driver.hub_assignments.all()
+        }
+
+    before = snap()
     for hub in CainiaoHub.objects.all():
         cps = sorted(set(request.POST.getlist(f"cp_{hub.id}")))
         if not cps and request.POST.get(f"hub_{hub.id}") != "on":
             continue
+        prices = {}
+        for cp in cps:
+            raw = (request.POST.get(f"cpp_{hub.id}_{cp}") or "").strip().replace(",", ".")
+            if not raw:
+                continue
+            try:
+                val = Decimal(raw).quantize(Decimal("0.01"))
+            except InvalidOperation:
+                errors.append(f"{hub.name} CP {cp}: valor '{raw}' inválido")
+                continue
+            if val <= 0 or val > 10:
+                errors.append(f"{hub.name} CP {cp}: valor tem de estar entre 0,01 € e 10 €")
+                continue
+            prices[cp] = str(val)
         keep.add(hub.id)
         DriverHubAssignment.objects.update_or_create(
             driver=driver, hub=hub,
-            defaults={"cp4s": cps, "is_primary": str(hub.id) == primary},
+            defaults={"cp4s": cps, "is_primary": str(hub.id) == primary, "cp_prices": prices},
         )
     driver.hub_assignments.exclude(hub_id__in=keep).delete()
     if keep and not driver.hub_assignments.filter(is_primary=True).exists():
         first = driver.hub_assignments.order_by("hub__name").first()
         first.is_primary = True
         first.save(update_fields=["is_primary"])
-    after = {a.hub_id: (sorted(a.cp4s), a.is_primary) for a in driver.hub_assignments.all()}
+    after = snap()
     if before != after:
         names = dict(CainiaoHub.objects.values_list("id", "name"))
-        fmt = lambda d: "; ".join(  # noqa: E731
-            f"{names.get(h, h)}{' (principal)' if p else ''}: {','.join(c) or '—'}"
-            for h, (c, p) in sorted(d.items())
-        )
+
+        def fmt(d):
+            return "; ".join(
+                f"{names.get(h, h)}{' (principal)' if p else ''}: "
+                + (", ".join(f"{x}{'=' + pr[x] + '€' if x in pr else ''}" for x in c) or "—")
+                for h, (c, p, pr) in sorted(d.items())
+            )
+
         DriverProfileEditLog.objects.create(
             driver=driver, user=request.user, section="hubs",
             changes={"hubs": [fmt(before), fmt(after)]},
         )
-    return before != after
+    return before != after, errors
 
 
 @admin_required
@@ -161,7 +188,9 @@ def driver_ficha(request, driver_id):
         section = request.POST.get("section", "")
         if section == "hubs":
             with transaction.atomic():
-                changed = _save_hubs(request, driver)
+                changed, errors = _save_hubs(request, driver)
+            for e in errors:
+                messages.error(request, e)
             messages.success(request, "Hubs e CP guardados." if changed else "Sem alterações.")
             return redirect(f"{request.path}#hubs")
 
@@ -240,8 +269,10 @@ def driver_ficha(request, driver_id):
         opt["assigned"] = a is not None
         opt["primary"] = bool(a and a.is_primary)
         selected = set(a.cp4s) if a else set()
+        negotiated = (a.cp_prices or {}) if a else {}
         for cp in opt["cps"]:
             cp["checked"] = cp["cp4"] in selected
+            cp["negotiated"] = negotiated.get(cp["cp4"], "") if cp["checked"] else ""
     suggestions = driver_hub_suggestions(driver)
 
     from contracts.models import GeneratedContract

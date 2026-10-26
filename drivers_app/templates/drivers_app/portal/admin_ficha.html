@@ -154,7 +154,8 @@
                       {% for cp in opt.cps %}{% if cp.checked %}
                         <span class="px-2 py-1 rounded-lg text-xs bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200">
                           <b class="font-mono">{{ cp.cp4 }}</b> {{ cp.zone }}{% if cp.tier %} · {{ cp.tier }}{% endif %}
-                          {% if cp.price_monthly is not None %}· {% if driver.payment_regime == 'SEMANAL' %}{{ cp.price_weekly|floatformat:2 }}{% else %}{{ cp.price_monthly|floatformat:2 }}{% endif %} €{% else %}<span class="text-rose-600">· sem tarifa</span>{% endif %}
+                          {% if cp.negotiated %}· <b class="text-emerald-700 dark:text-emerald-300">{{ cp.negotiated }} € negociado</b>
+                          {% elif cp.price_monthly is not None %}· {% if driver.payment_regime == 'SEMANAL' %}{{ cp.price_weekly|floatformat:2 }}{% else %}{{ cp.price_monthly|floatformat:2 }}{% endif %} € padrão{% else %}<span class="text-rose-600">· sem tarifa</span>{% endif %}
                         </span>
                       {% endif %}{% endfor %}
                     </div>
@@ -171,6 +172,7 @@
 
           {# Edição #}
           <form x-show="edit" x-cloak method="post" id="hubForm">
+            <p class="text-[11px] text-gray-500 mb-2">Preço por pacote: valor negociado (se preenchido num CP selecionado) → tarifa padrão do CP → preço do motorista/frota/parceiro. CP onde o motorista entregue sem estar selecionado usam a tarifa padrão.</p>
             {% csrf_token %}
             <input type="hidden" name="section" value="hubs">
             {% if suggestions %}
@@ -194,11 +196,16 @@
                   {% if not opt.terms %}<p class="text-[11px] text-rose-600 mt-1">Sem condições de contrato (configure no admin).</p>{% endif %}
                   <div class="mt-2 grid grid-cols-1 gap-1">
                     {% for cp in opt.cps %}
-                      <label class="flex items-center gap-2 text-xs text-gray-700 dark:text-gray-300">
-                        <input type="checkbox" name="cp_{{ opt.hub.id }}" value="{{ cp.cp4 }}" data-hub="{{ opt.hub.id }}" class="w-3.5 h-3.5 rounded cp-ck" {% if cp.checked %}checked{% endif %}>
-                        <b class="font-mono">{{ cp.cp4 }}</b> {{ cp.zone }}
-                        <span class="ml-auto text-gray-500">{% if cp.price_monthly is not None %}{% if cp.tier %}{{ cp.tier }} · {% endif %}{{ cp.price_monthly|floatformat:2 }} €{% if opt.terms.allows_weekly %} / {{ cp.price_weekly|floatformat:2 }} €{% endif %}{% else %}sem tarifa{% endif %}</span>
-                      </label>
+                      <div class="flex items-center gap-2 text-xs text-gray-700 dark:text-gray-300">
+                        <label class="flex items-center gap-2 min-w-0 flex-1">
+                          <input type="checkbox" name="cp_{{ opt.hub.id }}" value="{{ cp.cp4 }}" data-hub="{{ opt.hub.id }}" class="w-3.5 h-3.5 rounded cp-ck" {% if cp.checked %}checked{% endif %}>
+                          <b class="font-mono">{{ cp.cp4 }}</b> <span class="truncate">{{ cp.zone }}</span>
+                          <span class="ml-auto text-gray-500 whitespace-nowrap" title="Tarifa padrão mensal / semanal">{% if cp.price_monthly is not None %}{% if cp.tier %}{{ cp.tier }} · {% endif %}{{ cp.price_monthly|floatformat:2 }}{% if opt.terms.allows_weekly %}/{{ cp.price_weekly|floatformat:2 }}{% endif %} €{% else %}sem tarifa{% endif %}</span>
+                        </label>
+                        <input type="text" inputmode="decimal" name="cpp_{{ opt.hub.id }}_{{ cp.cp4 }}" value="{{ cp.negotiated }}"
+                               placeholder="negociado" title="Valor negociado (€/pacote). Vazio = tarifa padrão."
+                               class="w-20 px-2 py-1 text-xs text-right bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-gray-900 dark:text-white">
+                      </div>
                     {% endfor %}
                   </div>
                 </div>

@@ -76,6 +76,56 @@ def _bucket(days):
 
 CACHE_SECONDS = 600  # dados Cainiao entram de 30 em 30 min
 
+_SQL_DELIVERED = """
+SELECT SUBSTRING(zip_code, 1, 4) AS cp,
+       DATE(receipt_time) AS rd, HOUR(receipt_time) = 23 AS rl,
+       DATE(delivery_time) AS dd, HOUR(delivery_time) = 23 AS dl,
+       COUNT(*) AS n
+FROM settlements_cainiaooperationtask FORCE INDEX (settl_task_sla_cover_idx)
+WHERE task_status = 'Delivered' AND task_date BETWEEN %s AND %s
+  AND receipt_time IS NOT NULL AND delivery_time IS NOT NULL
+GROUP BY cp, rd, rl, dd, dl
+"""
+
+
+def _delivered_groups(date_from, date_to, tz):
+    """(cp4, dia de chegada, dia de entrega, n) — datas em hora local.
+
+    MySQL: agregação no servidor (milhares de linhas em vez de ~50 mil).
+    As datas vêm em UTC; em Portugal só a hora 23 UTC pode cair no dia
+    local seguinte (horário de verão, +1 h). Outros motores: Python.
+    """
+    from datetime import datetime as _dt
+
+    from django.db import connection
+
+    from settlements.models import CainiaoOperationTask as T
+
+    if connection.vendor != "mysql":
+        for zip_code, receipt, delivery in T.objects.filter(
+            task_status="Delivered", task_date__range=(date_from, date_to),
+            receipt_time__isnull=False, delivery_time__isnull=False,
+        ).values_list("zip_code", "receipt_time", "delivery_time").iterator():
+            yield (zip_code or "")[:4], receipt.astimezone(tz).date(), delivery.astimezone(tz).date(), 1
+        return
+
+    shift = {}
+
+    def local(d, late):
+        if not late:
+            return d
+        if d not in shift:
+            off = tz.utcoffset(_dt(d.year, d.month, d.day, 23, 30))
+            shift[d] = off.total_seconds() >= 3600
+        return d + timedelta(days=1) if shift[d] else d
+
+    with connection.cursor() as cur:
+        cur.execute(_SQL_DELIVERED, [date_from, date_to])
+        for cp, rd, rl, dd, dl, n in cur.fetchall():
+            if rd is None or dd is None:
+                continue
+            yield cp or "", local(rd, rl), local(dd, dl), n
+
 
 def zone_rules():
     """{cp4: (dias, etiqueta)} das regras configuradas (SlaZoneRule)."""
@@ -100,7 +150,7 @@ def sla_report(end, days=7, trend_days=30, working_days=True, cp_hub=None):
 
     rules = zone_rules()
     sig = hashlib.md5(repr(sorted(rules.items())).encode()).hexdigest()[:8]
-    key = f"sla:v2:{end.isoformat()}:{days}:{trend_days}:{int(working_days)}:{sig}"
+    key = f"sla:v3:{end.isoformat()}:{days}:{trend_days}:{int(working_days)}:{sig}"
     data = cache.get(key)
     if data is None:
         data = _sla_report(end, days, trend_days, working_days, cp_hub, rules)
@@ -133,30 +183,25 @@ def _sla_report(end, days=7, trend_days=30, working_days=True, cp_hub=None, rule
     total = new_row()
     trend = defaultdict(lambda: [0, 0])  # data de entrega → [n, no prazo]
 
-    for zip_code, receipt, delivery in T.objects.filter(
-        task_status="Delivered", task_date__range=(min(start, trend_start), end),
-        receipt_time__isnull=False, delivery_time__isnull=False,
-    ).values_list("zip_code", "receipt_time", "delivery_time").iterator():
-        t = receipt.astimezone(tz).date()
-        dd = delivery.astimezone(tz).date()
-        cp = (zip_code or "")[:4] or "—"
+    for cp, t, dd, k in _delivered_groups(min(start, trend_start), end, tz):
+        cp = cp or "—"
         sla_days = rule_for(rules, cp)[0]
         on_time = dd <= cal.deadline(t, sla_days)
         if trend_start <= dd <= end:
-            trend[dd][0] += 1
-            trend[dd][1] += on_time
+            trend[dd][0] += k
+            trend[dd][1] += k if on_time else 0
         if not (start <= dd <= end):
             continue
         el = cal.elapsed(t, dd)
         for row in (by_cp[cp], by_hub[cp_hub.get(cp, "Sem hub")], total):
-            row["n"] += 1
-            row["on_time"] += on_time
-            row["b"][_bucket(el)] += 1
+            row["n"] += k
+            row["on_time"] += k if on_time else 0
+            row["b"][_bucket(el)] += k
             for i in range(3):
-                row["le"][i] += el <= i + 1
+                row["le"][i] += k if el <= i + 1 else 0
             if not on_time:
-                row["late"] += 1
-                row["late_days"] += max(el - sla_days, 0)
+                row["late"] += k
+                row["late_days"] += max(el - sla_days, 0) * k
 
     # Em aberto fora do prazo (estado actual do dia `end`).
     for zip_code, receipt in T.objects.filter(

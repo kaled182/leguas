@@ -227,6 +227,17 @@ class DashboardView(TemplateView):
 
         last_batch = CainiaoOperationBatch.objects.order_by("-created_at").first()
 
+        # ─── SLA T+1 por CP4 ───
+        from .services_sla import sla_report
+
+        try:
+            sla_days = int(self.request.GET.get("sla_days", 7))
+        except ValueError:
+            sla_days = 7
+        sla_days = sla_days if sla_days in (1, 7, 14, 30) else 7
+        sla_working = self.request.GET.get("sla_cal", "uteis") != "corridos"
+        sla = sla_report(target, days=sla_days, working_days=sla_working, cp_hub=cp_hub)
+
         charts = {
             "days": [d.strftime("%d/%m") for d in days],
             "iso": [d.isoformat() for d in days],
@@ -292,6 +303,11 @@ class DashboardView(TemplateView):
             },
             "mgmt": _management_tiles(today),
             "charts": charts,
+            "sla": sla,
+            "sla_chart": {**sla["trend"], "hubs": [
+                {"label": h["key"], "sla": round(h["sla"], 1) if h["sla"] is not None else None, "n": h["n"]}
+                for h in sla["hubs"]
+            ]},
         })
         return ctx
 

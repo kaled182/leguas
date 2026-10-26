@@ -72,3 +72,62 @@ class DashboardTests(TestCase):
         self.assertEqual(r.status_code, 200)
         self.assertFalse(r.context["is_today"])
         self.assertEqual(r.context["kpis"]["delivered"], 1)
+
+
+class SlaTests(TestCase):
+    def test_calendar_working_days(self):
+        from datetime import date
+
+        from settlements.models import Holiday
+
+        from .services_sla import SlaCalendar
+
+        Holiday.objects.create(name="Implantação", date=date(2026, 10, 5))
+        cal = SlaCalendar(date(2026, 10, 1), date(2026, 10, 31))
+        self.assertEqual(cal.deadline(date(2026, 10, 1)), date(2026, 10, 2))   # qui → sex
+        self.assertEqual(cal.deadline(date(2026, 10, 3)), date(2026, 10, 6))   # sáb → (dom, feriado) → ter
+        self.assertEqual(cal.elapsed(date(2026, 10, 3), date(2026, 10, 6)), 1)
+        corr = SlaCalendar(date(2026, 10, 1), date(2026, 10, 31), working_days=False)
+        self.assertEqual(corr.deadline(date(2026, 10, 3)), date(2026, 10, 4))
+
+    def test_report_by_cp4(self):
+        from datetime import date, datetime, time
+
+        from settlements.models import CainiaoHub, CainiaoHubCP4, CainiaoOperationTask
+
+        from .services_sla import sla_report
+
+        hub = CainiaoHub.objects.create(name="Fão")
+        CainiaoHubCP4.objects.create(hub=hub, cp4="4740")
+        aware = lambda d, h=8: timezone.make_aware(datetime.combine(d, time(h)))  # noqa: E731
+        n = 0
+
+        def task(cp, rec, dlv, status="Delivered", day=None):
+            nonlocal n
+            n += 1
+            CainiaoOperationTask.objects.create(
+                waybill_number=f"S{n}", task_date=day or dlv, task_status=status, zip_code=f"{cp}-001",
+                receipt_time=aware(rec), delivery_time=aware(dlv, 15) if status == "Delivered" else None,
+            )
+
+        task("4740", date(2026, 10, 20), date(2026, 10, 20))   # D+0
+        task("4740", date(2026, 10, 20), date(2026, 10, 21))   # D+1 no prazo
+        task("4740", date(2026, 10, 19), date(2026, 10, 22))   # D+3 fora do prazo
+        task("4490", date(2026, 10, 17), date(2026, 10, 19))   # sáb → seg: no prazo
+        task("4740", date(2026, 10, 20), date(2026, 10, 23), status="Driver_received", day=date(2026, 10, 23))
+        r = sla_report(date(2026, 10, 23), days=7)
+        cps = {c["key"]: c for c in r["cps"]}
+        self.assertEqual((cps["4740"]["n"], cps["4740"]["on_time"], cps["4740"]["b"]), (3, 2, [1, 1, 0, 1]))
+        self.assertEqual(cps["4740"]["open_late"], 1)
+        self.assertEqual(cps["4740"]["avg_late"], 2)
+        self.assertEqual(cps["4490"]["sla"], 100)
+        self.assertEqual((r["total"]["n"], r["total"]["on_time"]), (4, 3))
+        self.assertEqual({h["key"] for h in r["hubs"]}, {"Fão", "Sem hub"})
+
+    def test_dashboard_renders_sla(self):
+        user = User.objects.create_user("s", password="x", is_staff=True)
+        self.client.force_login(user)
+        r = self.client.get("/", {"sla_days": "14", "sla_cal": "corridos"})
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual((r.context["sla"]["days"], r.context["sla"]["working_days"]), (14, False))
+        self.assertContains(r, "SLA T+1 por CP4")

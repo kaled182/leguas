@@ -1,7 +1,8 @@
 """SLA de entrega T+1 por CP4.
 
 T = dia em que o pacote chegou ao hub (receipt_time, hora local).
-Prazo = fim do dia útil seguinte a T (T+1). Dias não úteis: domingos e
+Prazo = fim do N.º dia útil depois de T. N vem da regra do CP4
+(SlaZoneRule, página "Prazos SLA"); sem regra, N = 1 (T+1). Dias não úteis: domingos e
 feriados nacionais (settlements.Holiday, sem região). Com
 working_days=False conta dias de calendário.
 
@@ -49,9 +50,9 @@ class SlaCalendar:
         self.working = working_days
         self.off = non_working_days(start - timedelta(days=40), end + timedelta(days=10)) if working_days else set()
 
-    def deadline(self, t):
+    def deadline(self, t, sla_days=SLA_DAYS):
         d, n = t, 0
-        while n < SLA_DAYS:
+        while n < sla_days:
             d += timedelta(days=1)
             if d not in self.off:
                 n += 1
@@ -76,24 +77,45 @@ def _bucket(days):
 CACHE_SECONDS = 600  # dados Cainiao entram de 30 em 30 min
 
 
+def zone_rules():
+    """{cp4: (dias, etiqueta)} das regras configuradas (SlaZoneRule)."""
+    from .models import SlaZoneRule
+
+    return {
+        r.cp4: (r.sla_days, r.label or r.get_sla_days_display())
+        for r in SlaZoneRule.objects.all()
+    }
+
+
+def rule_for(rules, cp):
+    days, label = rules.get(cp, (SLA_DAYS, ""))
+    return days, label or f"T+{days}"
+
+
 def sla_report(end, days=7, trend_days=30, working_days=True, cp_hub=None):
     """Relatório SLA (em cache 10 min). Ver _sla_report."""
     from django.core.cache import cache
 
-    key = f"sla:v1:{end.isoformat()}:{days}:{trend_days}:{int(working_days)}"
+    import hashlib
+
+    rules = zone_rules()
+    sig = hashlib.md5(repr(sorted(rules.items())).encode()).hexdigest()[:8]
+    key = f"sla:v2:{end.isoformat()}:{days}:{trend_days}:{int(working_days)}:{sig}"
     data = cache.get(key)
     if data is None:
-        data = _sla_report(end, days, trend_days, working_days, cp_hub)
+        data = _sla_report(end, days, trend_days, working_days, cp_hub, rules)
         cache.set(key, data, CACHE_SECONDS)
     return data
 
 
-def _sla_report(end, days=7, trend_days=30, working_days=True, cp_hub=None):
+def _sla_report(end, days=7, trend_days=30, working_days=True, cp_hub=None, rules=None):
     """Relatório SLA para entregas com task_date em [end-days+1, end]
     e tendência diária de `trend_days` dias."""
     from settlements.models import CainiaoHubCP4, CainiaoOperationTask as T
 
     tz = timezone.get_current_timezone()  # 1 vez: localtime() por linha é lento
+    if rules is None:
+        rules = zone_rules()
 
     if cp_hub is None:
         cp_hub = dict(CainiaoHubCP4.objects.values_list("cp4", "hub__name"))
@@ -102,7 +124,9 @@ def _sla_report(end, days=7, trend_days=30, working_days=True, cp_hub=None):
     cal = SlaCalendar(min(start, trend_start), end, working_days)
 
     def new_row():
-        return {"n": 0, "on_time": 0, "b": [0, 0, 0, 0], "late_days": 0, "late": 0, "open_late": 0}
+        # le = entregas em ≤1, ≤2, ≤3 dias (para simular outro prazo)
+        return {"n": 0, "on_time": 0, "b": [0, 0, 0, 0], "le": [0, 0, 0],
+                "late_days": 0, "late": 0, "open_late": 0}
 
     by_cp = defaultdict(new_row)
     by_hub = defaultdict(new_row)
@@ -115,29 +139,32 @@ def _sla_report(end, days=7, trend_days=30, working_days=True, cp_hub=None):
     ).values_list("zip_code", "receipt_time", "delivery_time").iterator():
         t = receipt.astimezone(tz).date()
         dd = delivery.astimezone(tz).date()
-        on_time = dd <= cal.deadline(t)
+        cp = (zip_code or "")[:4] or "—"
+        sla_days = rule_for(rules, cp)[0]
+        on_time = dd <= cal.deadline(t, sla_days)
         if trend_start <= dd <= end:
             trend[dd][0] += 1
             trend[dd][1] += on_time
         if not (start <= dd <= end):
             continue
-        cp = (zip_code or "")[:4] or "—"
         el = cal.elapsed(t, dd)
         for row in (by_cp[cp], by_hub[cp_hub.get(cp, "Sem hub")], total):
             row["n"] += 1
             row["on_time"] += on_time
             row["b"][_bucket(el)] += 1
+            for i in range(3):
+                row["le"][i] += el <= i + 1
             if not on_time:
                 row["late"] += 1
-                row["late_days"] += max(el - SLA_DAYS, 0)
+                row["late_days"] += max(el - sla_days, 0)
 
     # Em aberto fora do prazo (estado actual do dia `end`).
     for zip_code, receipt in T.objects.filter(
         task_date=end, task_status__in=OPEN_STATUSES, receipt_time__isnull=False,
     ).values_list("zip_code", "receipt_time").iterator():
         t = receipt.astimezone(tz).date()
-        if cal.deadline(t) < end:
-            cp = (zip_code or "")[:4] or "—"
+        cp = (zip_code or "")[:4] or "—"
+        if cal.deadline(t, rule_for(rules, cp)[0]) < end:
             for row in (by_cp[cp], by_hub[cp_hub.get(cp, "Sem hub")], total):
                 row["open_late"] += 1
 
@@ -148,15 +175,21 @@ def _sla_report(end, days=7, trend_days=30, working_days=True, cp_hub=None):
             "sla": (row["on_time"] / n * 100) if n else None,
             "pct": [(x / n * 100) if n else 0 for x in row["b"]],
             "avg_late": (row["late_days"] / row["late"]) if row["late"] else 0,
+            # SLA se o prazo fosse T+1 / T+2 / T+3
+            "sim": [(x / n * 100) if n else None for x in row["le"]],
         }
 
-    cps = [finish(cp, r, hub=cp_hub.get(cp, "")) for cp, r in by_cp.items()]
+    cps = [
+        finish(cp, r, hub=cp_hub.get(cp, ""), rule_days=rule_for(rules, cp)[0], rule_label=rule_for(rules, cp)[1])
+        for cp, r in by_cp.items()
+    ]
     cps.sort(key=lambda r: (r["sla"] is None, r["sla"] if r["sla"] is not None else 0, -r["n"]))
     hubs = [finish(h, r) for h, r in by_hub.items()]
     hubs.sort(key=lambda r: -r["n"])
     trend_days_list = [trend_start + timedelta(days=i) for i in range(trend_days)]
     return {
         "start": start, "end": end, "days": days, "working_days": working_days,
+        "rules": {cp: {"days": d, "label": label} for cp, (d, label) in rules.items()},
         "total": finish("total", total),
         "cps": cps,
         "hubs": hubs,

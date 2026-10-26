@@ -1,3 +1,4 @@
+from django.urls import reverse
 from datetime import datetime, time, timedelta
 
 from django.contrib.auth.models import User
@@ -130,4 +131,63 @@ class SlaTests(TestCase):
         r = self.client.get("/", {"sla_days": "14", "sla_cal": "corridos"})
         self.assertEqual(r.status_code, 200)
         self.assertEqual((r.context["sla"]["days"], r.context["sla"]["working_days"]), (14, False))
-        self.assertContains(r, "SLA T+1 por CP4")
+        self.assertContains(r, "Configurar prazos")
+
+
+class SlaRulesTests(TestCase):
+    def test_seed_has_t2_remote_zones(self):
+        from .models import SlaZoneRule
+
+        self.assertEqual(
+            sorted(SlaZoneRule.objects.values_list("cp4", "sla_days", "label")),
+            [(cp, 2, "T+2 R") for cp in ("4920", "4930", "4940", "4950")],
+        )
+
+    def setUp(self):
+        from datetime import date, datetime, time
+
+        from .models import SlaZoneRule
+
+        if self._testMethodName != "test_seed_has_t2_remote_zones":
+            SlaZoneRule.objects.all().delete()  # partir de "tudo T+1"
+
+        from settlements.models import CainiaoHub, CainiaoHubCP4, CainiaoOperationTask
+
+        hub = CainiaoHub.objects.create(name="Ponte da Barca")
+        CainiaoHubCP4.objects.create(hub=hub, cp4="4950")
+        aware = lambda d, h=8: timezone.make_aware(datetime.combine(d, time(h)))  # noqa: E731
+        # Chegada seg 19/10, entrega qua 21/10 = 2 dias úteis.
+        CainiaoOperationTask.objects.create(
+            waybill_number="R1", task_date=date(2026, 10, 21), task_status="Delivered",
+            zip_code="4950-001", receipt_time=aware(date(2026, 10, 19)),
+            delivery_time=aware(date(2026, 10, 21), 15),
+        )
+        self.date = date
+
+    def test_rule_changes_on_time(self):
+        from .models import SlaZoneRule
+        from .services_sla import _sla_report
+
+        r = _sla_report(self.date(2026, 10, 23), days=7)
+        c = r["cps"][0]
+        self.assertEqual((c["sla"], c["rule_label"], c["sim"]), (0, "T+1", [0, 100, 100]))
+        SlaZoneRule.objects.create(cp4="4950", sla_days=2, label="T+2 R")
+        r = _sla_report(self.date(2026, 10, 23), days=7)
+        c = r["cps"][0]
+        self.assertEqual((c["sla"], c["rule_days"], c["rule_label"]), (100, 2, "T+2 R"))
+
+    def test_page_saves_and_resets(self):
+        from .models import SlaZoneRule
+
+        user = User.objects.create_user("cfg", password="x", is_staff=True)
+        self.client.force_login(user)
+        url = reverse("dashboard_leguas:sla_rules")
+        r = self.client.get(url)
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, "4950")
+        self.client.post(url, {"cp": ["4950"], "d_4950": "2", "l_4950": "T+2 R"})
+        rule = SlaZoneRule.objects.get(cp4="4950")
+        self.assertEqual((rule.sla_days, rule.label, rule.updated_by_id), (2, "T+2 R", user.id))
+        # Voltar a T+1 sem etiqueta apaga a regra (fica no valor por omissão).
+        self.client.post(url, {"cp": ["4950"], "d_4950": "1", "l_4950": ""})
+        self.assertFalse(SlaZoneRule.objects.exists())

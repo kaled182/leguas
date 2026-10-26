@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from . import views_generator as vg
 
 app_name = "contracts"
 
@@ -22,4 +23,10 @@ urlpatterns = [
     path("admin/signed/", views.admin_signed_contracts, name="admin_signed_contracts"),
     path("admin/missing/", views.admin_missing_contracts, name="admin_missing_contracts"),
     path("admin/contract/<int:pk>/revoke/", views.admin_revoke_contract, name="admin_revoke_contract"),
+
+    # ─── Contrato único / aditivo (gerado no sistema) ───
+    path("admin/gerar/<int:driver_id>/", vg.contract_generator, name="contract_generator"),
+    path("admin/gerar/<int:driver_id>/registar/", vg.contract_generator_save, name="contract_generator_save"),
+    path("admin/gerado/<int:pk>/", vg.generated_contract_view, name="generated_contract_view"),
+    path("admin/gerado/<int:pk>/acao/", vg.generated_contract_action, name="generated_contract_action"),
 ]

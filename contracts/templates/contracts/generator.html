@@ -1,0 +1,191 @@
+{% load static %}<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% if kind == 'ADITIVO' %}Aditivo{% else %}Contrato{% endif %} · {{ driver.nome_completo }} · Léguas Franzinas</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'contracts/generator.css' %}?v=2">
+</head>
+<body>
+
+<div class="topbar">
+  <img src="{% static 'contracts/logo-leguas.png' %}" alt="Léguas Franzinas">
+  <div class="t">{% if kind == 'ADITIVO' %}Aditivo ao Contrato (entregas e responsabilidade){% else %}Contrato de Prestação de Serviços (único por hub/CP){% endif %}<small>{{ driver.nome_completo }} · minuta p/ validação jurídica</small></div>
+  <div class="spacer"></div>
+  <div class="hint">"Gerar PDF" abre a impressão: destino "Guardar como PDF", margens "Nenhuma". "Registar" guarda esta versão na ficha.</div>
+  <a class="btn2" href="{{ ficha_url }}">Voltar à ficha</a>
+  <button class="btn2" type="button" id="btnSave">Registar</button>
+  <button class="btn" type="button" id="btnPrint">Gerar PDF</button>
+</div>
+
+<form id="saveForm" method="post" action="{% url 'contracts:contract_generator_save' driver.id %}" style="display:none">
+  {% csrf_token %}
+  <input type="hidden" name="kind" value="{{ kind }}">
+  <input type="hidden" name="regime" id="f_regime">
+  <input type="hidden" name="hubs" id="f_hubs">
+  <input type="hidden" name="params" id="f_params">
+  <input type="hidden" name="html" id="f_html">
+</form>
+
+<div class="layout">
+  <aside class="panel">
+    <div id="warns"></div>
+
+    {% if kind == 'ADITIVO' %}
+    <div class="sec">
+      <h3>Contrato original</h3>
+      <div class="fld"><label for="g_hub">Hub do contrato</label>
+        <select id="g_hub">
+          {% for h in hubs %}<option value="{{ h.id }}" {% if h.id == primary_hub_id %}selected{% endif %}>{{ h.name }}{% if h.address %} — {{ h.address }}{% endif %}</option>{% endfor %}
+        </select></div>
+      <div class="fld"><label for="g_dorig">Data de assinatura do contrato original</label><input id="g_dorig" type="date"></div>
+      <div class="internal-note">As cláusulas substituídas são identificadas pelo assunto, não pelo número (as versões assinadas têm numerações diferentes).</div>
+    </div>
+    {% endif %}
+
+    <div class="sec">
+      <h3>{% if kind == 'ADITIVO' %}Aditivo{% else %}Documento{% endif %}</h3>
+      <div class="grid2">
+        <div class="fld"><label for="g_local">Local de assinatura</label><input id="g_local" value="{{ signing_place }}"></div>
+        <div class="fld"><label for="g_dass">Data de assinatura{% if kind == 'ADITIVO' %} = efeito{% endif %}</label><input id="g_dass" type="date" value="{{ today|date:'Y-m-d' }}"></div>
+      </div>
+      {% if kind != 'ADITIVO' %}
+      <div class="grid2">
+        <div class="fld"><label for="g_dini">Início do contrato</label><input id="g_dini" type="date" value="{{ today|date:'Y-m-d' }}"></div>
+        <div class="fld"><label for="g_dur">Duração (meses)</label><input id="g_dur" type="number" value="{{ settings.duration_months }}" min="1"></div>
+      </div>
+      {% endif %}
+      <div class="fld"><label for="g_rep">Representante da empresa</label><input id="g_rep" value="{{ settings.company_rep }}"></div>
+      <label class="tgl small"><input type="checkbox" id="c_minuta" checked> Mostrar nota "Minuta — sujeita a validação jurídica"</label>
+    </div>
+
+    <div class="sec">
+      <h3>Prestador (2.º Outorgante) — da ficha</h3>
+      <div class="fld"><label for="g_tipo">Tipo de prestador</label>
+        <select id="g_tipo">
+          <option value="singular" {% if driver.provider_type != 'SOCIEDADE' %}selected{% endif %}>Pessoa singular (trabalhador independente / ENI)</option>
+          <option value="sociedade" {% if driver.provider_type == 'SOCIEDADE' %}selected{% endif %}>Sociedade (unipessoal / lda.)</option>
+        </select></div>
+      <div class="fld"><label for="g_nome" id="lb_nome">Nome completo</label><input id="g_nome" value="{{ driver.nome_completo }}"></div>
+      <div class="grid2">
+        <div class="fld"><label for="g_nif" id="lb_nif">NIF</label><input id="g_nif" value="{{ driver.nif }}"></div>
+        {% if kind != 'ADITIVO' %}<div class="fld"><label for="g_tel">Telefone</label><input id="g_tel" value="{{ tel }}"></div>{% endif %}
+      </div>
+      <div id="box_singular">
+        {% if kind != 'ADITIVO' %}
+        <div class="fld"><label for="g_doctipo">Documento de identificação</label>
+          <select id="g_doctipo">
+            {% for code, label in id_doc_choices %}<option {% if driver.id_doc_type == code %}selected{% endif %}>{{ label }}</option>{% endfor %}
+          </select></div>
+        {% endif %}
+        <div class="grid2">
+          <div class="fld"><label for="g_docnum">N.º do documento</label><input id="g_docnum" value="{{ driver.id_doc_number }}"></div>
+          {% if kind != 'ADITIVO' %}<div class="fld"><label for="g_docval">Validade do documento</label><input id="g_docval" type="date" value="{{ driver.id_doc_expiry|date:'Y-m-d' }}"></div>{% endif %}
+        </div>
+      </div>
+      <div id="box_sociedade" style="display:none">
+        <div class="fld"><label for="g_repsoc">Representada por (gerente)</label><input id="g_repsoc" value="{{ driver.company_rep_name }}"></div>
+        <div class="fld"><label for="g_repsocnif">NIF do gerente</label><input id="g_repsocnif" value="{{ driver.company_rep_nif }}"></div>
+      </div>
+      <div class="fld"><label for="g_morada">Morada / sede</label><input id="g_morada" value="{{ morada }}"></div>
+      {% if kind != 'ADITIVO' %}
+      <div class="grid2">
+        <div class="fld"><label for="g_carta">Carta de condução n.º</label><input id="g_carta" value="{{ driver.driving_license_number }}"></div>
+        <div class="fld"><label for="g_cartapais">Emitida por (país)</label><input id="g_cartapais" value="{{ driver.driving_license_country|default:'Portugal' }}"></div>
+      </div>
+      <div class="fld"><label for="g_cartaval">Validade da carta</label><input id="g_cartaval" type="date" value="{{ driver.driving_license_expiry|date:'Y-m-d' }}"></div>
+      <div class="grid2">
+        <div class="fld"><label for="g_matr">Matrícula(s) da(s) viatura(s)</label><input id="g_matr" value="{{ plates }}"></div>
+        <div class="fld"><label for="g_iban">IBAN (pagamentos)</label><input id="g_iban" value="{{ driver.iban }}"></div>
+      </div>
+      <div class="grid2">
+        <div class="fld"><label for="g_segat">Seguro acid. trabalho — apólice n.º</label><input id="g_segat" value="{{ driver.insurance_work_policy }}"></div>
+        <div class="fld"><label for="g_segauto">Seguro automóvel — apólice n.º</label><input id="g_segauto" value="{{ driver.insurance_auto_policy }}"></div>
+      </div>
+      {% endif %}
+      <div class="internal-note">Campos vazios saem como linhas para preencher à mão. Para gravar os dados, use a Ficha do motorista.</div>
+    </div>
+
+    {% if kind != 'ADITIVO' %}
+    <div class="sec">
+      <h3>Hub(s) e zona(s) — Anexo I</h3>
+      <div id="zonelist"></div>
+      <div class="internal-note">Pré-marcado com os hubs e CP da ficha. O hub principal define o local e as regras de pagamento. CP sem tarifa não podem ser escolhidos (configure em Admin › Tarifas por CP).</div>
+    </div>
+
+    <div class="sec">
+      <h3>Regime de pagamento</h3>
+      <label class="tgl"><input type="radio" name="regime" id="r_padrao" {% if regime != 'SEMANAL' %}checked{% endif %}> Mensal (coluna «Mensal»)</label>
+      <label class="tgl"><input type="radio" name="regime" id="r_semanal" {% if regime == 'SEMANAL' %}checked{% endif %}> Semanal (coluna «Semanal»)</label>
+      <div class="internal-note">Só ficam disponíveis os regimes aceites por todos os hubs escolhidos. Caução: semanal = retenção rotativa; mensal = caução fixa.</div>
+    </div>
+
+    <div class="sec">
+      <h3>Tarifa mínima por rota (escalão C)</h3>
+      <label class="tgl"><input type="checkbox" id="c_minimo" {% if min_fare_default %}checked{% endif %}> Incluir tarifa mínima por rota completa</label>
+      <div class="sub" id="s_minimo" style="display:none">
+        <div class="grid2">
+          <div class="fld"><label for="v_min">Valor (€/dia/rota)</label><input id="v_min" type="number" value="60" step="1"></div>
+          <div class="fld"><label for="v_minlim">Rotas com menos de (volumes)</label><input id="v_minlim" type="number" value="50" step="1"></div>
+        </div>
+        <div class="fld"><label for="v_minpct">Condição de entrega</label><input id="v_minpct" value="100%"></div>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="sec">
+      <h3>{% if kind == 'ADITIVO' %}Valores de responsabilidade{% else %}Parâmetros operacionais{% endif %}</h3>
+      {% if kind != 'ADITIVO' %}
+      <div class="grid2">
+        <div class="fld"><label for="v_conf">Confirmação de rota até (véspera)</label><input id="v_conf" value="{{ settings.route_confirm_until }}"></div>
+        <div class="fld"><label for="v_saida">Recolha no hub até</label><input id="v_saida" value="{{ settings.hub_pickup_until }}"></div>
+      </div>
+      {% endif %}
+      <div class="grid2">
+        <div class="fld"><label for="v_perda">Perda / entrega falsa — mínimo (€/vol.)</label><input id="v_perda" type="number" value="{{ settings.loss_min }}" step="1"></div>
+        <div class="fld"><label for="v_teto">Teto do valor declarado (€; 0 = sem teto)</label><input id="v_teto" type="number" value="{{ settings.loss_cap }}" step="1"></div>
+      </div>
+      <div class="grid2">
+        <div class="fld"><label for="v_dano">Dano (€/vol.)</label><input id="v_dano" type="number" value="{{ settings.damage }}" step="1"></div>
+        <div class="fld"><label for="v_local">Entrega em local diferente, recebida (€/vol.)</label><input id="v_local" type="number" value="{{ settings.wrong_place }}" step="1"></div>
+      </div>
+      <div class="grid2">
+        <div class="fld"><label for="v_resp">Resposta a reclamações (horas)</label><input id="v_resp" type="number" value="{{ settings.response_hours }}"></div>
+        {% if kind == 'ADITIVO' %}<div class="fld"><label for="v_conf">Comunicação até (véspera)</label><input id="v_conf" value="{{ settings.route_confirm_until }}"></div>{% endif %}
+      </div>
+      {% if kind == 'ADITIVO' %}
+        <label class="tgl small"><input type="checkbox" id="c_noshow" checked> Incluir rota confirmada não executada</label>
+        <div class="fld"><label for="v_noshow">Valor (€/ocorr.)</label><input id="v_noshow" type="number" value="{{ settings.no_show }}" step="1"></div>
+        <label class="tgl small"><input type="checkbox" id="c_dev" checked> Incluir não devolução no próprio dia</label>
+        <div class="fld"><label for="v_dev">Valor (€/ocorr.)</label><input id="v_dev" type="number" value="{{ settings.no_return }}" step="1"></div>
+        <div class="internal-note">Desmarcar "rota não executada" / "não devolução" se esse parâmetro não constava do contrato original — o aditivo não deve criar novas cláusulas penais fora do âmbito de entregas e perdas.</div>
+      {% else %}
+      <div class="grid2">
+        <div class="fld"><label for="v_noshow">Rota confirmada não executada (€)</label><input id="v_noshow" type="number" value="{{ settings.no_show }}" step="1"></div>
+        <div class="fld"><label for="v_dev">Não devolução de volumes (€/ocorr.)</label><input id="v_dev" type="number" value="{{ settings.no_return }}" step="1"></div>
+      </div>
+      <div class="grid2">
+        <div class="fld"><label for="v_aviso">Pré-aviso de saída (dias)</label><input id="v_aviso" type="number" value="{{ settings.notice_days }}"></div>
+        <div class="fld"><label for="v_liq1">Liquidação com aviso (dias)</label><input id="v_liq1" type="number" value="{{ settings.settle_with_notice_days }}"></div>
+      </div>
+      <div class="grid2">
+        <div class="fld"><label for="v_liq2">Liquidação sem aviso — máx. (dias)</label><input id="v_liq2" type="number" value="{{ settings.settle_without_notice_days }}"></div>
+        <div class="fld"><label for="v_cauc">Semanal: retenção rotativa (semanas)</label><input id="v_cauc" type="number" value="{{ settings.weekly_retention_weeks }}"></div>
+      </div>
+      <div class="grid2">
+        <div class="fld"><label for="v_matur">Semanal: maturação do 1.º pagamento (dias)</label><input id="v_matur" type="number" value="{{ settings.weekly_maturation_days }}"></div>
+        <div class="fld"><label for="v_caucfix">Mensal: caução fixa (€)</label><input id="v_caucfix" type="number" value="{{ settings.monthly_deposit }}"></div>
+      </div>
+      {% endif %}
+      <div class="internal-note">Valores por omissão: Admin › Parâmetros do Contrato.</div>
+    </div>
+  </aside>
+
+  <main class="preview" id="preview"></main>
+</div>
+
+{{ gen|json_script:"gen-data" }}
+<script src="{% static 'contracts/generator.js' %}?v=1"></script>
+</body>
+</html>

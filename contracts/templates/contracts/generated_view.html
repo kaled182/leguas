@@ -1,0 +1,22 @@
+{% load static %}<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ c.get_kind_display }} n.º {{ c.id }} · {{ c.driver.nome_completo }}</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'contracts/generator.css' %}?v=2">
+<style>.layout .preview{height:auto;min-height:calc(100vh - 56px)}</style>
+</head>
+<body>
+<div class="topbar">
+  <img src="{% static 'contracts/logo-leguas.png' %}" alt="Léguas Franzinas">
+  <div class="t">{{ c.get_kind_display }} n.º {{ c.id }} · {{ c.get_status_display }}<small>{{ c.driver.nome_completo }} · registado {{ c.generated_at|date:"d/m/Y H:i" }} · SHA-256 {{ c.content_hash|slice:":12" }}…</small></div>
+  <div class="spacer"></div>
+  <a class="btn2" href="{{ ficha_url }}">Voltar à ficha</a>
+  {% if c.signed_file %}<a class="btn2" href="{{ c.signed_file.url }}" target="_blank">Ver assinado</a>{% endif %}
+  <button class="btn" type="button" onclick="window.print()">Gerar PDF</button>
+</div>
+<div class="layout"><main class="preview">{{ c.content_snapshot|safe }}</main></div>
+</body>
+</html>

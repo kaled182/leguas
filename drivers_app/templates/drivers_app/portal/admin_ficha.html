@@ -224,6 +224,14 @@
           <i data-lucide="file-signature" class="w-5 h-5 text-indigo-500"></i>Contrato
         </h3>
         <div class="flex flex-wrap gap-2">
+          <a href="{% url 'contracts:contract_generator' driver.id %}"
+             class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white">
+            <i data-lucide="file-plus-2" class="w-3.5 h-3.5"></i> Gerar contrato
+          </a>
+          <a href="{% url 'contracts:contract_generator' driver.id %}?kind=ADITIVO"
+             class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30">
+            <i data-lucide="file-diff" class="w-3.5 h-3.5"></i> Gerar aditivo
+          </a>
           <a href="{% url 'drivers_app:driver_documents' driver.id %}"
              class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">
             <i data-lucide="paperclip" class="w-3.5 h-3.5"></i> Anexar contrato em papel
@@ -234,12 +242,36 @@
         {% if contracts or documents_contract %}
           <ul class="divide-y divide-gray-100 dark:divide-gray-700">
             {% for c in contracts %}
-              <li class="py-2 flex flex-wrap items-center justify-between gap-2 text-sm">
-                <span>{{ c.get_kind_display }} · {{ c.generated_at|date:"d/m/Y" }}{% if c.regime %} · {{ c.regime|lower }}{% endif %}</span>
-                <span class="px-2 py-0.5 rounded text-[11px] font-bold
-                  {% if c.status == 'ASSINADO' %}bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300
-                  {% elif c.status == 'ANULADO' %}bg-gray-100 text-gray-500 dark:bg-gray-700
-                  {% else %}bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300{% endif %}">{{ c.get_status_display }}</span>
+              <li class="py-2.5 text-sm" x-data="{ up: false }">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <a href="{% url 'contracts:generated_contract_view' c.id %}" target="_blank" class="text-indigo-600 dark:text-indigo-400 hover:underline">
+                    {{ c.get_kind_display }} n.º {{ c.id }} · {{ c.generated_at|date:"d/m/Y" }}{% if c.regime %} · {{ c.regime|lower }}{% endif %}{% for h in c.hubs %} · {{ h.name }}{% endfor %}
+                  </a>
+                  <div class="flex flex-wrap items-center gap-1.5">
+                    <span class="px-2 py-0.5 rounded text-[11px] font-bold
+                      {% if c.status == 'ASSINADO' %}bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300
+                      {% elif c.status == 'ANULADO' %}bg-gray-100 text-gray-500 dark:bg-gray-700
+                      {% else %}bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300{% endif %}">{{ c.get_status_display }}</span>
+                    {% if c.status == 'GERADO' %}
+                      <form method="post" action="{% url 'contracts:generated_contract_action' c.id %}">{% csrf_token %}<input type="hidden" name="action" value="sent">
+                        <button class="px-2 py-0.5 rounded text-[11px] font-semibold border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">Marcar enviado</button></form>
+                    {% endif %}
+                    {% if c.status == 'GERADO' or c.status == 'ENVIADO' %}
+                      <button type="button" @click="up = !up" class="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-600 text-white hover:bg-emerald-700">Anexar assinado</button>
+                    {% endif %}
+                    {% if c.signed_file %}<a href="{{ c.signed_file.url }}" target="_blank" class="px-2 py-0.5 rounded text-[11px] font-semibold border border-emerald-300 text-emerald-700 dark:text-emerald-300">Ver assinado</a>{% endif %}
+                    {% if c.status != 'ANULADO' %}
+                      <form method="post" action="{% url 'contracts:generated_contract_action' c.id %}" onsubmit="return confirm('Anular este documento?')">{% csrf_token %}<input type="hidden" name="action" value="cancel">
+                        <button class="px-2 py-0.5 rounded text-[11px] font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30">Anular</button></form>
+                    {% endif %}
+                  </div>
+                </div>
+                <form x-show="up" x-cloak method="post" enctype="multipart/form-data" action="{% url 'contracts:generated_contract_action' c.id %}"
+                      class="mt-2 flex flex-wrap items-center gap-2">
+                  {% csrf_token %}<input type="hidden" name="action" value="signed">
+                  <input type="file" name="signed_file" accept=".pdf,image/*" required class="text-xs">
+                  <button class="px-3 py-1 rounded-lg text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700">Guardar como assinado</button>
+                </form>
               </li>
             {% endfor %}
             {% for d in documents_contract %}

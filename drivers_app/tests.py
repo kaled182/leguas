@@ -291,3 +291,73 @@ class FichaTests(TestCase):
         t = HubZoneTariff.objects.get(cp4="4740")
         self.assertEqual(t.price_for("SEMANAL"), Decimal("0.9000"))
         self.assertEqual(t.price_for("MENSAL"), Decimal("0.95"))
+
+
+class ContractGeneratorTests(TestCase):
+    def setUp(self):
+        import json
+        from decimal import Decimal
+
+        from contracts.models import HubContractTerms, HubZoneTariff
+        from settlements.models import CainiaoHub
+
+        from .models import DriverHubAssignment
+
+        self.json = json
+        self.admin = User.objects.create_user("adm3", password="x", is_staff=True)
+        self.client.force_login(self.admin)
+        self.d = _driver("500000001", apelido="Gen_LF")
+        self.fao = CainiaoHub.objects.create(name="Fão", address="N13 40 5, Fão")
+        self.ave = CainiaoHub.objects.create(name="Aveiro", address="R. de São João 157, Válega")
+        HubContractTerms.objects.create(hub=self.fao, signing_place="Esposende", allows_weekly=True)
+        HubContractTerms.objects.create(
+            hub=self.ave, signing_place="Válega", allows_weekly=False,
+            monthly_payment_mode="DAY_OF_NEXT_MONTH", monthly_payment_value=15,
+        )
+        HubZoneTariff.objects.create(hub=self.fao, cp4="4740", zone_name="Esposende", tier="A", price_monthly=Decimal("0.95"), price_weekly=Decimal("0.90"))
+        HubZoneTariff.objects.create(hub=self.fao, cp4="4920", zone_name="Cerveira", tier="C", price_monthly=Decimal("1.15"), price_weekly=Decimal("1.10"))
+        HubZoneTariff.objects.create(hub=self.ave, cp4="3880", zone_name="Ovar", price_monthly=Decimal("1.00"))
+        DriverHubAssignment.objects.create(driver=self.d, hub=self.fao, cp4s=["4740", "4920"], is_primary=True)
+        DriverHubAssignment.objects.create(driver=self.d, hub=self.ave, cp4s=["3880"])
+
+    def test_generator_payload(self):
+        r = self.client.get(reverse("contracts:contract_generator", args=[self.d.id]))
+        self.assertEqual(r.status_code, 200)
+        gen = r.context["gen"]
+        self.assertEqual(gen["primary_hub_id"], self.fao.id)
+        fao = next(h for h in gen["hubs"] if h["id"] == self.fao.id)
+        self.assertEqual([c["cp"] for c in fao["cps"] if c["checked"]], ["4740", "4920"])
+        self.assertEqual(r.context["signing_place"], "Esposende")
+        r = self.client.get(reverse("contracts:contract_generator", args=[self.d.id]), {"kind": "ADITIVO"})
+        self.assertContains(r, 'id="g_dorig"')
+
+    def test_save_and_lifecycle(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        from contracts.models import GeneratedContract
+
+        from .central_views import _contract_driver_ids
+
+        url = reverse("contracts:contract_generator_save", args=[self.d.id])
+        self.client.post(url, {
+            "kind": "CONTRATO", "regime": "MENSAL", "html": "<div class='a4'>x</div>",
+            "hubs": self.json.dumps([{"hub_id": self.fao.id, "name": "Fão", "cp4s": ["4740"]}]),
+            "params": self.json.dumps({"local": "Esposende"}),
+        })
+        c = GeneratedContract.objects.get()
+        self.assertEqual((c.status, c.regime, len(c.content_hash)), ("GERADO", "MENSAL", 64))
+        self.assertNotIn(self.d.id, _contract_driver_ids())
+
+        act = reverse("contracts:generated_contract_action", args=[c.id])
+        self.client.post(act, {"action": "sent"})
+        c.refresh_from_db()
+        self.assertEqual(c.status, "ENVIADO")
+        self.client.post(act, {"action": "signed"})  # sem ficheiro → recusa
+        c.refresh_from_db()
+        self.assertEqual(c.status, "ENVIADO")
+        self.client.post(act, {"action": "signed", "signed_file": SimpleUploadedFile("a.pdf", b"%PDF")})
+        c.refresh_from_db()
+        self.assertEqual(c.status, "ASSINADO")
+        self.assertIn(self.d.id, _contract_driver_ids())
+        r = self.client.get(reverse("contracts:generated_contract_view", args=[c.id]))
+        self.assertContains(r, "<div class='a4'>x</div>", html=False)

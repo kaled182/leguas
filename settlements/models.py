@@ -2436,6 +2436,11 @@ class CainiaoOperationTask(models.Model):
             models.Index(
                 fields=["is_priority_external", "task_status"],
             ),
+            # SLA T+1 (dashboard): índice de cobertura, evita ler a linha toda.
+            models.Index(
+                fields=["task_status", "task_date", "zip_code", "receipt_time", "delivery_time"],
+                name="settl_task_sla_cover_idx",
+            ),
         ]
 
     def __str__(self):

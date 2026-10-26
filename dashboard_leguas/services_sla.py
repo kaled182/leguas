@@ -73,10 +73,27 @@ def _bucket(days):
     return min(days, 3)  # 0, 1, 2, 3+
 
 
+CACHE_SECONDS = 600  # dados Cainiao entram de 30 em 30 min
+
+
 def sla_report(end, days=7, trend_days=30, working_days=True, cp_hub=None):
+    """Relatório SLA (em cache 10 min). Ver _sla_report."""
+    from django.core.cache import cache
+
+    key = f"sla:v1:{end.isoformat()}:{days}:{trend_days}:{int(working_days)}"
+    data = cache.get(key)
+    if data is None:
+        data = _sla_report(end, days, trend_days, working_days, cp_hub)
+        cache.set(key, data, CACHE_SECONDS)
+    return data
+
+
+def _sla_report(end, days=7, trend_days=30, working_days=True, cp_hub=None):
     """Relatório SLA para entregas com task_date em [end-days+1, end]
     e tendência diária de `trend_days` dias."""
     from settlements.models import CainiaoHubCP4, CainiaoOperationTask as T
+
+    tz = timezone.get_current_timezone()  # 1 vez: localtime() por linha é lento
 
     if cp_hub is None:
         cp_hub = dict(CainiaoHubCP4.objects.values_list("cp4", "hub__name"))
@@ -96,8 +113,8 @@ def sla_report(end, days=7, trend_days=30, working_days=True, cp_hub=None):
         task_status="Delivered", task_date__range=(min(start, trend_start), end),
         receipt_time__isnull=False, delivery_time__isnull=False,
     ).values_list("zip_code", "receipt_time", "delivery_time").iterator():
-        t = timezone.localtime(receipt).date()
-        dd = timezone.localtime(delivery).date()
+        t = receipt.astimezone(tz).date()
+        dd = delivery.astimezone(tz).date()
         on_time = dd <= cal.deadline(t)
         if trend_start <= dd <= end:
             trend[dd][0] += 1
@@ -118,7 +135,7 @@ def sla_report(end, days=7, trend_days=30, working_days=True, cp_hub=None):
     for zip_code, receipt in T.objects.filter(
         task_date=end, task_status__in=OPEN_STATUSES, receipt_time__isnull=False,
     ).values_list("zip_code", "receipt_time").iterator():
-        t = timezone.localtime(receipt).date()
+        t = receipt.astimezone(tz).date()
         if cal.deadline(t) < end:
             cp = (zip_code or "")[:4] or "—"
             for row in (by_cp[cp], by_hub[cp_hub.get(cp, "Sem hub")], total):

@@ -633,3 +633,21 @@ class PendingDeductionsTests(TestCase):
         self.assertContains(r, "A descontar")
         self.assertContains(r, "Entra na próxima PF")
         self.assertContains(r, "Ver histórico (2)")
+
+
+class BeatHealthTests(TestCase):
+    def test_fails_when_old_and_passes_when_recent(self):
+        from django.core.management import CommandError, call_command
+        from django_celery_beat.models import IntervalSchedule, PeriodicTask
+
+        sched = IntervalSchedule.objects.create(every=1, period="hours")
+        t = PeriodicTask.objects.create(name="x", task="x", interval=sched)
+        with self.assertRaises(CommandError):
+            call_command("beat_health")  # nunca correu
+        t.last_run_at = timezone.now() - timedelta(minutes=300)
+        t.save()
+        with self.assertRaises(CommandError):
+            call_command("beat_health")
+        t.last_run_at = timezone.now() - timedelta(minutes=10)
+        t.save()
+        call_command("beat_health")

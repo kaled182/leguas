@@ -131,6 +131,13 @@ services:
     depends_on:
       web:
         condition: service_healthy
+    healthcheck:
+      # Sem isto herdava o da imagem web (curl :8000), sempre "unhealthy".
+      test: ["CMD-SHELL", "python manage.py beat_health --max-minutes 120 || exit 1"]
+      interval: 5m
+      timeout: 60s
+      retries: 2
+      start_period: 2m
     networks:
       - leguas_net
 
@@ -148,7 +155,9 @@ services:
       - wppconnect_store:/usr/src/wpp-server/userDataDir
       - wppconnect_tokens:/usr/src/wpp-server/tokens
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:21465/api/${WPPCONNECT_INSTANCE:-leguas_wppconnect}/check-connection-session"]
+      # Rota aberta do servidor (a de sessão exige token e dava 401).
+      # O estado da sessão WhatsApp vê-se em /system/whatsapp/.
+      test: ["CMD", "curl", "-fsS", "http://localhost:21465/healthz"]
       interval: 60s
       timeout: 10s
       retries: 3

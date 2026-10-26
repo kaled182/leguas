@@ -3784,7 +3784,7 @@ from .admin_change_requests import (
 )
 
 # ─── Central de Motoristas (vista admin moderna) ───
-from .central_views import drivers_central
+from .central_views import drivers_activity_refresh, drivers_central
 
 # ─── Portal Admin: editar / docs / veículos / helpers / reclamações / logins / financeiro ───
 from .portal_admin_views import (

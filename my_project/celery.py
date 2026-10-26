@@ -61,6 +61,14 @@ app.conf.beat_schedule = {
         }
     },
     
+    # Atividade dos motoristas — inactivo após 7 dias sem entregas.
+    # Corre às 06:20 e de hora a hora (EPOD chega a cada 30 min).
+    'drivers-refresh-activity': {
+        'task': 'drivers_app.refresh_driver_activity',
+        'schedule': crontab(minute=20, hour='6-23'),
+        'options': {'expires': 3000},
+    },
+
     # Auto-emit de PFs por frota — corre todo dia 06:30 e
     # decide internamente quais frotas processar nesse dia (mensal/semanal)
     'auto-emit-fleet-invoices': {

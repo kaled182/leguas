@@ -368,6 +368,22 @@ class DriverProfile(models.Model):
         help_text="Driver criado por importação de planilha — dados pessoais pendentes de atualização",
     )
 
+    # === ATIVIDADE OPERACIONAL ===
+    # Calculado pela task diária `drivers_app.refresh_driver_activity`.
+    # Independente de `status`/`is_active`: um motorista inactivo continua
+    # ATIVO no cadastro (PF, planeamento e login não mudam).
+    last_activity_date = models.DateField(
+        "Última Atividade", null=True, blank=True, db_index=True,
+        help_text="Último dia com entrega ou tentativa (Cainiao).",
+    )
+    inactive_since = models.DateField(
+        "Inactivo desde", null=True, blank=True, db_index=True,
+        help_text="Preenchido quando passa mais de 7 dias sem atividade. Vazio = activo.",
+    )
+    activity_checked_at = models.DateTimeField(
+        "Atividade verificada em", null=True, blank=True,
+    )
+
     # === METADADOS ===
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -415,6 +431,7 @@ class DriverDocument(models.Model):
         ("ADR", "Certificado ADR"),
         ("RC", "Registo Criminal"),
         ("DECLARACAO_ATIVIDADE", "Declaracao de Inicio de Atividade"),
+        ("CONTRATO", "Contrato Assinado (anexo)"),
         ("OUTRO", "Outro Documento"),
     ]
 

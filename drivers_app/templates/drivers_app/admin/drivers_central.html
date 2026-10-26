@@ -14,15 +14,27 @@
         </div>
         <div>
           <h1 class="text-2xl lg:text-3xl font-extrabold text-white">Central de Motoristas</h1>
-          <p class="text-white/80 text-sm">Gestão completa · {{ counts.total }} motoristas no sistema</p>
+          <p class="text-white/80 text-sm">
+            {{ kpis.total }} motoristas no sistema ·
+            {% if last_check %}atividade verificada {{ last_check|date:"d/m H:i" }}{% else %}atividade ainda não calculada{% endif %}
+          </p>
         </div>
       </div>
-      <div class="flex items-center gap-2">
+      <div class="flex flex-wrap items-center gap-2">
+        <form method="post" action="{% url 'drivers_app:drivers_activity_refresh' %}">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{{ request.get_full_path }}">
+          <button type="submit" title="Recalcula a última atividade de todos os motoristas"
+                  class="inline-flex items-center gap-1.5 px-3 py-2 bg-white/15 hover:bg-white/25 backdrop-blur-sm rounded-lg text-white text-sm font-medium">
+            <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+            Recalcular atividade
+          </button>
+        </form>
         <a href="{% url 'drivers_app:admin_approve_drivers' %}"
            class="inline-flex items-center gap-1.5 px-3 py-2 bg-white/15 hover:bg-white/25 backdrop-blur-sm rounded-lg text-white text-sm font-medium">
           <i data-lucide="user-check" class="w-4 h-4"></i>
           Aprovar Cadastros
-          {% if counts.pendente %}<span class="ml-1 px-1.5 py-0.5 rounded bg-amber-500 text-white text-[10px] font-bold">{{ counts.pendente }}</span>{% endif %}
+          {% if kpis.pendentes %}<span class="ml-1 px-1.5 py-0.5 rounded bg-amber-500 text-white text-[10px] font-bold">{{ kpis.pendentes }}</span>{% endif %}
         </a>
         <a href="{% url 'drivers_app:admin_create_driver' %}"
            class="inline-flex items-center gap-1.5 px-4 py-2 bg-white text-indigo-700 hover:bg-indigo-50 rounded-lg font-bold text-sm shadow">
@@ -41,63 +53,144 @@
     {% endfor %}
   {% endif %}
 
+  {% if not last_check %}
+    <div class="mb-4 px-4 py-3 rounded-lg text-sm bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-700/50">
+      A atividade dos motoristas ainda não foi calculada. Clique em <b>Recalcular atividade</b> para preencher os separadores Activos / Inactivos.
+    </div>
+  {% endif %}
+
   {# ─── KPIs ─── #}
-  <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 mb-6">
-    <a href="?" class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200/50 dark:border-gray-700/50 hover:shadow-md transition">
-      <p class="text-xs uppercase font-bold text-gray-500 dark:text-gray-400">Total</p>
-      <p class="text-2xl font-extrabold text-gray-900 dark:text-white mt-1">{{ counts.total }}</p>
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+    <a href="?tab=ativos" class="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-4 border border-emerald-200/50 dark:border-emerald-700/30 hover:shadow-md transition">
+      <div class="flex items-center justify-between">
+        <p class="text-xs uppercase font-bold text-emerald-700 dark:text-emerald-300">Activos</p>
+        <i data-lucide="user-check" class="w-4 h-4 text-emerald-600 dark:text-emerald-400"></i>
+      </div>
+      <p class="text-3xl font-extrabold text-emerald-700 dark:text-emerald-300 mt-1">{{ kpis.ativos }}</p>
+      <p class="text-[11px] text-emerald-700/70 dark:text-emerald-300/70">atividade nos últimos {{ inactivity_days }} dias</p>
     </a>
-    <a href="?status=ATIVO" class="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-4 border border-emerald-200/50 dark:border-emerald-700/30 hover:shadow-md transition">
-      <p class="text-xs uppercase font-bold text-emerald-700 dark:text-emerald-300">Activos</p>
-      <p class="text-2xl font-extrabold text-emerald-700 dark:text-emerald-300 mt-1">{{ counts.ativo }}</p>
+    <a href="?tab=inativos&sort=idle" class="bg-rose-50 dark:bg-rose-900/20 rounded-xl p-4 border border-rose-200/50 dark:border-rose-700/30 hover:shadow-md transition">
+      <div class="flex items-center justify-between">
+        <p class="text-xs uppercase font-bold text-rose-700 dark:text-rose-300">Inactivos +{{ inactivity_days }}d</p>
+        <i data-lucide="user-x" class="w-4 h-4 text-rose-600 dark:text-rose-400"></i>
+      </div>
+      <p class="text-3xl font-extrabold text-rose-700 dark:text-rose-300 mt-1">{{ kpis.inativos }}</p>
+      <p class="text-[11px] text-rose-700/70 dark:text-rose-300/70">{{ kpis.newly_inactive_7d }} novos nos últimos 7 dias</p>
     </a>
-    <a href="?status=PENDENTE" class="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 border border-amber-200/50 dark:border-amber-700/30 hover:shadow-md transition">
-      <p class="text-xs uppercase font-bold text-amber-700 dark:text-amber-300">Pendentes</p>
-      <p class="text-2xl font-extrabold text-amber-700 dark:text-amber-300 mt-1">{{ counts.pendente }}</p>
+    <a href="?tab=todos&flag=worked_today" class="bg-sky-50 dark:bg-sky-900/20 rounded-xl p-4 border border-sky-200/50 dark:border-sky-700/30 hover:shadow-md transition">
+      <div class="flex items-center justify-between">
+        <p class="text-xs uppercase font-bold text-sky-700 dark:text-sky-300">Trabalharam hoje</p>
+        <i data-lucide="truck" class="w-4 h-4 text-sky-600 dark:text-sky-400"></i>
+      </div>
+      <p class="text-3xl font-extrabold text-sky-700 dark:text-sky-300 mt-1">{{ kpis.worked_today }}</p>
+      <p class="text-[11px] text-sky-700/70 dark:text-sky-300/70">média {{ kpis.avg_drivers_day }}/dia (30 dias)</p>
     </a>
-    <a href="?status=BLOQUEADO" class="bg-rose-50 dark:bg-rose-900/20 rounded-xl p-4 border border-rose-200/50 dark:border-rose-700/30 hover:shadow-md transition">
-      <p class="text-xs uppercase font-bold text-rose-700 dark:text-rose-300">Bloqueados</p>
-      <p class="text-2xl font-extrabold text-rose-700 dark:text-rose-300 mt-1">{{ counts.bloqueado }}</p>
+    <div class="bg-indigo-50 dark:bg-indigo-900/20 rounded-xl p-4 border border-indigo-200/50 dark:border-indigo-700/30">
+      <div class="flex items-center justify-between">
+        <p class="text-xs uppercase font-bold text-indigo-700 dark:text-indigo-300">Entregas 30 dias</p>
+        <i data-lucide="package-check" class="w-4 h-4 text-indigo-600 dark:text-indigo-400"></i>
+      </div>
+      <p class="text-3xl font-extrabold text-indigo-700 dark:text-indigo-300 mt-1">{{ kpis.deliveries_30d }}</p>
+      <p class="text-[11px] text-indigo-700/70 dark:text-indigo-300/70">{{ kpis.avg_per_driver_day }} por motorista/dia</p>
+    </div>
+    <a href="?tab=ativos&flag=no_contract" class="bg-orange-50 dark:bg-orange-900/20 rounded-xl p-4 border border-orange-200/50 dark:border-orange-700/30 hover:shadow-md transition">
+      <div class="flex items-center justify-between">
+        <p class="text-xs uppercase font-bold text-orange-700 dark:text-orange-300">Activos sem contrato</p>
+        <i data-lucide="file-warning" class="w-4 h-4 text-orange-600 dark:text-orange-400"></i>
+      </div>
+      <p class="text-3xl font-extrabold text-orange-700 dark:text-orange-300 mt-1">{{ kpis.active_no_contract }}</p>
+      <div class="mt-1.5 h-1.5 rounded-full bg-orange-200/60 dark:bg-orange-900/50 overflow-hidden">
+        <div class="h-full bg-emerald-500" style="width: {{ kpis.contract_pct }}%"></div>
+      </div>
+      <p class="text-[11px] text-orange-700/70 dark:text-orange-300/70 mt-1">{{ kpis.contract_pct }}% dos activos com contrato · {{ kpis.no_contract }} no total</p>
     </a>
-    <a href="?flag=pending_changes" class="bg-violet-50 dark:bg-violet-900/20 rounded-xl p-4 border border-violet-200/50 dark:border-violet-700/30 hover:shadow-md transition">
-      <p class="text-xs uppercase font-bold text-violet-700 dark:text-violet-300">C/ Pedidos</p>
-      <p class="text-2xl font-extrabold text-violet-700 dark:text-violet-300 mt-1">{{ counts.pending_changes }}</p>
+    <a href="?tab=todos&flag=no_access" class="bg-slate-50 dark:bg-slate-800/40 rounded-xl p-4 border border-slate-200/50 dark:border-slate-700/30 hover:shadow-md transition">
+      <div class="flex items-center justify-between">
+        <p class="text-xs uppercase font-bold text-slate-700 dark:text-slate-300">Sem acesso ao portal</p>
+        <i data-lucide="key-round" class="w-4 h-4 text-slate-500"></i>
+      </div>
+      <p class="text-3xl font-extrabold text-slate-700 dark:text-slate-200 mt-1">{{ kpis.no_access }}</p>
+      <p class="text-[11px] text-slate-500">sem credenciais activas</p>
     </a>
-    <a href="?flag=no_contract" class="bg-orange-50 dark:bg-orange-900/20 rounded-xl p-4 border border-orange-200/50 dark:border-orange-700/30 hover:shadow-md transition">
-      <p class="text-xs uppercase font-bold text-orange-700 dark:text-orange-300">S/ Contrato</p>
-      <p class="text-2xl font-extrabold text-orange-700 dark:text-orange-300 mt-1">{{ counts.no_contract }}</p>
+    <a href="?tab=todos&flag=pending_changes" class="bg-violet-50 dark:bg-violet-900/20 rounded-xl p-4 border border-violet-200/50 dark:border-violet-700/30 hover:shadow-md transition">
+      <div class="flex items-center justify-between">
+        <p class="text-xs uppercase font-bold text-violet-700 dark:text-violet-300">Pedidos de alteração</p>
+        <i data-lucide="inbox" class="w-4 h-4 text-violet-600 dark:text-violet-400"></i>
+      </div>
+      <p class="text-3xl font-extrabold text-violet-700 dark:text-violet-300 mt-1">{{ kpis.pending_changes }}</p>
+      <p class="text-[11px] text-violet-700/70 dark:text-violet-300/70">motoristas a aguardar</p>
     </a>
-    <a href="?flag=no_access" class="bg-slate-50 dark:bg-slate-900/20 rounded-xl p-4 border border-slate-200/50 dark:border-slate-700/30 hover:shadow-md transition">
-      <p class="text-xs uppercase font-bold text-slate-700 dark:text-slate-300">S/ Acesso</p>
-      <p class="text-2xl font-extrabold text-slate-700 dark:text-slate-300 mt-1">{{ counts.no_access }}</p>
+    <a href="?tab=todos&sort=recent" class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200/50 dark:border-gray-700/50 hover:shadow-md transition">
+      <div class="flex items-center justify-between">
+        <p class="text-xs uppercase font-bold text-gray-500 dark:text-gray-400">Novos (30 dias)</p>
+        <i data-lucide="sparkles" class="w-4 h-4 text-gray-400"></i>
+      </div>
+      <p class="text-3xl font-extrabold text-gray-900 dark:text-white mt-1">{{ kpis.new_30d }}</p>
+      <p class="text-[11px] text-gray-500">{{ kpis.pendentes }} pendentes de aprovação</p>
     </a>
+  </div>
+
+  {# ─── Gráficos ─── #}
+  <div x-data="{ open: localStorage.getItem('dc_charts') !== '0' }" class="mb-6">
+    <button type="button" @click="open = !open; localStorage.setItem('dc_charts', open ? '1' : '0')"
+            class="flex items-center gap-1.5 text-xs font-semibold uppercase text-gray-500 dark:text-gray-400 hover:text-indigo-600 mb-2">
+      <i data-lucide="bar-chart-3" class="w-4 h-4"></i>
+      Gráficos
+      <span x-text="open ? '(esconder)' : '(mostrar)'"></span>
+    </button>
+    <div x-show="open" class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div class="lg:col-span-2 bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200/50 dark:border-gray-700/50">
+        <p class="text-sm font-semibold text-gray-900 dark:text-white">Motoristas a trabalhar e entregas por dia</p>
+        <p class="text-xs text-gray-500 mb-2">Últimos 30 dias · fonte: tarefas Cainiao (entregue ou tentativa)</p>
+        <div class="h-64"><canvas id="chartDaily"></canvas></div>
+      </div>
+      <div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200/50 dark:border-gray-700/50">
+        <p class="text-sm font-semibold text-gray-900 dark:text-white">Dias desde a última atividade</p>
+        <p class="text-xs text-gray-500 mb-2">Motoristas com cadastro ACTIVO · clique numa fatia para filtrar</p>
+        <div class="h-64"><canvas id="chartIdle"></canvas></div>
+      </div>
+      <div class="lg:col-span-3 bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200/50 dark:border-gray-700/50">
+        <p class="text-sm font-semibold text-gray-900 dark:text-white">Activos vs inactivos por frota</p>
+        <p class="text-xs text-gray-500 mb-2">10 maiores grupos · clique numa barra para filtrar</p>
+        <div class="h-56"><canvas id="chartFleets"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  {# ─── Separadores ─── #}
+  <div class="flex flex-wrap gap-1 border-b border-gray-200 dark:border-gray-700 mb-4">
+    {% for key, label, n in tabs %}
+      <a href="?tab={{ key }}{% if q %}&q={{ q|urlencode }}{% endif %}{% if vinculo_filter %}&vinculo={{ vinculo_filter }}{% endif %}{% if fleet_filter %}&fleet={{ fleet_filter }}{% endif %}{% if sort_filter != 'name' %}&sort={{ sort_filter }}{% endif %}"
+         class="px-4 py-2 -mb-px text-sm font-semibold border-b-2 transition flex items-center gap-2
+           {% if tab == key %}border-indigo-600 text-indigo-700 dark:text-indigo-300{% else %}border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200{% endif %}">
+        {{ label }}
+        <span class="px-1.5 py-0.5 rounded text-[11px] font-bold
+          {% if key == 'inativos' and n %}bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300
+          {% elif tab == key %}bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300
+          {% else %}bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300{% endif %}">{{ n }}</span>
+      </a>
+    {% endfor %}
   </div>
 
   {# ─── Filtros ─── #}
   <form method="get" class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200/50 dark:border-gray-700/50 mb-4">
+    <input type="hidden" name="tab" value="{{ tab }}">
+    {% if status_filter %}<input type="hidden" name="status" value="{{ status_filter }}">{% endif %}
+    {% if idle_filter %}<input type="hidden" name="idle" value="{{ idle_filter }}">{% endif %}
     <div class="flex flex-wrap items-center gap-3">
-      <div class="flex-1 min-w-[200px] relative">
+      <div class="flex-1 min-w-[220px] relative">
         <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
-        <input type="text" name="q" value="{{ q }}"
-               placeholder="Procurar nome, NIF, courier ID, telefone..."
+        <input type="text" name="q" value="{{ q }}" id="driverSearch" autocomplete="off"
+               placeholder="Filtrar já: nome, NIF, courier ID, telefone…  ( / )"
                class="w-full pl-9 pr-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
       </div>
-      <select name="status"
-              class="px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
-        <option value="">Todos os estados</option>
-        <option value="ATIVO" {% if status_filter == 'ATIVO' %}selected{% endif %}>Activo</option>
-        <option value="PENDENTE" {% if status_filter == 'PENDENTE' %}selected{% endif %}>Pendente</option>
-        <option value="EM_ANALISE" {% if status_filter == 'EM_ANALISE' %}selected{% endif %}>Em Análise</option>
-        <option value="BLOQUEADO" {% if status_filter == 'BLOQUEADO' %}selected{% endif %}>Bloqueado</option>
-        <option value="IRREGULAR" {% if status_filter == 'IRREGULAR' %}selected{% endif %}>Irregular</option>
-      </select>
-      <select name="vinculo"
+      <select name="vinculo" onchange="this.form.submit()"
               class="px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
         <option value="">Todos os vínculos</option>
         <option value="DIRETO" {% if vinculo_filter == 'DIRETO' %}selected{% endif %}>Direto</option>
         <option value="PARCEIRO" {% if vinculo_filter == 'PARCEIRO' %}selected{% endif %}>Parceiro (Frota)</option>
       </select>
-      <select name="fleet"
+      <select name="fleet" onchange="this.form.submit()"
               class="px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
         <option value="">Todas as frotas</option>
         <option value="none" {% if fleet_filter == 'none' %}selected{% endif %}>Sem frota</option>
@@ -105,44 +198,64 @@
           <option value="{{ f.id }}" {% if fleet_filter == f.id|stringformat:'s' %}selected{% endif %}>{{ f.nome }}</option>
         {% endfor %}
       </select>
-      <select name="sort"
+      <select name="sort" onchange="this.form.submit()"
               class="px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
         <option value="name" {% if sort_filter == 'name' %}selected{% endif %}>Ordenar: Nome</option>
-        <option value="recent" {% if sort_filter == 'recent' %}selected{% endif %}>Mais recente</option>
-        <option value="status" {% if sort_filter == 'status' %}selected{% endif %}>Por estado</option>
+        <option value="activity" {% if sort_filter == 'activity' %}selected{% endif %}>Atividade mais recente</option>
+        <option value="idle" {% if sort_filter == 'idle' %}selected{% endif %}>Mais dias parado</option>
+        <option value="deliveries" {% if sort_filter == 'deliveries' %}selected{% endif %}>Mais entregas (30d)</option>
+        <option value="recent" {% if sort_filter == 'recent' %}selected{% endif %}>Cadastro mais recente</option>
       </select>
       <button type="submit"
               class="px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium">
         Filtrar
       </button>
-      {% if q or status_filter or vinculo_filter or fleet_filter or flag_filter %}
-      <a href="{% url 'drivers_app:drivers_central' %}"
-         class="px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-rose-600">
+      {% if q or status_filter or vinculo_filter or fleet_filter or flag_filter or idle_filter %}
+      <a href="?tab={{ tab }}" class="px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-rose-600">
         Limpar
       </a>
       {% endif %}
     </div>
 
-    {# Flags rápidas (chips) #}
+    {# Flags rápidas (contagens dentro do separador) #}
     <div class="flex flex-wrap gap-2 mt-3">
-      <a href="?flag=pending_changes"
-         class="px-3 py-1 rounded-full text-xs font-medium border transition
-           {% if flag_filter == 'pending_changes' %}bg-violet-100 border-violet-400 text-violet-800 dark:bg-violet-900/40 dark:border-violet-700 dark:text-violet-300{% else %}border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-violet-400{% endif %}">
-        <i data-lucide="user-check" class="w-3 h-3 inline -mt-0.5"></i>
-        Com pedidos pendentes ({{ counts.pending_changes }})
-      </a>
-      <a href="?flag=no_contract"
+      {% with base="?tab="|add:tab %}
+      <a href="{{ base }}{% if flag_filter != 'no_contract' %}&flag=no_contract{% endif %}"
          class="px-3 py-1 rounded-full text-xs font-medium border transition
            {% if flag_filter == 'no_contract' %}bg-orange-100 border-orange-400 text-orange-800 dark:bg-orange-900/40 dark:border-orange-700 dark:text-orange-300{% else %}border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-orange-400{% endif %}">
         <i data-lucide="file-warning" class="w-3 h-3 inline -mt-0.5"></i>
-        Sem contrato ({{ counts.no_contract }})
+        Sem contrato ({{ flag_counts.no_contract }})
       </a>
-      <a href="?flag=no_access"
+      <a href="{{ base }}{% if flag_filter != 'no_access' %}&flag=no_access{% endif %}"
          class="px-3 py-1 rounded-full text-xs font-medium border transition
            {% if flag_filter == 'no_access' %}bg-slate-100 border-slate-400 text-slate-800 dark:bg-slate-900/40 dark:border-slate-700 dark:text-slate-300{% else %}border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-slate-400{% endif %}">
-        <i data-lucide="key-off" class="w-3 h-3 inline -mt-0.5"></i>
-        Sem acesso ao portal ({{ counts.no_access }})
+        <i data-lucide="key-round" class="w-3 h-3 inline -mt-0.5"></i>
+        Sem acesso ao portal ({{ flag_counts.no_access }})
       </a>
+      <a href="{{ base }}{% if flag_filter != 'pending_changes' %}&flag=pending_changes{% endif %}"
+         class="px-3 py-1 rounded-full text-xs font-medium border transition
+           {% if flag_filter == 'pending_changes' %}bg-violet-100 border-violet-400 text-violet-800 dark:bg-violet-900/40 dark:border-violet-700 dark:text-violet-300{% else %}border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-violet-400{% endif %}">
+        <i data-lucide="user-check" class="w-3 h-3 inline -mt-0.5"></i>
+        Com pedidos pendentes ({{ flag_counts.pending_changes }})
+      </a>
+      <a href="{{ base }}{% if flag_filter != 'worked_today' %}&flag=worked_today{% endif %}"
+         class="px-3 py-1 rounded-full text-xs font-medium border transition
+           {% if flag_filter == 'worked_today' %}bg-sky-100 border-sky-400 text-sky-800 dark:bg-sky-900/40 dark:border-sky-700 dark:text-sky-300{% else %}border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-sky-400{% endif %}">
+        <i data-lucide="truck" class="w-3 h-3 inline -mt-0.5"></i>
+        Trabalharam hoje ({{ flag_counts.worked_today }})
+      </a>
+      <a href="{{ base }}{% if flag_filter != 'never' %}&flag=never{% endif %}"
+         class="px-3 py-1 rounded-full text-xs font-medium border transition
+           {% if flag_filter == 'never' %}bg-gray-200 border-gray-400 text-gray-800 dark:bg-gray-700 dark:border-gray-500 dark:text-gray-200{% else %}border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-gray-400{% endif %}">
+        <i data-lucide="circle-slash" class="w-3 h-3 inline -mt-0.5"></i>
+        Sem atividade registada ({{ flag_counts.never }})
+      </a>
+      {% endwith %}
+      {% if idle_filter %}
+        <span class="px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300">
+          Parado: {% for b in idle_chart %}{% if b.key == idle_filter %}{{ b.label }}{% endif %}{% endfor %}
+        </span>
+      {% endif %}
     </div>
   </form>
 
@@ -150,9 +263,10 @@
   <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
     <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
       <p class="text-xs text-gray-500 dark:text-gray-400">
-        Mostrando <span class="font-bold text-gray-900 dark:text-white">{{ shown_count }}</span>
-        de <span class="font-bold">{{ filtered_count }}</span> motoristas
+        Mostrando <span class="font-bold text-gray-900 dark:text-white" id="shownCount">{{ shown_count }}</span>
+        de <span class="font-bold">{{ filtered_count }}</span> motoristas neste separador
       </p>
+      <p class="text-[11px] text-gray-400 hidden md:block">Barras: entregas por dia nos últimos 14 dias</p>
     </div>
     <div class="overflow-x-auto">
       <table class="w-full">
@@ -161,18 +275,22 @@
             <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Motorista</th>
             <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Vínculo</th>
             <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Estado</th>
+            <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Última atividade</th>
+            <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Últimos 14 dias</th>
             <th class="px-4 py-2 text-center text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Status</th>
             <th class="px-4 py-2 text-right text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Acções</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-700" id="driverRows">
           {% for d in drivers %}
-          <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition">
+          <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition"
+              data-text="{{ d.nome_completo|lower }} {{ d.apelido|lower }} {{ d.nif }} {{ d.courier_id_cainiao }} {{ d.telefone }} {{ d.email|lower }}">
             {# Identificação #}
             <td class="px-4 py-3">
               <div class="flex items-center gap-3">
                 <div class="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold text-white flex-shrink-0
-                  {% if d.status == 'ATIVO' %}bg-gradient-to-br from-emerald-500 to-green-600
+                  {% if d.status == 'ATIVO' and d.inactive_since %}bg-gradient-to-br from-gray-400 to-gray-500
+                  {% elif d.status == 'ATIVO' %}bg-gradient-to-br from-emerald-500 to-green-600
                   {% elif d.status == 'PENDENTE' or d.status == 'EM_ANALISE' %}bg-gradient-to-br from-amber-500 to-orange-600
                   {% elif d.status == 'BLOQUEADO' %}bg-gradient-to-br from-rose-500 to-red-600
                   {% else %}bg-gradient-to-br from-gray-400 to-gray-500{% endif %}">
@@ -208,7 +326,13 @@
 
             {# Estado (badge) #}
             <td class="px-4 py-3">
-              {% if d.status == 'ATIVO' %}
+              {% if d.status == 'ATIVO' and d.inactive_since %}
+                <span title="Sem atividade há mais de {{ inactivity_days }} dias (detectado em {{ d.inactive_since|date:'d/m/Y' }})"
+                      class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold uppercase bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+                  <i data-lucide="moon" class="w-3 h-3"></i>
+                  Inactivo
+                </span>
+              {% elif d.status == 'ATIVO' %}
                 <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold uppercase bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300">
                   <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                   Activo
@@ -235,10 +359,38 @@
               {% endif %}
             </td>
 
+            {# Última atividade #}
+            <td class="px-4 py-3 whitespace-nowrap">
+              {% if d.last_activity_date %}
+                <p class="text-sm text-gray-900 dark:text-white">{{ d.last_activity_date|date:"d/m/Y" }}</p>
+                <p class="text-[11px] font-semibold
+                  {% if d.idle_days <= 3 %}text-emerald-600 dark:text-emerald-400
+                  {% elif d.idle_days <= inactivity_days %}text-amber-600 dark:text-amber-400
+                  {% else %}text-rose-600 dark:text-rose-400{% endif %}">
+                  {% if d.idle_days == 0 %}hoje{% elif d.idle_days == 1 %}ontem{% else %}há {{ d.idle_days }} dias{% endif %}
+                </p>
+              {% else %}
+                <p class="text-xs italic text-gray-400">sem registo</p>
+              {% endif %}
+            </td>
+
+            {# Sparkline 14 dias + entregas 30d #}
+            <td class="px-4 py-3">
+              <div class="flex items-end gap-[2px] h-6" aria-hidden="true">
+                {% for s in d.spark %}
+                  <span title="{{ s.day|date:'d/m' }}: {% if s.worked %}{{ s.n }} entregas{% else %}sem atividade{% endif %}"
+                        class="w-1.5 rounded-sm {% if s.worked %}bg-indigo-500 dark:bg-indigo-400{% else %}bg-gray-200 dark:bg-gray-700{% endif %}"
+                        style="height: {% if s.worked %}{{ s.h }}%{% else %}2px{% endif %}"></span>
+                {% endfor %}
+              </div>
+              <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                <b class="text-gray-700 dark:text-gray-200">{{ d.deliveries_30d }}</b> entregas · {{ d.active_days_30d }} dias (30d)
+              </p>
+            </td>
+
             {# Indicadores rápidos #}
             <td class="px-4 py-3">
               <div class="flex items-center justify-center gap-1.5">
-                {# Pedidos de alteração pendentes #}
                 {% if d.has_pending_changes %}
                   <a href="{% url 'drivers_app:change_requests_list' %}?driver={{ d.id }}"
                      title="Tem pedidos de alteração pendentes"
@@ -246,20 +398,18 @@
                     <i data-lucide="user-check" class="w-3.5 h-3.5 text-violet-700 dark:text-violet-300"></i>
                   </a>
                 {% endif %}
-                {# Tem contrato? #}
                 {% if d.has_contract %}
-                  <span title="Contrato assinado"
-                        class="w-7 h-7 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center">
+                  <a href="{% url 'contracts:driver_contracts' d.id %}" title="Tem contrato (assinado ou anexado)"
+                     class="w-7 h-7 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center">
                     <i data-lucide="file-check" class="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-300"></i>
-                  </span>
+                  </a>
                 {% else %}
-                  <a href="{% url 'contracts:driver_contracts' d.id %}"
-                     title="Sem contrato — gerir"
+                  <a href="{% url 'drivers_app:driver_documents' d.id %}"
+                     title="Sem contrato — anexar contrato"
                      class="w-7 h-7 rounded-full bg-orange-100 dark:bg-orange-900/40 hover:bg-orange-200 flex items-center justify-center">
                     <i data-lucide="file-warning" class="w-3.5 h-3.5 text-orange-700 dark:text-orange-300"></i>
                   </a>
                 {% endif %}
-                {# Acesso ao portal? #}
                 {% if d.has_access %}
                   <span title="Tem credenciais"
                         class="w-7 h-7 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center">
@@ -269,7 +419,7 @@
                   <a href="{% url 'customauth:admin_driver_credentials' d.id %}"
                      title="Sem credenciais — criar"
                      class="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-900/40 hover:bg-slate-200 flex items-center justify-center">
-                    <i data-lucide="key-off" class="w-3.5 h-3.5 text-slate-700 dark:text-slate-300"></i>
+                    <i data-lucide="key-round" class="w-3.5 h-3.5 text-slate-700 dark:text-slate-300"></i>
                   </a>
                 {% endif %}
               </div>
@@ -282,6 +432,11 @@
                    title="Abrir portal"
                    class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400">
                   <i data-lucide="external-link" class="w-4 h-4"></i>
+                </a>
+                <a href="{% url 'drivers_app:driver_documents' d.id %}"
+                   title="Documentos (anexar contrato)"
+                   class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md text-gray-600 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400">
+                  <i data-lucide="paperclip" class="w-4 h-4"></i>
                 </a>
                 <a href="{% url 'customauth:admin_driver_credentials' d.id %}"
                    title="Credenciais"
@@ -298,7 +453,7 @@
           </tr>
           {% empty %}
           <tr>
-            <td colspan="5" class="px-4 py-12 text-center">
+            <td colspan="7" class="px-4 py-12 text-center">
               <i data-lucide="users" class="w-10 h-10 text-gray-300 mx-auto mb-2"></i>
               <p class="text-sm text-gray-500 italic">Nenhum motorista corresponde aos filtros.</p>
             </td>
@@ -309,4 +464,103 @@
     </div>
   </div>
 </div>
+
+{{ charts|json_script:"central-charts" }}
+<script>
+(function () {
+  // ─── Filtro instantâneo da tabela ───
+  const input = document.getElementById('driverSearch');
+  const rows = Array.from(document.querySelectorAll('#driverRows tr[data-text]'));
+  const shown = document.getElementById('shownCount');
+  input.addEventListener('input', () => {
+    const terms = input.value.toLowerCase().trim().split(/\s+/).filter(Boolean);
+    let n = 0;
+    rows.forEach(r => {
+      const ok = terms.every(t => r.dataset.text.includes(t));
+      r.style.display = ok ? '' : 'none';
+      if (ok) n++;
+    });
+    shown.textContent = n;
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === '/' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) {
+      e.preventDefault();
+      input.focus();
+    }
+  });
+
+  // ─── Gráficos ───
+  if (typeof Chart === 'undefined') return;
+  const data = JSON.parse(document.getElementById("central-charts").textContent);
+  const dark = document.documentElement.classList.contains('dark');
+  const grid = dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
+  const text = dark ? '#9ca3af' : '#6b7280';
+  Chart.defaults.color = text;
+  Chart.defaults.font.family = 'inherit';
+
+  new Chart(document.getElementById('chartDaily'), {
+    data: {
+      labels: data.days,
+      datasets: [
+        { type: 'bar', label: 'Entregas', data: data.deliveries, yAxisID: 'y1',
+          backgroundColor: dark ? 'rgba(129,140,248,0.35)' : 'rgba(99,102,241,0.25)', borderRadius: 3 },
+        { type: 'line', label: 'Motoristas a trabalhar', data: data.drivers, yAxisID: 'y',
+          borderColor: '#10b981', backgroundColor: '#10b981', tension: 0.3, pointRadius: 2 },
+      ],
+    },
+    options: {
+      maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } } },
+      scales: {
+        x: { grid: { display: false } },
+        y: { beginAtZero: true, position: 'left', grid: { color: grid },
+             title: { display: true, text: 'Motoristas' } },
+        y1: { beginAtZero: true, position: 'right', grid: { display: false },
+              title: { display: true, text: 'Entregas' } },
+      },
+    },
+  });
+
+  const idleColors = ['#10b981', '#34d399', '#f59e0b', '#f97316', '#ef4444', '#991b1b', '#9ca3af'];
+  new Chart(document.getElementById('chartIdle'), {
+    type: 'doughnut',
+    data: {
+      labels: data.idle.map(b => b.label),
+      datasets: [{ data: data.idle.map(b => b.n), backgroundColor: idleColors,
+                   borderColor: dark ? '#1f2937' : '#fff', borderWidth: 2 }],
+    },
+    options: {
+      maintainAspectRatio: false, cutout: '60%',
+      plugins: { legend: { position: 'right', labels: { boxWidth: 10 } } },
+      onClick: (_e, els) => {
+        if (!els.length) return;
+        const b = data.idle[els[0].index];
+        window.location = '?tab=todos&status=ATIVO&sort=idle&idle=' + encodeURIComponent(b.key);
+      },
+    },
+  });
+
+  new Chart(document.getElementById('chartFleets'), {
+    type: 'bar',
+    data: {
+      labels: data.fleets.map(f => f.label),
+      datasets: [
+        { label: 'Activos', data: data.fleets.map(f => f.ativos), backgroundColor: '#10b981', borderRadius: 3 },
+        { label: 'Inactivos', data: data.fleets.map(f => f.inativos), backgroundColor: dark ? '#6b7280' : '#d1d5db', borderRadius: 3 },
+      ],
+    },
+    options: {
+      maintainAspectRatio: false, indexAxis: 'y',
+      plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } } },
+      scales: { x: { stacked: true, grid: { color: grid } }, y: { stacked: true, grid: { display: false } } },
+      onClick: (_e, els) => {
+        if (!els.length) return;
+        const f = data.fleets[els[0].index];
+        const tab = els[0].datasetIndex === 0 ? 'ativos' : 'inativos';
+        window.location = '?tab=' + tab + '&fleet=' + encodeURIComponent(f.id);
+      },
+    },
+  });
+})();
+</script>
 {% endblock %}

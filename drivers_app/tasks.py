@@ -149,3 +149,14 @@ def auto_close_expired_complaints():
     }
     logger.info("[auto_close_complaints] %s", result)
     return result
+
+
+@shared_task(name="drivers_app.refresh_driver_activity")
+def refresh_driver_activity():
+    """Marca como inactivos os motoristas com mais de 7 dias sem atividade
+    e reactiva os que voltaram a entregar. Não altera `status`."""
+    from .services_activity import refresh_driver_activity as _refresh
+
+    result = _refresh()
+    logger.info("[refresh_driver_activity] %s", result)
+    return result

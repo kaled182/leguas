@@ -136,6 +136,11 @@ urlpatterns = [
     # ─── Central de Motoristas (admin moderna) ───
     path("admin/", views.drivers_central, name="drivers_central"),
     path("admin/central/", views.drivers_central, name="drivers_central_alias"),
+    path(
+        "admin/atividade/recalcular/",
+        views.drivers_activity_refresh,
+        name="drivers_activity_refresh",
+    ),
 
     # Admin - Gestao de Motoristas
     path("admin/criar/", views.admin_create_driver, name="admin_create_driver"),

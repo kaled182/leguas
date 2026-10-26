@@ -67,6 +67,12 @@ class ActivityMappingTests(TestCase):
         self.assertNotIn(hub.id, m)
         self.assertEqual(m[other.id], self.today)
 
+    def test_name_match_ignores_case_and_accents(self):
+        """Como a collation do MySQL (utf8mb4_0900_ai_ci) usada no portal."""
+        a = _driver("100000008", apelido="José Da Silva_LF")
+        _task("W8", self.today, name="jose da silva_LF")
+        self.assertEqual(last_activity_map(self.today)[a.id], self.today)
+
     def test_driver_received_is_not_activity(self):
         a = _driver("100000005", apelido="Zé_LF")
         _task("W4", self.today, status="Driver_received", name="Zé_LF")

@@ -11,6 +11,7 @@ A atribuição task → motorista segue a regra de
     courier_name não pertencer a outro motorista);
   - transferências (WaybillAttributionOverride) contam para o destino.
 """
+import unicodedata
 from collections import defaultdict
 from datetime import timedelta
 
@@ -21,6 +22,15 @@ INACTIVITY_DAYS = 7
 ACTIVITY_STATUSES = ("Delivered", "Attempt Failure")
 # Janela máxima para procurar a última atividade.
 LOOKBACK_DAYS = 400
+
+
+def _norm(name):
+    """Igual à collation do MySQL (utf8mb4_0900_ai_ci): ignora maiúsculas
+    e acentos. Assim o lote dá o mesmo resultado que o portal."""
+    if not name:
+        return ""
+    decomposed = unicodedata.normalize("NFKD", name)
+    return "".join(c for c in decomposed if not unicodedata.combining(c)).casefold()
 
 
 def _courier_index():
@@ -36,26 +46,27 @@ def _courier_index():
         if cid:
             id_owners[cid].add(did)
         if apelido:
-            name_owners[apelido].add(did)
+            name_owners[_norm(apelido)].add(did)
     for did, cid, cname in DriverCourierMapping.objects.filter(
         partner__name__iexact="CAINIAO",
     ).values_list("driver_id", "courier_id", "courier_name"):
         if cid:
             id_owners[cid].add(did)
         if cname:
-            name_owners[cname].add(did)
+            name_owners[_norm(cname)].add(did)
     # Aliases de nome: o nome passa a pertencer aos donos do courier_id.
     for cname, cid in CourierNameAlias.objects.filter(
         partner__name__iexact="CAINIAO", courier_id__in=list(id_owners),
     ).values_list("courier_name", "courier_id"):
         if cname:
-            name_owners[cname] |= id_owners[cid]
+            name_owners[_norm(cname)] |= id_owners[cid]
     return name_owners, id_owners
 
 
 def _owners(cid, cname, name_owners, id_owners):
-    if cname and cname in name_owners:
-        return name_owners[cname]
+    key = _norm(cname)
+    if key and key in name_owners:
+        return name_owners[key]
     if cid:
         return id_owners.get(cid, ())
     return ()

@@ -1,3 +1,74 @@
-from django.test import TestCase
+from datetime import datetime, time, timedelta
 
-# Create your tests here.
+from django.contrib.auth.models import User
+from django.test import TestCase
+from django.utils import timezone
+
+
+class DashboardTests(TestCase):
+    def setUp(self):
+        from settlements.models import (
+            CainiaoHub, CainiaoHubCP4, CainiaoOperationTask, CainiaoOperationTaskHistory,
+        )
+
+        self.user = User.objects.create_user("u", password="x", is_staff=True)
+        self.client.force_login(self.user)
+        self.today = timezone.localdate()
+        hub = CainiaoHub.objects.create(name="Fão")
+        CainiaoHubCP4.objects.create(hub=hub, cp4="4740")
+        n = 0
+
+        def task(status, cp="4740-001", courier="Ana_LF", day=None):
+            nonlocal n
+            n += 1
+            day = day or self.today
+            dt = timezone.make_aware(datetime.combine(day, time(10, 30)))
+            CainiaoOperationTask.objects.create(
+                waybill_number=f"W{n}", task_date=day, task_status=status,
+                zip_code=cp, courier_name=courier,
+                delivery_time=dt if status == "Delivered" else None,
+            )
+            CainiaoOperationTaskHistory.objects.create(
+                waybill_number=f"W{n}", task_date=day, task_status=status,
+                courier_name=courier, change_type="signature",
+            )
+
+        for _ in range(8):
+            task("Delivered")
+        for _ in range(2):
+            task("Attempt Failure")
+        for _ in range(3):
+            task("Driver_received", cp="9999-001")
+        # Outro motorista com poucas tentativas (era ele que estragava o KPI).
+        task("Delivered", courier="Rui_LF")
+        task("Delivered", day=self.today - timedelta(days=7))
+
+    def test_kpis_and_regression_attempted(self):
+        r = self.client.get("/")
+        self.assertEqual(r.status_code, 200)
+        k = r.context["kpis"]
+        self.assertEqual((k["total"], k["delivered"], k["failures"], k["en_route"]), (14, 9, 2, 3))
+        # Bug antigo: "entregues de N tentadas" usava o N do último motorista.
+        self.assertEqual(k["attempted"], 11)
+        self.assertEqual(r.context["compare"]["total_d7"], 1)
+        self.assertEqual(r.context["compare"]["delta_total_d7"], 1300)
+
+    def test_hubs_charts_and_drivers(self):
+        r = self.client.get("/")
+        hubs = {h["name"]: h for h in r.context["hubs"]}
+        self.assertEqual((hubs["Fão"]["delivered"], hubs["Fão"]["failures"]), (9, 2))
+        self.assertEqual(hubs["Sem hub"]["en_route"], 3)
+        ch = r.context["charts"]
+        self.assertEqual(len(ch["days"]), 30)
+        self.assertEqual(ch["delivered"][-1], 9)
+        self.assertEqual(sum(x or 0 for x in ch["rhythm"]["avg"][:1]), 0)
+        self.assertEqual(r.context["top_volume"][0]["name"], "Ana_LF")
+        self.assertEqual(r.context["attention"][0]["failures"], 2)
+        self.assertContains(r, 'id="dash-charts"')
+
+    def test_tv_mode_and_past_date(self):
+        d = (self.today - timedelta(days=7)).isoformat()
+        r = self.client.get("/", {"date": d, "tv": "1"})
+        self.assertEqual(r.status_code, 200)
+        self.assertFalse(r.context["is_today"])
+        self.assertEqual(r.context["kpis"]["delivered"], 1)

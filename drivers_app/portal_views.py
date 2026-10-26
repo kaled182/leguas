@@ -674,6 +674,32 @@ def driver_portal_invoices(request, driver_id):
     ded = pending_deductions(driver, include_unapproved=is_admin_view)
     pending_advances = [a for a in ded["advances"] if a.status == "PENDENTE"]
 
+    # ─── Estado das PF: paradas, negativas, próximo pagamento ───
+    from .services_payments import pf_amount
+    STALE_DAYS = 15
+    open_pfs = list(driver.pre_invoices.filter(
+        status__in=("CALCULADO", "APROVADO", "PENDENTE", "CONTESTADO"),
+    ).order_by("data_prevista_pagamento", "periodo_fim"))
+    stale_pfs = [
+        p for p in open_pfs
+        if p.status == "CALCULADO" and p.periodo_fim <= today - timedelta(days=STALE_DAYS)
+    ]
+    negative_pfs = [p for p in open_pfs if (p.total_a_receber or 0) < 0]
+    next_payment = next(
+        (p for p in open_pfs if pf_amount(p) > 0 and p.data_prevista_pagamento), None,
+    )
+    if next_payment:
+        next_payment.amount = pf_amount(next_payment)
+
+    # ─── Limite mensal de adiantamentos ───
+    adv_limit = driver.advance_monthly_limit
+    adv_used_month = PreInvoiceAdvance.objects.filter(
+        driver=driver, data__gte=month_start, data__lte=today,
+    ).exclude(status="CANCELADO").aggregate(s=Sum("valor"))["s"] or Decimal("0")
+    adv_limit_pct = (
+        min(int(adv_used_month / adv_limit * 100), 100) if adv_limit else None
+    )
+
     # ─── Pré-faturas que sobrepõem o período (admin) ───
     overlap_pfs = []
     if is_admin_view:
@@ -728,6 +754,16 @@ def driver_portal_invoices(request, driver_id):
         "history_advances": ded["history"][:100],
         "pending_advances": pending_advances,
         "net_estimate": custo_motorista - ded["next_pf_total"],
+        "stale_pfs": stale_pfs,
+        "stale_days": STALE_DAYS,
+        "negative_pfs": negative_pfs,
+        "next_payment": next_payment,
+        "adv_limit": adv_limit,
+        "adv_used_month": adv_used_month,
+        "adv_limit_pct": adv_limit_pct,
+        "pf_status_counts": {
+            s_: sum(1 for p in pfs if p.status == s_) for s_ in ("CALCULADO", "APROVADO", "PENDENTE", "CONTESTADO", "PAGO")
+        },
         "overlap_pfs": overlap_pfs,
         # PFs
         "pfs": pfs,

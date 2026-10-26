@@ -651,3 +651,55 @@ class BeatHealthTests(TestCase):
         t.last_run_at = timezone.now() - timedelta(minutes=10)
         t.save()
         call_command("beat_health")
+
+
+class CarryNegativeBalanceTests(TestCase):
+    def setUp(self):
+        from datetime import date
+        from decimal import Decimal
+
+        from settlements.models import DriverPreInvoice, PreInvoiceAdvance
+
+        self.D = Decimal
+        self.drv = _driver("910000001")
+        self.pf = DriverPreInvoice.objects.create(
+            numero="PF-N1", driver=self.drv, periodo_inicio=date(2026, 9, 1),
+            periodo_fim=date(2026, 9, 30), status="CALCULADO", ajuste_manual=Decimal("100"),
+        )
+        for v in ("80", "50", "30", "20"):
+            PreInvoiceAdvance.objects.create(
+                driver=self.drv, data=date(2026, 9, 10), valor=Decimal(v),
+                status="INCLUIDO_PF", pre_invoice=self.pf,
+            )
+        self.pf.recalcular()  # 100 − 180 = −80
+
+    def test_min_cover(self):
+        from .services_deductions import _min_cover
+
+        self.assertEqual(sorted(_min_cover([(1, 80), (2, 50), (3, 30), (4, 20)], 80)), [1])
+        self.assertEqual(sorted(_min_cover([(1, 50), (2, 30), (3, 25)], 54)), [2, 3])
+        self.assertIsNone(_min_cover([(1, 10)], 20))
+
+    def test_carry_frees_minimal_advances(self):
+        from settlements.models import PreInvoiceAdvance
+
+        from .services_deductions import carry_negative_balance
+
+        self.assertEqual(self.pf.total_a_receber, self.D("-80"))
+        r = carry_negative_balance(self.pf)
+        self.pf.refresh_from_db()
+        self.assertEqual(self.pf.total_a_receber, self.D("0"))
+        self.assertEqual(r["advances_total"], self.D("80"))
+        pend = PreInvoiceAdvance.objects.filter(driver=self.drv, status="PENDENTE")
+        self.assertEqual([a.valor for a in pend], [self.D("80")])
+        self.assertIn("[SALDO]", self.pf.observacoes)
+
+    def test_bulk_carry_and_invoices_page(self):
+        admin = User.objects.create_user("adm7", password="x", is_staff=True)
+        self.client.force_login(admin)
+        r = self.client.get(reverse("drivers_app:driver_portal_invoices", args=[self.drv.id]))
+        self.assertContains(r, "Saldo devedor")
+        self.assertContains(r, "Próximo pagamento")
+        self.client.post(reverse("drivers_app:payments_bulk"), {"ids": [self.pf.id], "action": "carry"})
+        self.pf.refresh_from_db()
+        self.assertEqual(self.pf.total_a_receber, self.D("0"))

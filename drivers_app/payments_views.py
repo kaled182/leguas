@@ -307,6 +307,25 @@ def payments_bulk(request):
         )
         return redirect(back)
 
+    if action == "carry":
+        from .services_deductions import CarryError, carry_negative_balance
+
+        done, errors = [], []
+        for pf in qs.filter(total_a_receber__lt=0):
+            try:
+                r = carry_negative_balance(pf, user=request.user)
+                if r.get("changed"):
+                    done.append(r["message"])
+            except CarryError as e:
+                errors.append(str(e))
+        for m in done:
+            messages.success(request, m)
+        for m in errors:
+            messages.error(request, m)
+        if not done and not errors:
+            messages.info(request, "Nenhuma PF negativa selecionada.")
+        return redirect(back)
+
     if action == "csv":
         resp = HttpResponse(content_type="text/csv; charset=utf-8")
         resp["Content-Disposition"] = f'attachment; filename="pagamentos_{timezone.localdate():%Y%m%d}.csv"'

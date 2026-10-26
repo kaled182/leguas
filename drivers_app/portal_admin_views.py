@@ -744,6 +744,9 @@ def driver_claim_action(request, driver_id, claim_id):
         messages.error(request, f"Desconto #{claim.id}: {e}")
     else:
         messages.success(request, f"Desconto #{claim.id}: {result['message']}")
+    nxt = request.POST.get("next", "")
+    if nxt.startswith("/") and not nxt.startswith("//"):
+        return redirect(nxt)
     return redirect("drivers_app:driver_claims", driver_id=driver.id)
 
 

@@ -1,5 +1,6 @@
 ﻿from django.urls import path
 
+from . import ficha_views
 from . import views
 from . import views_ticket_import as vti
 
@@ -44,7 +45,7 @@ urlpatterns = [
         name="driver_portal_pudos",
     ),
     # ─── Portal Admin (substitui modais antigos) ───
-    path("portal/<int:driver_id>/editar/", views.driver_admin_edit, name="driver_admin_edit"),
+    path("portal/<int:driver_id>/editar/", ficha_views.driver_ficha, name="driver_admin_edit"),
     path(
         "portal/<int:driver_id>/unify/search/",
         views.driver_unify_search, name="driver_unify_search",

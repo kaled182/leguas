@@ -368,6 +368,63 @@ class DriverProfile(models.Model):
         help_text="Driver criado por importação de planilha — dados pessoais pendentes de atualização",
     )
 
+    # === CONTRATO E PAGAMENTO ===
+    PAYMENT_REGIME_CHOICES = [
+        ("MENSAL", "Mensal"),
+        ("SEMANAL", "Semanal"),
+    ]
+    payment_regime = models.CharField(
+        "Regime de pagamento", max_length=10,
+        choices=PAYMENT_REGIME_CHOICES, blank=True, default="",
+        help_text="Marcado à mão. Vazio = por definir.",
+    )
+    payment_regime_since = models.DateField(
+        "Regime desde", null=True, blank=True,
+    )
+    PROVIDER_TYPE_CHOICES = [
+        ("SINGULAR", "Pessoa singular (trabalhador independente / ENI)"),
+        ("SOCIEDADE", "Sociedade (unipessoal / lda.)"),
+    ]
+    provider_type = models.CharField(
+        "Tipo de prestador", max_length=10,
+        choices=PROVIDER_TYPE_CHOICES, default="SINGULAR",
+    )
+    company_rep_name = models.CharField(
+        "Gerente (se sociedade)", max_length=200, blank=True,
+    )
+    company_rep_nif = models.CharField(
+        "NIF do gerente", max_length=9, blank=True,
+    )
+    ID_DOC_CHOICES = [
+        ("CC", "Cartão de Cidadão"),
+        ("TR", "Título de Residência"),
+        ("PP", "Passaporte"),
+        ("VR", "Visto de Residência"),
+        ("MI", "Manifestação de Interesse"),
+    ]
+    id_doc_type = models.CharField(
+        "Documento de identificação", max_length=2,
+        choices=ID_DOC_CHOICES, blank=True,
+    )
+    id_doc_number = models.CharField("N.º do documento", max_length=40, blank=True)
+    id_doc_expiry = models.DateField("Validade do documento", null=True, blank=True)
+    driving_license_number = models.CharField(
+        "Carta de condução n.º", max_length=40, blank=True,
+    )
+    driving_license_country = models.CharField(
+        "Carta emitida por (país)", max_length=60, blank=True, default="Portugal",
+    )
+    driving_license_expiry = models.DateField(
+        "Validade da carta", null=True, blank=True,
+    )
+    iban = models.CharField("IBAN", max_length=34, blank=True)
+    insurance_work_policy = models.CharField(
+        "Seguro acidentes de trabalho — apólice", max_length=60, blank=True,
+    )
+    insurance_auto_policy = models.CharField(
+        "Seguro automóvel — apólice", max_length=60, blank=True,
+    )
+
     # === ATIVIDADE OPERACIONAL ===
     # Calculado pela task diária `drivers_app.refresh_driver_activity`.
     # Independente de `status`/`is_active`: um motorista inactivo continua
@@ -1192,3 +1249,69 @@ class TicketImportAttachment(models.Model):
 
     def __str__(self):
         return f"Anexo linha #{self.row_id}"
+
+
+class DriverHubAssignment(models.Model):
+    """Hub onde o motorista trabalha e CP4 contratados nesse hub."""
+
+    driver = models.ForeignKey(
+        DriverProfile, on_delete=models.CASCADE, related_name="hub_assignments",
+    )
+    hub = models.ForeignKey(
+        "settlements.CainiaoHub", on_delete=models.PROTECT,
+        related_name="driver_assignments",
+    )
+    cp4s = models.JSONField("CP4 contratados", default=list, blank=True)
+    is_primary = models.BooleanField("Hub principal", default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Hub do Motorista"
+        verbose_name_plural = "Hubs dos Motoristas"
+        ordering = ["-is_primary", "hub__name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["driver", "hub"], name="unique_driver_hub",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.driver_id} · {self.hub.name} · {','.join(self.cp4s)}"
+
+
+class DriverPaymentRegimeChange(models.Model):
+    """Histórico do regime de pagamento (vale a partir do ciclo seguinte)."""
+
+    driver = models.ForeignKey(
+        DriverProfile, on_delete=models.CASCADE, related_name="regime_changes",
+    )
+    old_regime = models.CharField(max_length=10, blank=True)
+    new_regime = models.CharField(max_length=10, blank=True)
+    effective_from = models.DateField("Válido desde", null=True, blank=True)
+    changed_by = models.ForeignKey(
+        "auth.User", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="+",
+    )
+    changed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-changed_at"]
+
+
+class DriverProfileEditLog(models.Model):
+    """Quem mudou o quê na ficha do motorista (edição admin)."""
+
+    driver = models.ForeignKey(
+        DriverProfile, on_delete=models.CASCADE, related_name="edit_logs",
+    )
+    user = models.ForeignKey(
+        "auth.User", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="+",
+    )
+    section = models.CharField(max_length=30, blank=True)
+    changes = models.JSONField(default=dict, help_text="{campo: [antes, depois]}")
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ["-created_at"]

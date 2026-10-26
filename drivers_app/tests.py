@@ -179,3 +179,115 @@ class DriversCentralViewTests(TestCase):
             {"next": "https://evil.example/"},
         )
         self.assertRedirects(r, reverse("drivers_app:drivers_central"), fetch_redirect_response=False)
+
+
+class FichaTests(TestCase):
+    def setUp(self):
+        from decimal import Decimal
+
+        from contracts.models import HubContractTerms, HubZoneTariff
+        from settlements.models import CainiaoHub, CainiaoHubCP4
+
+        from .models import EmpresaParceira
+
+        self.admin = User.objects.create_user("adm2", password="x", is_staff=True)
+        self.client.force_login(self.admin)
+        self.fleet = EmpresaParceira.objects.create(nome="Frota X", nif="509999999")
+        self.d = _driver("400000001", apelido="Fi_LF")
+        self.d.empresa_parceira = self.fleet
+        self.d.niss = None
+        self.d.save()
+        self.hub = CainiaoHub.objects.create(name="Fão")
+        CainiaoHubCP4.objects.create(hub=self.hub, cp4="4740")
+        HubContractTerms.objects.create(hub=self.hub, allows_weekly=True)
+        HubZoneTariff.objects.create(
+            hub=self.hub, cp4="4740", zone_name="Esposende", tier="A",
+            price_monthly=Decimal("0.95"),
+        )
+        self.url = reverse("drivers_app:driver_admin_edit", args=[self.d.id])
+
+    def _post(self, section, **data):
+        payload = {"section": section}
+        payload.update({f"{section}-{k}": v for k, v in data.items()})
+        return self.client.post(self.url, payload)
+
+    def test_get_renders_without_none_text(self):
+        r = self.client.get(self.url)
+        self.assertEqual(r.status_code, 200)
+        self.assertNotContains(r, 'value="None"')
+        self.assertContains(r, "Dados para o contrato")
+
+    def test_section_save_keeps_other_fields(self):
+        r = self._post(
+            "contacto", telefone="912000111", email="novo@x.pt",
+            endereco_residencia="Rua A", codigo_postal="4740-001", cidade="Esposende",
+        )
+        self.assertEqual(r.status_code, 302)
+        self.d.refresh_from_db()
+        self.assertEqual(self.d.telefone, "912000111")
+        # Campos de outros blocos não mudam (o bug antigo punha False / None).
+        self.assertTrue(self.d.is_active)
+        self.assertEqual(self.d.empresa_parceira_id, self.fleet.id)
+        log = self.d.edit_logs.get()
+        self.assertEqual(log.section, "contacto")
+        self.assertEqual(log.changes["telefone"], ["912345678", "912000111"])
+
+    def test_empty_niss_saved_as_null(self):
+        self._post(
+            "identificacao", nome_completo="Fi", apelido="Fi_LF", courier_id_cainiao="",
+            nif="400000001", niss="", data_nascimento="", nacionalidade="Portugal",
+        )
+        self.d.refresh_from_db()
+        self.assertIsNone(self.d.niss)
+
+    def test_invalid_value_shows_errors_and_does_not_save(self):
+        r = self._post(
+            "identificacao", nome_completo="Fi", apelido="Fi_LF", courier_id_cainiao="",
+            nif="12", niss="", data_nascimento="", nacionalidade="Portugal",
+        )
+        self.assertEqual(r.status_code, 200)
+        self.d.refresh_from_db()
+        self.assertEqual(self.d.nif, "400000001")
+
+    def test_regime_change_effective_next_cycle(self):
+        from .models import DriverPaymentRegimeChange
+
+        fin = dict(
+            payment_regime="SEMANAL", payment_regime_since="", iban="PT50000000000000000000000",
+            price_per_package="", advance_monthly_limit="", daily_capacity="",
+            bonus_performance_enabled="on", vat_regime="isento", irs_retention_pct="0",
+        )
+        self._post("financeiro", **fin)
+        self.d.refresh_from_db()
+        today = timezone.localdate()
+        self.assertEqual(self.d.payment_regime_since, today)  # 1.ª definição: já
+        fin["payment_regime"] = "MENSAL"
+        self._post("financeiro", **fin)
+        self.d.refresh_from_db()
+        self.assertEqual(self.d.payment_regime_since.day, 1)
+        self.assertGreater(self.d.payment_regime_since, today)
+        self.assertEqual(DriverPaymentRegimeChange.objects.filter(driver=self.d).count(), 2)
+
+    def test_save_hubs_and_completeness(self):
+        from .services_hubs import contract_completeness
+
+        pct_before, missing = contract_completeness(self.d)
+        self.assertIn("Hub e CP contratados", missing)
+        self.client.post(self.url, {
+            "section": "hubs", f"cp_{self.hub.id}": ["4740"], "primary_hub": str(self.hub.id),
+        })
+        a = self.d.hub_assignments.get()
+        self.assertEqual((a.cp4s, a.is_primary), (["4740"], True))
+        pct_after, missing = contract_completeness(self.d)
+        self.assertNotIn("Hub e CP contratados", missing)
+        self.assertGreater(pct_after, pct_before)
+        self.assertEqual(self.d.edit_logs.get().section, "hubs")
+
+    def test_weekly_price_fallback(self):
+        from decimal import Decimal
+
+        from contracts.models import HubZoneTariff
+
+        t = HubZoneTariff.objects.get(cp4="4740")
+        self.assertEqual(t.price_for("SEMANAL"), Decimal("0.9000"))
+        self.assertEqual(t.price_for("MENSAL"), Decimal("0.95"))

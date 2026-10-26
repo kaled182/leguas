@@ -108,40 +108,30 @@
         {% if request.user.is_staff or request.user.is_superuser %}
           <span class="hidden md:inline w-px h-5 bg-white/20 mx-1"></span>
           <a href="{% url 'drivers_app:driver_admin_edit' driver.id %}"
-             title="Editar (admin)"
+             title="Ficha do motorista (ver e editar por bloco)"
              class="px-3 py-1.5 rounded-lg text-sm font-medium transition
                {% if request.resolver_match.url_name == 'driver_admin_edit' %}bg-white text-indigo-700 shadow{% else %}text-white/90 hover:bg-white/10{% endif %}">
-            <i data-lucide="pencil" class="w-4 h-4 inline -mt-0.5"></i>
-            <span class="hidden lg:inline ml-1">Editar</span>
+            <i data-lucide="contact" class="w-4 h-4 inline -mt-0.5"></i>
+            <span class="hidden lg:inline ml-1">Ficha</span>
           </a>
-          <a href="{% url 'drivers_app:driver_logins' driver.id %}"
-             title="Logins por parceiro"
-             class="px-3 py-1.5 rounded-lg text-sm font-medium transition
-               {% if request.resolver_match.url_name == 'driver_logins' %}bg-white text-indigo-700 shadow{% else %}text-white/90 hover:bg-white/10{% endif %}">
-            <i data-lucide="key-round" class="w-4 h-4 inline -mt-0.5"></i>
-            <span class="hidden lg:inline ml-1">Logins</span>
-          </a>
-          <a href="{% url 'drivers_app:driver_documents' driver.id %}"
-             title="Documentos"
-             class="px-3 py-1.5 rounded-lg text-sm font-medium transition
-               {% if request.resolver_match.url_name == 'driver_documents' %}bg-white text-indigo-700 shadow{% else %}text-white/90 hover:bg-white/10{% endif %}">
-            <i data-lucide="file-text" class="w-4 h-4 inline -mt-0.5"></i>
-            <span class="hidden lg:inline ml-1">Docs</span>
-          </a>
-          <a href="{% url 'drivers_app:driver_vehicles' driver.id %}"
-             title="Veículos"
-             class="px-3 py-1.5 rounded-lg text-sm font-medium transition
-               {% if request.resolver_match.url_name == 'driver_vehicles' %}bg-white text-indigo-700 shadow{% else %}text-white/90 hover:bg-white/10{% endif %}">
-            <i data-lucide="truck" class="w-4 h-4 inline -mt-0.5"></i>
-            <span class="hidden lg:inline ml-1">Veículos</span>
-          </a>
-          <a href="{% url 'drivers_app:driver_helpers' driver.id %}"
-             title="Helpers"
-             class="px-3 py-1.5 rounded-lg text-sm font-medium transition
-               {% if request.resolver_match.url_name == 'driver_helpers' %}bg-white text-indigo-700 shadow{% else %}text-white/90 hover:bg-white/10{% endif %}">
-            <i data-lucide="users" class="w-4 h-4 inline -mt-0.5"></i>
-            <span class="hidden lg:inline ml-1">Helpers</span>
-          </a>
+          {% with un=request.resolver_match.url_name %}
+          <div class="relative" x-data="{ open: false }" @click.outside="open = false">
+            <button type="button" @click="open = !open"
+                    class="px-3 py-1.5 rounded-lg text-sm font-medium transition inline-flex items-center
+                      {% if un == 'driver_logins' or un == 'driver_documents' or un == 'driver_vehicles' or un == 'driver_helpers' %}bg-white text-indigo-700 shadow{% else %}text-white/90 hover:bg-white/10{% endif %}">
+              <i data-lucide="settings-2" class="w-4 h-4 inline -mt-0.5"></i>
+              <span class="hidden lg:inline ml-1">Operação</span>
+              <i data-lucide="chevron-down" class="w-3.5 h-3.5 ml-0.5"></i>
+            </button>
+            <div x-show="open" x-cloak
+                 class="absolute right-0 mt-2 w-48 rounded-xl bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-gray-700 p-1 z-40">
+              <a href="{% url 'drivers_app:driver_logins' driver.id %}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"><i data-lucide="key-round" class="w-4 h-4"></i>Logins</a>
+              <a href="{% url 'drivers_app:driver_documents' driver.id %}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"><i data-lucide="file-text" class="w-4 h-4"></i>Documentos</a>
+              <a href="{% url 'drivers_app:driver_vehicles' driver.id %}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"><i data-lucide="truck" class="w-4 h-4"></i>Veículos</a>
+              <a href="{% url 'drivers_app:driver_helpers' driver.id %}" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"><i data-lucide="users" class="w-4 h-4"></i>Helpers</a>
+            </div>
+          </div>
+          {% endwith %}
           <a href="{% url 'drivers_app:driver_claims' driver.id %}"
              title="Descontos / DriverClaim — recurso e prova de entrega"
              class="px-3 py-1.5 rounded-lg text-sm font-medium transition

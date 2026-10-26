@@ -57,9 +57,10 @@ def _idle_bucket(days):
 
 
 def _contract_driver_ids():
-    """Motoristas com contrato: assinado no portal (não revogado) ou
-    contrato em papel anexado como documento CONTRATO."""
-    from contracts.models import DriverContract
+    """Motoristas com contrato: assinado no portal (não revogado),
+    contrato gerado no sistema e assinado, ou contrato em papel anexado
+    como documento CONTRATO."""
+    from contracts.models import DriverContract, GeneratedContract
 
     signed = set(
         DriverContract.objects.filter(revoked_at__isnull=True)
@@ -69,7 +70,11 @@ def _contract_driver_ids():
         DriverDocument.objects.filter(tipo_documento="CONTRATO")
         .values_list("motorista_id", flat=True)
     )
-    return signed | attached
+    generated = set(
+        GeneratedContract.objects.filter(kind="CONTRATO", status="ASSINADO")
+        .values_list("driver_id", flat=True)
+    )
+    return signed | attached | generated
 
 
 @admin_required

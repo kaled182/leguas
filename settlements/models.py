@@ -2503,6 +2503,8 @@ class CainiaoOperationTaskHistory(models.Model):
         indexes = [
             models.Index(fields=["waybill_number", "-recorded_at"]),
             models.Index(fields=["change_type", "-recorded_at"]),
+            # Dashboard: assinaturas de um dia (antes 18 s, varria 585 mil linhas).
+            models.Index(fields=["change_type", "task_date"], name="settl_hist_type_date_idx"),
         ]
 
     def __str__(self):

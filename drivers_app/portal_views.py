@@ -667,18 +667,12 @@ def driver_portal_invoices(request, driver_id):
     receita_estimada = receita_per_pkg * bd["totals"]["delivered"]
     margem = receita_estimada - custo_motorista
 
-    # ─── Conta-Corrente (advances) ───
-    advances_qs = PreInvoiceAdvance.objects.filter(driver=driver).order_by("-data", "-id")
-    pending_advances = advances_qs.filter(status="PENDENTE")
-    advances_total_pending = pending_advances.aggregate(s=Sum("valor"))["s"] or Decimal("0")
-    # Lista visível: ordena por status (PENDENTE/INCLUIDO primeiro, CANCELADO no fim)
-    # e cap a 50. Cancelados ficam ocultos via x-show; toggle revela.
-    advances_visible = list(
-        advances_qs.exclude(status="CANCELADO")[:50]
-    ) + list(
-        advances_qs.filter(status="CANCELADO")[:50]
-    )
-    advances_cancelled_count = advances_qs.filter(status="CANCELADO").count()
+    # ─── A descontar: conta-corrente + descontos (claims) ───
+    # Só o que ainda não saiu numa PF paga. O histórico fica escondido.
+    # O motorista não vê descontos ainda por aprovar.
+    from .services_deductions import pending_deductions
+    ded = pending_deductions(driver, include_unapproved=is_admin_view)
+    pending_advances = [a for a in ded["advances"] if a.status == "PENDENTE"]
 
     # ─── Pré-faturas que sobrepõem o período (admin) ───
     overlap_pfs = []
@@ -730,11 +724,10 @@ def driver_portal_invoices(request, driver_id):
         "receita_estimada": receita_estimada,
         "margem": margem,
         # Conta-corrente
-        "advances": advances_qs[:50],
-        "advances_visible": advances_visible,
-        "advances_cancelled_count": advances_cancelled_count,
+        "ded": ded,
+        "history_advances": ded["history"][:100],
         "pending_advances": pending_advances,
-        "advances_total_pending": advances_total_pending,
+        "net_estimate": custo_motorista - ded["next_pf_total"],
         "overlap_pfs": overlap_pfs,
         # PFs
         "pfs": pfs,

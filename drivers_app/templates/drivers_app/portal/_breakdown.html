@@ -25,7 +25,7 @@
     <div class="bg-white dark:bg-gray-800 p-4">
       <p class="text-xs uppercase font-bold text-indigo-700 dark:text-indigo-300">Porta</p>
       <p class="text-2xl font-extrabold text-gray-900 dark:text-white">{{ t.door_normal }}</p>
-      <p class="text-xs text-gray-500">€ {{ a.door_normal|floatformat:2 }}{% if bd.base_price %} · {{ bd.base_price|floatformat:2 }}/pct{% endif %}</p>
+      <p class="text-xs text-gray-500">€ {{ a.door_normal|floatformat:2 }}{% if bd.door_avg_price %} · {{ bd.door_avg_price|floatformat:2 }}/pct{% if bd.cp_pricing %} (média por CP){% endif %}{% endif %}</p>
     </div>
     <div class="bg-white dark:bg-gray-800 p-4">
       <p class="text-xs uppercase font-bold text-teal-700 dark:text-teal-300">Mesma porta</p>

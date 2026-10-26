@@ -585,3 +585,51 @@ class CopyIndividualPriceCommandTests(TestCase):
         call_command("copy_individual_price_to_cp")
         self.assertEqual(drv.hub_assignments.get().cp_prices, {"4740": "1.00"})
         self.assertEqual(drv.edit_logs.count(), 1)
+
+
+class PendingDeductionsTests(TestCase):
+    def setUp(self):
+        from datetime import date
+        from decimal import Decimal
+
+        from settlements.models import DriverClaim, DriverPreInvoice, PreInvoiceAdvance
+
+        self.D = Decimal
+        self.drv = _driver("900000001", apelido="Ded_LF")
+        paid = DriverPreInvoice.objects.create(numero="PF-P", driver=self.drv, periodo_inicio=date(2026, 8, 1), periodo_fim=date(2026, 8, 31), status="PAGO")
+        open_pf = DriverPreInvoice.objects.create(numero="PF-O", driver=self.drv, periodo_inicio=date(2026, 9, 1), periodo_fim=date(2026, 9, 30), status="CALCULADO")
+        mk = lambda **kw: PreInvoiceAdvance.objects.create(driver=self.drv, data=date(2026, 9, 1), **kw)  # noqa: E731
+        self.pend = mk(valor=Decimal("20"), status="PENDENTE")
+        self.in_open = mk(valor=Decimal("35"), status="INCLUIDO_PF", pre_invoice=open_pf)
+        self.in_paid = mk(valor=Decimal("1000"), status="INCLUIDO_PF", pre_invoice=paid)
+        self.cancel = mk(valor=Decimal("7"), status="CANCELADO")
+        now = timezone.now()
+        mkc = lambda **kw: DriverClaim.objects.create(driver=self.drv, claim_type="ORDER_LOSS", occurred_at=now, description="x", **kw)  # noqa: E731
+        self.c_wait = mkc(amount=Decimal("50"), status="APPROVED")
+        self.c_pending = mkc(amount=Decimal("30"), status="PENDING")
+        self.c_rejected = mkc(amount=Decimal("99"), status="REJECTED")
+
+    def test_only_what_is_still_to_deduct(self):
+        from .services_deductions import pending_deductions
+
+        d = pending_deductions(self.drv)
+        self.assertEqual({a.id for a in d["advances"]}, {self.pend.id, self.in_open.id})
+        self.assertEqual({a.id for a in d["history"]}, {self.in_paid.id, self.cancel.id})
+        self.assertEqual({c.id for c in d["claims"]}, {self.c_wait.id, self.c_pending.id})
+        self.assertEqual(d["advances_total"], self.D("55"))
+        self.assertEqual(d["claims_confirmed_total"], self.D("50"))
+        self.assertEqual(d["claims_review_total"], self.D("30"))
+        self.assertEqual(d["total"], self.D("105"))
+        self.assertEqual(d["next_pf_total"], self.D("70"))  # 20 pendente + 50 à espera
+        # O motorista não vê descontos ainda por aprovar.
+        d2 = pending_deductions(self.drv, include_unapproved=False)
+        self.assertEqual({c.id for c in d2["claims"]}, {self.c_wait.id})
+
+    def test_invoices_page_admin(self):
+        admin = User.objects.create_user("adm6", password="x", is_staff=True)
+        self.client.force_login(admin)
+        r = self.client.get(reverse("drivers_app:driver_portal_invoices", args=[self.drv.id]))
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, "A descontar")
+        self.assertContains(r, "Entra na próxima PF")
+        self.assertContains(r, "Ver histórico (2)")

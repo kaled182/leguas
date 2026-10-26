@@ -163,6 +163,12 @@ def driver_breakdown(driver, date_from, date_to, partner=None):
         "days": days,
         "n_days": sum(1 for d in days if d["delivered"]),
         "base_price": base_price,
+        # Preço médio à porta (com preço por CP, varia por pacote).
+        "door_avg_price": (
+            (amount_door_normal / (len(door_delivered) - n_same_door_paid)).quantize(Decimal("0.001"))
+            if len(door_delivered) - n_same_door_paid else base_price
+        ),
+        "cp_pricing": pricer.active,
         "same_door_price": sd_price,
         "same_door_active": bool(partner and partner.same_door_enabled),
         "same_door_groups": same_door_groups,

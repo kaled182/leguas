@@ -163,7 +163,7 @@ def _row_pre_invoice(pf):
             "drivers_app:driver_pre_invoice_detail",
             kwargs={"driver_id": pf.driver_id, "pre_invoice_id": pf.id},
         ),
-        due_date=pf.periodo_fim,
+        due_date=pf.data_prevista_pagamento or pf.periodo_fim,
         period_label=(
             f"{pf.periodo_inicio.strftime('%d/%m')} → "
             f"{pf.periodo_fim.strftime('%d/%m')}"

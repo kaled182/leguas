@@ -1,6 +1,7 @@
 ﻿from django.urls import path
 
 from . import ficha_views
+from . import payments_views
 from . import views
 from . import views_ticket_import as vti
 
@@ -137,6 +138,8 @@ urlpatterns = [
     # ─── Central de Motoristas (admin moderna) ───
     path("admin/", views.drivers_central, name="drivers_central"),
     path("admin/central/", views.drivers_central, name="drivers_central_alias"),
+    path("admin/pagamentos/", payments_views.payments_dashboard, name="payments_dashboard"),
+    path("admin/pagamentos/lote/", payments_views.payments_bulk, name="payments_bulk"),
     path(
         "admin/atividade/recalcular/",
         views.drivers_activity_refresh,

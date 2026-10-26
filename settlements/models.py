@@ -1089,6 +1089,11 @@ class DriverPreInvoice(models.Model):
         db_index=True,
     )
     data_pagamento = models.DateField("Data de Pagamento", null=True, blank=True)
+    # Data prevista pelo regime (semanal/mensal) e pelo hub principal.
+    # Calculada ao gravar (drivers_app.services_payments).
+    data_prevista_pagamento = models.DateField(
+        "Pagamento previsto", null=True, blank=True, db_index=True,
+    )
     referencia_pagamento = models.CharField(
         "Referência de Pagamento",
         max_length=200,

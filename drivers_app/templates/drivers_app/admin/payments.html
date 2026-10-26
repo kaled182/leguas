@@ -1,0 +1,285 @@
+{% extends 'layouts/admin_base.html' %}
+
+{% block title %}Pagamentos a Motoristas{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+
+  {# ─── Header ─── #}
+  <div class="bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 rounded-2xl p-6 mb-6 shadow-lg">
+    <div class="flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="bg-white/20 backdrop-blur-sm rounded-xl p-3">
+          <i data-lucide="wallet" class="w-7 h-7 text-white"></i>
+        </div>
+        <div>
+          <h1 class="text-2xl lg:text-3xl font-extrabold text-white">Pagamentos a Motoristas</h1>
+          <p class="text-white/80 text-sm">Agenda por regime · semanal à terça, mensal pelo hub · {{ kpis.open_total|floatformat:"2g" }} € em aberto</p>
+        </div>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <a href="{% url 'accounting:payables_inbox' %}"
+           class="inline-flex items-center gap-1.5 px-4 py-2 bg-white text-emerald-700 hover:bg-emerald-50 rounded-lg font-bold text-sm shadow">
+          <i data-lucide="banknote" class="w-4 h-4"></i>
+          Pagar (caixa "A pagar")
+        </a>
+        <a href="{% url 'drivers_app:drivers_central' %}"
+           class="inline-flex items-center gap-1.5 px-3 py-2 bg-white/15 hover:bg-white/25 backdrop-blur-sm rounded-lg text-white text-sm font-medium">
+          <i data-lucide="users" class="w-4 h-4"></i>
+          Central de Motoristas
+        </a>
+      </div>
+    </div>
+  </div>
+
+  {% if messages %}
+    {% for m in messages %}
+      <div class="mb-3 px-4 py-3 rounded-lg text-sm
+        {% if 'error' in m.tags %}bg-rose-50 dark:bg-rose-900/20 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-700/50
+        {% else %}bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-700/50{% endif %}">{{ m }}</div>
+    {% endfor %}
+  {% endif %}
+
+  {# ─── KPIs ─── #}
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+    <a href="?tab=proximo" class="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-4 border border-emerald-200/50 dark:border-emerald-700/30 hover:shadow-md transition">
+      <div class="flex items-center justify-between">
+        <p class="text-xs uppercase font-bold text-emerald-700 dark:text-emerald-300">Até terça {{ kpis.next_payday|date:"d/m" }}</p>
+        <i data-lucide="calendar-check" class="w-4 h-4 text-emerald-600"></i>
+      </div>
+      <p class="text-2xl font-extrabold text-emerald-700 dark:text-emerald-300 mt-1">{{ kpis.week_total|floatformat:"2g" }} €</p>
+      <p class="text-[11px] text-emerald-700/70 dark:text-emerald-300/70">{{ kpis.week_n }} motoristas</p>
+    </a>
+    <a href="?tab=proximo&regime=MENSAL" class="bg-sky-50 dark:bg-sky-900/20 rounded-xl p-4 border border-sky-200/50 dark:border-sky-700/30 hover:shadow-md transition">
+      <div class="flex items-center justify-between">
+        <p class="text-xs uppercase font-bold text-sky-700 dark:text-sky-300">Próximo fecho mensal</p>
+        <i data-lucide="calendar-range" class="w-4 h-4 text-sky-600"></i>
+      </div>
+      <p class="text-2xl font-extrabold text-sky-700 dark:text-sky-300 mt-1">{{ kpis.monthly_total|floatformat:"2g" }} €</p>
+      <p class="text-[11px] text-sky-700/70 dark:text-sky-300/70">{% if kpis.next_monthly %}{{ kpis.next_monthly|date:"d/m/Y" }} · {{ kpis.monthly_n }} PF{% else %}sem PF mensal em aberto{% endif %}</p>
+    </a>
+    <a href="?tab=atraso" class="bg-rose-50 dark:bg-rose-900/20 rounded-xl p-4 border border-rose-200/50 dark:border-rose-700/30 hover:shadow-md transition">
+      <div class="flex items-center justify-between">
+        <p class="text-xs uppercase font-bold text-rose-700 dark:text-rose-300">Em atraso</p>
+        <i data-lucide="alarm-clock" class="w-4 h-4 text-rose-600"></i>
+      </div>
+      <p class="text-2xl font-extrabold text-rose-700 dark:text-rose-300 mt-1">{{ kpis.overdue_total|floatformat:"2g" }} €</p>
+      <p class="text-[11px] text-rose-700/70 dark:text-rose-300/70">{{ kpis.overdue_n }} PF com data prevista passada</p>
+    </a>
+    <a href="?tab=aprovar" class="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 border border-amber-200/50 dark:border-amber-700/30 hover:shadow-md transition">
+      <div class="flex items-center justify-between">
+        <p class="text-xs uppercase font-bold text-amber-700 dark:text-amber-300">Por aprovar</p>
+        <i data-lucide="clipboard-check" class="w-4 h-4 text-amber-600"></i>
+      </div>
+      <p class="text-2xl font-extrabold text-amber-700 dark:text-amber-300 mt-1">{{ kpis.approve_n }}</p>
+      <p class="text-[11px] text-amber-700/70 dark:text-amber-300/70">{{ kpis.approve_total|floatformat:"2g" }} € em CALCULADO</p>
+    </a>
+    <div class="bg-indigo-50 dark:bg-indigo-900/20 rounded-xl p-4 border border-indigo-200/50 dark:border-indigo-700/30">
+      <div class="flex items-center justify-between">
+        <p class="text-xs uppercase font-bold text-indigo-700 dark:text-indigo-300">Produção sem PF</p>
+        <i data-lucide="package" class="w-4 h-4 text-indigo-600"></i>
+      </div>
+      <p class="text-2xl font-extrabold text-indigo-700 dark:text-indigo-300 mt-1">≈ {{ kpis.unbilled|floatformat:"0g" }} €</p>
+      <p class="text-[11px] text-indigo-700/70 dark:text-indigo-300/70">{{ kpis.unbilled_n }} motoristas · estimativa (60 dias)</p>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200/50 dark:border-gray-700/50">
+      <div class="flex items-center justify-between">
+        <p class="text-xs uppercase font-bold text-gray-500">Pago este mês</p>
+        <i data-lucide="badge-euro" class="w-4 h-4 text-gray-400"></i>
+      </div>
+      <p class="text-2xl font-extrabold text-gray-900 dark:text-white mt-1">{{ kpis.paid_month|floatformat:"2g" }} €</p>
+      <p class="text-[11px] text-gray-500">mês anterior: {{ kpis.paid_prev|floatformat:"2g" }} €</p>
+    </div>
+    <a href="{% url 'drivers_app:drivers_central' %}?tab=ativos" class="col-span-2 bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200/50 dark:border-gray-700/50 hover:shadow-md transition">
+      <div class="flex items-center justify-between">
+        <p class="text-xs uppercase font-bold text-gray-500">Motoristas activos — dados de pagamento em falta</p>
+        <i data-lucide="triangle-alert" class="w-4 h-4 text-amber-500"></i>
+      </div>
+      <div class="grid grid-cols-5 gap-2 mt-2 text-center">
+        <div><p class="text-xl font-extrabold {% if alerts.sem_regime %}text-amber-600{% else %}text-emerald-600{% endif %}">{{ alerts.sem_regime }}</p><p class="text-[10px] text-gray-500">sem regime</p></div>
+        <div><p class="text-xl font-extrabold {% if alerts.sem_iban %}text-amber-600{% else %}text-emerald-600{% endif %}">{{ alerts.sem_iban }}</p><p class="text-[10px] text-gray-500">sem IBAN</p></div>
+        <div><p class="text-xl font-extrabold {% if alerts.sem_hub %}text-amber-600{% else %}text-emerald-600{% endif %}">{{ alerts.sem_hub }}</p><p class="text-[10px] text-gray-500">sem hub</p></div>
+        <div><p class="text-xl font-extrabold {% if alerts.sem_contrato %}text-rose-600{% else %}text-emerald-600{% endif %}">{{ alerts.sem_contrato }}</p><p class="text-[10px] text-gray-500">sem contrato</p></div>
+        <div><p class="text-xl font-extrabold {% if alerts.contestadas %}text-rose-600{% else %}text-emerald-600{% endif %}">{{ alerts.contestadas }}</p><p class="text-[10px] text-gray-500">PF contestadas</p></div>
+      </div>
+    </a>
+  </div>
+
+  {# ─── Gráficos ─── #}
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+    <div class="lg:col-span-2 bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200/50 dark:border-gray-700/50">
+      <p class="text-sm font-semibold text-gray-900 dark:text-white">Saídas previstas por semana</p>
+      <p class="text-xs text-gray-500 mb-2">PF em aberto pela data prevista de pagamento · semana a começar à segunda</p>
+      <div class="h-64"><canvas id="chWeeks"></canvas></div>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200/50 dark:border-gray-700/50">
+      <p class="text-sm font-semibold text-gray-900 dark:text-white">Motoristas activos por regime</p>
+      <p class="text-xs text-gray-500 mb-2">Marcado na ficha de cada motorista</p>
+      <div class="h-64"><canvas id="chRegimes"></canvas></div>
+    </div>
+    <div class="lg:col-span-2 bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200/50 dark:border-gray-700/50">
+      <p class="text-sm font-semibold text-gray-900 dark:text-white">Pago por mês</p>
+      <p class="text-xs text-gray-500 mb-2">PF pagas nos últimos 12 meses (com IVA quando aplicável)</p>
+      <div class="h-56"><canvas id="chPaid"></canvas></div>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200/50 dark:border-gray-700/50">
+      <p class="text-sm font-semibold text-gray-900 dark:text-white">Em aberto por hub principal</p>
+      <p class="text-xs text-gray-500 mb-2">Clique numa barra para filtrar a tabela</p>
+      <div class="h-56"><canvas id="chHubs"></canvas></div>
+    </div>
+  </div>
+
+  {# ─── Separadores ─── #}
+  <div class="flex flex-wrap gap-1 border-b border-gray-200 dark:border-gray-700 mb-4">
+    {% for key, label, n in tabs %}
+      <a href="?tab={{ key }}{% if regime_filter %}&regime={{ regime_filter }}{% endif %}{% if hub_filter %}&hub={{ hub_filter|urlencode }}{% endif %}"
+         class="px-4 py-2 -mb-px text-sm font-semibold border-b-2 transition flex items-center gap-2
+           {% if tab == key %}border-emerald-600 text-emerald-700 dark:text-emerald-300{% else %}border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200{% endif %}">
+        {{ label }}
+        {% if n is not None %}<span class="px-1.5 py-0.5 rounded text-[11px] font-bold {% if key == 'atraso' and n %}bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300{% else %}bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300{% endif %}">{{ n }}</span>{% endif %}
+      </a>
+    {% endfor %}
+  </div>
+
+  {# ─── Tabela + ações em lote ─── #}
+  <form method="post" action="{% url 'drivers_app:payments_bulk' %}" id="bulkForm"
+        class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+    <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex flex-wrap items-center gap-2 text-sm">
+        <span class="text-gray-500">Regime:</span>
+        <a href="?tab={{ tab }}{% if hub_filter %}&hub={{ hub_filter|urlencode }}{% endif %}" class="px-2.5 py-1 rounded-full text-xs border {% if not regime_filter %}bg-gray-900 text-white border-gray-900 dark:bg-white dark:text-gray-900{% else %}border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300{% endif %}">Todos</a>
+        <a href="?tab={{ tab }}&regime=SEMANAL{% if hub_filter %}&hub={{ hub_filter|urlencode }}{% endif %}" class="px-2.5 py-1 rounded-full text-xs border {% if regime_filter == 'SEMANAL' %}bg-gray-900 text-white border-gray-900 dark:bg-white dark:text-gray-900{% else %}border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300{% endif %}">Semanal</a>
+        <a href="?tab={{ tab }}&regime=MENSAL{% if hub_filter %}&hub={{ hub_filter|urlencode }}{% endif %}" class="px-2.5 py-1 rounded-full text-xs border {% if regime_filter == 'MENSAL' %}bg-gray-900 text-white border-gray-900 dark:bg-white dark:text-gray-900{% else %}border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300{% endif %}">Mensal</a>
+        {% if hub_filter %}<span class="px-2.5 py-1 rounded-full text-xs bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">Hub: {{ hub_filter }} <a href="?tab={{ tab }}{% if regime_filter %}&regime={{ regime_filter }}{% endif %}" class="ml-1 font-bold">×</a></span>{% endif %}
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="text-xs text-gray-500"><b id="selCount">0</b> selecionadas · <b id="selSum">0,00</b> €</span>
+        <button type="submit" name="action" value="approve"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-amber-500 hover:bg-amber-600 text-white">
+          <i data-lucide="check-check" class="w-3.5 h-3.5"></i> Aprovar selecionadas
+        </button>
+        <button type="submit" name="action" value="csv"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">
+          <i data-lucide="download" class="w-3.5 h-3.5"></i> Exportar CSV (IBAN)
+        </button>
+      </div>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-gray-50 dark:bg-gray-900/40">
+          <tr class="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">
+            <th class="px-3 py-2 text-left"><input type="checkbox" id="selAll" class="rounded"></th>
+            <th class="px-3 py-2 text-left">Previsto</th>
+            <th class="px-3 py-2 text-left">Motorista</th>
+            <th class="px-3 py-2 text-left">PF · período</th>
+            <th class="px-3 py-2 text-left">Regime · hub</th>
+            <th class="px-3 py-2 text-left">Estado</th>
+            <th class="px-3 py-2 text-right">Valor</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+          {% for pf in rows %}
+          <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+            <td class="px-3 py-2"><input type="checkbox" name="ids" value="{{ pf.id }}" data-amount="{{ pf.amount|stringformat:'s' }}" class="rowck rounded"></td>
+            <td class="px-3 py-2 whitespace-nowrap">
+              {% if pf.status == 'PAGO' %}
+                <span class="text-emerald-600 font-semibold">pago {{ pf.data_pagamento|date:"d/m" }}</span>
+              {% elif pf.due %}
+                <span class="font-semibold {% if pf.late_days %}text-rose-600{% elif pf.due == today %}text-amber-600{% else %}text-gray-900 dark:text-white{% endif %}">{{ pf.due|date:"d/m/Y" }}</span>
+                {% if pf.late_days %}<p class="text-[11px] text-rose-600">{{ pf.late_days }} dia{{ pf.late_days|pluralize }} de atraso</p>{% endif %}
+              {% else %}<span class="text-gray-400">—</span>{% endif %}
+            </td>
+            <td class="px-3 py-2">
+              <a href="{% url 'drivers_app:driver_admin_edit' pf.driver_id %}#financeiro" class="font-semibold text-gray-900 dark:text-white hover:text-emerald-600">{{ pf.driver.nome_completo }}</a>
+              <p class="text-[11px] {% if pf.driver.iban %}text-gray-500 font-mono{% else %}text-amber-600{% endif %}">{% if pf.driver.iban %}{{ pf.driver.iban }}{% else %}sem IBAN{% endif %}</p>
+            </td>
+            <td class="px-3 py-2 whitespace-nowrap">
+              <a href="{% url 'drivers_app:driver_pre_invoice_detail' pf.driver_id pf.id %}" class="text-emerald-700 dark:text-emerald-400 hover:underline font-mono text-xs">{{ pf.numero }}</a>
+              <p class="text-[11px] text-gray-500">{{ pf.periodo_inicio|date:"d/m" }} → {{ pf.periodo_fim|date:"d/m/Y" }}</p>
+            </td>
+            <td class="px-3 py-2">
+              <span class="px-1.5 py-0.5 rounded text-[11px] font-bold {% if pf.kind == 'SEMANAL' %}bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300{% else %}bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300{% endif %}">{{ pf.kind|lower }}</span>
+              <span class="text-xs text-gray-500 ml-1">{{ pf.hub|default:"sem hub" }}</span>
+            </td>
+            <td class="px-3 py-2">
+              <span class="px-1.5 py-0.5 rounded text-[11px] font-bold
+                {% if pf.status == 'PAGO' %}bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300
+                {% elif pf.status == 'CALCULADO' %}bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300
+                {% elif pf.status == 'CONTESTADO' %}bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300
+                {% else %}bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300{% endif %}">{{ pf.get_status_display }}</span>
+              {% if pf.status != 'PAGO' and not pf.fatura_ficheiro %}<p class="text-[10px] text-gray-400 mt-0.5">sem fatura-recibo</p>{% endif %}
+            </td>
+            <td class="px-3 py-2 text-right font-semibold tabular-nums whitespace-nowrap">{{ pf.amount|floatformat:"2g" }} €</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="7" class="px-4 py-10 text-center text-sm text-gray-500 italic">Nada neste separador.</td></tr>
+          {% endfor %}
+        </tbody>
+        {% if rows %}
+        <tfoot class="bg-gray-50 dark:bg-gray-900/40">
+          <tr><td colspan="6" class="px-3 py-2 text-right text-xs font-semibold text-gray-500 uppercase">Total ({{ rows|length }})</td>
+              <td class="px-3 py-2 text-right font-extrabold tabular-nums">{{ rows_total|floatformat:"2g" }} €</td></tr>
+        </tfoot>
+        {% endif %}
+      </table>
+    </div>
+  </form>
+  <p class="text-[11px] text-gray-500 mt-2">Previsto = regra do contrato: PF semanal paga na terça 4 semanas depois da segunda-feira da semana; PF mensal paga pela regra do hub principal (ex.: Fão 30 dias após o fecho, Aveiro dia 15). Para pagar, use a caixa "A pagar" (exige comprovativo).</p>
+</div>
+
+{{ charts|json_script:"pay-charts" }}
+<script>
+(function () {
+  // Seleção: contagem e soma
+  const cks = Array.from(document.querySelectorAll('.rowck'));
+  const upd = () => {
+    const sel = cks.filter(c => c.checked);
+    document.getElementById('selCount').textContent = sel.length;
+    const s = sel.reduce((a, c) => a + parseFloat(c.dataset.amount || 0), 0);
+    document.getElementById('selSum').textContent = s.toLocaleString('pt-PT', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  };
+  cks.forEach(c => c.addEventListener('change', upd));
+  const all = document.getElementById('selAll');
+  if (all) all.addEventListener('change', () => { cks.forEach(c => { c.checked = all.checked; }); upd(); });
+
+  if (typeof Chart === 'undefined') return;
+  const data = JSON.parse(document.getElementById('pay-charts').textContent);
+  const dark = document.documentElement.classList.contains('dark');
+  const grid = dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
+  Chart.defaults.color = dark ? '#9ca3af' : '#6b7280';
+  const eur = v => v.toLocaleString('pt-PT', {maximumFractionDigits: 0}) + ' €';
+
+  new Chart(document.getElementById('chWeeks'), {
+    type: 'bar',
+    data: { labels: data.weeks, datasets: [
+      { label: 'Semanal', data: data.weekly, backgroundColor: '#8b5cf6', borderRadius: 3 },
+      { label: 'Mensal', data: data.monthly, backgroundColor: '#0ea5e9', borderRadius: 3 },
+    ]},
+    options: { maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } },
+               tooltip: { callbacks: { label: c => c.dataset.label + ': ' + eur(c.parsed.y) } } },
+               scales: { x: { stacked: true, grid: { display: false } }, y: { stacked: true, grid: { color: grid }, ticks: { callback: eur } } } },
+  });
+  new Chart(document.getElementById('chRegimes'), {
+    type: 'doughnut',
+    data: { labels: data.regimes.map(r => r.label), datasets: [{ data: data.regimes.map(r => r.n),
+            backgroundColor: ['#0ea5e9', '#8b5cf6', '#d1d5db'], borderColor: dark ? '#1f2937' : '#fff', borderWidth: 2 }] },
+    options: { maintainAspectRatio: false, cutout: '60%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 10 } } } },
+  });
+  new Chart(document.getElementById('chPaid'), {
+    type: 'bar',
+    data: { labels: data.paid.map(m => m.label), datasets: [{ label: 'Pago', data: data.paid.map(m => m.v), backgroundColor: '#10b981', borderRadius: 3 }] },
+    options: { maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => eur(c.parsed.y) } } },
+               scales: { x: { grid: { display: false } }, y: { grid: { color: grid }, ticks: { callback: eur } } } },
+  });
+  new Chart(document.getElementById('chHubs'), {
+    type: 'bar',
+    data: { labels: data.hubs.map(h => h.label), datasets: [{ data: data.hubs.map(h => h.v), backgroundColor: '#14b8a6', borderRadius: 3 }] },
+    options: { maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => eur(c.parsed.x) } } },
+               scales: { x: { grid: { color: grid }, ticks: { callback: eur } }, y: { grid: { display: false } } },
+               onClick: (_e, els) => { if (els.length) window.location = '?tab=aberto&hub=' + encodeURIComponent(data.hubs[els[0].index].label); } },
+  });
+})();
+</script>
+{% endblock %}

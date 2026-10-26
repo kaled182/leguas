@@ -361,3 +361,71 @@ class ContractGeneratorTests(TestCase):
         self.assertIn(self.d.id, _contract_driver_ids())
         r = self.client.get(reverse("contracts:generated_contract_view", args=[c.id]))
         self.assertContains(r, "<div class='a4'>x</div>", html=False)
+
+
+class PaymentsTests(TestCase):
+    def setUp(self):
+        from datetime import date
+
+        from contracts.models import HubContractTerms
+        from settlements.models import CainiaoHub
+
+        self.date = date
+        self.admin = User.objects.create_user("adm4", password="x", is_staff=True)
+        self.client.force_login(self.admin)
+        self.ave = CainiaoHub.objects.create(name="Aveiro")
+        self.ave_terms = HubContractTerms.objects.create(
+            hub=self.ave, monthly_payment_mode="DAY_OF_NEXT_MONTH", monthly_payment_value=15,
+        )
+
+    def test_expected_dates(self):
+        from .services_payments import expected_payment_date
+
+        d = self.date
+        # Semanal: semana de seg. 7/09 → terça 4 semanas depois (6/10).
+        self.assertEqual(expected_payment_date(d(2026, 9, 7), d(2026, 9, 13)), d(2026, 10, 6))
+        # Mensal Viana (omissão): 30 dias após o fecho.
+        self.assertEqual(expected_payment_date(d(2026, 9, 1), d(2026, 9, 30)), d(2026, 10, 31))
+        # Mensal Aveiro: dia 15 do mês seguinte (e passagem de ano).
+        self.assertEqual(expected_payment_date(d(2026, 9, 1), d(2026, 9, 30), self.ave_terms), d(2026, 10, 15))
+        self.assertEqual(expected_payment_date(d(2026, 12, 1), d(2026, 12, 31), self.ave_terms), d(2027, 1, 15))
+
+    def test_signal_fills_expected_date_from_primary_hub(self):
+        from settlements.models import DriverPreInvoice
+
+        from .models import DriverHubAssignment
+
+        drv = _driver("600000001")
+        DriverHubAssignment.objects.create(driver=drv, hub=self.ave, cp4s=["3880"], is_primary=True)
+        pf = DriverPreInvoice.objects.create(
+            numero="PF-T1", driver=drv, periodo_inicio=self.date(2026, 9, 1),
+            periodo_fim=self.date(2026, 9, 30), status="CALCULADO",
+        )
+        self.assertEqual(pf.data_prevista_pagamento, self.date(2026, 10, 15))
+
+    def test_dashboard_bulk_approve_and_csv(self):
+        from settlements.models import DriverPreInvoice
+
+        drv = _driver("600000002")
+        drv.iban = "PT50123"
+        drv.save()
+        today = timezone.localdate()
+        late = DriverPreInvoice.objects.create(
+            numero="PF-T2", driver=drv, periodo_inicio=today - timedelta(days=90),
+            periodo_fim=today - timedelta(days=60), status="CALCULADO", total_a_receber=100,
+        )
+        url = reverse("drivers_app:payments_dashboard")
+        r = self.client.get(url, {"tab": "atraso"})
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual([p.id for p in r.context["rows"]], [late.id])
+        self.assertEqual(r.context["kpis"]["approve_n"], 1)
+        self.assertEqual(r.context["kpis"]["overdue_n"], 1)
+
+        bulk = reverse("drivers_app:payments_bulk")
+        self.client.post(bulk, {"ids": [late.id], "action": "approve"})
+        late.refresh_from_db()
+        self.assertEqual(late.status, "APROVADO")
+        r = self.client.post(bulk, {"ids": [late.id], "action": "csv"})
+        body = r.content.decode("utf-8-sig")
+        self.assertIn("PF-T2;Driver 600000002;600000002;PT50123", body)
+        self.assertIn("100,00", body)

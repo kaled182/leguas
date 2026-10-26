@@ -109,6 +109,11 @@
               {{ active_drivers_count|default:0 }}
             </span>
           </a>
+          <a href="{% url 'drivers_app:payments_dashboard' %}"
+            class="flex items-center gap-2 p-2 rounded-lg text-sm transition-all {% if request.resolver_match.url_name == 'payments_dashboard' %}bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 font-medium{% else %}text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:text-emerald-600 dark:hover:text-emerald-400{% endif %}">
+            <i data-lucide="wallet" class="w-4 h-4"></i>
+            <span>Pagamentos a Motoristas</span>
+          </a>
           <a href="{% url 'drivers_app:admin_active_drivers' %}"
             class="flex items-center gap-2 p-2 rounded-lg text-sm transition-all {% if request.resolver_match.url_name == 'admin_active_drivers' %}bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 font-medium{% else %}text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-100{% endif %}">
             <i data-lucide="users-round" class="w-4 h-4"></i>

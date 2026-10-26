@@ -32,6 +32,9 @@ RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-3}"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 
 mkdir -p "$BACKUP_DIR"
+# Caminho absoluto: BACKUP_DIR pode ser relativo (./backups) ou absoluto
+# (ex.: /data/backups/leguas, no disco grande). O docker run precisa dele.
+BACKUP_DIR_ABS="$(cd "$BACKUP_DIR" && pwd)"
 
 # ── Cores para logs ──────────────────────────────────────────────────
 G='\033[0;32m'; Y='\033[1;33m'; R='\033[0;31m'; N='\033[0m'
@@ -58,7 +61,7 @@ MEDIA_FILE="$BACKUP_DIR/media_${TIMESTAMP}.tar.gz"
 log "A fazer backup do volume media…"
 docker run --rm \
     -v "$(docker compose ps -q web | head -1 | xargs -I {} docker inspect {} --format '{{ range .Mounts }}{{ if eq .Destination "/app/media" }}{{ .Name }}{{ end }}{{ end }}'):/source:ro" \
-    -v "$(pwd)/$BACKUP_DIR:/dest" \
+    -v "$BACKUP_DIR_ABS:/dest" \
     alpine sh -c "cd /source && tar czf /dest/media_${TIMESTAMP}.tar.gz ." 2>/dev/null
 
 if [ ! -s "$MEDIA_FILE" ]; then

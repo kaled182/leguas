@@ -429,3 +429,18 @@ class PaymentsTests(TestCase):
         body = r.content.decode("utf-8-sig")
         self.assertIn("PF-T2;Driver 600000002;600000002;PT50123", body)
         self.assertIn("100,00", body)
+
+    def test_negative_pf_not_counted_as_payable(self):
+        from settlements.models import DriverPreInvoice
+
+        drv = _driver("600000003")
+        today = timezone.localdate()
+        neg = DriverPreInvoice.objects.create(
+            numero="PF-T3", driver=drv, periodo_inicio=today - timedelta(days=90),
+            periodo_fim=today - timedelta(days=60), status="CALCULADO", total_a_receber=-50,
+        )
+        r = self.client.get(reverse("drivers_app:payments_dashboard"), {"tab": "negativas"})
+        k = r.context["kpis"]
+        self.assertEqual((k["overdue_n"], k["overdue_total"]), (0, 0))
+        self.assertEqual(r.context["alerts"]["negativas"], 1)
+        self.assertEqual([p.id for p in r.context["rows"]], [neg.id])

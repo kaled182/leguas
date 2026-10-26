@@ -95,12 +95,13 @@
         <p class="text-xs uppercase font-bold text-gray-500">Motoristas activos — dados de pagamento em falta</p>
         <i data-lucide="triangle-alert" class="w-4 h-4 text-amber-500"></i>
       </div>
-      <div class="grid grid-cols-5 gap-2 mt-2 text-center">
+      <div class="grid grid-cols-3 sm:grid-cols-6 gap-2 mt-2 text-center">
         <div><p class="text-xl font-extrabold {% if alerts.sem_regime %}text-amber-600{% else %}text-emerald-600{% endif %}">{{ alerts.sem_regime }}</p><p class="text-[10px] text-gray-500">sem regime</p></div>
         <div><p class="text-xl font-extrabold {% if alerts.sem_iban %}text-amber-600{% else %}text-emerald-600{% endif %}">{{ alerts.sem_iban }}</p><p class="text-[10px] text-gray-500">sem IBAN</p></div>
         <div><p class="text-xl font-extrabold {% if alerts.sem_hub %}text-amber-600{% else %}text-emerald-600{% endif %}">{{ alerts.sem_hub }}</p><p class="text-[10px] text-gray-500">sem hub</p></div>
         <div><p class="text-xl font-extrabold {% if alerts.sem_contrato %}text-rose-600{% else %}text-emerald-600{% endif %}">{{ alerts.sem_contrato }}</p><p class="text-[10px] text-gray-500">sem contrato</p></div>
         <div><p class="text-xl font-extrabold {% if alerts.contestadas %}text-rose-600{% else %}text-emerald-600{% endif %}">{{ alerts.contestadas }}</p><p class="text-[10px] text-gray-500">PF contestadas</p></div>
+        <div title="{{ alerts.negativas_total|floatformat:'2g' }} €"><p class="text-xl font-extrabold {% if alerts.negativas %}text-rose-600{% else %}text-emerald-600{% endif %}">{{ alerts.negativas }}</p><p class="text-[10px] text-gray-500">PF negativas</p></div>
       </div>
     </a>
   </div>
@@ -136,7 +137,7 @@
          class="px-4 py-2 -mb-px text-sm font-semibold border-b-2 transition flex items-center gap-2
            {% if tab == key %}border-emerald-600 text-emerald-700 dark:text-emerald-300{% else %}border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200{% endif %}">
         {{ label }}
-        {% if n is not None %}<span class="px-1.5 py-0.5 rounded text-[11px] font-bold {% if key == 'atraso' and n %}bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300{% else %}bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300{% endif %}">{{ n }}</span>{% endif %}
+        {% if n is not None %}<span class="px-1.5 py-0.5 rounded text-[11px] font-bold {% if key == 'atraso' and n or key == 'negativas' and n %}bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300{% else %}bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300{% endif %}">{{ n }}</span>{% endif %}
       </a>
     {% endfor %}
   </div>
@@ -211,7 +212,7 @@
                 {% else %}bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300{% endif %}">{{ pf.get_status_display }}</span>
               {% if pf.status != 'PAGO' and not pf.fatura_ficheiro %}<p class="text-[10px] text-gray-400 mt-0.5">sem fatura-recibo</p>{% endif %}
             </td>
-            <td class="px-3 py-2 text-right font-semibold tabular-nums whitespace-nowrap">{{ pf.amount|floatformat:"2g" }} €</td>
+            <td class="px-3 py-2 text-right font-semibold tabular-nums whitespace-nowrap {% if pf.amount < 0 %}text-rose-600{% endif %}">{{ pf.amount|floatformat:"2g" }} €</td>
           </tr>
           {% empty %}
           <tr><td colspan="7" class="px-4 py-10 text-center text-sm text-gray-500 italic">Nada neste separador.</td></tr>
@@ -226,7 +227,7 @@
       </table>
     </div>
   </form>
-  <p class="text-[11px] text-gray-500 mt-2">Previsto = regra do contrato: PF semanal paga na terça 4 semanas depois da segunda-feira da semana; PF mensal paga pela regra do hub principal (ex.: Fão 30 dias após o fecho, Aveiro dia 15). Para pagar, use a caixa "A pagar" (exige comprovativo).</p>
+  <p class="text-[11px] text-gray-500 mt-2">Previsto = regra do contrato: PF semanal paga na terça 4 semanas depois da segunda-feira da semana; PF mensal paga pela regra do hub principal (ex.: Fão 30 dias após o fecho, Aveiro dia 15). Para pagar, use a caixa "A pagar" (exige comprovativo). Os KPIs e gráficos somam só PF com valor positivo; PF negativas (o motorista deve à empresa) estão em "Saldo devedor".</p>
 </div>
 
 {{ charts|json_script:"pay-charts" }}

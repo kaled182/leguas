@@ -33,6 +33,7 @@ TABS = [
     ("atraso", "Em atraso"),
     ("aprovar", "Por aprovar"),
     ("aberto", "Todos em aberto"),
+    ("negativas", "Saldo devedor"),
     ("pagos", "Pagos (30 dias)"),
 ]
 WEEKS_AHEAD = 8
@@ -124,7 +125,10 @@ def payments_dashboard(request):
     def total(rows):
         return sum((r.amount for r in rows), Decimal("0"))
 
-    payable = [p for p in open_pfs if p.status != "CONTESTADO"]
+    # Só sai dinheiro quando o valor é positivo. PF negativas = o motorista
+    # deve à empresa (adiantamentos/perdas maiores do que a produção).
+    payable = [p for p in open_pfs if p.status != "CONTESTADO" and p.amount > 0]
+    debtors = [p for p in open_pfs if p.amount < 0]
     upcoming_week = [p for p in payable if p.due and today <= p.due <= next_payday]
     overdue = [p for p in payable if p.due and p.due < today]
     to_approve = [p for p in open_pfs if p.status == "CALCULADO"]
@@ -159,6 +163,8 @@ def payments_dashboard(request):
         "sem_contrato": active.exclude(id__in=contract_ids).count(),
         "sem_hub": active.filter(hub_assignments__isnull=True).count(),
         "contestadas": sum(1 for p in open_pfs if p.status == "CONTESTADO"),
+        "negativas": len(debtors),
+        "negativas_total": total(debtors),
     }
 
     kpis = {
@@ -167,7 +173,7 @@ def payments_dashboard(request):
         "next_monthly": next_monthly,
         "monthly_total": total(next_monthly_rows), "monthly_n": len(next_monthly_rows),
         "overdue_total": total(overdue), "overdue_n": len(overdue),
-        "approve_total": total(to_approve), "approve_n": len(to_approve),
+        "approve_total": total([p for p in to_approve if p.amount > 0]), "approve_n": len(to_approve),
         "unbilled": unbilled, "unbilled_n": unbilled_n,
         "paid_month": _paid(paid_month), "paid_prev": _paid(paid_prev),
         "open_total": total(payable),
@@ -229,6 +235,8 @@ def payments_dashboard(request):
         rows = to_approve
     elif tab == "aberto":
         rows = open_pfs
+    elif tab == "negativas":
+        rows = debtors
     else:
         rows = list(
             paid_qs.filter(data_pagamento__gte=today - timedelta(days=30))
@@ -248,6 +256,7 @@ def payments_dashboard(request):
     tab_counts = {
         "proximo": len(upcoming_week) + len([p for p in next_monthly_rows if p not in upcoming_week]),
         "atraso": len(overdue), "aprovar": len(to_approve), "aberto": len(open_pfs),
+        "negativas": len(debtors),
     }
 
     return render(request, "drivers_app/admin/payments.html", {

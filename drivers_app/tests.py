@@ -552,3 +552,36 @@ class CpPricingTests(TestCase):
         })
         a = self.drv.hub_assignments.get()
         self.assertEqual(a.cp_prices, {"4740": "1.05"})
+
+
+class CopyIndividualPriceCommandTests(TestCase):
+    def test_copies_only_where_individual_price_is_higher(self):
+        from datetime import date
+        from decimal import Decimal
+
+        from django.core.management import call_command
+
+        from contracts.models import HubZoneTariff
+        from settlements.models import CainiaoHub
+
+        hub = CainiaoHub.objects.create(name="Fão")
+        porto = CainiaoHub.objects.create(name="Porto")
+        HubZoneTariff.objects.create(hub=hub, cp4="4740", zone_name="E", price_monthly=Decimal("0.95"), valid_from=date(2026, 1, 1))
+        HubZoneTariff.objects.create(hub=porto, cp4="4490", zone_name="P", price_monthly=Decimal("1.10"), valid_from=date(2026, 1, 1))
+        drv = _driver("800000001", apelido="Ind_LF")
+        drv.price_per_package = Decimal("1.00")
+        drv.save()
+        today = timezone.localdate()
+        for i, cp in enumerate(["4740", "4740", "4490"]):
+            t = _task(f"I{i}", today - timedelta(days=2), name="Ind_LF")
+            t.zip_code = f"{cp}-001"
+            t.save()
+        call_command("copy_individual_price_to_cp", "--dry-run")
+        self.assertFalse(drv.hub_assignments.exists())
+        call_command("copy_individual_price_to_cp")
+        a = drv.hub_assignments.get()
+        self.assertEqual((a.hub_id, a.cp4s, a.cp_prices, a.is_primary), (hub.id, ["4740"], {"4740": "1.00"}, True))
+        # Segunda corrida não duplica nem altera.
+        call_command("copy_individual_price_to_cp")
+        self.assertEqual(drv.hub_assignments.get().cp_prices, {"4740": "1.00"})
+        self.assertEqual(drv.edit_logs.count(), 1)

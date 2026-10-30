@@ -139,7 +139,7 @@
                 <i data-lucide="edit" class="w-4 h-4"></i>
                 Editar
               </a>
-              <form method="post" action="{% url 'core:partner-toggle-status' partner.pk %}" class="contents">
+              <form method="post" action="{% url 'core:partner-toggle-status' partner.pk %}" class="contents" onsubmit="return confirm('{% if partner.is_active %}Desativar{% else %}Ativar{% endif %} este parceiro?');">
                 {% csrf_token %}
                 <button type="submit"
                   class="px-3 py-2 text-sm rounded-lg font-medium transition-colors duration-200 flex items-center gap-1

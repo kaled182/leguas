@@ -847,6 +847,7 @@ def partner_edit(request, pk):
 
 
 @login_required
+@require_POST
 def partner_toggle_status(request, pk):
     """Ativar/desativar parceiro"""
     partner = get_object_or_404(Partner, pk=pk)
@@ -943,6 +944,7 @@ def integration_edit(request, pk):
 
 
 @login_required
+@require_POST
 def integration_toggle_status(request, pk):
     """Ativar/desativar integração"""
     integration = get_object_or_404(PartnerIntegration, pk=pk)

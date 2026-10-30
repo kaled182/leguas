@@ -108,7 +108,7 @@
               <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-3">
                 <div class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                   <i data-lucide="calendar" class="w-4 h-4"></i>
-                  <span>{{ incident.incident_date|date:"d/m/Y H:i" }}</span>
+                  <span>{{ incident.incident_date|date:"d/m/Y" }}</span>
                 </div>
                 {% if incident.location %}
                 <div class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">

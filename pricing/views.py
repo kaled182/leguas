@@ -7,6 +7,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.http import require_POST
 
 from core.models import Partner
 
@@ -136,6 +137,7 @@ def zone_edit(request, pk):
 
 
 @login_required
+@require_POST
 def zone_toggle_status(request, pk):
     """Ativar/desativar zona"""
     zone = get_object_or_404(PostalZone, pk=pk)
@@ -274,6 +276,7 @@ def tariff_edit(request, pk):
 
 
 @login_required
+@require_POST
 def tariff_toggle_status(request, pk):
     """Ativar/desativar tarifa"""
     tariff = get_object_or_404(PartnerTariff, pk=pk)

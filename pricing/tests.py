@@ -1,6 +1,8 @@
 ﻿from datetime import date, timedelta
 
-from django.test import TestCase
+from django.contrib.auth.models import User
+from django.test import Client, TestCase
+from django.urls import reverse
 
 from core.models import Partner
 
@@ -118,3 +120,43 @@ class PartnerTariffModelTest(TestCase):
         # Preço com multiplicador de fim de semana
         price_weekend = tariff.calculate_price(is_weekend=True)
         self.assertEqual(price_weekend, 3.75)  # 2.50 * 1.5
+
+
+class ToggleStatusSecurityTests(TestCase):
+    """Ativar/desativar só por POST."""
+
+    def setUp(self):
+        self.user = User.objects.create_user("u", password="x", is_staff=True)
+        self.client.force_login(self.user)
+        self.zone = PostalZone.objects.create(
+            name="Zona", code="Z1", postal_code_pattern="^4740",
+        )
+        self.partner = Partner.objects.create(
+            name="P", nif="517307243", contact_email="p@example.test",
+        )
+        self.tariff = PartnerTariff.objects.create(
+            partner=self.partner, postal_zone=self.zone, base_price=1,
+            valid_from=date(2026, 1, 1),
+        )
+
+    def assert_post_only(self, url_name, obj):
+        url = reverse(url_name, args=[obj.pk])
+        before = obj.is_active
+        self.assertEqual(self.client.get(url).status_code, 405)
+        obj.refresh_from_db()
+        self.assertEqual(obj.is_active, before)
+        self.assertEqual(self.client.post(url).status_code, 302)
+        obj.refresh_from_db()
+        self.assertNotEqual(obj.is_active, before)
+
+    def test_zone_toggle_rejects_get(self):
+        self.assert_post_only("pricing:zone-toggle-status", self.zone)
+
+    def test_tariff_toggle_rejects_get(self):
+        self.assert_post_only("pricing:tariff-toggle-status", self.tariff)
+
+    def test_toggle_requires_csrf(self):
+        client = Client(enforce_csrf_checks=True)
+        client.force_login(self.user)
+        url = reverse("pricing:zone-toggle-status", args=[self.zone.pk])
+        self.assertEqual(client.post(url).status_code, 403)

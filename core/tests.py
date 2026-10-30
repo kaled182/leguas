@@ -1,5 +1,7 @@
-﻿from django.core.exceptions import ValidationError
+﻿from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
 from django.test import TestCase
+from django.urls import reverse
 
 from .models import Partner, PartnerIntegration
 
@@ -117,3 +119,34 @@ class PartnerIntegrationModelTest(TestCase):
         integration.last_sync_at = timezone.now() - timedelta(minutes=60)
         integration.save()
         self.assertTrue(integration.is_sync_overdue)
+
+
+class ToggleStatusSecurityTests(TestCase):
+    """Ativar/desativar só por POST."""
+
+    def setUp(self):
+        self.user = User.objects.create_user("u", password="x", is_staff=True)
+        self.client.force_login(self.user)
+        self.partner = Partner.objects.create(
+            name="P", nif="517307243", contact_email="p@example.test",
+        )
+        self.integration = PartnerIntegration.objects.create(
+            partner=self.partner, integration_type="API",
+            endpoint_url="https://example.test",
+        )
+
+    def assert_post_only(self, url_name, obj):
+        url = reverse(url_name, args=[obj.pk])
+        before = obj.is_active
+        self.assertEqual(self.client.get(url).status_code, 405)
+        obj.refresh_from_db()
+        self.assertEqual(obj.is_active, before)
+        self.assertEqual(self.client.post(url).status_code, 302)
+        obj.refresh_from_db()
+        self.assertNotEqual(obj.is_active, before)
+
+    def test_partner_toggle_rejects_get(self):
+        self.assert_post_only("core:partner-toggle-status", self.partner)
+
+    def test_integration_toggle_rejects_get(self):
+        self.assert_post_only("core:integration-toggle-status", self.integration)

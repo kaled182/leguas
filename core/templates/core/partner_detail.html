@@ -777,7 +777,7 @@
       {% endif %}
     </div>
     <div class="px-6 py-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 flex justify-between items-center flex-wrap gap-2">
-      <form method="post" action="{% url 'core:partner-toggle-status' partner.pk %}">
+      <form method="post" action="{% url 'core:partner-toggle-status' partner.pk %}" onsubmit="return confirm('{% if partner.is_active %}Desativar{% else %}Ativar{% endif %} este parceiro?');">
         {% csrf_token %}
         <input type="hidden" name="next" value="{{ request.path }}">
         <button type="submit" class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border transition-colors
@@ -823,7 +823,7 @@
         <a href="{% url 'core:partner-edit' partner.pk %}" class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors gap-2 text-sm">
           <i data-lucide="edit" class="w-4 h-4"></i>Editar
         </a>
-        <form method="post" action="{% url 'core:partner-toggle-status' partner.pk %}" class="inline">
+        <form method="post" action="{% url 'core:partner-toggle-status' partner.pk %}" class="inline" onsubmit="return confirm('{% if partner.is_active %}Desativar{% else %}Ativar{% endif %} este parceiro?');">
           {% csrf_token %}
           <input type="hidden" name="next" value="{{ request.path }}">
           <button type="submit" class="inline-flex items-center px-4 py-2 {% if partner.is_active %}bg-amber-100 hover:bg-amber-200 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400{% else %}bg-emerald-600 hover:bg-emerald-700 text-white{% endif %} rounded-lg font-medium transition-colors gap-2 text-sm">
@@ -882,7 +882,13 @@
               </div>
               <div class="flex gap-2">
                 <a href="{% url 'core:integration-edit' integration.pk %}" class="text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"><i data-lucide="edit" class="w-4 h-4"></i></a>
-                <a href="{% url 'core:integration-toggle-status' integration.pk %}" class="text-gray-400 hover:text-red-600 dark:hover:text-red-400"><i data-lucide="{% if integration.is_active %}toggle-right{% else %}toggle-left{% endif %}" class="w-4 h-4"></i></a>
+                <form method="post" action="{% url 'core:integration-toggle-status' integration.pk %}" class="inline"
+                      onsubmit="return confirm('{% if integration.is_active %}Desativar{% else %}Ativar{% endif %} esta integração?');">
+                  {% csrf_token %}
+                  <button type="submit" class="text-gray-400 hover:text-red-600 dark:hover:text-red-400">
+                    <i data-lucide="{% if integration.is_active %}toggle-right{% else %}toggle-left{% endif %}" class="w-4 h-4"></i>
+                  </button>
+                </form>
               </div>
             </div>
             {% if integration.endpoint_url %}<p class="text-xs text-gray-500 font-mono truncate mb-2">{{ integration.endpoint_url }}</p>{% endif %}

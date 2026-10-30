@@ -29,10 +29,14 @@
           <i data-lucide="edit" class="w-4 h-4"></i>
           Editar
         </a>
-        <a href="{% url 'pricing:zone-toggle-status' zone.pk %}" class="inline-flex items-center px-4 py-2 {% if zone.is_active %}bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white{% else %}bg-emerald-600 hover:bg-emerald-700 text-white{% endif %} rounded-lg font-medium transition-colors duration-200 gap-2">
-          <i data-lucide="{% if zone.is_active %}x-circle{% else %}check-circle{% endif %}" class="w-4 h-4"></i>
+        <form method="post" action="{% url 'pricing:zone-toggle-status' zone.pk %}" class="inline"
+              onsubmit="return confirm('{% if zone.is_active %}Desativar{% else %}Ativar{% endif %} esta zona?');">
+          {% csrf_token %}
+          <button type="submit" class="inline-flex items-center px-4 py-2 {% if zone.is_active %}bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white{% else %}bg-emerald-600 hover:bg-emerald-700 text-white{% endif %} rounded-lg font-medium transition-colors duration-200 gap-2">
+            <i data-lucide="{% if zone.is_active %}x-circle{% else %}check-circle{% endif %}" class="w-4 h-4"></i>
           {% if zone.is_active %}Desativar{% else %}Ativar{% endif %}
-        </a>
+          </button>
+        </form>
       </div>
     </div>
   </div>

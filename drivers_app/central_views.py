@@ -1,11 +1,12 @@
 """Central de Motoristas — vista admin moderna que substitui modais por
 páginas dedicadas e reúne KPIs, filtros e acções rápidas."""
-from collections import Counter
+import re
+from collections import Counter, defaultdict
 from datetime import timedelta
 
 from django.contrib import messages
 from django.contrib.auth.decorators import user_passes_test
-from django.db.models import Max, Q
+from django.db.models import Exists, Max, OuterRef, Q
 from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -46,6 +47,11 @@ IDLE_BUCKETS = [
 SPARK_DAYS = 14
 CHART_DAYS = 30
 
+# Campos do cadastro consultados pela pesquisa (os logins têm query própria).
+SEARCH_FIELDS = (
+    "nome_completo", "apelido", "nif", "courier_id_cainiao", "telefone", "email",
+)
+
 
 def _idle_bucket(days):
     if days is None:
@@ -75,6 +81,61 @@ def _contract_driver_ids():
         .values_list("driver_id", flat=True)
     )
     return signed | attached | generated
+
+
+def _all_tokens(field, tokens):
+    """Q: `field` contém todos os termos."""
+    match = Q()
+    for token in tokens:
+        match &= Q(**{f"{field}__icontains": token})
+    return match
+
+
+def _driver_search_q(q):
+    """Filtro da pesquisa: cadastro, logins guardados e nomes antigos do login.
+
+    Os termos separam-se por espaço ou "_": "Ricardo Milhazes 2_LF" encontra
+    "Ricardo_Milhazes_2_LF". Todos os termos têm de estar no mesmo campo.
+    """
+    from settlements.models import CourierNameAlias, DriverCourierMapping
+
+    tokens = [t for t in re.split(r"[\s_]+", q) if t] or [q]
+    aliases = CourierNameAlias.objects.filter(_all_tokens("courier_name", tokens))
+    logins = DriverCourierMapping.objects.filter(
+        _all_tokens("courier_id", tokens)
+        | _all_tokens("courier_name", tokens)
+        | Q(Exists(aliases.filter(
+            partner=OuterRef("partner"), courier_id=OuterRef("courier_id"),
+        )))
+    )
+    match = Q(id__in=logins.values("driver_id")) | Q(
+        courier_id_cainiao__in=aliases.filter(
+            partner__name__iexact="CAINIAO",
+        ).values("courier_id"),
+    )
+    for field in SEARCH_FIELDS:
+        match |= _all_tokens(field, tokens)
+    return match
+
+
+def _logins_by_driver():
+    """{driver_id: [DriverCourierMapping]}, cada um com `search_text`."""
+    from settlements.models import CourierNameAlias, DriverCourierMapping
+
+    alias_names = defaultdict(list)
+    for partner_id, courier_id, name in CourierNameAlias.objects.values_list(
+        "partner_id", "courier_id", "courier_name",
+    ):
+        alias_names[(partner_id, courier_id)].append(name)
+
+    result = defaultdict(list)
+    for m in DriverCourierMapping.objects.select_related("partner").order_by("id"):
+        m.search_text = " ".join([
+            m.courier_id, m.courier_name,
+            *alias_names[(m.partner_id, m.courier_id)],
+        ]).lower()
+        result[m.driver_id].append(m)
+    return result
 
 
 @admin_required
@@ -113,14 +174,7 @@ def drivers_central(request):
     # ─── Base (filtros de pesquisa, sem separador) ───
     base = DriverProfile.objects.select_related("empresa_parceira")
     if q:
-        base = base.filter(
-            Q(nome_completo__icontains=q)
-            | Q(apelido__icontains=q)
-            | Q(nif__icontains=q)
-            | Q(courier_id_cainiao__icontains=q)
-            | Q(telefone__icontains=q)
-            | Q(email__icontains=q)
-        )
+        base = base.filter(_driver_search_q(q))
     if status:
         base = base.filter(status=status)
     if vinculo:
@@ -131,6 +185,11 @@ def drivers_central(request):
         base = base.filter(empresa_parceira_id=fleet_id)
 
     tab_counts = {k: base.filter(f).count() for k, _l, f in TABS}
+    # Pesquisa sem resultados neste separador: abre o primeiro com resultados.
+    moved_from_tab = ""
+    if q and not tab_counts[tab] and tab_counts["todos"]:
+        moved_from_tab = next(label for k, label, _f in TABS if k == tab)
+        tab = next(k for k, _l, _f in TABS if tab_counts[k])
     in_tab = base.filter(TAB_FILTERS[tab])
 
     # Contagens das flags dentro do separador actual
@@ -168,8 +227,11 @@ def drivers_central(request):
 
     # ─── Anotar linhas ───
     spark_days = [today - timedelta(days=i) for i in range(SPARK_DAYS - 1, -1, -1)]
+    logins = _logins_by_driver()
     for d in drivers_list:
         days = activity.get(d.id, {})
+        d.logins = logins.get(d.id, [])
+        d.login_text = " ".join(m.search_text for m in d.logins)
         d.has_pending_changes = d.id in pending_change_ids
         d.has_contract = d.id in contract_ids
         d.has_access = d.id in access_ids
@@ -276,6 +338,7 @@ def drivers_central(request):
         "counts": kpis,
         "tabs": [(k, label, tab_counts[k]) for k, label, _f in TABS],
         "tab": tab,
+        "moved_from_tab": moved_from_tab,
         "flag_counts": flag_counts,
         "idle_chart": idle_chart,
         "charts": charts,

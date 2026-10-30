@@ -181,6 +181,78 @@ class DriversCentralViewTests(TestCase):
         self.assertRedirects(r, reverse("drivers_app:drivers_central"), fetch_redirect_response=False)
 
 
+class DriversCentralLoginSearchTests(TestCase):
+    def setUp(self):
+        from core.models import Partner
+        from settlements.models import CourierNameAlias, DriverCourierMapping
+
+        self.client.force_login(User.objects.create_user("adm", password="x", is_staff=True))
+        self.url = reverse("drivers_app:drivers_central")
+        self.partner = Partner.objects.create(name="CAINIAO", nif="500000000", contact_email="c@x.pt")
+        self.owner = _driver("310000001", apelido="Ricardo_LF")
+        self.other = _driver("310000002", apelido="Outro_LF")
+        self.mapping = DriverCourierMapping.objects.create(
+            driver=self.owner, partner=self.partner,
+            courier_id="9988", courier_name="Ricardo_Milhazes_2_LF",
+        )
+        CourierNameAlias.objects.create(
+            partner=self.partner, courier_name="Nome_Antigo_LF", courier_id="9988",
+        )
+        CourierNameAlias.objects.create(
+            partner=self.partner, courier_name="Perfil_Antigo_LF", courier_id="7777",
+        )
+        DriverProfile.objects.filter(pk=self.other.pk).update(courier_id_cainiao="7777")
+
+    def _ids(self, q, tab="todos"):
+        r = self.client.get(self.url, {"tab": tab, "q": q})
+        return {d.id for d in r.context["drivers"]}
+
+    def test_finds_saved_login(self):
+        self.assertEqual(self._ids("Ricardo_Milhazes_2_LF"), {self.owner.id})
+        self.assertEqual(self._ids("9988"), {self.owner.id})
+
+    def test_space_matches_underscore(self):
+        self.assertEqual(self._ids("Ricardo Milhazes 2_LF"), {self.owner.id})
+        self.assertEqual(self._ids("ricardo milhazes 2 lf"), {self.owner.id})
+
+    def test_finds_old_login_name(self):
+        self.assertEqual(self._ids("Nome_Antigo"), {self.owner.id})
+        self.assertEqual(self._ids("Perfil Antigo"), {self.other.id})
+
+    def test_terms_must_match_same_field(self):
+        self.assertEqual(self._ids("Milhazes Outro"), set())
+
+    def test_no_duplicates_with_several_logins(self):
+        from settlements.models import DriverCourierMapping
+
+        DriverCourierMapping.objects.create(
+            driver=self.owner, partner=self.partner,
+            courier_id="9989", courier_name="Ricardo_Milhazes_3_LF",
+        )
+        r = self.client.get(self.url, {"tab": "todos", "q": "Milhazes"})
+        self.assertEqual([d.id for d in r.context["drivers"]], [self.owner.id])
+        self.assertEqual({k: n for k, _l, n in r.context["tabs"]}["todos"], 1)
+
+    def test_opens_tab_with_results(self):
+        DriverProfile.objects.filter(pk=self.owner.pk).update(
+            inactive_since=timezone.localdate(),
+        )
+        r = self.client.get(self.url, {"tab": "ativos", "q": "Milhazes"})
+        self.assertEqual(r.context["tab"], "inativos")
+        self.assertEqual(r.context["moved_from_tab"], "Activos")
+        self.assertEqual({d.id for d in r.context["drivers"]}, {self.owner.id})
+
+    def test_keeps_tab_without_results(self):
+        r = self.client.get(self.url, {"tab": "ativos", "q": "inexistente"})
+        self.assertEqual((r.context["tab"], r.context["moved_from_tab"]), ("ativos", ""))
+
+    def test_row_shows_login_and_instant_filter_text(self):
+        r = self.client.get(self.url, {"tab": "todos"})
+        self.assertContains(r, "Ricardo_Milhazes_2_LF")
+        self.assertContains(r, "nome_antigo_lf")
+        self.assertContains(r, reverse("drivers_app:driver_logins", args=[self.owner.id]))
+
+
 class FichaTests(TestCase):
     def setUp(self):
         from decimal import Decimal

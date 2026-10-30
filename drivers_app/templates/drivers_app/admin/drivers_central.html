@@ -173,7 +173,7 @@
   </div>
 
   {# ─── Filtros ─── #}
-  <form method="get" class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200/50 dark:border-gray-700/50 mb-4">
+  <form method="get" id="driverFilters" class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200/50 dark:border-gray-700/50 mb-4">
     <input type="hidden" name="tab" value="{{ tab }}">
     {% if status_filter %}<input type="hidden" name="status" value="{{ status_filter }}">{% endif %}
     {% if idle_filter %}<input type="hidden" name="idle" value="{{ idle_filter }}">{% endif %}
@@ -181,7 +181,7 @@
       <div class="flex-1 min-w-[220px] relative">
         <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
         <input type="text" name="q" value="{{ q }}" id="driverSearch" autocomplete="off"
-               placeholder="Filtrar já: nome, NIF, courier ID, telefone…  ( / )"
+               placeholder="Filtrar já: nome, NIF, login, courier ID, telefone…  ( / )"
                class="w-full pl-9 pr-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
       </div>
       <select name="vinculo" onchange="this.form.submit()"
@@ -259,12 +259,22 @@
     </div>
   </form>
 
+  {% if moved_from_tab %}
+  <p class="mb-4 px-4 py-2 text-sm rounded-lg bg-indigo-50 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-200">
+    Sem resultados em "{{ moved_from_tab }}". O sistema abriu o separador com resultados.
+  </p>
+  {% endif %}
+
   {# ─── Tabela ─── #}
   <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
     <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
       <p class="text-xs text-gray-500 dark:text-gray-400">
         Mostrando <span class="font-bold text-gray-900 dark:text-white" id="shownCount">{{ shown_count }}</span>
         de <span class="font-bold">{{ filtered_count }}</span> motoristas neste separador
+        <span id="searchAllHint" class="hidden ml-2">
+          · Nada neste separador.
+          <button type="submit" form="driverFilters" class="font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">Procurar em todos os motoristas (Enter)</button>
+        </span>
       </p>
       <p class="text-[11px] text-gray-400 hidden md:block">Barras: entregas por dia nos últimos 14 dias</p>
     </div>
@@ -284,7 +294,7 @@
         <tbody class="divide-y divide-gray-100 dark:divide-gray-700" id="driverRows">
           {% for d in drivers %}
           <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition"
-              data-text="{{ d.nome_completo|lower }} {{ d.apelido|lower }} {{ d.nif }} {{ d.courier_id_cainiao }} {{ d.telefone }} {{ d.email|lower }}">
+              data-text="{{ d.nome_completo|lower }} {{ d.apelido|lower }} {{ d.nif }} {{ d.courier_id_cainiao }} {{ d.telefone }} {{ d.email|lower }} {{ d.login_text }}">
             {# Identificação #}
             <td class="px-4 py-3">
               <div class="flex items-center gap-3">
@@ -305,6 +315,17 @@
                     {% if d.apelido %}<span class="font-mono">{{ d.apelido }}</span>{% endif %}
                     {% if d.courier_id_cainiao %}<span>· {{ d.courier_id_cainiao }}</span>{% endif %}
                   </div>
+                  {% if d.logins %}
+                  <div class="flex flex-wrap gap-1 mt-1">
+                    {% for m in d.logins %}
+                      <a href="{% url 'drivers_app:driver_logins' d.id %}"
+                         title="Ver, corrigir ou transferir este login"
+                         class="px-1.5 py-0.5 rounded text-[10px] font-mono bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 hover:bg-violet-200 dark:hover:bg-violet-900/70">
+                        {{ m.partner.name }} · {% if m.courier_name %}{{ m.courier_name }} · {% endif %}{{ m.courier_id }}
+                      </a>
+                    {% endfor %}
+                  </div>
+                  {% endif %}
                 </div>
               </div>
             </td>
@@ -438,6 +459,11 @@
                    class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md text-gray-600 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400">
                   <i data-lucide="paperclip" class="w-4 h-4"></i>
                 </a>
+                <a href="{% url 'drivers_app:driver_logins' d.id %}"
+                   title="Logins (corrigir ou transferir)"
+                   class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md text-gray-600 dark:text-gray-400 hover:text-sky-600 dark:hover:text-sky-400">
+                  <i data-lucide="link-2" class="w-4 h-4"></i>
+                </a>
                 <a href="{% url 'customauth:admin_driver_credentials' d.id %}"
                    title="Credenciais"
                    class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md text-gray-600 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400">
@@ -472,8 +498,9 @@
   const input = document.getElementById('driverSearch');
   const rows = Array.from(document.querySelectorAll('#driverRows tr[data-text]'));
   const shown = document.getElementById('shownCount');
+  const hint = document.getElementById('searchAllHint');
   input.addEventListener('input', () => {
-    const terms = input.value.toLowerCase().trim().split(/\s+/).filter(Boolean);
+    const terms = input.value.toLowerCase().trim().split(/[\s_]+/).filter(Boolean);
     let n = 0;
     rows.forEach(r => {
       const ok = terms.every(t => r.dataset.text.includes(t));
@@ -481,6 +508,7 @@
       if (ok) n++;
     });
     shown.textContent = n;
+    hint.classList.toggle('hidden', n > 0 || !terms.length);
   });
   document.addEventListener('keydown', e => {
     if (e.key === '/' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) {

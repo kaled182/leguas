@@ -158,94 +158,9 @@ urlpatterns = [
         views.admin_approve_driver_action,
         name="admin_approve_driver_action",
     ),
-    path(
-        "admin/ativos/",
-        views.admin_active_drivers,
-        name="admin_active_drivers",
-    ),
     # Bulk actions na página Motoristas Ativos
-    path(
-        "admin/bulk/block/",
-        views.bulk_block_drivers,
-        name="bulk_block_drivers",
-    ),
-    path(
-        "admin/bulk/unblock/",
-        views.bulk_unblock_drivers,
-        name="bulk_unblock_drivers",
-    ),
-    path(
-        "admin/bulk/whatsapp/",
-        views.bulk_whatsapp_drivers,
-        name="bulk_whatsapp_drivers",
-    ),
-    path(
-        "admin/bulk/export-csv/",
-        views.bulk_export_drivers_csv,
-        name="bulk_export_drivers_csv",
-    ),
     # Drawer / quick-view API
-    path(
-        "admin/quickview/<int:driver_id>/",
-        views.driver_quickview,
-        name="driver_quickview",
-    ),
     # Admin - Gestão Completa (Edição, Documentos, Veículos)
-    path(
-        "admin/editar/<int:driver_id>/pessoal/",
-        views.admin_edit_driver_personal,
-        name="admin_edit_driver_personal",
-    ),
-    path(
-        "admin/editar/<int:driver_id>/profissional/",
-        views.admin_edit_driver_professional,
-        name="admin_edit_driver_professional",
-    ),
-    path(
-        "admin/anexar-documento/<int:driver_id>/",
-        views.admin_attach_document,
-        name="admin_attach_document",
-    ),
-    path(
-        "admin/deletar-documento/<int:document_id>/",
-        views.admin_delete_document,
-        name="admin_delete_document",
-    ),
-    path(
-        "admin/adicionar-veiculo/<int:driver_id>/",
-        views.admin_add_vehicle,
-        name="admin_add_vehicle",
-    ),
-    path(
-        "admin/deletar-veiculo/<int:vehicle_id>/",
-        views.admin_delete_vehicle,
-        name="admin_delete_vehicle",
-    ),
-    path(
-        "admin/deletar-documento-veiculo/<int:document_id>/",
-        views.admin_delete_vehicle_document,
-        name="admin_delete_vehicle_document",
-    ),
-    path(
-        "admin/desativar/<int:driver_id>/",
-        views.admin_deactivate_driver,
-        name="admin_deactivate_driver",
-    ),
-    path(
-        "admin/ativar/<int:driver_id>/",
-        views.admin_activate_driver,
-        name="admin_activate_driver",
-    ),
-    path(
-        "admin/excluir/<int:driver_id>/",
-        views.admin_delete_driver,
-        name="admin_delete_driver",
-    ),
-    path(
-        "admin/get-driver-data/<int:driver_id>/",
-        views.admin_get_driver_data,
-        name="admin_get_driver_data",
-    ),
     # Indicações / Referrals
     path("api/referrals/search/", views.referral_search_drivers, name="referral-search"),
     path("api/referrals/<int:driver_id>/", views.referral_list, name="referral-list"),

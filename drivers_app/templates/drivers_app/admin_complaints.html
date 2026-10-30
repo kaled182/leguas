@@ -811,7 +811,7 @@
       </div>
       <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex gap-2 justify-between flex-shrink-0">
         <div class="flex gap-2">
-          <a :href="editComplaint ? '/driversapp/admin/ativos/?open=' + editComplaint.driver_id + '&tab=reclamacoes' : '#'"
+          <a :href="editComplaint ? '/driversapp/portal/' + editComplaint.driver_id + '/reclamacoes/' : '#'"
              class="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors flex items-center gap-1.5">
             <i data-lucide="user" class="w-4 h-4"></i> Ver Motorista
           </a>

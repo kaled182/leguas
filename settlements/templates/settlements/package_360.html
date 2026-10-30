@@ -79,7 +79,7 @@
             <p class="font-semibold text-gray-900 dark:text-white truncate">{{ driver.nome_completo }}</p>
             <p class="text-xs text-gray-500">{{ driver.telefone|default:"sem telefone" }}</p>
           </div>
-          <a href="/driversapp/admin/ativos/?open={{ driver.id }}&tab=reclamacoes"
+          <a href="{% url 'drivers_app:driver_complaints' driver.id %}"
              class="px-3 py-1.5 text-xs bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 rounded-lg hover:bg-emerald-100 transition-colors inline-flex items-center gap-1.5 flex-shrink-0">
             <i data-lucide="external-link" class="w-3.5 h-3.5"></i> Abrir
           </a>

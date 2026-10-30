@@ -253,6 +253,35 @@ class DriversCentralLoginSearchTests(TestCase):
         self.assertContains(r, reverse("drivers_app:driver_logins", args=[self.owner.id]))
 
 
+class LegacyListRemovedTests(TestCase):
+    def setUp(self):
+        self.client.force_login(User.objects.create_user("adm", password="x", is_staff=True))
+        self.drv = _driver("320000001", apelido="Leg_LF")
+
+    def test_pages_and_actions_are_gone(self):
+        for url in (
+            "/driversapp/admin/ativos/",
+            "/driversapp/admin/bulk/export-csv/",
+            "/driversapp/admin/bulk/block/",
+            f"/driversapp/admin/excluir/{self.drv.id}/",
+            f"/driversapp/admin/quickview/{self.drv.id}/",
+        ):
+            self.assertEqual(self.client.get(url).status_code, 404, url)
+            self.assertEqual(self.client.post(url).status_code, 404, url)
+        self.assertTrue(DriverProfile.objects.filter(pk=self.drv.id).exists())
+
+    def test_menu_and_create_page_have_no_link(self):
+        r = self.client.get(reverse("drivers_app:admin_create_driver"))
+        self.assertEqual(r.status_code, 200)
+        self.assertNotContains(r, "/driversapp/admin/ativos/")
+        self.assertNotContains(r, "legacy")
+
+    def test_replacement_pages_open(self):
+        for name in ("driver_complaints", "driver_vehicles", "driver_documents"):
+            r = self.client.get(reverse(f"drivers_app:{name}", args=[self.drv.id]))
+            self.assertEqual(r.status_code, 200, name)
+
+
 class FichaTests(TestCase):
     def setUp(self):
         from decimal import Decimal

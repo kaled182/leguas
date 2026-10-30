@@ -49,7 +49,7 @@
       <!-- Motoristas - Submenu Expansivel -->
       <div x-data="{ open: {% if 'admin_' in request.resolver_match.url_name %}true{% else %}false{% endif %} }" class="mb-1">
         <button @click="open = !open" type="button"
-          class="nav-link flex items-center gap-3 p-3 rounded-lg transition-all duration-200 group w-full text-left {% if 'admin_create_driver' in request.resolver_match.url_name or 'admin_approve_driver' in request.resolver_match.url_name or 'admin_active_drivers' in request.resolver_match.url_name %}bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300{% else %}text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:text-primary-600 dark:hover:text-primary-400{% endif %}">
+          class="nav-link flex items-center gap-3 p-3 rounded-lg transition-all duration-200 group w-full text-left {% if 'admin_create_driver' in request.resolver_match.url_name or 'admin_approve_driver' in request.resolver_match.url_name %}bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300{% else %}text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:text-primary-600 dark:hover:text-primary-400{% endif %}">
           <i data-lucide="users" class="w-5 h-5 text-current group-hover:scale-110 transition-transform flex-shrink-0"></i>
           <span class="sidebar-text font-medium flex-1">Motoristas</span>
           <i data-lucide="chevron-down" :class="open ? 'rotate-180' : ''" class="w-4 h-4 transition-transform"></i>
@@ -93,11 +93,6 @@
             class="flex items-center gap-2 p-2 rounded-lg text-sm transition-all {% if request.resolver_match.url_name == 'payments_dashboard' %}bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 font-medium{% else %}text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:text-emerald-600 dark:hover:text-emerald-400{% endif %}">
             <i data-lucide="wallet" class="w-4 h-4"></i>
             <span>Pagamentos a Motoristas</span>
-          </a>
-          <a href="{% url 'drivers_app:admin_active_drivers' %}"
-            class="flex items-center gap-2 p-2 rounded-lg text-sm transition-all {% if request.resolver_match.url_name == 'admin_active_drivers' %}bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 font-medium{% else %}text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-100{% endif %}">
-            <i data-lucide="users-round" class="w-4 h-4"></i>
-            <span>Lista clássica (legacy)</span>
           </a>
 
           <a href="{% url 'drivers_app:change_requests_list' %}"

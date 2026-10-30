@@ -89,8 +89,7 @@ urlpatterns = [
         "pricing/", include("pricing.urls")
     ),  # APP para gestão de zonas postais e tarifas
     path("fleet/", include("fleet_management.urls")),  # APP para gestão de frota
-    path("geozonas/", include("geozonas.urls")),  # Mapa de Códigos Postais e Zonas
-    path("sorting/", include("sorting.urls")),  # Sorting de pacotes em bigbags
+    path("geozonas/", include("geozonas.urls")),  # Export das zonas para o ReliableMaps
     path("system/", include("system_config.urls")),  # Configurações do Sistema
     path(
         "analytics/", include("analytics.urls")

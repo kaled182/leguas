@@ -22,21 +22,6 @@
                     </a>
                 </div>
 
-                <div x-data="{ open: {% if current_ns == 'geozonas' and current_url == 'mapa' %}true{% else %}false{% endif %} }" class="mb-4 space-y-1">
-                    <button type="button" @click="open = !open" class="group flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide cursor-pointer transition-colors text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700/70 dark:hover:text-gray-200">
-                        <i data-lucide="map" class="h-4 w-4" aria-hidden="true"></i>
-                        <span class="flex-1">Mapas</span>
-                        <i data-lucide="chevron-down" class="h-4 w-4 transition-transform" :class="open ? 'rotate-180' : ''" aria-hidden="true"></i>
-                    </button>
-
-                    <div x-show="open" x-transition x-cloak class="space-y-1 border-l border-gray-200 pl-2 dark:border-gray-700">
-                        <a href="{% url 'geozonas:mapa' %}" class="group flex items-center gap-2 rounded-md px-2 py-1.5 text-sm cursor-pointer transition-colors {% if current_ns == 'geozonas' and current_url == 'mapa' %}bg-indigo-500 text-white shadow-lg hover:bg-indigo-600{% else %}text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-700/70 dark:hover:text-white{% endif %}">
-                            <i data-lucide="map-pinned" class="h-3.5 w-3.5 shrink-0" aria-hidden="true"></i>
-                            <span>Mapa de CP's</span>
-                        </a>
-                    </div>
-                </div>
-
                 <div x-data="{ open: {% if current_ns == 'drivers_app' or current_ns == 'fleet' or current_ns == 'contracts' or 'packages' in current_path or 'claims' in current_path or 'appeals' in current_path %}true{% else %}false{% endif %} }" class="mb-4 space-y-1">
                     <button type="button" @click="open = !open" class="group flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide cursor-pointer transition-colors text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700/70 dark:hover:text-gray-200">
                         <i data-lucide="layers" class="h-4 w-4" aria-hidden="true"></i>

@@ -161,7 +161,7 @@ INSTALLED_APPS = [
     "fleet_management",  # Gestão de Frota
     "pricing",  # Tarifação e Zonas Postais
     "geozonas",  # Catálogo de Códigos Postais (GeoAPI) e Zonas de Entrega
-    "sorting",  # Sorting de pacotes em bigbags virtuais por CP/geozona
+    "sorting",  # Só modelos e migrations: páginas na tag arquivo/sorting-geozonas-2026-10-30
     # Analytics (Fase 2)
     "analytics",  # Relatórios de frota e estado das integrações
     # Contratos

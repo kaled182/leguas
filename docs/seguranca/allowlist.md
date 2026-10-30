@@ -41,7 +41,7 @@ O middleware deixa passar. A view mantém a sua proteção.
 
 - **Reset de password:** não existe rota pública. O reset é feito por um administrador em `/system/users/`.
 - **Webhooks de parceiros:** o único POST externo sem CSRF é o do WPPConnect. O projeto tem 2 vistas `@csrf_exempt` fora de `app_api`: esse webhook e `/converter/`, que exige login.
-- **Sincronização de integrações:** corre em Celery e não passa pelo middleware. O botão manual usa a sessão do utilizador.
+- **Sincronização de integrações:** os dados da Cainiao vêm por API da Reliable. O sistema vai buscá-los em Celery (`settlements.sync_epod_from_reliable`), por isso o pedido não passa pelo middleware. O botão manual usa a sessão do utilizador.
 
 ## 5. Interruptor
 

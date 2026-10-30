@@ -11,9 +11,7 @@
 
 6. **App do motorista:** faça login, abra a lista e abra um pacote. Não registe nada.
 7. **Sincronização:** abra `/analytics/integrations/logs/`. Confirme que o último ciclo de sincronização terminou depois do deploy.
-**AVISO:** não use um ficheiro de teste. Importar altera dados reais.
-
-8. **Importação:** confirme a importação só com a importação real do dia.
+8. **Sincronização Reliable:** confirme que entram dados novos depois do próximo ciclo. O ciclo corre aos minutos 5 e 35, das 7h às 23h.
 9. **Modo ecrã:** abra `/?tv=1`. Confirme a atualização automática ao fim de 60 s.
 10. **ReliableMaps:** confirme que a exportação de zonas responde com a chave.
 11. **Operador:** abra `/settlements/packages/` e faça uma pesquisa.

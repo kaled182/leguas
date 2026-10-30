@@ -14,6 +14,8 @@
 | Contratos | 0 | **Manter**, por decisão |
 | Sorting: 37 sessões, 81 bigbags, 1 964 volumes, último registo em 2026-10-22 | 2 082 | **Manter**, por decisão |
 
+**Candidato novo (2026-10-30):** o utilizador indicou que já não importa ficheiros Cainiao, porque tudo vem por API. Os 6 painéis de importação em `core/partner_detail.html` e as suas rotas em `/settlements/cainiao/` passam a candidatos. Falta confirmar se isto inclui `/settlements/invoices/cainiao/upload/` e `/driversapp/api/tickets-cainiao/upload/`.
+
 **CUIDADO:** `visitas.txt` cobre só o período desde 18:29 de 2026-10-30, data do último deploy. Não serve como prova de não uso.
 
 ## 1. Como recolher de novo

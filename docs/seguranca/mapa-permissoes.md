@@ -1,6 +1,6 @@
 # Mapa de permissões — por aprovar
 
-**Estado:** P2, P3, P4 e o middleware aprovados em 2026-10-30. Falta P1 e a aprovação da allowlist. Nenhuma permissão foi alterada.
+**Estado:** aprovado em 2026-10-30, com as correções ao mapa. Nenhuma permissão foi alterada.
 **Base:** 164 páginas do inventário da Fase 0.
 
 ## Regras
@@ -21,17 +21,22 @@ Um middleware central, com regras por prefixo de URL e negação por omissão. M
 
 | # | Questão | Estado |
 |---|---|---|
-| P1 | Quem fica no grupo `Gestão`? Um `is_staff` sem grupo perde Finanças | **Aguarda os nomes** |
+| P1 | Quem fica em Gestão? | Hoje 4 utilizadores, todos superuser. Ver a nota abaixo |
 | P2 | O Operador vê faturas, descontos e relatórios na ficha do motorista? | Não |
 | P3 | O Operador vê preços? | Não |
 | P4 | O Operador vê os KPI de pagamentos no Dashboard? | Não, esconder o bloco |
+| Reclamações | Quem vê `/settlements/claims/` e `/settlements/recursos/`? | Só Gestão: os julgamentos chegam por API para cobrança |
+
+**NOTA:** o perfil Gestão inclui todo o superuser. O grupo `Gestão` só é preciso para quem não for superuser.
+
+**CUIDADO:** hoje existem 0 Operadores. O perfil só tem efeito depois de criar utilizadores `is_staff` sem superuser.
 
 ## Totais
 
 | Grupo | Páginas |
 |---|---|
-| Finanças | 71 |
-| Operação | 25 |
+| Finanças | 66 |
+| Operação | 30 |
 | Portal do motorista | 17 |
 | Autenticação e registo | 11 |
 | Tarifas | 9 |
@@ -92,7 +97,7 @@ Um middleware central, com regras por prefixo de URL e negação por omissão. M
 | `/analytics/incidents/` | Operação | sim | sim | - | - |  |
 | `/analytics/integrations/logs/` | Operação | sim | sim | - | - |  |
 | `/analytics/integrations/status/` | Operação | sim | sim | - | - |  |
-| `/analytics/reports/fleet-costs/` | Operação | sim | sim | - | - |  |
+| `/analytics/reports/fleet-costs/` | Finanças | sim | - | - | - | Custos |
 | `/analytics/vehicles/` | Operação | sim | sim | - | - |  |
 | `/auth/` | Autenticação e registo | sim | sim | sim | sim | Público |
 | `/auth/authenticate/` | Autenticação e registo | sim | sim | sim | sim | Público |
@@ -177,13 +182,13 @@ Um middleware central, com regras por prefixo de URL e negação por omissão. M
 | `/pricing/zones/create/` | Tarifas | sim | - | - | - | Sem Operador: P3 |
 | `/pricing/zones/import/` | Tarifas | sim | - | - | - | Sem Operador: P3 |
 | `/settlements/adiantamentos/` | Finanças | sim | - | - | - |  |
-| `/settlements/cainiao/map/` | Finanças | sim | - | - | - |  |
-| `/settlements/cainiao/map/compare/` | Finanças | sim | - | - | - |  |
-| `/settlements/cainiao/waybill/<str:waybill>/` | Finanças | sim | - | - | - |  |
+| `/settlements/cainiao/map/` | Operação | sim | sim | - | - |  |
+| `/settlements/cainiao/map/compare/` | Operação | sim | sim | - | - |  |
+| `/settlements/cainiao/waybill/<str:waybill>/` | Operação | sim | sim | - | - | Esconder valores ao Operador |
 | `/settlements/calendar/` | Finanças | sim | - | - | - |  |
-| `/settlements/claims/` | Finanças | sim | - | - | - |  |
-| `/settlements/claims/<int:claim_id>/` | Finanças | sim | - | - | - |  |
-| `/settlements/claims/appeals/` | Finanças | sim | - | - | - |  |
+| `/settlements/claims/` | Finanças | sim | - | - | - | Reclamações: julgamentos por API para cobrança |
+| `/settlements/claims/<int:claim_id>/` | Finanças | sim | - | - | - | Reclamações: julgamentos por API para cobrança |
+| `/settlements/claims/appeals/` | Finanças | sim | - | - | - | Reclamações: julgamentos por API para cobrança |
 | `/settlements/empresas/<int:empresa_id>/portal/` | Portal da frota | sim | - | - | sim | Só a própria frota |
 | `/settlements/empresas/<int:empresa_id>/portal/claims/` | Portal da frota | sim | - | - | sim | Só a própria frota |
 | `/settlements/empresas/<int:empresa_id>/portal/contratos/` | Portal da frota | sim | - | - | sim | Só a própria frota |
@@ -196,10 +201,10 @@ Um middleware central, com regras por prefixo de URL e negação por omissão. M
 | `/settlements/invoices/` | Finanças | sim | - | - | - |  |
 | `/settlements/invoices/<int:invoice_id>/` | Finanças | sim | - | - | - |  |
 | `/settlements/invoices/cainiao/<int:import_id>/` | Finanças | sim | - | - | - |  |
-| `/settlements/packages/` | Finanças | sim | - | - | - |  |
-| `/settlements/pacote/<str:waybill>/` | Finanças | sim | - | - | - |  |
-| `/settlements/pudo/fake-delivery-suspects/` | Finanças | sim | - | - | - |  |
-| `/settlements/recursos/` | Finanças | sim | - | - | - |  |
+| `/settlements/packages/` | Operação | sim | sim | - | - |  |
+| `/settlements/pacote/<str:waybill>/` | Operação | sim | sim | - | - | Esconder valores ao Operador |
+| `/settlements/pudo/fake-delivery-suspects/` | Operação | sim | sim | - | - |  |
+| `/settlements/recursos/` | Finanças | sim | - | - | - | Reclamações: julgamentos por API para cobrança |
 | `/settlements/settlements/` | Finanças | sim | - | - | - |  |
 | `/settlements/socios/` | Finanças | sim | - | - | - |  |
 | `/sla/prazos/` | Operação | sim | sim | - | - |  |

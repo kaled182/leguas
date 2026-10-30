@@ -1,6 +1,6 @@
 # Allowlist do middleware de permissões — por aprovar
 
-**Estado:** proposta. O middleware não foi implementado.
+**Estado:** aprovada em 2026-10-30, com os acréscimos da secção 6. O middleware ainda não foi implementado.
 **Método:** teste anónimo de 560 rotas, mais leitura de `@csrf_exempt` e do código de autenticação.
 
 ## 1. Sem sessão
@@ -15,7 +15,7 @@
 | 6 | `/driversapp/cadastro/`, `/driversapp/cadastro-completo/` | Registo público de motoristas | Nenhuma |
 | 7 | `/api/app/v1/` (prefixo, 17 rotas) | App do motorista | Token Bearer, 401 sem token |
 | 8 | `/geozonas/api/zonas/export/` | ReliableMaps | Bearer `ZONAS_EXPORT_KEY` |
-| 9 | `/system/whatsapp/webhook/` | Webhook do WPPConnect | Nenhuma: ver N3 |
+| 9 | `/system/whatsapp/webhook/` | Webhook do WPPConnect, em uso | Nenhuma: ver N3 |
 | 10 | `/core/pre-invoice/sign/<token>/` | Assinatura remota de pré-fatura | Token no URL |
 | 11 | `/static/`, `/media/` | Em produção, o Caddy serve-os antes do Django | Nenhuma: ver N2 |
 
@@ -25,7 +25,6 @@ O middleware deixa passar. A view mantém a sua proteção.
 
 | Rota | Proteção |
 |---|---|
-| `/admin/` | Login do Django admin |
 | `/driversapp/portal/`, `/contracts/portal/` | `portal_access_required`: só o próprio motorista ou staff |
 | `/settlements/empresas/<id>/portal/` | `empresa_login_required`: só a própria frota ou staff |
 
@@ -36,6 +35,7 @@ O middleware deixa passar. A view mantém a sua proteção.
 | `/settlements/cainiao/operation/import/` | Hoje abre sem login. Só `core/partner_detail.html` a usa, com sessão: ver N1 |
 | `/settlements/cainiao/parcel-list/preview/` | Igual à anterior |
 | `/dashboard_v2/` | Fechada com `login_required` neste branch |
+| `/admin/` | Só Gestão. O middleware recusa o Operador, para o admin não contornar o mapa |
 
 ## 4. Factos
 
@@ -55,10 +55,26 @@ cd /root/leguas/production
 docker compose up -d web
 ```
 
-## 6. Decisões pedidas
+## 6. Resultado das verificações
 
-| # | Questão | Recomendação |
+| Item | Facto | Ação |
 |---|---|---|
-| N1 | As 2 rotas de import Cainiao abrem sem login em produção. Um anónimo pode obter um token CSRF na página de login e enviar um ficheiro | Corrigir já com `login_required`, em hotfix próprio, sem esperar pelo PR |
-| N2 | O Caddy serve `/media/` sem login. Quem tiver o URL de um documento abre-o | Registar como pendente. Corrigir exige mudar o Caddy e os links |
-| N3 | O webhook diz "só acessível na rede interna", mas o Caddy encaminha tudo para o Django | Bloquear o caminho no Caddy, porque o WhatsApp não é usado |
+| N1 | `DEBUG = False` em produção. Hotfix no branch `hotfix/cainiao-import-login` | Deploy antes deste PR |
+| N2 | Ver a secção 7 | PR seguinte, com prioridade alta |
+| N3 | O WPPConnect envia para este sistema. O OTP do motorista usa WhatsApp | A rota fica na allowlist. Não bloquear no Caddy |
+| Token de assinatura | `secrets.token_urlsafe(32)`: aleatório e longo. **Não expira e pode ser reutilizado** | B14: corrigir neste PR |
+| OTP do motorista | 6 dígitos, 5 min, 5 tentativas, 1 envio por número a cada 60 s. **Sem limite por IP** | Limite por IP com o cache Redis, sem dependência nova |
+| Cadastro público | Sem limite | Limite por IP com o cache Redis |
+| API da app | 15 rotas exigem token. 2 rotas são o próprio login | Teste por rota em `app_api/test_auth_required.py` |
+
+**B14:** um novo POST em `/core/pre-invoice/sign/<token>/` volta a pôr a pré-fatura em `APROVADO`, em qualquer estado, incluindo `PAGO` e `CANCELADO`.
+
+## 7. Ficheiros em `/media/`
+
+- O caminho é `pasta/ano/mês/nome-original`, por exemplo `driver_documents/2026/10/cc.pdf`.
+- O nome não tem parte aleatória. O Django só acrescenta um sufixo em caso de colisão.
+- O Caddy não lista pastas, mas um nome comum pode ser adivinhado por tentativa.
+- A cache é pública por 7 dias.
+- `DriverDocument` tem 0 registos, mas os comprovativos de pré-faturas, as reclamações e os documentos de frota usam a mesma regra.
+
+**Conclusão:** os nomes são adivinháveis. A prioridade é alta, no PR seguinte.

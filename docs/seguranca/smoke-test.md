@@ -7,11 +7,17 @@
 3. **Operador:** abra `/accounting/hub/`, `/pricing/tariffs/` e `/system/users/`. Confirme que o acesso é recusado.
 4. **Motorista:** entre em `/auth/driver/`. Abra o portal, as faturas e os contratos.
 5. **Frota:** entre em `/auth/empresa/`. Abra o portal e as faturas.
-6. **App do motorista:** faça login, abra a lista e registe uma entrega de teste.
+**AVISO:** não registe entregas de teste. Uma entrega fictícia pode chegar à Cainiao como estado real.
+
+6. **App do motorista:** faça login, abra a lista e abra um pacote. Não registe nada.
 7. **Sincronização:** abra `/analytics/integrations/logs/`. Confirme que o último ciclo de sincronização terminou depois do deploy.
-8. **Importação:** importe um ficheiro Cainiao em `/core/partners/<id>/`.
+**AVISO:** não use um ficheiro de teste. Importar altera dados reais.
+
+8. **Importação:** confirme a importação só com a importação real do dia.
 9. **Modo ecrã:** abra `/?tv=1`. Confirme a atualização automática ao fim de 60 s.
 10. **ReliableMaps:** confirme que a exportação de zonas responde com a chave.
+11. **Operador:** abra `/settlements/packages/` e faça uma pesquisa.
+12. **Operador:** abra `/admin/`. Confirme que o acesso é recusado.
 
 ## Rollback
 

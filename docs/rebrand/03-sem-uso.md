@@ -1,6 +1,6 @@
 # Módulos e páginas sem uso — levantamento
 
-**Estado:** Fase 0.7. Contagem de produção recolhida em 2026-10-30. Aguarda a aprovação da lista.
+**Estado:** Etapa A concluída no branch `rebrand/leguas-gestao` em 2026-10-30. Sem deploy. A Etapa B só avança com ordem.
 **AVISO:** não remova nada com base neste ficheiro antes da aprovação da lista.
 
 ## 0. Resultado de produção
@@ -16,18 +16,24 @@
 
 ## 0.1 Lista final para aprovar
 
-Todas as linhas são Etapa A: saem páginas e rotas, e as tabelas ficam.
+Lista aprovada e aplicada. Saem páginas e rotas, e as tabelas ficam. Os URL antigos redirecionam com 301.
 
 | # | Item | O que sai | O que fica, e porquê |
 |---|---|---|---|
 | 1 | Frota e 3 relatórios | Menu, páginas, rotas | Modelos. `DriverClaim.vehicle_incident` aponta para `VehicleIncident` |
 | 2 | Tarifas, Zonas Postais, Calculadora | Menu, páginas, rotas | Modelos. `ZonaGeo.postal_zone` aponta para `PostalZone` |
 | 3 | Receitas e Despesas | 5 rotas sem template e formulários | Modelos |
-| 4 | Forecast e Planning | Painéis, 22 rotas, plano de distribuição | Tabelas. `accounting/views.py:1246` e `:1603`, `drivers_app/views.py:1838` e `services_ticket_import.py:321` leem `CainiaoPlanningPackage` |
+| 4 | Forecast e Planning | Modais, 21 rotas, plano de distribuição, separador Forecast Orphans | Tabelas. `accounting/views.py:1246` e `:1603`, `drivers_app/views.py:1838` e `services_ticket_import.py:321` leem `CainiaoPlanningPackage` |
 | 5 | Importações Cainiao por ficheiro | 6 painéis em `partner_detail.html` e as suas rotas | **Painel "entregas sem Courier ID", backfill, roll-forward e limpar armazém** |
 | 6 | Driver Statistic | Importação simples e guiada | Tabela `CainiaoDriverStat`: `services_courier_onboarding.py:64` lê-a para encontrar o Courier ID |
 | 7 | Tickets Cainiao | `/driversapp/admin/tickets-cainiao/` e as suas rotas | `CustomerComplaint`, porque a ficha do motorista mostra o histórico de 513 reclamações |
-| 8 | Faturas de clientes (`PartnerInvoice`) | Menu e página `invoice-list` | Modelo: `CainiaoBillingImport` e o hub, a tesouraria, a auditoria e a reconciliação de `accounting` usam-no |
+| 8 | Faturas de clientes (`PartnerInvoice`) | Só a entrada do menu | A página `invoice-list`: é a entrada da Faturação Cainiao. Modelo: `CainiaoBillingImport`, hub, tesouraria, auditoria e reconciliação usam-no |
+
+**Ficam, apesar do nome:**
+
+- `cainiao/import/preview` e `confirm`: a página de Pré-faturas usa-as.
+- Caixa da Sincronização com o ReliableMaps: passou para o botão "Sincronização" na ficha do parceiro.
+- `import_operation_file`: a sincronização EPOD chama esta função. `core/test_removed_pages.py` protege-a.
 
 **Faturação Cainiao:** fica como está e não recebe rebrand. Vai ser refeita com agentes depois do rebrand.
 

@@ -37,3 +37,58 @@ class RemovedPagesRedirectTests(TestCase):
 
     def test_ticket_import_goes_to_complaints(self):
         self.assert_moved("/driversapp/admin/tickets-cainiao/", "/driversapp/admin/reclamacoes/")
+
+    def test_forecast_and_file_imports_go_to_partners(self):
+        for path in (
+            "/settlements/forecast-plan/", "/settlements/cainiao/forecast/cp4/",
+            "/settlements/cainiao/planning/import/",
+            "/settlements/cainiao/operation/import/",
+            "/settlements/cainiao/parcel-list/import/",
+            "/settlements/cainiao/driver-stat/import/",
+            "/settlements/cainiao/driver-detail/import/",
+        ):
+            with self.subTest(path=path):
+                self.assert_moved(path, "/core/partners/")
+
+
+class EpodSyncStaysTests(TestCase):
+    def test_sync_import_function_is_kept(self):
+        from settlements.cainiao_views import import_operation_file
+
+        self.assertTrue(callable(import_operation_file))
+
+
+# Já partido antes do rebrand, numa página sem view (docs/seguranca/pendentes.md).
+KNOWN_OLD_LINKS = {"driversmanager_manager"}
+
+
+class DeadLinkTests(TestCase):
+    def test_every_url_tag_resolves(self):
+        import re
+        from pathlib import Path
+
+        from django.conf import settings
+        from django.urls import get_resolver
+
+        def names(resolver, prefix=""):
+            found = set()
+            for entry in resolver.url_patterns:
+                if hasattr(entry, "url_patterns"):
+                    space = f"{prefix}{entry.namespace}:" if entry.namespace else prefix
+                    found |= names(entry, space)
+                elif entry.name:
+                    found.add(prefix + entry.name)
+            return found
+
+        known = names(get_resolver())
+        missing = []
+        tag = re.compile(r"""\{%\s*url\s+['"]([^'"]+)['"]""")
+        for path in Path(settings.BASE_DIR).rglob("*.html"):
+            if "docs" in path.parts or "staticfiles" in path.parts:
+                continue
+            text = path.read_text(encoding="utf-8", errors="replace")
+            missing += [
+                f"{path.name}: {name}" for name in tag.findall(text)
+                if name not in known and name not in KNOWN_OLD_LINKS
+            ]
+        self.assertEqual(missing, [])

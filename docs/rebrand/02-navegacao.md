@@ -1,6 +1,6 @@
 # Nova arquitetura de navegação — proposta
 
-**Estado:** aprovada em 2026-10-30, com as 5 correções e a secção RELATÓRIOS. Nenhum menu foi alterado.
+**Estado:** aprovada em 2026-10-30. A Etapa A retirou do menu 11 entradas: Frota (4), relatórios de frota (3), Tarifas, Zonas e Calculadora (3) e Faturas Parceiros (1). Restam 46 entradas para a Fase 2.
 **Fonte:** `templates/layouts/partials/sidebar.html` (commit `469a7d8`).
 
 ## 1. Situação atual

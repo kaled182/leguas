@@ -11,8 +11,7 @@ Class-based views
     1. Add an import:  from other_app.views import Home
     2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
 Including another URLconf
-    1. Import the include() function: from django.urls import include, path, re_path
-from django.views.generic import RedirectView
+    1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 
@@ -22,7 +21,8 @@ from django.contrib import admin
 from django.db import connection
 from django.http import JsonResponse
 from django.shortcuts import redirect
-from django.urls import include, path
+from django.urls import include, path, re_path
+from django.views.generic import RedirectView
 
 
 def redirect_mixed(request):
@@ -104,6 +104,8 @@ urlpatterns += [
     moved(r"^analytics/(incidents|vehicles|reports/fleet-costs)/", "/analytics/integrations/status/"),
     moved(r"^pricing/", "/core/partners/"),
     moved(r"^driversapp/(admin|api)/tickets-cainiao/", "/driversapp/admin/reclamacoes/"),
+    moved(r"^settlements/forecast-plan/", "/core/partners/"),
+    moved(r"^settlements/cainiao/(forecast|forecast-orphans|planning|operation|parcel-list|driver-stat|driver-detail|import/forecast)/", "/core/partners/"),
     moved(r"^accounting/$", "/accounting/hub/"),
     moved(r"^accounting/(receitas|despesas|relatorios)/", "/accounting/hub/"),
 ]

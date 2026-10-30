@@ -1,7 +1,7 @@
 ﻿from django.urls import path
 
 from . import (
-    cainiao_views, forecast_plan_views, holiday_views,
+    cainiao_views, holiday_views,
     views, views_cash_entries, views_fleet_portal, views_pudo,
     views_shareholder, views_cainiao_billing, views_reliable_sync,
     views_courier_onboarding,
@@ -203,11 +203,6 @@ urlpatterns = [
         name="waybill-bulk-resolve",
     ),
     path(
-        "cainiao/forecast-orphans/",
-        cainiao_views.cainiao_forecast_orphans,
-        name="cainiao-forecast-orphans",
-    ),
-    path(
         "cainiao/resolutions/",
         cainiao_views.cainiao_resolutions_list,
         name="cainiao-resolutions-list",
@@ -372,16 +367,6 @@ urlpatterns = [
         name="cainiao-hubs-with-counts",
     ),
     # PARCEL_LIST (formato rico — 105 cols)
-    path(
-        "cainiao/parcel-list/preview/",
-        cainiao_views.cainiao_parcel_list_preview,
-        name="cainiao-parcel-list-preview",
-    ),
-    path(
-        "cainiao/parcel-list/import/",
-        cainiao_views.cainiao_parcel_list_import,
-        name="cainiao-parcel-list-import",
-    ),
     # Auto-detecção do tipo de planilha
     path(
         "cainiao/detect-xlsx-type/",
@@ -712,75 +697,10 @@ urlpatterns = [
         cainiao_views.cainiao_create_driver,
         name="cainiao-create-driver",
     ),
-    path(
-        "cainiao/import/forecast/preview/",
-        cainiao_views.cainiao_import_forecast_preview,
-        name="cainiao-import-forecast-preview",
-    ),
-    path(
-        "cainiao/import/forecast/",
-        cainiao_views.cainiao_import_forecast,
-        name="cainiao-import-forecast",
-    ),
     # Forecast CP4 API (modal de previsão)
-    path(
-        "cainiao/forecast/cp4/",
-        cainiao_views.cainiao_forecast_cp4,
-        name="cainiao-forecast-cp4",
-    ),
     # Forecast Manual (sem ficheiro)
-    path(
-        "cainiao/forecast/manual/",
-        cainiao_views.cainiao_manual_forecast_list,
-        name="cainiao-manual-forecast-list",
-    ),
-    path(
-        "cainiao/forecast/manual/save/",
-        cainiao_views.cainiao_manual_forecast_save,
-        name="cainiao-manual-forecast-save",
-    ),
-    path(
-        "cainiao/forecast/manual/<int:manual_id>/delete/",
-        cainiao_views.cainiao_manual_forecast_delete,
-        name="cainiao-manual-forecast-delete",
-    ),
-    path(
-        "cainiao/forecast/reset/",
-        cainiao_views.cainiao_forecast_reset,
-        name="cainiao-forecast-reset",
-    ),
-    path(
-        "cainiao/forecast/pdf/",
-        cainiao_views.cainiao_forecast_pdf,
-        name="cainiao-forecast-pdf",
-    ),
-    path(
-        "cainiao/forecast/excel/",
-        cainiao_views.cainiao_forecast_excel,
-        name="cainiao-forecast-excel",
-    ),
     # Planilha Forecast nova (Parcel ID)
-    path(
-        "cainiao/planning/preview/",
-        cainiao_views.cainiao_planning_preview,
-        name="cainiao-planning-preview",
-    ),
-    path(
-        "cainiao/planning/import/",
-        cainiao_views.cainiao_planning_import,
-        name="cainiao-planning-import",
-    ),
     # Planilha Operation Update
-    path(
-        "cainiao/operation/preview/",
-        cainiao_views.cainiao_operation_preview,
-        name="cainiao-operation-preview",
-    ),
-    path(
-        "cainiao/operation/import/",
-        cainiao_views.cainiao_operation_import,
-        name="cainiao-operation-import",
-    ),
     path(
         "cainiao/reliable-sync/",
         views_reliable_sync.api_reliable_sync,
@@ -792,21 +712,6 @@ urlpatterns = [
         name="cainiao-operation-audit",
     ),
     # Planilha Driver Statistic
-    path(
-        "cainiao/driver-stat/preview/",
-        cainiao_views.cainiao_driver_stat_preview,
-        name="cainiao-driver-stat-preview",
-    ),
-    path(
-        "cainiao/driver-stat/import/",
-        cainiao_views.cainiao_driver_stat_import,
-        name="cainiao-driver-stat-import",
-    ),
-    path(
-        "cainiao/driver-stat/guided-import/",
-        cainiao_views.cainiao_driver_stat_guided_import,
-        name="cainiao-driver-stat-guided-import",
-    ),
     path(
         "cainiao/courier-backfill/status/",
         cainiao_views.cainiao_courier_backfill_status,
@@ -868,16 +773,6 @@ urlpatterns = [
         name="cainiao-existing-logins",
     ),
     # Planilha Driver Detail Info
-    path(
-        "cainiao/driver-detail/preview/",
-        cainiao_views.cainiao_driver_detail_preview,
-        name="cainiao-driver-detail-preview",
-    ),
-    path(
-        "cainiao/driver-detail/import/",
-        cainiao_views.cainiao_driver_detail_import,
-        name="cainiao-driver-detail-import",
-    ),
     # Relatório / PDF de resumo de pagamentos
     path(
         "pre-invoices/report/summary/",
@@ -946,61 +841,6 @@ urlpatterns = [
         name="cainiao-map-compare",
     ),
     # ── Forecast Plan (Kanban driver-centric) ────────────────────────
-    path(
-        "forecast-plan/",
-        forecast_plan_views.forecast_plan_get_or_create,
-        name="forecast-plan-get-or-create",
-    ),
-    path(
-        "forecast-plan/<int:plan_id>/assign/",
-        forecast_plan_views.forecast_plan_assign,
-        name="forecast-plan-assign",
-    ),
-    path(
-        "forecast-plan/assignment/<int:assignment_id>/delete/",
-        forecast_plan_views.forecast_plan_delete_assignment,
-        name="forecast-plan-delete-assignment",
-    ),
-    path(
-        "forecast-plan/<int:plan_id>/clear/",
-        forecast_plan_views.forecast_plan_clear,
-        name="forecast-plan-clear",
-    ),
-    path(
-        "forecast-plan/<int:plan_id>/auto-distribute/",
-        forecast_plan_views.forecast_plan_auto_distribute,
-        name="forecast-plan-auto-distribute",
-    ),
-    path(
-        "forecast-plan/<int:plan_id>/toggle-skip/",
-        forecast_plan_views.forecast_plan_toggle_skip,
-        name="forecast-plan-toggle-skip",
-    ),
-    path(
-        "forecast-plan/<int:plan_id>/publish/",
-        forecast_plan_views.forecast_plan_publish,
-        name="forecast-plan-publish",
-    ),
-    path(
-        "forecast-plan/<int:plan_id>/unpublish/",
-        forecast_plan_views.forecast_plan_unpublish,
-        name="forecast-plan-unpublish",
-    ),
-    path(
-        "forecast-plan/<int:plan_id>/clone-to/",
-        forecast_plan_views.forecast_plan_clone_to,
-        name="forecast-plan-clone-to",
-    ),
-    path(
-        "forecast-plan/history/",
-        forecast_plan_views.forecast_plan_history,
-        name="forecast-plan-history",
-    ),
-    path(
-        "drivers/<int:driver_id>/set-capacity/",
-        forecast_plan_views.driver_set_capacity,
-        name="driver-set-capacity",
-    ),
 
     # ── Conta-Corrente do Motorista (Lançamentos / Adiantamentos) ────
     path(

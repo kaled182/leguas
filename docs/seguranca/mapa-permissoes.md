@@ -1,6 +1,6 @@
 # Mapa de permissões — por aprovar
 
-**Estado:** proposta. Nenhuma permissão foi alterada.
+**Estado:** P2, P3, P4 e o middleware aprovados em 2026-10-30. Falta P1 e a aprovação da allowlist. Nenhuma permissão foi alterada.
 **Base:** 164 páginas do inventário da Fase 0.
 
 ## Regras
@@ -15,16 +15,16 @@
 
 Um middleware central, com regras por prefixo de URL e negação por omissão. Motivo: as 402 rotas sem página ficam protegidas sem editar cada view. O menu esconde as entradas sem acesso.
 
-**Exceções ao middleware:** `/health/`, `/auth/`, `/api/app/v1/` (token), `/geozonas/api/zonas/export/` (chave), webhooks, `/driversapp/cadastro*`. A lista final vai no PR.
+**Exceções ao middleware:** `/health/`, `/auth/`, `/api/app/v1/` (token), `/geozonas/api/zonas/export/` (chave), webhooks, `/driversapp/cadastro*`. Lista completa em `allowlist.md`.
 
-## Decisões pedidas
+## Decisões
 
-| # | Questão | Recomendação |
+| # | Questão | Estado |
 |---|---|---|
-| P1 | Quem fica no grupo `Gestão`? Superuser já tem tudo. Um `is_staff` sem grupo perde Finanças | Indique os nomes antes do deploy |
-| P2 | O Operador vê faturas, descontos e relatórios na ficha do motorista? | Não. Vê perfil, documentos, veículos, reclamações e logins |
-| P3 | O Operador vê preços? Afeta Tarifas, edição de clientes e faturas de frota | Não |
-| P4 | O Dashboard `/` mostra KPI de pagamentos e pré-faturas. O Operador vê-os? | Não. Esconder o bloco Gestão para o Operador |
+| P1 | Quem fica no grupo `Gestão`? Um `is_staff` sem grupo perde Finanças | **Aguarda os nomes** |
+| P2 | O Operador vê faturas, descontos e relatórios na ficha do motorista? | Não |
+| P3 | O Operador vê preços? | Não |
+| P4 | O Operador vê os KPI de pagamentos no Dashboard? | Não, esconder o bloco |
 
 ## Totais
 
@@ -138,18 +138,18 @@ Um middleware central, com regras por prefixo de URL e negação por omissão. M
 | `/driversapp/cadastro/` | Autenticação e registo | sim | sim | sim | sim | Público |
 | `/driversapp/empresas-parceiras/` | Frotas subcontratadas | sim | sim | - | - | Sem faturas: P3 |
 | `/driversapp/portal/<int:driver_id>/` | Portal do motorista | sim | sim | sim | - | Só o próprio motorista |
-| `/driversapp/portal/<int:driver_id>/descontos/` | Portal do motorista | sim | - | sim | - | Operador sem dados financeiros: P2 |
+| `/driversapp/portal/<int:driver_id>/descontos/` | Portal do motorista | sim | - | sim | - | Sem Operador: P2 |
 | `/driversapp/portal/<int:driver_id>/documentos/` | Portal do motorista | sim | sim | sim | - | Só o próprio motorista |
 | `/driversapp/portal/<int:driver_id>/editar/` | Portal do motorista | sim | sim | sim | - | Só o próprio motorista |
-| `/driversapp/portal/<int:driver_id>/faturas/` | Portal do motorista | sim | - | sim | - | Operador sem dados financeiros: P2 |
+| `/driversapp/portal/<int:driver_id>/faturas/` | Portal do motorista | sim | - | sim | - | Sem Operador: P2 |
 | `/driversapp/portal/<int:driver_id>/helpers/` | Portal do motorista | sim | sim | sim | - | Só o próprio motorista |
 | `/driversapp/portal/<int:driver_id>/indicacoes/` | Portal do motorista | sim | sim | sim | - | Só o próprio motorista |
 | `/driversapp/portal/<int:driver_id>/logins/` | Portal do motorista | sim | sim | sim | - | Só o próprio motorista |
 | `/driversapp/portal/<int:driver_id>/perfil/` | Portal do motorista | sim | sim | sim | - | Só o próprio motorista |
-| `/driversapp/portal/<int:driver_id>/pf/<int:pre_invoice_id>/` | Portal do motorista | sim | - | sim | - | Operador sem dados financeiros: P2 |
+| `/driversapp/portal/<int:driver_id>/pf/<int:pre_invoice_id>/` | Portal do motorista | sim | - | sim | - | Sem Operador: P2 |
 | `/driversapp/portal/<int:driver_id>/pudos/` | Portal do motorista | sim | sim | sim | - | Só o próprio motorista |
 | `/driversapp/portal/<int:driver_id>/reclamacoes/` | Portal do motorista | sim | sim | sim | - | Só o próprio motorista |
-| `/driversapp/portal/<int:driver_id>/relatorios/` | Portal do motorista | sim | - | sim | - | Operador sem dados financeiros: P2 |
+| `/driversapp/portal/<int:driver_id>/relatorios/` | Portal do motorista | sim | - | sim | - | Sem Operador: P2 |
 | `/driversapp/portal/<int:driver_id>/veiculos/` | Portal do motorista | sim | sim | sim | - | Só o próprio motorista |
 | `/fleet/dashboard/` | Operação | sim | sim | - | - |  |
 | `/fleet/maintenance/` | Operação | sim | sim | - | - |  |
@@ -167,15 +167,15 @@ Um middleware central, com regras por prefixo de URL e negação por omissão. M
 | `/payroll/funcionarios/` | Finanças | sim | - | - | - |  |
 | `/payroll/funcionarios/<int:pk>/` | Finanças | sim | - | - | - |  |
 | `/payroll/funcionarios/novo/` | Finanças | sim | - | - | - |  |
-| `/pricing/calculator/` | Tarifas | sim | - | - | - | Preços: P3 |
-| `/pricing/tariffs/` | Tarifas | sim | - | - | - | Preços: P3 |
-| `/pricing/tariffs/<int:pk>/edit/` | Tarifas | sim | - | - | - | Preços: P3 |
-| `/pricing/tariffs/create/` | Tarifas | sim | - | - | - | Preços: P3 |
-| `/pricing/tariffs/import/` | Tarifas | sim | - | - | - | Preços: P3 |
-| `/pricing/zones/` | Tarifas | sim | - | - | - | Preços: P3 |
-| `/pricing/zones/<int:pk>/edit/` | Tarifas | sim | - | - | - | Preços: P3 |
-| `/pricing/zones/create/` | Tarifas | sim | - | - | - | Preços: P3 |
-| `/pricing/zones/import/` | Tarifas | sim | - | - | - | Preços: P3 |
+| `/pricing/calculator/` | Tarifas | sim | - | - | - | Sem Operador: P3 |
+| `/pricing/tariffs/` | Tarifas | sim | - | - | - | Sem Operador: P3 |
+| `/pricing/tariffs/<int:pk>/edit/` | Tarifas | sim | - | - | - | Sem Operador: P3 |
+| `/pricing/tariffs/create/` | Tarifas | sim | - | - | - | Sem Operador: P3 |
+| `/pricing/tariffs/import/` | Tarifas | sim | - | - | - | Sem Operador: P3 |
+| `/pricing/zones/` | Tarifas | sim | - | - | - | Sem Operador: P3 |
+| `/pricing/zones/<int:pk>/edit/` | Tarifas | sim | - | - | - | Sem Operador: P3 |
+| `/pricing/zones/create/` | Tarifas | sim | - | - | - | Sem Operador: P3 |
+| `/pricing/zones/import/` | Tarifas | sim | - | - | - | Sem Operador: P3 |
 | `/settlements/adiantamentos/` | Finanças | sim | - | - | - |  |
 | `/settlements/cainiao/map/` | Finanças | sim | - | - | - |  |
 | `/settlements/cainiao/map/compare/` | Finanças | sim | - | - | - |  |

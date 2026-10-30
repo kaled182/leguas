@@ -150,3 +150,23 @@ class ToggleStatusSecurityTests(TestCase):
 
     def test_integration_toggle_rejects_get(self):
         self.assert_post_only("core:integration-toggle-status", self.integration)
+
+    def test_partner_toggle_ignores_external_next(self):
+        url = reverse("core:partner-toggle-status", args=[self.partner.pk])
+        response = self.client.post(url, {"next": "https://example.com/"})
+        self.assertRedirects(
+            response, reverse("core:partner-list"), fetch_redirect_response=False,
+        )
+
+    def test_partner_toggle_ignores_external_referer(self):
+        url = reverse("core:partner-toggle-status", args=[self.partner.pk])
+        response = self.client.post(url, HTTP_REFERER="https://example.com/")
+        self.assertRedirects(
+            response, reverse("core:partner-list"), fetch_redirect_response=False,
+        )
+
+    def test_partner_toggle_keeps_internal_next(self):
+        url = reverse("core:partner-toggle-status", args=[self.partner.pk])
+        next_url = reverse("core:partner-detail", args=[self.partner.pk])
+        response = self.client.post(url, {"next": next_url})
+        self.assertRedirects(response, next_url, fetch_redirect_response=False)

@@ -320,20 +320,17 @@
           <h3 class="text-sm font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
             <i data-lucide="trending-up" class="w-4 h-4"></i> Histórico (últimos 6 meses)
           </h3>
-          {# SVG sparkline simples #}
-          <svg :viewBox="'0 0 ' + (health.data?.history?.length * 60 || 360) + ' 80'" class="w-full h-20" x-show="health.data?.history?.length">
+          {# Barras em HTML: x-for não funciona dentro de <svg> #}
+          <div class="flex items-end gap-3 h-20" x-show="health.data?.history?.length">
             <template x-for="(h, i) in health.data?.history" :key="i">
-              <g>
-                <rect :x="i * 60 + 6" :y="80 - Math.min(70, ((h.paid_total + h.pending_total) / Math.max(1, Math.max(...health.data.history.map(x => x.paid_total + x.pending_total)))) * 70)"
-                      width="48"
-                      :height="Math.min(70, ((h.paid_total + h.pending_total) / Math.max(1, Math.max(...health.data.history.map(x => x.paid_total + x.pending_total)))) * 70)"
-                      :class="h.pending_total > 0 ? 'fill-amber-400' : 'fill-emerald-400'"/>
-                <text :x="i * 60 + 30" y="78" text-anchor="middle" class="text-[9px] fill-gray-600">
-                  <tspan x-text="h.month_label"></tspan>
-                </text>
-              </g>
+              <div class="flex-1 h-full flex flex-col justify-end items-center gap-0.5">
+                <div class="w-full rounded-t"
+                     :class="h.pending_total > 0 ? 'bg-amber-400' : 'bg-emerald-400'"
+                     :style="'height:' + Math.min(75, ((h.paid_total + h.pending_total) / Math.max(1, Math.max(...health.data.history.map(x => x.paid_total + x.pending_total)))) * 75) + '%'"></div>
+                <span class="text-[9px] text-gray-600" x-text="h.month_label"></span>
+              </div>
             </template>
-          </svg>
+          </div>
           <div class="mt-2 grid grid-cols-3 gap-1 text-[10px]">
             <template x-for="h in health.data?.history" :key="h.month_label">
               <div class="text-center">

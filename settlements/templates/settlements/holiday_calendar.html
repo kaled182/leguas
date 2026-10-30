@@ -149,7 +149,7 @@
             <td class="px-4 py-2 text-gray-600 dark:text-gray-400">{{ h.region|default:"—" }}</td>
             <td class="px-4 py-2 text-xs text-gray-500 dark:text-gray-400 max-w-xs truncate">{{ h.notes|default:"—" }}</td>
             <td class="px-4 py-2 text-right">
-              <button @click='openEdit({{ h.id }}, {{ h.name|escapejs|stringformat:"q" }}, "{{ h.date|date:"Y-m-d" }}", {{ h.is_recurring_yearly|yesno:"true,false" }}, "{{ h.scope }}", "{{ h.region|escapejs }}", "{{ h.notes|escapejs }}")'
+              <button @click='openEdit({{ h.id }}, "{{ h.name|escapejs }}", "{{ h.date|date:"Y-m-d" }}", {{ h.is_recurring_yearly|yesno:"true,false" }}, "{{ h.scope }}", "{{ h.region|escapejs }}", "{{ h.notes|escapejs }}")'
                       class="px-2 py-1 text-xs text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded">
                 Editar
               </button>

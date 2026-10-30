@@ -48,7 +48,7 @@ def portal_access_required(view_func):
 def _driver_courier_keys(driver):
     """Retorna (courier_ids, courier_names) para um driver no parceiro CAINIAO.
 
-    Mesma lógica usada no `settlements.views.driver_delivery_report` (legacy)
+    Lógica herdada do antigo `driver_delivery_report`.
     para garantir consistência de números entre todas as views.
     """
     from settlements.models import DriverCourierMapping, CourierNameAlias

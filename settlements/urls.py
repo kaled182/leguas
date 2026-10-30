@@ -138,11 +138,6 @@ urlpatterns = [
         name="driver-fleet-invoice-lines",
     ),
     # Relatório de entregas + preview de pré-fatura
-    path(
-        "drivers/<int:driver_id>/delivery-report/",
-        views.driver_delivery_report,
-        name="driver-delivery-report",
-    ),
     # Transferências de atribuição (waybill ↔ driver)
     path(
         "drivers/<int:driver_id>/day-waybills/",

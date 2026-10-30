@@ -475,7 +475,7 @@
 <script>
   document.addEventListener('DOMContentLoaded', function() {
     if (typeof lucide !== 'undefined') lucide.createIcons();
-    document.getElementById('modalRejeitar').addEventListener('click', function(e) {
+    document.getElementById('modalRejeitar')?.addEventListener('click', function(e) {
       if (e.target === this) this.classList.add('hidden');
     });
   });

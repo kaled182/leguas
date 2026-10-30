@@ -191,3 +191,10 @@ class SlaRulesTests(TestCase):
         # Voltar a T+1 sem etiqueta apaga a regra (fica no valor por omissão).
         self.client.post(url, {"cp": ["4950"], "d_4950": "1", "l_4950": ""})
         self.assertFalse(SlaZoneRule.objects.exists())
+
+
+class DashboardV2AccessTests(TestCase):
+    def test_anonymous_is_sent_to_login(self):
+        response = self.client.get(reverse("dashboard_leguas:dashboard_v2"))
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/auth/login/", response["Location"])

@@ -421,7 +421,7 @@
 <!-- Chart.js (se ainda não carregado) -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
-const COST_FIXED = {{ d.cost_fixed|floatformat:2 }};
+const COST_FIXED = {{ d.cost_fixed|floatformat:"2u" }};
 
 // Posicionamento do marker no termómetro:
 // Mapa: 0% atingido → 0%, 100% atingido → 50%, 200% atingido → 100%

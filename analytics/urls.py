@@ -10,13 +10,6 @@ app_name = "analytics"
 
 urlpatterns = [
     # Relatórios de frota
-    path("incidents/", views.incidents_report, name="incidents_report"),
-    path("vehicles/", views.vehicles_performance_report, name="vehicles_report"),
-    path(
-        "reports/fleet-costs/",
-        views.fleet_cost_report,
-        name="fleet_cost_report",
-    ),
     # Integrações & API Status
     path(
         "integrations/status/",

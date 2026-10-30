@@ -11,7 +11,8 @@ Class-based views
     1. Add an import:  from other_app.views import Home
     2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
 Including another URLconf
-    1. Import the include() function: from django.urls import include, path
+    1. Import the include() function: from django.urls import include, path, re_path
+from django.views.generic import RedirectView
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 
@@ -85,16 +86,23 @@ urlpatterns = [
     path("accounting/", include("accounting.urls")),
     path("payroll/", include("payroll.urls")),
     path("core/", include("core.urls")),  # APP para gestão de parceiros e integrações
-    path(
-        "pricing/", include("pricing.urls")
-    ),  # APP para gestão de zonas postais e tarifas
-    path("fleet/", include("fleet_management.urls")),  # APP para gestão de frota
     path("geozonas/", include("geozonas.urls")),  # Export das zonas para o ReliableMaps
     path("system/", include("system_config.urls")),  # Configurações do Sistema
     path(
         "analytics/", include("analytics.urls")
     ),  # Dashboards de Analytics e Relatórios
     path("contracts/", include("contracts.urls")),  # Sistema de Contratos
+]
+
+# Etapa A do rebrand: páginas removidas redirecionam para a página-mãe.
+def moved(pattern, target):
+    return re_path(pattern, RedirectView.as_view(url=target, permanent=True))
+
+
+urlpatterns += [
+    moved(r"^fleet/", "/"),
+    moved(r"^analytics/(incidents|vehicles|reports/fleet-costs)/", "/analytics/integrations/status/"),
+    moved(r"^pricing/", "/core/partners/"),
 ]
 
 # Servir arquivos estáticos

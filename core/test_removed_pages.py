@@ -92,3 +92,16 @@ class DeadLinkTests(TestCase):
                 if name not in known and name not in KNOWN_OLD_LINKS
             ]
         self.assertEqual(missing, [])
+
+
+class PartnerPagePriceTests(TestCase):
+    def test_operator_template_hides_same_door_amount(self):
+        from pathlib import Path
+
+        from django.conf import settings
+
+        path = Path(settings.BASE_DIR) / "core/templates/core/partner_detail.html"
+        text = path.read_text(encoding="utf-8")
+        line = next(row for row in text.splitlines() if "adicionais{% if" in row)
+        self.assertLess(line.index("{% if is_gestao %}"), line.index("€"))
+        self.assertGreater(line.index("{% endif %}"), line.rindex("}}"))

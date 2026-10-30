@@ -7,7 +7,7 @@ from .services.triagem import resolver_triagem
 
 class RemovedPagesTests(TestCase):
     def setUp(self):
-        self.client.force_login(User.objects.create_user("adm", password="x", is_staff=True))
+        self.client.force_login(User.objects.create_user("adm", password="x", is_staff=True, is_superuser=True))
 
     def test_pages_are_gone(self):
         for url in (

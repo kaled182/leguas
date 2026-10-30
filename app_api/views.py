@@ -14,6 +14,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
+from core.ratelimit import OTP_SEND_LIMIT, OTP_VERIFY_LIMIT, over_limit
 from customauth.otp_service import (
     OTPError,
     resolve_driver_by_phone,
@@ -153,6 +154,8 @@ def _resolve_zone_name(query):
 @require_http_methods(["POST"])
 def request_code(request):
     """Pede um código OTP por WhatsApp para o número do motorista."""
+    if over_limit(request, "otp-send", OTP_SEND_LIMIT):
+        return JsonResponse({"error": "Demasiados pedidos."}, status=429)
     data = _json_body(request)
     phone = (data.get("phone") or "").strip()
     try:
@@ -167,6 +170,8 @@ def request_code(request):
 @require_http_methods(["POST"])
 def verify_code(request):
     """Valida o código e devolve um token Bearer + o perfil do motorista."""
+    if over_limit(request, "otp-verify", OTP_VERIFY_LIMIT):
+        return JsonResponse({"error": "Demasiadas tentativas."}, status=429)
     data = _json_body(request)
     phone = (data.get("phone") or "").strip()
     code = (data.get("code") or "").strip()

@@ -1,6 +1,6 @@
 # Mapa de permissões — por aprovar
 
-**Estado:** aprovado em 2026-10-30, com as correções ao mapa. Nenhuma permissão foi alterada.
+**Estado:** implementado no branch `fix/seguranca-permissoes`. Regras em `core/permissions.py`.
 **Base:** 164 páginas do inventário da Fase 0.
 
 ## Regras
@@ -21,22 +21,32 @@ Um middleware central, com regras por prefixo de URL e negação por omissão. M
 
 | # | Questão | Estado |
 |---|---|---|
-| P1 | Quem fica em Gestão? | Hoje 4 utilizadores, todos superuser. Ver a nota abaixo |
+| P1 | Quem fica em Gestão? | Mantêm-se os 4 superusers. Sem alterações |
 | P2 | O Operador vê faturas, descontos e relatórios na ficha do motorista? | Não |
 | P3 | O Operador vê preços? | Não |
-| P4 | O Operador vê os KPI de pagamentos no Dashboard? | Não, esconder o bloco |
-| Reclamações | Quem vê `/settlements/claims/` e `/settlements/recursos/`? | Só Gestão: os julgamentos chegam por API para cobrança |
+| P4 | O Operador vê os KPI de pagamentos no Dashboard? | Não, os 2 cartões ficam escondidos |
+| Courier ID | Quem corrige os logins sem motorista? | O Operador, na ficha do parceiro, sem contrato nem preços |
+| Reclamações | Quem vê `/settlements/claims/` e `/settlements/recursos/`? | Só Gestão. Ver abaixo |
 
-**NOTA:** o perfil Gestão inclui todo o superuser. O grupo `Gestão` só é preciso para quem não for superuser.
+## Como funcionam as reclamações
 
-**CUIDADO:** hoje existem 0 Operadores. O perfil só tem efeito depois de criar utilizadores `is_staff` sem superuser.
+1. A reclamação é gerida no ReliableMaps. A Cainiao julga lá.
+2. Ao minuto 20 de cada hora, este sistema lê o veredicto.
+3. **Contra:** cria um `DriverClaim` aprovado, com o valor por omissão do parceiro.
+4. **A favor:** não há desconto. Se já existia um criado por esta sincronização, é estornado.
+5. **Login sem motorista:** fica pendente e repete em cada volta, até o Operador ligar o login em "names sem mapping".
+6. O desconto entra na pré-fatura do período, quando esta é criada ou recalculada.
+
+Aqui decide-se só o dinheiro: alterar o valor, tirar o desconto, restaurar, ou passar para a próxima fatura. Por isso, estas páginas são só para Gestão.
+
+**NOTA:** o perfil Gestão inclui todo o superuser. Hoje existem 0 Operadores, por isso nenhum utilizador atual perde acesso.
 
 ## Totais
 
 | Grupo | Páginas |
 |---|---|
-| Finanças | 66 |
-| Operação | 30 |
+| Finanças | 67 |
+| Operação | 29 |
 | Portal do motorista | 17 |
 | Autenticação e registo | 11 |
 | Tarifas | 9 |
@@ -125,7 +135,7 @@ Um middleware central, com regras por prefixo de URL e negação por omissão. M
 | `/core/integrations/dashboard/` | Clientes e plataformas | sim | sim | - | - | Só leitura |
 | `/core/partners/` | Clientes e plataformas | sim | sim | - | - | Só leitura |
 | `/core/partners/<int:partner_pk>/integrations/create/` | Clientes e plataformas | sim | - | - | - | Só leitura para Operador: P3 |
-| `/core/partners/<int:pk>/` | Clientes e plataformas | sim | sim | - | - | Só leitura |
+| `/core/partners/<int:pk>/` | Clientes e plataformas | sim | sim | - | - | Operador: painel de Courier ID, sem contrato nem preços |
 | `/core/partners/<int:pk>/bonus-rules/` | Finanças | sim | - | - | - |  |
 | `/core/partners/<int:pk>/edit/` | Clientes e plataformas | sim | - | - | - | Só leitura para Operador: P3 |
 | `/core/partners/<int:pk>/financial/` | Finanças | sim | - | - | - |  |
@@ -138,7 +148,7 @@ Um middleware central, com regras por prefixo de URL e negação por omissão. M
 | `/driversapp/admin/pagamentos/` | Finanças | sim | - | - | - |  |
 | `/driversapp/admin/pedidos-alteracao/` | Operação | sim | sim | - | - |  |
 | `/driversapp/admin/reclamacoes/` | Operação | sim | sim | - | - |  |
-| `/driversapp/admin/tickets-cainiao/` | Operação | sim | sim | - | - |  |
+| `/driversapp/admin/tickets-cainiao/` | Finanças | sim | - | - | - |  |
 | `/driversapp/cadastro-completo/` | Autenticação e registo | sim | sim | sim | sim | Público |
 | `/driversapp/cadastro/` | Autenticação e registo | sim | sim | sim | sim | Público |
 | `/driversapp/empresas-parceiras/` | Frotas subcontratadas | sim | sim | - | - | Sem faturas: P3 |

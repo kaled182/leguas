@@ -14,7 +14,7 @@
     <div class="p-4 rounded bg-emerald-50 text-emerald-800 text-sm">
       ✓ Esta pré-fatura foi aceite em {{ pre.signed_at|date:"d/m/Y H:i" }} (IP {{ pre.signed_ip }}).
     </div>
-    {% else %}
+    {% elif can_sign %}
     <form method="post" class="space-y-3">
       {% csrf_token %}
       <p class="text-sm text-gray-600">Ao confirmar, estás a aceitar os valores apresentados.</p>
@@ -22,6 +22,10 @@
         Aceitar Pré-Fatura
       </button>
     </form>
+    {% else %}
+    <div class="p-4 rounded bg-amber-50 text-amber-800 text-sm">
+      Este link já não é válido. Pede um novo link à gestão.
+    </div>
     {% endif %}
   </div>
 </div>

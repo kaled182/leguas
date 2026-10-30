@@ -1,5 +1,7 @@
 # Checklist de smoke test — depois do deploy
 
+**NOTA:** produção não tem Operadores. Crie um utilizador de teste `is_staff`, sem superuser, para os passos do Operador. Apague-o no fim.
+
 **AVISO:** se um passo falhar por 403 ou redirect inesperado, execute o rollback da secção final.
 
 1. **Gestão:** entre em `/auth/login/`. Abra `/`, `/accounting/hub/` e `/system/users/`.
@@ -16,6 +18,7 @@
 10. **ReliableMaps:** confirme que a exportação de zonas responde com a chave.
 11. **Operador:** abra `/settlements/packages/` e faça uma pesquisa.
 12. **Operador:** abra `/admin/`. Confirme que o acesso é recusado.
+13. **Operador:** abra a ficha da Cainiao em `/core/partners/`. Confirme que vê o painel de Courier ID, sem contrato nem preços.
 
 ## Rollback
 

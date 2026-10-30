@@ -97,7 +97,7 @@ class LookupTests(TestCase):
 class ViewsTests(TestCase):
     def setUp(self):
         Partner.objects.create(name="CAINIAO", nif="514154411", contact_email="c@x.pt")
-        self.user = get_user_model().objects.create_user("operador", password="x")
+        self.user = get_user_model().objects.create_user("operador", password="x", is_staff=True)
 
     def test_login_obrigatorio(self):
         self.assertEqual(self.client.get("/settlements/cainiao/unmapped/lookup/?courier_name=A", secure=True).status_code, 302)

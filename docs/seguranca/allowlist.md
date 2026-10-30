@@ -1,6 +1,6 @@
 # Allowlist do middleware de permissões — por aprovar
 
-**Estado:** aprovada em 2026-10-30, com os acréscimos da secção 6. O middleware ainda não foi implementado.
+**Estado:** aprovada e implementada no branch `fix/seguranca-permissoes`, em `core/permissions.py`.
 **Método:** teste anónimo de 560 rotas, mais leitura de `@csrf_exempt` e do código de autenticação.
 
 ## 1. Sem sessão
@@ -62,9 +62,9 @@ docker compose up -d web
 | N1 | `DEBUG = False` em produção. Hotfix no branch `hotfix/cainiao-import-login` | Deploy antes deste PR |
 | N2 | Ver a secção 7 | PR seguinte, com prioridade alta |
 | N3 | O WPPConnect envia para este sistema. O OTP do motorista usa WhatsApp | A rota fica na allowlist. Não bloquear no Caddy |
-| Token de assinatura | `secrets.token_urlsafe(32)`: aleatório e longo. **Não expira e pode ser reutilizado** | B14: corrigir neste PR |
-| OTP do motorista | 6 dígitos, 5 min, 5 tentativas, 1 envio por número a cada 60 s. **Sem limite por IP** | Limite por IP com o cache Redis, sem dependência nova |
-| Cadastro público | Sem limite | Limite por IP com o cache Redis |
+| Token de assinatura | `secrets.token_urlsafe(32)`. Corrigido (B14): expira 7 dias depois do envio, assina 1 vez e só em `RASCUNHO` ou `CALCULADO` | Feito |
+| OTP do motorista | 6 dígitos, 5 min, 5 tentativas, 1 envio por número a cada 60 s. **Sem limite por IP** | Feito: 10 envios e 30 validações por hora, por IP |
+| Cadastro público | 10 envios por hora, por IP | Feito |
 | API da app | 15 rotas exigem token. 2 rotas são o próprio login | Teste por rota em `app_api/test_auth_required.py` |
 
 **B14:** um novo POST em `/core/pre-invoice/sign/<token>/` volta a pôr a pré-fatura em `APROVADO`, em qualquer estado, incluindo `PAGO` e `CANCELADO`.

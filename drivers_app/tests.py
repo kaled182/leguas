@@ -125,7 +125,7 @@ class RefreshActivityTests(TestCase):
 
 class DriversCentralViewTests(TestCase):
     def setUp(self):
-        self.admin = User.objects.create_user("adm", password="x", is_staff=True)
+        self.admin = User.objects.create_user("adm", password="x", is_staff=True, is_superuser=True)
         self.client.force_login(self.admin)
         today = timezone.localdate()
         self.active = _driver("300000001", apelido="Act_LF")
@@ -186,7 +186,7 @@ class DriversCentralLoginSearchTests(TestCase):
         from core.models import Partner
         from settlements.models import CourierNameAlias, DriverCourierMapping
 
-        self.client.force_login(User.objects.create_user("adm", password="x", is_staff=True))
+        self.client.force_login(User.objects.create_user("adm", password="x", is_staff=True, is_superuser=True))
         self.url = reverse("drivers_app:drivers_central")
         self.partner = Partner.objects.create(name="CAINIAO", nif="500000000", contact_email="c@x.pt")
         self.owner = _driver("310000001", apelido="Ricardo_LF")
@@ -255,7 +255,7 @@ class DriversCentralLoginSearchTests(TestCase):
 
 class LegacyListRemovedTests(TestCase):
     def setUp(self):
-        self.client.force_login(User.objects.create_user("adm", password="x", is_staff=True))
+        self.client.force_login(User.objects.create_user("adm", password="x", is_staff=True, is_superuser=True))
         self.drv = _driver("320000001", apelido="Leg_LF")
 
     def test_pages_and_actions_are_gone(self):
@@ -291,7 +291,7 @@ class FichaTests(TestCase):
 
         from .models import EmpresaParceira
 
-        self.admin = User.objects.create_user("adm2", password="x", is_staff=True)
+        self.admin = User.objects.create_user("adm2", password="x", is_staff=True, is_superuser=True)
         self.client.force_login(self.admin)
         self.fleet = EmpresaParceira.objects.create(nome="Frota X", nif="509999999")
         self.d = _driver("400000001", apelido="Fi_LF")
@@ -405,7 +405,7 @@ class ContractGeneratorTests(TestCase):
         from .models import DriverHubAssignment
 
         self.json = json
-        self.admin = User.objects.create_user("adm3", password="x", is_staff=True)
+        self.admin = User.objects.create_user("adm3", password="x", is_staff=True, is_superuser=True)
         self.client.force_login(self.admin)
         self.d = _driver("500000001", apelido="Gen_LF")
         self.fao = CainiaoHub.objects.create(name="Fão", address="N13 40 5, Fão")
@@ -472,7 +472,7 @@ class PaymentsTests(TestCase):
         from settlements.models import CainiaoHub
 
         self.date = date
-        self.admin = User.objects.create_user("adm4", password="x", is_staff=True)
+        self.admin = User.objects.create_user("adm4", password="x", is_staff=True, is_superuser=True)
         self.client.force_login(self.admin)
         self.ave = CainiaoHub.objects.create(name="Aveiro")
         self.ave_terms = HubContractTerms.objects.create(
@@ -643,7 +643,7 @@ class CpPricingTests(TestCase):
         self.assertEqual(bd["amounts"]["door_normal"], self.D("6.80"))
 
     def test_ficha_saves_negotiated_price_only_for_valid_values(self):
-        admin = User.objects.create_user("adm5", password="x", is_staff=True)
+        admin = User.objects.create_user("adm5", password="x", is_staff=True, is_superuser=True)
         self.client.force_login(admin)
         url = reverse("drivers_app:driver_admin_edit", args=[self.drv.id])
         self.client.post(url, {
@@ -727,7 +727,7 @@ class PendingDeductionsTests(TestCase):
         self.assertEqual({c.id for c in d2["claims"]}, {self.c_wait.id})
 
     def test_invoices_page_admin(self):
-        admin = User.objects.create_user("adm6", password="x", is_staff=True)
+        admin = User.objects.create_user("adm6", password="x", is_staff=True, is_superuser=True)
         self.client.force_login(admin)
         r = self.client.get(reverse("drivers_app:driver_portal_invoices", args=[self.drv.id]))
         self.assertEqual(r.status_code, 200)
@@ -796,7 +796,7 @@ class CarryNegativeBalanceTests(TestCase):
         self.assertIn("[SALDO]", self.pf.observacoes)
 
     def test_bulk_carry_and_invoices_page(self):
-        admin = User.objects.create_user("adm7", password="x", is_staff=True)
+        admin = User.objects.create_user("adm7", password="x", is_staff=True, is_superuser=True)
         self.client.force_login(admin)
         r = self.client.get(reverse("drivers_app:driver_portal_invoices", args=[self.drv.id]))
         self.assertContains(r, "Saldo devedor")

@@ -14,6 +14,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods, require_POST
 from openpyxl.utils import get_column_letter
 
+from core.ratelimit import REGISTER_LIMIT, over_limit
 from customauth.models import DriverAccess
 
 from .models import DriverDocument, DriverProfile, EmpresaParceira, Vehicle, VehicleDocument
@@ -134,6 +135,9 @@ def public_driver_register(request):
             {"current_year": datetime.now().year},
         )
 
+    if over_limit(request, "register", REGISTER_LIMIT):
+        return HttpResponse("Demasiados pedidos. Tenta mais tarde.", status=429)
+
     # POST - Processar formulario
     try:
         # Obter dados do formulario
@@ -252,6 +256,9 @@ def public_driver_register_full(request):
             "drivers_app/driver_public_register_full.html",
             {"current_year": datetime.now().year},
         )
+
+    if over_limit(request, "register", REGISTER_LIMIT):
+        return HttpResponse("Demasiados pedidos. Tenta mais tarde.", status=429)
 
     # POST - Processar formulario completo
     try:

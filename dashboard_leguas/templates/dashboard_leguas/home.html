@@ -378,6 +378,7 @@
     <p class="text-2xl font-extrabold text-gray-900 dark:text-white">{{ mgmt.drivers_active }}</p>
     <p class="text-[11px] text-gray-500">{{ mgmt.drivers_inactive }} inactivos +7 dias</p>
   </a>
+  {% if is_gestao %}
   <a href="{% url 'drivers_app:payments_dashboard' %}?tab=aprovar" class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200/50 dark:border-gray-700/50 hover:shadow-md transition">
     <p class="text-[11px] uppercase font-bold text-gray-500">PF por aprovar</p>
     <p class="text-2xl font-extrabold {% if mgmt.pf_to_approve %}text-amber-600{% else %}text-emerald-600{% endif %}">{{ mgmt.pf_to_approve }}</p>
@@ -388,6 +389,7 @@
     <p class="text-2xl font-extrabold text-gray-900 dark:text-white">{{ mgmt.due_week_n }} <span class="text-sm font-semibold text-gray-500">até {{ mgmt.due_week_day|date:"d/m" }}</span></p>
     <p class="text-[11px] {% if mgmt.overdue_n %}text-rose-600 font-semibold{% else %}text-gray-500{% endif %}">{{ mgmt.overdue_n }} PF em atraso</p>
   </a>
+  {% endif %}
   <a href="{% url 'drivers_app:drivers_central' %}?tab=ativos&flag=no_contract" class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200/50 dark:border-gray-700/50 hover:shadow-md transition">
     <p class="text-[11px] uppercase font-bold text-gray-500">Contratos</p>
     <p class="text-2xl font-extrabold text-gray-900 dark:text-white">{{ mgmt.with_contract }} <span class="text-sm font-semibold text-gray-500">de {{ mgmt.drivers_active }} activos</span></p>

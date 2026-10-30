@@ -175,6 +175,7 @@
       {% endfor %}
     </div>
 
+    {% if is_gestao %}
     <!-- ░░ Coluna direita: Financeiro (claims) ░░ -->
     <div class="lg:col-span-3 space-y-4">
       <div class="flex items-center justify-between">
@@ -217,6 +218,7 @@
         <i data-lucide="shield" class="w-3.5 h-3.5 inline"></i> Ver recursos
       </a>
     </div>
+    {% endif %}
   </div>
 </div>
 

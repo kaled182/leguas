@@ -22,10 +22,11 @@ def api_reliable_sync(request):
       • "sync" — agenda uma sincronização agora (qualquer utilizador autenticado);
       • "save" {url, key, enabled} — guarda a configuração (só admin; key vazia mantém a atual).
     """
+    from core.permissions import is_gestao
     from system_config.models import SystemConfiguration
 
     cfg = SystemConfiguration.get_config()
-    is_admin = request.user.is_staff or request.user.is_superuser
+    is_admin = is_gestao(request.user)
 
     if request.method == "POST":
         try:

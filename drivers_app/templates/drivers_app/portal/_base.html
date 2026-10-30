@@ -70,18 +70,22 @@
           <i data-lucide="layout-dashboard" class="w-4 h-4 inline -mt-0.5"></i>
           <span class="hidden sm:inline ml-1">Visão Geral</span>
         </a>
+{% if not request.user.is_staff or is_gestao %}
         <a href="{% url 'drivers_app:driver_portal_reports' driver.id %}"
            class="px-3 py-1.5 rounded-lg text-sm font-medium transition
              {% if request.resolver_match.url_name == 'driver_portal_reports' %}bg-white text-indigo-700 shadow{% else %}text-white/90 hover:bg-white/10{% endif %}">
           <i data-lucide="bar-chart-3" class="w-4 h-4 inline -mt-0.5"></i>
           <span class="hidden sm:inline ml-1">Relatórios</span>
         </a>
+{% endif %}
+{% if not request.user.is_staff or is_gestao %}
         <a href="{% url 'drivers_app:driver_portal_invoices' driver.id %}"
            class="px-3 py-1.5 rounded-lg text-sm font-medium transition
              {% if request.resolver_match.url_name == 'driver_portal_invoices' %}bg-white text-indigo-700 shadow{% else %}text-white/90 hover:bg-white/10{% endif %}">
           <i data-lucide="receipt" class="w-4 h-4 inline -mt-0.5"></i>
           <span class="hidden sm:inline ml-1">Faturas</span>
         </a>
+{% endif %}
         {# Perfil = auto-edição com aprovação (exclusivo do motorista). Admins têm "Editar" abaixo. #}
         {% if not request.user.is_staff and not request.user.is_superuser %}
         <a href="{% url 'drivers_app:driver_portal_profile' driver.id %}"
@@ -132,6 +136,7 @@
             </div>
           </div>
           {% endwith %}
+{% if not request.user.is_staff or is_gestao %}
           <a href="{% url 'drivers_app:driver_claims' driver.id %}"
              title="Descontos / DriverClaim — recurso e prova de entrega"
              class="px-3 py-1.5 rounded-lg text-sm font-medium transition
@@ -139,6 +144,7 @@
             <i data-lucide="circle-dollar-sign" class="w-4 h-4 inline -mt-0.5"></i>
             <span class="hidden lg:inline ml-1">Descontos</span>
           </a>
+{% endif %}
         {% endif %}
       </nav>
     </div>

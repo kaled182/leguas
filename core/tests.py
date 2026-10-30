@@ -125,7 +125,7 @@ class ToggleStatusSecurityTests(TestCase):
     """Ativar/desativar só por POST."""
 
     def setUp(self):
-        self.user = User.objects.create_user("u", password="x", is_staff=True)
+        self.user = User.objects.create_user("u", password="x", is_staff=True, is_superuser=True)
         self.client.force_login(self.user)
         self.partner = Partner.objects.create(
             name="P", nif="517307243", contact_email="p@example.test",

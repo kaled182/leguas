@@ -126,6 +126,9 @@ WPPCONNECT_WEBHOOK_URL = env(
     default="http://web:8000/system/whatsapp/webhook/",
 )
 
+# Controlo de acesso por perfil (core/permissions.py)
+PERMISSIONS_ENFORCE = env.bool("PERMISSIONS_ENFORCE", default=True)
+
 # Tailwind
 TAILWIND_APP_NAME = "theme"
 
@@ -184,6 +187,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "core.middleware.PermissionMiddleware",
 ]
 
 # Security: Allow iframes from same origin (for PDF preview)
@@ -206,6 +210,7 @@ TEMPLATES = [
                 "drivers_app.context_processors.drivers_counts",
                 "drivers_app.context_processors.portal_layout",
                 "system_config.context_processors.map_config",
+                "core.context_processors.user_access",
             ],
         },
     },

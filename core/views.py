@@ -11,6 +11,9 @@ from django.views.decorators.http import require_POST
 from .forms import PartnerForm, PartnerIntegrationForm
 from .models import Partner, PartnerIntegration
 
+SIGN_LINK_VALID_DAYS = 7
+SIGNABLE_STATUSES = ("RASCUNHO", "CALCULADO")
+
 
 @login_required
 def partner_list(request):
@@ -2003,14 +2006,22 @@ def pre_invoice_remote_sign(request, token):
     """Extra 8.3 — Página pública de aceitação via token único.
 
     Acede-se SEM login: /pre-invoice/sign/<token>/ (o token é o credencial).
+    O token vale SIGN_LINK_VALID_DAYS depois do envio e aceita uma só assinatura.
     """
+    from datetime import timedelta
     from django.shortcuts import render
     from django.utils import timezone
     from settlements.models import DriverPreInvoice, PreInvoiceAuditLog
 
     pre = get_object_or_404(DriverPreInvoice, signed_token=token)
+    expired = not pre.whatsapp_sent_at or (
+        timezone.now() > pre.whatsapp_sent_at + timedelta(days=SIGN_LINK_VALID_DAYS)
+    )
+    can_sign = (
+        not pre.signed_at and not expired and pre.status in SIGNABLE_STATUSES
+    )
 
-    if request.method == "POST":
+    if request.method == "POST" and can_sign:
         pre.signed_at = timezone.now()
         pre.signed_ip = request.META.get("REMOTE_ADDR", "")[:45]
         pre.status = "APROVADO"
@@ -2020,8 +2031,11 @@ def pre_invoice_remote_sign(request, token):
             summary=f"Aceite remotamente de {pre.signed_ip}",
             diff={"ip": pre.signed_ip, "ts": pre.signed_at.isoformat()},
         )
+        can_sign = False
 
-    return render(request, "core/pre_invoice_sign.html", {"pre": pre})
+    return render(
+        request, "core/pre_invoice_sign.html", {"pre": pre, "can_sign": can_sign},
+    )
 
 
 @login_required

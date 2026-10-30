@@ -18,13 +18,13 @@ class CainiaoImportAccessTests(TestCase):
         self.assertIn("/auth/login/", response["Location"])
 
     def test_authenticated_user_keeps_access(self):
-        user = User.objects.create_user("u", password="x", is_staff=True)
+        user = User.objects.create_user("u", password="x", is_staff=True, is_superuser=True)
         self.client.force_login(user)
         response = self.client.post(reverse("cainiao-operation-import"))
         self.assertEqual(response.status_code, 400)
 
     def test_error_response_hides_internal_details(self):
-        user = User.objects.create_user("u", password="x", is_staff=True)
+        user = User.objects.create_user("u", password="x", is_staff=True, is_superuser=True)
         self.client.force_login(user)
         target = "settlements.cainiao_views._cainiao_operation_import_impl"
         with patch(target, side_effect=RuntimeError("segredo interno")):

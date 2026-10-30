@@ -180,8 +180,8 @@ class ReliableEpodSyncTests(TestCase):
 class ReliableSyncViewTests(TestCase):
     def setUp(self):
         User = get_user_model()
-        self.user = User.objects.create_user("operador", password="x")
-        self.admin = User.objects.create_user("admin", password="x", is_staff=True)
+        self.user = User.objects.create_user("operador", password="x", is_staff=True)
+        self.admin = User.objects.create_user("admin", password="x", is_staff=True, is_superuser=True)
         self.url = "/settlements/cainiao/reliable-sync/"
 
     def _post(self, body):

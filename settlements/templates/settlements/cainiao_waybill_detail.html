@@ -35,7 +35,7 @@
           Data: <strong>{{ return_record.return_date|date:"d/m/Y" }}</strong>
           {% if return_record.return_carrier %} · Transportadora: <strong>{{ return_record.return_carrier }}</strong>{% endif %}
           {% if return_record.return_tracking_number %} · Tracking: <strong class="font-mono">{{ return_record.return_tracking_number }}</strong>{% endif %}
-          {% if return_record.return_cost_eur %} · Custo: <strong>€{{ return_record.return_cost_eur }}</strong>{% endif %}
+          {% if is_gestao and return_record.return_cost_eur %} · Custo: <strong>€{{ return_record.return_cost_eur }}</strong>{% endif %}
           {% if return_record.batch %} · Lote: <strong>#{{ return_record.batch.id }} {{ return_record.batch.name }}</strong>{% endif %}
         </p>
         <p class="text-[10px] text-amber-600 dark:text-amber-400 mt-1">
@@ -438,7 +438,7 @@
                   <div class="mt-1 text-[11px] text-gray-600 dark:text-gray-400 space-y-0.5">
                     {% if ev.reason %}<div><span class="font-semibold">Razão:</span> {{ ev.reason }}</div>{% endif %}
                     {% if ev.tracking %}<div><span class="font-semibold">Tracking retorno:</span> <span class="font-mono">{{ ev.tracking }}</span>{% if ev.carrier %} · {{ ev.carrier }}{% endif %}</div>{% endif %}
-                    {% if ev.cost and ev.cost != '0.00' and ev.cost != '0' %}<div><span class="font-semibold">Custo:</span> €{{ ev.cost }}</div>{% endif %}
+                    {% if is_gestao and ev.cost and ev.cost != '0.00' and ev.cost != '0' %}<div><span class="font-semibold">Custo:</span> €{{ ev.cost }}</div>{% endif %}
                     {% if ev.notes %}<div class="italic text-gray-500">{{ ev.notes }}</div>{% endif %}
                   </div>
                 {% endif %}

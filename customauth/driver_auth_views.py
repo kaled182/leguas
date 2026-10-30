@@ -12,6 +12,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
 from customauth.models import DriverAccess
+from core.ratelimit import OTP_SEND_LIMIT, OTP_VERIFY_LIMIT, over_limit
 from drivers_app.models import DriverProfile
 
 
@@ -103,6 +104,11 @@ def driver_login_send_code(request):
     motorista. Resposta JSON (AJAX)."""
     from .otp_service import OTPError, resolve_driver_by_phone, send_otp
 
+    if over_limit(request, "otp-send", OTP_SEND_LIMIT):
+        return JsonResponse(
+            {"success": False, "error": "Demasiados pedidos. Tenta mais tarde."},
+            status=429,
+        )
     raw_phone = (request.POST.get("phone") or "").strip()
     try:
         profile = resolve_driver_by_phone(raw_phone)
@@ -117,6 +123,11 @@ def driver_login_send_code(request):
 @require_http_methods(["POST"])
 def driver_login_verify_code(request):
     """Valida o código OTP e inicia a sessão do motorista. JSON (AJAX)."""
+    if over_limit(request, "otp-verify", OTP_VERIFY_LIMIT):
+        return JsonResponse(
+            {"success": False, "error": "Demasiadas tentativas. Tenta mais tarde."},
+            status=429,
+        )
     from .otp_service import OTPError, resolve_driver_by_phone, verify_otp
 
     raw_phone = (request.POST.get("phone") or "").strip()

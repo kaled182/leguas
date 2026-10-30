@@ -34,3 +34,6 @@ class RemovedPagesRedirectTests(TestCase):
         for path in ("/accounting/", "/accounting/receitas/", "/accounting/despesas/1/", "/accounting/relatorios/"):
             with self.subTest(path=path):
                 self.assert_moved(path, "/accounting/hub/")
+
+    def test_ticket_import_goes_to_complaints(self):
+        self.assert_moved("/driversapp/admin/tickets-cainiao/", "/driversapp/admin/reclamacoes/")

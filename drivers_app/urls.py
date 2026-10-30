@@ -3,7 +3,6 @@
 from . import ficha_views
 from . import payments_views
 from . import views
-from . import views_ticket_import as vti
 
 app_name = "drivers_app"
 
@@ -207,86 +206,6 @@ urlpatterns = [
         name="admin_complaints_driver_search",
     ),
     # ─── Processador de Tickets Cainiao (abertura/recurso em massa) ───
-    path(
-        "admin/tickets-cainiao/",
-        vti.admin_tickets_cainiao,
-        name="admin_tickets_cainiao",
-    ),
-    path(
-        "api/tickets-cainiao/preview/",
-        vti.tickets_import_preview,
-        name="tickets_import_preview",
-    ),
-    path(
-        "api/tickets-cainiao/upload/",
-        vti.tickets_import_upload,
-        name="tickets_import_upload",
-    ),
-    path(
-        "api/tickets-cainiao/<int:batch_id>/rows/",
-        vti.tickets_import_rows_api,
-        name="tickets_import_rows_api",
-    ),
-    path(
-        "api/tickets-cainiao/row/<int:row_id>/update/",
-        vti.tickets_import_row_update,
-        name="tickets_import_row_update",
-    ),
-    path(
-        "api/tickets-cainiao/<int:batch_id>/bulk-select/",
-        vti.tickets_import_bulk_select,
-        name="tickets_import_bulk_select",
-    ),
-    path(
-        "api/tickets-cainiao/row/<int:row_id>/attach/",
-        vti.tickets_import_row_attach,
-        name="tickets_import_row_attach",
-    ),
-    path(
-        "api/tickets-cainiao/attach/<int:att_id>/delete/",
-        vti.tickets_import_attach_delete,
-        name="tickets_import_attach_delete",
-    ),
-    path(
-        "api/tickets-cainiao/<int:batch_id>/bulk-action/",
-        vti.tickets_import_bulk_action,
-        name="tickets_import_bulk_action",
-    ),
-    path(
-        "api/tickets-cainiao/<int:batch_id>/auto-close/",
-        vti.tickets_import_auto_close,
-        name="tickets_import_auto_close",
-    ),
-    path(
-        "api/tickets-cainiao/<int:batch_id>/reresolve-drivers/",
-        vti.tickets_import_reresolve_drivers,
-        name="tickets_import_reresolve_drivers",
-    ),
-    path(
-        "api/tickets-cainiao/row/<int:row_id>/open/",
-        vti.tickets_import_open_one,
-        name="tickets_import_open_one",
-    ),
-    path(
-        "api/tickets-cainiao/<int:batch_id>/bulk-open/",
-        vti.tickets_import_bulk_open,
-        name="tickets_import_bulk_open",
-    ),
-    path(
-        "api/tickets-cainiao/<int:batch_id>/export/zip/",
-        vti.tickets_import_export_zip,
-        name="tickets_import_export_zip",
-    ),
-    path(
-        "api/tickets-cainiao/<int:batch_id>/export/xlsx/",
-        vti.tickets_import_export_xlsx,
-        name="tickets_import_export_xlsx",
-    ),
-    path(
-        "api/tickets-cainiao/driver-search/",
-        vti.tickets_import_driver_search,
-        name="tickets_import_driver_search",
-    ),
     # Reclamações de Clientes
     path(
         "api/complaints/<int:driver_id>/",

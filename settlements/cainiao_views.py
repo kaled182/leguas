@@ -2644,6 +2644,7 @@ def cainiao_operation_audit(request):
     })
 
 
+@login_required
 def cainiao_operation_import(request):
     """Import da planilha Operation Update.
 
@@ -2668,8 +2669,7 @@ def cainiao_operation_import(request):
         print(tb, file=sys.stderr)
         return JsonResponse({
             "success": False,
-            "error": f"{type(e).__name__}: {e}",
-            "traceback": tb.splitlines()[-15:],
+            "error": "Erro ao importar o ficheiro. Contacte o administrador.",
         }, status=500)
 
 
@@ -9635,6 +9635,7 @@ def _extract_date_from_filename(fn):
         return None
 
 
+@login_required
 def cainiao_parcel_list_preview(request):
     """Preview do PARCEL_LIST sem importar."""
     ficheiro = request.FILES.get("ficheiro")

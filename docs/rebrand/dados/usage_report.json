@@ -1,0 +1,1140 @@
+{
+ "users": {
+  "active": 4,
+  "superuser": 4,
+  "staff_not_superuser": 0,
+  "not_staff": 0
+ },
+ "candidates": {
+  "Frota": [
+   {
+    "model": "fleet_management.Vehicle",
+    "table": "fleet_management_vehicle",
+    "rows": 0,
+    "date_field": "updated_at",
+    "last_record": null
+   },
+   {
+    "model": "fleet_management.VehicleAssignment",
+    "table": "fleet_management_vehicleassignment",
+    "rows": 0,
+    "date_field": "updated_at",
+    "last_record": null
+   },
+   {
+    "model": "fleet_management.VehicleMaintenance",
+    "table": "fleet_management_vehiclemaintenance",
+    "rows": 0,
+    "date_field": "updated_at",
+    "last_record": null
+   },
+   {
+    "model": "fleet_management.VehicleIncident",
+    "table": "fleet_management_vehicleincident",
+    "rows": 0,
+    "date_field": "updated_at",
+    "last_record": null
+   }
+  ],
+  "Tarifas e zonas postais": [
+   {
+    "model": "pricing.PartnerTariff",
+    "table": "pricing_partnertariff",
+    "rows": 0,
+    "date_field": "updated_at",
+    "last_record": null
+   },
+   {
+    "model": "pricing.PostalZone",
+    "table": "pricing_postalzone",
+    "rows": 0,
+    "date_field": "updated_at",
+    "last_record": null
+   }
+  ],
+  "Contratos": [
+   {
+    "model": "contracts.ContractTemplate",
+    "table": "contracts_contracttemplate",
+    "rows": 0,
+    "date_field": "created_at",
+    "last_record": null
+   },
+   {
+    "model": "contracts.DriverContract",
+    "table": "contracts_drivercontract",
+    "rows": 0,
+    "date_field": "signed_at",
+    "last_record": null
+   },
+   {
+    "model": "contracts.GeneratedContract",
+    "table": "contracts_generatedcontract",
+    "rows": 0,
+    "date_field": "original_contract_date",
+    "last_record": null
+   }
+  ],
+  "Sorting (tabelas sem páginas)": [
+   {
+    "model": "sorting.SortingSession",
+    "table": "sorting_sortingsession",
+    "rows": 37,
+    "date_field": "updated_at",
+    "last_record": "2026-10-22T08:25:35.659584+00:00"
+   },
+   {
+    "model": "sorting.SortingBigbag",
+    "table": "sorting_sortingbigbag",
+    "rows": 81,
+    "date_field": "created_at",
+    "last_record": "2026-10-22T08:25:45.253894+00:00"
+   },
+   {
+    "model": "sorting.SortingParcel",
+    "table": "sorting_sortingparcel",
+    "rows": 1964,
+    "date_field": "scanned_at",
+    "last_record": "2026-10-22T08:27:16.575909+00:00"
+   }
+  ]
+ },
+ "models": [
+  {
+   "model": "accounting.AccountingPeriodLock",
+   "table": "accounting_accountingperiodlock",
+   "rows": 0,
+   "date_field": "updated_at",
+   "last_record": null
+  },
+  {
+   "model": "accounting.ApprovalRule",
+   "table": "accounting_approvalrule",
+   "rows": 0,
+   "date_field": "created_at",
+   "last_record": null
+  },
+  {
+   "model": "accounting.BankStatement",
+   "table": "accounting_bankstatement",
+   "rows": 0,
+   "date_field": "uploaded_at",
+   "last_record": null
+  },
+  {
+   "model": "accounting.BankTransaction",
+   "table": "accounting_banktransaction",
+   "rows": 0,
+   "date_field": "date",
+   "last_record": null
+  },
+  {
+   "model": "accounting.Bill",
+   "table": "accounting_bill",
+   "rows": 487,
+   "date_field": "updated_at",
+   "last_record": "2026-10-30T20:21:11.804721+00:00"
+  },
+  {
+   "model": "accounting.BillApproval",
+   "table": "accounting_billapproval",
+   "rows": 0,
+   "date_field": "decided_at",
+   "last_record": null
+  },
+  {
+   "model": "accounting.BillAttachment",
+   "table": "accounting_billattachment",
+   "rows": 810,
+   "date_field": "uploaded_at",
+   "last_record": "2026-10-30T20:21:11.817614+00:00"
+  },
+  {
+   "model": "accounting.CostCenter",
+   "table": "accounting_costcenter",
+   "rows": 9,
+   "date_field": "created_at",
+   "last_record": "2026-10-12T15:20:29.054105+00:00"
+  },
+  {
+   "model": "accounting.ExpenseCategory",
+   "table": "accounting_expensecategory",
+   "rows": 16,
+   "date_field": null,
+   "last_record": null
+  },
+  {
+   "model": "accounting.Expenses",
+   "table": "accounting_expenses",
+   "rows": 0,
+   "date_field": "atualizado_em",
+   "last_record": null
+  },
+  {
+   "model": "accounting.Fornecedor",
+   "table": "accounting_fornecedor",
+   "rows": 64,
+   "date_field": "updated_at",
+   "last_record": "2026-10-27T15:27:25.910163+00:00"
+  },
+  {
+   "model": "accounting.FornecedorTag",
+   "table": "accounting_fornecedortag",
+   "rows": 0,
+   "date_field": "created_at",
+   "last_record": null
+  },
+  {
+   "model": "accounting.Imposto",
+   "table": "accounting_imposto",
+   "rows": 838,
+   "date_field": "updated_at",
+   "last_record": "2026-10-26T18:42:13.908768+00:00"
+  },
+  {
+   "model": "accounting.Revenues",
+   "table": "accounting_revenues",
+   "rows": 0,
+   "date_field": "atualizado_em",
+   "last_record": null
+  },
+  {
+   "model": "app_api.DriverAppToken",
+   "table": "app_api_driverapptoken",
+   "rows": 7,
+   "date_field": "created_at",
+   "last_record": "2026-07-14T16:25:30.000733+00:00"
+  },
+  {
+   "model": "app_api.IncidencePacket",
+   "table": "app_api_incidencepacket",
+   "rows": 0,
+   "date_field": "updated_at",
+   "last_record": null
+  },
+  {
+   "model": "app_api.OcrCorrectionLearning",
+   "table": "app_api_ocrcorrectionlearning",
+   "rows": 0,
+   "date_field": "last_used_at",
+   "last_record": null
+  },
+  {
+   "model": "app_api.OcrScanAttempt",
+   "table": "app_api_ocrscanattempt",
+   "rows": 0,
+   "date_field": "created_at",
+   "last_record": null
+  },
+  {
+   "model": "contracts.ContractSettings",
+   "table": "contracts_contractsettings",
+   "rows": 1,
+   "date_field": "updated_at",
+   "last_record": "2026-10-26T18:23:50.275178+00:00"
+  },
+  {
+   "model": "contracts.ContractTemplate",
+   "table": "contracts_contracttemplate",
+   "rows": 0,
+   "date_field": "created_at",
+   "last_record": null
+  },
+  {
+   "model": "contracts.DriverContract",
+   "table": "contracts_drivercontract",
+   "rows": 0,
+   "date_field": "signed_at",
+   "last_record": null
+  },
+  {
+   "model": "contracts.GeneratedContract",
+   "table": "contracts_generatedcontract",
+   "rows": 0,
+   "date_field": "original_contract_date",
+   "last_record": null
+  },
+  {
+   "model": "contracts.HubContractTerms",
+   "table": "contracts_hubcontractterms",
+   "rows": 4,
+   "date_field": "updated_at",
+   "last_record": "2026-10-26T19:50:04.488852+00:00"
+  },
+  {
+   "model": "contracts.HubZoneTariff",
+   "table": "contracts_hubzonetariff",
+   "rows": 26,
+   "date_field": "valid_from",
+   "last_record": "2026-01-01"
+  },
+  {
+   "model": "converter.LearningPattern",
+   "table": "converter_learningpattern",
+   "rows": 0,
+   "date_field": "updated_at",
+   "last_record": null
+  },
+  {
+   "model": "converter.ProcessingHistory",
+   "table": "converter_processinghistory",
+   "rows": 0,
+   "date_field": "created_at",
+   "last_record": null
+  },
+  {
+   "model": "core.Partner",
+   "table": "core_partner",
+   "rows": 2,
+   "date_field": "updated_at",
+   "last_record": "2026-10-03T21:48:48.834566+00:00"
+  },
+  {
+   "model": "core.PartnerIntegration",
+   "table": "core_partnerintegration",
+   "rows": 1,
+   "date_field": "updated_at",
+   "last_record": "2026-05-05T17:50:05.790022+00:00"
+  },
+  {
+   "model": "core.SyncLog",
+   "table": "core_synclog",
+   "rows": 0,
+   "date_field": "started_at",
+   "last_record": null
+  },
+  {
+   "model": "customauth.DriverAccess",
+   "table": "customauth_driveraccess",
+   "rows": 1,
+   "date_field": "updated_at",
+   "last_record": "2026-05-07T22:08:49.855786+00:00"
+  },
+  {
+   "model": "customauth.DriverLoginOTP",
+   "table": "customauth_driverloginotp",
+   "rows": 17,
+   "date_field": "created_at",
+   "last_record": "2026-07-14T16:25:08.960518+00:00"
+  },
+  {
+   "model": "customauth.EmpresaAccess",
+   "table": "customauth_empresaaccess",
+   "rows": 1,
+   "date_field": "updated_at",
+   "last_record": "2026-05-08T22:57:01.084855+00:00"
+  },
+  {
+   "model": "dashboard_leguas.SlaZoneRule",
+   "table": "dashboard_leguas_slazonerule",
+   "rows": 4,
+   "date_field": "updated_at",
+   "last_record": "2026-10-26T21:31:53.126994+00:00"
+  },
+  {
+   "model": "drivers_app.CustomerComplaint",
+   "table": "drivers_app_customercomplaint",
+   "rows": 513,
+   "date_field": "updated_at",
+   "last_record": "2026-09-28T22:08:22.504911+00:00"
+  },
+  {
+   "model": "drivers_app.CustomerComplaintAttachment",
+   "table": "drivers_app_customercomplaintattachment",
+   "rows": 881,
+   "date_field": "created_at",
+   "last_record": "2026-09-28T15:53:03.573096+00:00"
+  },
+  {
+   "model": "drivers_app.DriverAutoEmitConfig",
+   "table": "drivers_app_driverautoemitconfig",
+   "rows": 0,
+   "date_field": "updated_at",
+   "last_record": null
+  },
+  {
+   "model": "drivers_app.DriverDocument",
+   "table": "drivers_app_driverdocument",
+   "rows": 0,
+   "date_field": "uploaded_at",
+   "last_record": null
+  },
+  {
+   "model": "drivers_app.DriverHubAssignment",
+   "table": "drivers_app_driverhubassignment",
+   "rows": 13,
+   "date_field": "updated_at",
+   "last_record": "2026-10-26T19:41:34.050862+00:00"
+  },
+  {
+   "model": "drivers_app.DriverMergeAudit",
+   "table": "drivers_app_drivermergeaudit",
+   "rows": 31,
+   "date_field": "merged_at",
+   "last_record": "2026-10-30T11:36:05.647457+00:00"
+  },
+  {
+   "model": "drivers_app.DriverPaymentRegimeChange",
+   "table": "drivers_app_driverpaymentregimechange",
+   "rows": 0,
+   "date_field": "changed_at",
+   "last_record": null
+  },
+  {
+   "model": "drivers_app.DriverProfile",
+   "table": "drivers_app_driverprofile",
+   "rows": 217,
+   "date_field": "updated_at",
+   "last_record": "2026-10-26T18:12:48.162962+00:00"
+  },
+  {
+   "model": "drivers_app.DriverProfileChangeRequest",
+   "table": "drivers_app_driverprofilechangerequest",
+   "rows": 0,
+   "date_field": "requested_at",
+   "last_record": null
+  },
+  {
+   "model": "drivers_app.DriverProfileEditLog",
+   "table": "drivers_app_driverprofileeditlog",
+   "rows": 10,
+   "date_field": "created_at",
+   "last_record": "2026-10-26T19:41:34.052557+00:00"
+  },
+  {
+   "model": "drivers_app.DriverReferral",
+   "table": "drivers_app_driverreferral",
+   "rows": 4,
+   "date_field": "created_at",
+   "last_record": "2026-07-13T16:35:00.791634+00:00"
+  },
+  {
+   "model": "drivers_app.EmpresaParceira",
+   "table": "drivers_app_empresaparceira",
+   "rows": 2,
+   "date_field": "updated_at",
+   "last_record": "2026-05-27T15:31:26.493822+00:00"
+  },
+  {
+   "model": "drivers_app.EmpresaParceiraLancamento",
+   "table": "drivers_app_empresaparceiralancamento",
+   "rows": 0,
+   "date_field": "created_at",
+   "last_record": null
+  },
+  {
+   "model": "drivers_app.FleetAutoEmitConfig",
+   "table": "drivers_app_fleetautoemitconfig",
+   "rows": 0,
+   "date_field": "updated_at",
+   "last_record": null
+  },
+  {
+   "model": "drivers_app.TicketImportAttachment",
+   "table": "drivers_app_ticketimportattachment",
+   "rows": 396,
+   "date_field": "created_at",
+   "last_record": "2026-09-28T11:53:07.902637+00:00"
+  },
+  {
+   "model": "drivers_app.TicketImportBatch",
+   "table": "drivers_app_ticketimportbatch",
+   "rows": 87,
+   "date_field": "updated_at",
+   "last_record": "2026-09-28T09:08:16.544150+00:00"
+  },
+  {
+   "model": "drivers_app.TicketImportRow",
+   "table": "drivers_app_ticketimportrow",
+   "rows": 1337,
+   "date_field": "updated_at",
+   "last_record": "2026-09-28T11:54:45.114638+00:00"
+  },
+  {
+   "model": "drivers_app.Vehicle",
+   "table": "drivers_app_vehicle",
+   "rows": 0,
+   "date_field": "updated_at",
+   "last_record": null
+  },
+  {
+   "model": "drivers_app.VehicleDocument",
+   "table": "drivers_app_vehicledocument",
+   "rows": 0,
+   "date_field": "uploaded_at",
+   "last_record": null
+  },
+  {
+   "model": "fleet_management.Vehicle",
+   "table": "fleet_management_vehicle",
+   "rows": 0,
+   "date_field": "updated_at",
+   "last_record": null
+  },
+  {
+   "model": "fleet_management.VehicleAssignment",
+   "table": "fleet_management_vehicleassignment",
+   "rows": 0,
+   "date_field": "updated_at",
+   "last_record": null
+  },
+  {
+   "model": "fleet_management.VehicleIncident",
+   "table": "fleet_management_vehicleincident",
+   "rows": 0,
+   "date_field": "updated_at",
+   "last_record": null
+  },
+  {
+   "model": "fleet_management.VehicleMaintenance",
+   "table": "fleet_management_vehiclemaintenance",
+   "rows": 0,
+   "date_field": "updated_at",
+   "last_record": null
+  },
+  {
+   "model": "geozonas.AreaCP4",
+   "table": "geozonas_areacp4",
+   "rows": 28,
+   "date_field": "atualizado_em",
+   "last_record": "2026-08-22T18:19:06.716458+00:00"
+  },
+  {
+   "model": "geozonas.CodigoPostal",
+   "table": "geozonas_codigopostal",
+   "rows": 15549,
+   "date_field": "atualizado_em",
+   "last_record": "2026-08-22T18:19:08.277582+00:00"
+  },
+  {
+   "model": "geozonas.Concelho",
+   "table": "geozonas_concelho",
+   "rows": 21,
+   "date_field": "updated_at",
+   "last_record": "2026-08-23T17:32:23.424403+00:00"
+  },
+  {
+   "model": "geozonas.Freguesia",
+   "table": "geozonas_freguesia",
+   "rows": 423,
+   "date_field": "updated_at",
+   "last_record": "2026-08-22T18:03:44.653777+00:00"
+  },
+  {
+   "model": "geozonas.IngestJob",
+   "table": "geozonas_ingestjob",
+   "rows": 86,
+   "date_field": "updated_at",
+   "last_record": "2026-08-23T17:32:24.471015+00:00"
+  },
+  {
+   "model": "geozonas.Localidade",
+   "table": "geozonas_localidade",
+   "rows": 1473,
+   "date_field": null,
+   "last_record": null
+  },
+  {
+   "model": "geozonas.ZonaGeo",
+   "table": "geozonas_zonageo",
+   "rows": 107,
+   "date_field": "updated_at",
+   "last_record": "2026-09-22T19:51:17.000684+00:00"
+  },
+  {
+   "model": "payroll.Employee",
+   "table": "payroll_employee",
+   "rows": 2,
+   "date_field": "updated_at",
+   "last_record": "2026-08-04T17:31:40.365678+00:00"
+  },
+  {
+   "model": "payroll.IRSEscalao",
+   "table": "payroll_irsescalao",
+   "rows": 11,
+   "date_field": null,
+   "last_record": null
+  },
+  {
+   "model": "payroll.IRSTable",
+   "table": "payroll_irstable",
+   "rows": 1,
+   "date_field": "updated_at",
+   "last_record": "2026-05-14T00:02:53.155668+00:00"
+  },
+  {
+   "model": "payroll.Payroll",
+   "table": "payroll_payroll",
+   "rows": 1,
+   "date_field": "updated_at",
+   "last_record": "2026-08-04T15:55:42.856218+00:00"
+  },
+  {
+   "model": "payroll.PayrollComponent",
+   "table": "payroll_payrollcomponent",
+   "rows": 5,
+   "date_field": "created_at",
+   "last_record": "2026-08-03T18:39:23.977557+00:00"
+  },
+  {
+   "model": "pricing.PartnerTariff",
+   "table": "pricing_partnertariff",
+   "rows": 0,
+   "date_field": "updated_at",
+   "last_record": null
+  },
+  {
+   "model": "pricing.PostalZone",
+   "table": "pricing_postalzone",
+   "rows": 0,
+   "date_field": "updated_at",
+   "last_record": null
+  },
+  {
+   "model": "settlements.AppealBatch",
+   "table": "settlements_appealbatch",
+   "rows": 2,
+   "date_field": "created_at",
+   "last_record": "2026-09-28T22:09:38.394362+00:00"
+  },
+  {
+   "model": "settlements.BonusBlackoutDate",
+   "table": "settlements_bonusblackoutdate",
+   "rows": 24,
+   "date_field": "updated_at",
+   "last_record": "2026-09-28T17:01:49.791033+00:00"
+  },
+  {
+   "model": "settlements.CainiaoBillingImport",
+   "table": "settlements_cainiaobillingimport",
+   "rows": 3,
+   "date_field": "imported_at",
+   "last_record": "2026-06-06T18:59:43.942703+00:00"
+  },
+  {
+   "model": "settlements.CainiaoBillingLine",
+   "table": "settlements_cainiaobillingline",
+   "rows": 74385,
+   "date_field": "updated_at",
+   "last_record": "2026-06-06T18:59:58.868479+00:00"
+  },
+  {
+   "model": "settlements.CainiaoDelivery",
+   "table": "settlements_cainiaodelivery",
+   "rows": 0,
+   "date_field": "delivery_time",
+   "last_record": null
+  },
+  {
+   "model": "settlements.CainiaoDriverDetailBatch",
+   "table": "settlements_cainiaodriverdetailbatch",
+   "rows": 0,
+   "date_field": "created_at",
+   "last_record": null
+  },
+  {
+   "model": "settlements.CainiaoDriverDetailRecord",
+   "table": "settlements_cainiaodriverdetailrecord",
+   "rows": 0,
+   "date_field": "updated_at",
+   "last_record": null
+  },
+  {
+   "model": "settlements.CainiaoDriverStat",
+   "table": "settlements_cainiaodriverstat",
+   "rows": 1451,
+   "date_field": null,
+   "last_record": null
+  },
+  {
+   "model": "settlements.CainiaoDriverStatBatch",
+   "table": "settlements_cainiaodriverstatbatch",
+   "rows": 22,
+   "date_field": "created_at",
+   "last_record": "2026-09-28T19:34:04.630463+00:00"
+  },
+  {
+   "model": "settlements.CainiaoForecastBatch",
+   "table": "settlements_cainiaoforecastbatch",
+   "rows": 52,
+   "date_field": "created_at",
+   "last_record": "2026-07-14T20:42:01.077561+00:00"
+  },
+  {
+   "model": "settlements.CainiaoForecastPackage",
+   "table": "settlements_cainiaoforecastpackage",
+   "rows": 23013,
+   "date_field": "updated_at",
+   "last_record": "2026-07-14T20:42:01.201529+00:00"
+  },
+  {
+   "model": "settlements.CainiaoHub",
+   "table": "settlements_cainiaohub",
+   "rows": 4,
+   "date_field": "created_at",
+   "last_record": "2026-08-15T19:40:05.299249+00:00"
+  },
+  {
+   "model": "settlements.CainiaoHubCP4",
+   "table": "settlements_cainiaohubcp4",
+   "rows": 27,
+   "date_field": null,
+   "last_record": null
+  },
+  {
+   "model": "settlements.CainiaoImportBatch",
+   "table": "settlements_cainiaoimportbatch",
+   "rows": 0,
+   "date_field": "created_at",
+   "last_record": null
+  },
+  {
+   "model": "settlements.CainiaoManualForecast",
+   "table": "settlements_cainiaomanualforecast",
+   "rows": 418,
+   "date_field": "updated_at",
+   "last_record": "2026-06-19T21:43:54.847215+00:00"
+  },
+  {
+   "model": "settlements.CainiaoOperationBatch",
+   "table": "settlements_cainiaooperationbatch",
+   "rows": 14147,
+   "date_field": "created_at",
+   "last_record": "2026-10-30T21:35:26.470639+00:00"
+  },
+  {
+   "model": "settlements.CainiaoOperationTask",
+   "table": "settlements_cainiaooperationtask",
+   "rows": 282638,
+   "date_field": "updated_at",
+   "last_record": "2026-10-30T21:35:15.315539+00:00"
+  },
+  {
+   "model": "settlements.CainiaoOperationTaskHistory",
+   "table": "settlements_cainiaooperationtaskhistory",
+   "rows": 1243575,
+   "date_field": "task_date",
+   "last_record": "2026-10-30"
+  },
+  {
+   "model": "settlements.CainiaoPlanningBatch",
+   "table": "settlements_cainiaoplanningbatch",
+   "rows": 48,
+   "date_field": "created_at",
+   "last_record": "2026-07-14T20:42:01.423118+00:00"
+  },
+  {
+   "model": "settlements.CainiaoPlanningPackage",
+   "table": "settlements_cainiaoplanningpackage",
+   "rows": 23013,
+   "date_field": "updated_at",
+   "last_record": "2026-07-14T20:42:01.493561+00:00"
+  },
+  {
+   "model": "settlements.CourierNameAlias",
+   "table": "settlements_couriernamealias",
+   "rows": 114,
+   "date_field": "updated_at",
+   "last_record": "2026-10-30T11:17:56.518084+00:00"
+  },
+  {
+   "model": "settlements.DriverClaim",
+   "table": "settlements_driverclaim",
+   "rows": 264,
+   "date_field": "updated_at",
+   "last_record": "2026-10-30T19:17:53.433103+00:00"
+  },
+  {
+   "model": "settlements.DriverCourierMapping",
+   "table": "settlements_drivercouriermapping",
+   "rows": 257,
+   "date_field": null,
+   "last_record": null
+  },
+  {
+   "model": "settlements.DriverHelper",
+   "table": "settlements_driverhelper",
+   "rows": 0,
+   "date_field": "created_at",
+   "last_record": null
+  },
+  {
+   "model": "settlements.DriverPreInvoice",
+   "table": "settlements_driverpreinvoice",
+   "rows": 304,
+   "date_field": "updated_at",
+   "last_record": "2026-10-30T20:03:57.658423+00:00"
+  },
+  {
+   "model": "settlements.DriverSettlement",
+   "table": "settlements_driversettlement",
+   "rows": 0,
+   "date_field": "updated_at",
+   "last_record": null
+  },
+  {
+   "model": "settlements.FinancialAlert",
+   "table": "settlements_financialalert",
+   "rows": 0,
+   "date_field": "created_at",
+   "last_record": null
+  },
+  {
+   "model": "settlements.FleetContract",
+   "table": "settlements_fleetcontract",
+   "rows": 0,
+   "date_field": "updated_at",
+   "last_record": null
+  },
+  {
+   "model": "settlements.FleetDocument",
+   "table": "settlements_fleetdocument",
+   "rows": 0,
+   "date_field": "uploaded_at",
+   "last_record": null
+  },
+  {
+   "model": "settlements.FleetInvoice",
+   "table": "settlements_fleetinvoice",
+   "rows": 5,
+   "date_field": "updated_at",
+   "last_record": "2026-07-15T15:46:21.755196+00:00"
+  },
+  {
+   "model": "settlements.FleetInvoiceAttachment",
+   "table": "settlements_fleetinvoiceattachment",
+   "rows": 3,
+   "date_field": "uploaded_at",
+   "last_record": "2026-07-15T13:23:23.310654+00:00"
+  },
+  {
+   "model": "settlements.FleetInvoiceBonusDay",
+   "table": "settlements_fleetinvoicebonusday",
+   "rows": 14,
+   "date_field": "data",
+   "last_record": "2026-05-10"
+  },
+  {
+   "model": "settlements.FleetInvoiceClaim",
+   "table": "settlements_fleetinvoiceclaim",
+   "rows": 5,
+   "date_field": null,
+   "last_record": null
+  },
+  {
+   "model": "settlements.FleetInvoiceDriverLine",
+   "table": "settlements_fleetinvoicedriverline",
+   "rows": 22,
+   "date_field": null,
+   "last_record": null
+  },
+  {
+   "model": "settlements.ForecastPlan",
+   "table": "settlements_forecastplan",
+   "rows": 47,
+   "date_field": "updated_at",
+   "last_record": "2026-07-14T20:32:04.544495+00:00"
+  },
+  {
+   "model": "settlements.ForecastPlanAssignment",
+   "table": "settlements_forecastplanassignment",
+   "rows": 404,
+   "date_field": "created_at",
+   "last_record": "2026-06-19T21:52:55.438811+00:00"
+  },
+  {
+   "model": "settlements.ForecastPlanCP4Skip",
+   "table": "settlements_forecastplancp4skip",
+   "rows": 64,
+   "date_field": "created_at",
+   "last_record": "2026-06-19T21:45:37.736957+00:00"
+  },
+  {
+   "model": "settlements.Holiday",
+   "table": "settlements_holiday",
+   "rows": 13,
+   "date_field": "updated_at",
+   "last_record": "2026-05-05T17:49:25.802894+00:00"
+  },
+  {
+   "model": "settlements.NotArrivedSnapshot",
+   "table": "settlements_notarrivedsnapshot",
+   "rows": 174,
+   "date_field": "created_at",
+   "last_record": "2026-10-30T18:00:07.226686+00:00"
+  },
+  {
+   "model": "settlements.NotArrivedSnapshotRow",
+   "table": "settlements_notarrivedsnapshotrow",
+   "rows": 24099,
+   "date_field": "first_seen",
+   "last_record": "2026-10-19"
+  },
+  {
+   "model": "settlements.OperationalCost",
+   "table": "settlements_operationalcost",
+   "rows": 0,
+   "date_field": "updated_at",
+   "last_record": null
+  },
+  {
+   "model": "settlements.PackagePriceOverride",
+   "table": "settlements_packagepriceoverride",
+   "rows": 18867,
+   "date_field": "created_at",
+   "last_record": "2026-10-29T18:19:54.048893+00:00"
+  },
+  {
+   "model": "settlements.PartnerInvoice",
+   "table": "settlements_partnerinvoice",
+   "rows": 3,
+   "date_field": "updated_at",
+   "last_record": "2026-06-18T20:58:38.899040+00:00"
+  },
+  {
+   "model": "settlements.PerformanceBonusRule",
+   "table": "settlements_performancebonusrule",
+   "rows": 0,
+   "date_field": "updated_at",
+   "last_record": null
+  },
+  {
+   "model": "settlements.PreInvoiceAdvance",
+   "table": "settlements_preinvoiceadvance",
+   "rows": 467,
+   "date_field": "created_at",
+   "last_record": "2026-10-30T18:50:07.090966+00:00"
+  },
+  {
+   "model": "settlements.PreInvoiceAuditLog",
+   "table": "settlements_preinvoiceauditlog",
+   "rows": 2,
+   "date_field": "created_at",
+   "last_record": "2026-10-22T10:44:59.508005+00:00"
+  },
+  {
+   "model": "settlements.PreInvoiceBonus",
+   "table": "settlements_preinvoicebonus",
+   "rows": 144,
+   "date_field": "created_at",
+   "last_record": "2026-09-04T18:20:00.346957+00:00"
+  },
+  {
+   "model": "settlements.PreInvoiceExtra",
+   "table": "settlements_preinvoiceextra",
+   "rows": 5,
+   "date_field": "created_at",
+   "last_record": "2026-08-16T17:50:32.184966+00:00"
+  },
+  {
+   "model": "settlements.PreInvoiceLine",
+   "table": "settlements_preinvoiceline",
+   "rows": 403,
+   "date_field": "created_at",
+   "last_record": "2026-10-30T20:03:45.136658+00:00"
+  },
+  {
+   "model": "settlements.PreInvoiceLostPackage",
+   "table": "settlements_preinvoicelostpackage",
+   "rows": 181,
+   "date_field": "created_at",
+   "last_record": "2026-10-30T17:20:01.607566+00:00"
+  },
+  {
+   "model": "settlements.PreInvoiceNote",
+   "table": "settlements_preinvoicenote",
+   "rows": 0,
+   "date_field": "created_at",
+   "last_record": null
+  },
+  {
+   "model": "settlements.PreInvoicePriceOverride",
+   "table": "settlements_preinvoicepriceoverride",
+   "rows": 0,
+   "date_field": "updated_at",
+   "last_record": null
+  },
+  {
+   "model": "settlements.PreInvoicePudo",
+   "table": "settlements_preinvoicepudo",
+   "rows": 922,
+   "date_field": "created_at",
+   "last_record": "2026-10-29T18:22:42.784661+00:00"
+  },
+  {
+   "model": "settlements.PrioritySettings",
+   "table": "settlements_prioritysettings",
+   "rows": 1,
+   "date_field": "updated_at",
+   "last_record": "2026-05-05T19:45:08.152286+00:00"
+  },
+  {
+   "model": "settlements.ReliableClaimVerdict",
+   "table": "settlements_reliableclaimverdict",
+   "rows": 243,
+   "date_field": "updated_at",
+   "last_record": "2026-10-30T21:20:01.617671+00:00"
+  },
+  {
+   "model": "settlements.ReliableEpodSync",
+   "table": "settlements_reliableepodsync",
+   "rows": 22438,
+   "date_field": "created_at",
+   "last_record": "2026-10-30T21:35:27.471632+00:00"
+  },
+  {
+   "model": "settlements.ReturnBatch",
+   "table": "settlements_returnbatch",
+   "rows": 0,
+   "date_field": "created_at",
+   "last_record": null
+  },
+  {
+   "model": "settlements.SavedSearchFilter",
+   "table": "settlements_savedsearchfilter",
+   "rows": 0,
+   "date_field": "updated_at",
+   "last_record": null
+  },
+  {
+   "model": "settlements.Shareholder",
+   "table": "settlements_shareholder",
+   "rows": 3,
+   "date_field": "created_at",
+   "last_record": "2026-05-28T07:54:12.695952+00:00"
+  },
+  {
+   "model": "settlements.ThirdPartyReimbursement",
+   "table": "settlements_thirdpartyreimbursement",
+   "rows": 60,
+   "date_field": "created_at",
+   "last_record": "2026-10-12T13:55:02.150844+00:00"
+  },
+  {
+   "model": "settlements.WaybillAttributionOverride",
+   "table": "settlements_waybillattributionoverride",
+   "rows": 1199,
+   "date_field": "transferred_at",
+   "last_record": "2026-07-22T08:10:48.473633+00:00"
+  },
+  {
+   "model": "settlements.WaybillComment",
+   "table": "settlements_waybillcomment",
+   "rows": 0,
+   "date_field": "created_at",
+   "last_record": null
+  },
+  {
+   "model": "settlements.WaybillFlag",
+   "table": "settlements_waybillflag",
+   "rows": 7,
+   "date_field": "flagged_at",
+   "last_record": "2026-06-09T22:45:05.213280+00:00"
+  },
+  {
+   "model": "settlements.WaybillResolution",
+   "table": "settlements_waybillresolution",
+   "rows": 304,
+   "date_field": "updated_at",
+   "last_record": "2026-05-19T18:46:45.483195+00:00"
+  },
+  {
+   "model": "settlements.WaybillReturn",
+   "table": "settlements_waybillreturn",
+   "rows": 0,
+   "date_field": "updated_at",
+   "last_record": null
+  },
+  {
+   "model": "settlements.WaybillTag",
+   "table": "settlements_waybilltag",
+   "rows": 0,
+   "date_field": "created_at",
+   "last_record": null
+  },
+  {
+   "model": "settlements.WaybillWatch",
+   "table": "settlements_waybillwatch",
+   "rows": 0,
+   "date_field": "created_at",
+   "last_record": null
+  },
+  {
+   "model": "sorting.SortingBigbag",
+   "table": "sorting_sortingbigbag",
+   "rows": 81,
+   "date_field": "created_at",
+   "last_record": "2026-10-22T08:25:45.253894+00:00"
+  },
+  {
+   "model": "sorting.SortingParcel",
+   "table": "sorting_sortingparcel",
+   "rows": 1964,
+   "date_field": "scanned_at",
+   "last_record": "2026-10-22T08:27:16.575909+00:00"
+  },
+  {
+   "model": "sorting.SortingSession",
+   "table": "sorting_sortingsession",
+   "rows": 37,
+   "date_field": "updated_at",
+   "last_record": "2026-10-22T08:25:35.659584+00:00"
+  },
+  {
+   "model": "system_config.ChangelogEntry",
+   "table": "system_config_changelogentry",
+   "rows": 0,
+   "date_field": "updated_at",
+   "last_record": null
+  },
+  {
+   "model": "system_config.CompanyProfile",
+   "table": "system_config_companyprofile",
+   "rows": 0,
+   "date_field": "updated_at",
+   "last_record": null
+  },
+  {
+   "model": "system_config.ConfigurationAudit",
+   "table": "system_config_configurationaudit",
+   "rows": 10,
+   "date_field": "timestamp",
+   "last_record": "2026-09-22T11:44:45.439629+00:00"
+  },
+  {
+   "model": "system_config.CronJobExecution",
+   "table": "system_config_cronjobexecution",
+   "rows": 0,
+   "date_field": "started_at",
+   "last_record": null
+  },
+  {
+   "model": "system_config.MessagingGateway",
+   "table": "system_config_messaginggateway",
+   "rows": 0,
+   "date_field": "updated_at",
+   "last_record": null
+  },
+  {
+   "model": "system_config.Suggestion",
+   "table": "system_config_suggestion",
+   "rows": 0,
+   "date_field": "created_at",
+   "last_record": null
+  },
+  {
+   "model": "system_config.SystemConfiguration",
+   "table": "system_config_systemconfiguration",
+   "rows": 1,
+   "date_field": "updated_at",
+   "last_record": "2026-08-15T19:44:23.475760+00:00"
+  },
+  {
+   "model": "system_config.SystemVersionState",
+   "table": "system_config_systemversionstate",
+   "rows": 1,
+   "date_field": "deployed_at",
+   "last_record": null
+  }
+ ]
+}

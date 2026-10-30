@@ -1,9 +1,22 @@
 # Módulos e páginas sem uso — levantamento
 
-**Estado:** Fase 0.7. A classificação é **provisória**. Falta a contagem de produção.
+**Estado:** Fase 0.7. Contagem de produção recolhida em 2026-10-30. Aguarda a aprovação da lista.
 **AVISO:** não remova nada com base neste ficheiro antes da aprovação da lista.
 
-## 1. Evidência que falta
+## 0. Resultado de produção
+
+| Candidato | Registos | Classe final |
+|---|---|---|
+| Frota: `Vehicle`, `VehicleAssignment`, `VehicleMaintenance`, `VehicleIncident` | 0 | **Remover com cuidado** |
+| Incidências, Performance, Custos de frota | Sem modelos | **Remover com cuidado**, com a Frota |
+| `PartnerTariff`, `PostalZone` | 0 | **Remover**. `PostalZone` com cuidado |
+| `accounting.Revenues`, `accounting.Expenses` | 0 | **Remover** as 5 rotas sem template e os formulários |
+| Contratos | 0 | **Manter**, por decisão |
+| Sorting: 37 sessões, 81 bigbags, 1 964 volumes, último registo em 2026-10-22 | 2 082 | **Manter**, por decisão |
+
+**CUIDADO:** `visitas.txt` cobre só o período desde 18:29 de 2026-10-30, data do último deploy. Não serve como prova de não uso.
+
+## 1. Como recolher de novo
 
 Execute estes passos no servidor. O comando só lê dados e mostra só contagens e datas.
 

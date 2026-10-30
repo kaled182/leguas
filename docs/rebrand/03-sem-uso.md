@@ -12,7 +12,7 @@
 | `PartnerTariff`, `PostalZone` | 0 | **Remover**. `PostalZone` com cuidado |
 | `accounting.Revenues`, `accounting.Expenses` | 0 | **Remover** as 5 rotas sem template e os formulários |
 | Contratos | 0 | **Manter**, por decisão |
-| Sorting: 37 sessões, 81 bigbags, 1 964 volumes, último registo em 2026-10-22 | 2 082 | **Manter**, por decisão |
+| Sorting: 37 sessões, 81 bigbags, 1 964 volumes, último registo em 2026-10-22 | 2 082 | Páginas fora e sem reposição. O sorting passou para outro sistema. Tabelas ficam até ordem de Etapa B |
 
 ## 0.1 Lista final para aprovar
 

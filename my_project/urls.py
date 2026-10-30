@@ -103,6 +103,8 @@ urlpatterns += [
     moved(r"^fleet/", "/"),
     moved(r"^analytics/(incidents|vehicles|reports/fleet-costs)/", "/analytics/integrations/status/"),
     moved(r"^pricing/", "/core/partners/"),
+    moved(r"^accounting/$", "/accounting/hub/"),
+    moved(r"^accounting/(receitas|despesas|relatorios)/", "/accounting/hub/"),
 ]
 
 # Servir arquivos estáticos

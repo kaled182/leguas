@@ -29,3 +29,8 @@ class RemovedPagesRedirectTests(TestCase):
         for path in ("/pricing/tariffs/", "/pricing/zones/1/", "/pricing/calculator/"):
             with self.subTest(path=path):
                 self.assert_moved(path, "/core/partners/")
+
+    def test_old_accounting_pages_go_to_hub(self):
+        for path in ("/accounting/", "/accounting/receitas/", "/accounting/despesas/1/", "/accounting/relatorios/"):
+            with self.subTest(path=path):
+                self.assert_moved(path, "/accounting/hub/")

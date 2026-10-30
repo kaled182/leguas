@@ -1,6 +1,6 @@
 # Nova arquitetura de navegação — proposta
 
-**Estado:** proposta da Fase 0. Nenhum menu foi alterado.
+**Estado:** aprovada em 2026-10-30, com as 5 correções e a secção RELATÓRIOS. Nenhum menu foi alterado.
 **Fonte:** `templates/layouts/partials/sidebar.html` (commit `469a7d8`).
 
 ## 1. Situação atual

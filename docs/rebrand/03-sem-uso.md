@@ -28,6 +28,12 @@ Execute estes passos no servidor. O comando só lê dados e mostra só contagens
    docker logs leguas_web 2>&1 | grep -oE '"(GET|POST) /[^ ?"]*' | sed -E 's#/[0-9]+#/N#g' | sort | uniq -c | sort -rn > docs/rebrand/dados/visitas.txt
    ```
 
+4. Retire o comando do container:
+
+   ```bash
+   docker exec leguas_web rm /app/core/management/commands/usage_report.py
+   ```
+
 **CUIDADO:** o passo 3 mostra só os pedidos desde o último deploy. O container é recriado em cada deploy. O projeto não tem registo de 90 dias. Por isso, o critério dos 90 dias do briefing não pode ser cumprido com os dados atuais.
 
 ## 2. Classificação provisória
@@ -39,7 +45,7 @@ Execute estes passos no servidor. O comando só lê dados e mostra só contagens
 | Tarifas | parte de 13 | `PartnerTariff` | FK para `core.Partner`. Sem imports fora da app | **Remover**, se 0 registos |
 | Calculadora de Preços | 1 | Nenhum próprio | Usa só tarifas e zonas da app `pricing` | **Remover**, junto com Tarifas |
 | Zonas Postais | parte de 13 | `PostalZone` | `geozonas.ZonaGeo.postal_zone` (FK, `SET_NULL`), comando `seed_postal_zones` | **Remover com cuidado** |
-| Contratos: Modelos, Por assinar, Assinados | 13 | `ContractTemplate`, `DriverContract`, `GeneratedContract` | Ver 3.2 | **Manter** |
+| Contratos: Modelos, Por assinar, Assinados | 13 | `ContractTemplate`, `DriverContract`, `GeneratedContract` | Ver 3.2 | **Manter**, decidido em 2026-10-30, independentemente das contagens |
 
 ### 3.1 Dependências da Frota
 
@@ -56,7 +62,7 @@ Execute estes passos no servidor. O comando só lê dados e mostra só contagens
 
 - `drivers_app/context_processors.py:58`, `ficha_views.py:278` e `central_views.py:69` leem estes modelos.
 - `services_cp_pricing.py:37` e `services_hubs.py:30` leem `ContractSettings` e `HubZoneTariff`. Estes modelos definem preços por CP.
-- A página "Assinados" sem registos não prova falta de uso. É preciso a contagem de `DriverContract` e `GeneratedContract`.
+- O módulo vai receber os geradores de contrato que hoje estão fora do sistema.
 
 **AVISO:** `contracts.HubZoneTariff` é diferente de `pricing.PartnerTariff`. Remover "Tarifas" não pode tocar em `HubZoneTariff`, porque o cálculo de pagamentos a motoristas usa este modelo.
 
@@ -66,7 +72,7 @@ Execute estes passos no servidor. O comando só lê dados e mostra só contagens
 |---|---|---|
 | `/dashboard_v2/` e `dashboard_sidebar.html` | Página estática antiga, com 30 ligações, sem login. A página real é `/` | **Remover** |
 | `/accounting/receitas/`, `/receitas/<pk>/`, `/despesas/`, `/despesas/<pk>/`, `/relatorios/` | Os 5 templates não existem. As rotas devolvem 500 | **Remover**, se as visitas forem 0 e o modelo estiver vazio |
-| Tabelas `sorting_*` | Sem páginas desde 2026-10-30. Opção A em vigor | **Manter** até a contagem. Etapa B só com ordem |
+| Tabelas `sorting_*` | Sem páginas desde 2026-10-30. Base do projeto de triagem previsto | **Manter**, decidido em 2026-10-30, independentemente das contagens |
 
 ## 5. Erros que apoiam a classificação
 

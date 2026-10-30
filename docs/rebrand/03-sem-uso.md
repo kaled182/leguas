@@ -14,7 +14,26 @@
 | Contratos | 0 | **Manter**, por decisão |
 | Sorting: 37 sessões, 81 bigbags, 1 964 volumes, último registo em 2026-10-22 | 2 082 | **Manter**, por decisão |
 
-**Candidato novo (2026-10-30):** o utilizador indicou que já não importa ficheiros Cainiao, porque tudo vem por API. Os 6 painéis de importação em `core/partner_detail.html` e as suas rotas em `/settlements/cainiao/` passam a candidatos. Falta confirmar se isto inclui `/settlements/invoices/cainiao/upload/` e `/driversapp/api/tickets-cainiao/upload/`.
+## 0.1 Lista final para aprovar
+
+Todas as linhas são Etapa A: saem páginas e rotas, e as tabelas ficam.
+
+| # | Item | O que sai | O que fica, e porquê |
+|---|---|---|---|
+| 1 | Frota e 3 relatórios | Menu, páginas, rotas | Modelos. `DriverClaim.vehicle_incident` aponta para `VehicleIncident` |
+| 2 | Tarifas, Zonas Postais, Calculadora | Menu, páginas, rotas | Modelos. `ZonaGeo.postal_zone` aponta para `PostalZone` |
+| 3 | Receitas e Despesas | 5 rotas sem template e formulários | Modelos |
+| 4 | Forecast e Planning | Painéis, 22 rotas, plano de distribuição | Tabelas. `accounting/views.py:1246` e `:1603`, `drivers_app/views.py:1838` e `services_ticket_import.py:321` leem `CainiaoPlanningPackage` |
+| 5 | Importações Cainiao por ficheiro | 6 painéis em `partner_detail.html` e as suas rotas | **Painel "entregas sem Courier ID", backfill, roll-forward e limpar armazém** |
+| 6 | Driver Statistic | Importação simples e guiada | Tabela `CainiaoDriverStat`: `services_courier_onboarding.py:64` lê-a para encontrar o Courier ID |
+| 7 | Tickets Cainiao | `/driversapp/admin/tickets-cainiao/` e as suas rotas | `CustomerComplaint`, porque a ficha do motorista mostra o histórico de 513 reclamações |
+| 8 | Faturas de clientes (`PartnerInvoice`) | Menu e página `invoice-list` | Modelo: `CainiaoBillingImport` e o hub, a tesouraria, a auditoria e a reconciliação de `accounting` usam-no |
+
+**Faturação Cainiao:** fica como está e não recebe rebrand. Vai ser refeita com agentes depois do rebrand.
+
+**Tickets:** a importação parou em 28/09/2026, a data do commit que trouxe os julgamentos por API. A API substituiu este fluxo.
+
+**CUIDADO:** com `CainiaoPlanningPackage` sem dados futuros, a previsão de entradas do Break-even e do Fluxo de Caixa conta 0 pacotes. Isto já acontece hoje. A fórmula não muda.
 
 **CUIDADO:** `visitas.txt` cobre só o período desde 18:29 de 2026-10-30, data do último deploy. Não serve como prova de não uso.
 

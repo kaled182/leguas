@@ -90,7 +90,7 @@ Todas as entradas têm destino. Os URL não mudam.
 | 27 | Relatórios | Status de APIs | `analytics:api_status_dashboard` | Relatórios | Estado das APIs |
 | 28 | Relatórios | Logs de Sincronização | `analytics:sync_logs_list` | Relatórios | Registos de sincronização |
 | 29 | Financeiro | Hub Financeiro | `accounting:hub_financeiro` | Finanças › Visão geral | Visão financeira |
-| 30 | Financeiro | Faturas Parceiros | `invoice-list` | Finanças › A receber | Faturas de clientes |
+| 30 | Financeiro | Faturas Parceiros | `invoice-list` | Sai, se a linha 8 de `03-sem-uso.md` for aprovada | - |
 | 31 | Financeiro | Faturas Frota | `drivers_app:empresas-parceiras` | Finanças › A pagar | Faturas de frotas subcontratadas (decisão D1) |
 | 32 | Financeiro | Reconciliação Bancária | `accounting:bank_reconciliation` | Finanças › A receber | Reconciliação bancária |
 | 33 | Financeiro | Inbox A Pagar | `accounting:payables_inbox` | Finanças › A pagar | Inbox |

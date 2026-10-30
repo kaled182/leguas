@@ -1,0 +1,2 @@
+{# label, tone (success|danger|warning|neutral|brand), title #}
+<span class="lf-badge lf-tone-{{ tone|default:'neutral' }}"{% if title %} title="{{ title }}"{% endif %}>{{ label }}</span>

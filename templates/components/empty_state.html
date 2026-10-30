@@ -1,0 +1,7 @@
+{# title, message, action_label, action_url #}
+<div class="lf-empty">
+  <i data-lucide="inbox" class="w-8 h-8" aria-hidden="true"></i>
+  <p class="lf-empty-title">{{ title }}</p>
+  {% if message %}<p>{{ message }}</p>{% endif %}
+  {% if action_label %}{% include "components/button.html" with label=action_label url=action_url variant="primary" %}{% endif %}
+</div>

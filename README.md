@@ -8,6 +8,10 @@ Sistema de gestão logística para operadores de última-milha em Portugal. Gere
 
 ---
 
+## 🎨 CSS
+
+O Tailwind é compilado na stage `css` do `production/Dockerfile`. O comando local está em `docs/rebrand/04-design-system.md`.
+
 ## ⚡ Quick Start
 
 ### Host Linux limpo (zero pré-requisitos)

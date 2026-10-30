@@ -1,0 +1,4 @@
+{# tone, title, message #}
+<div class="lf-alert lf-tone-{{ tone|default:'neutral' }}" role="{% if tone == 'danger' %}alert{% else %}status{% endif %}">
+  <div>{% if title %}<strong>{{ title }}</strong> {% endif %}{{ message }}</div>
+</div>

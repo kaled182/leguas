@@ -1,0 +1,6 @@
+{# id, title, subtitle. Tema em static/brand/chart-theme.js. #}
+<figure class="lf-chart">
+  <figcaption class="lf-chart-title">{{ title }}</figcaption>
+  {% if subtitle %}<p class="lf-help">{{ subtitle }}</p>{% endif %}
+  <div class="lf-chart-canvas"><canvas id="{{ id }}" role="img" aria-label="{{ title }}"></canvas></div>
+</figure>

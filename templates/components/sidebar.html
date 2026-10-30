@@ -1,0 +1,16 @@
+{# groups: lista de {label, items: [{label, url, icon, active, count}]} #}
+<aside id="lf-sidebar" class="lf-sidebar" aria-label="Menu principal">
+  {% include "components/logo.html" with tone="negativo" %}
+  <nav class="flex flex-col gap-1">
+    {% for group in groups %}
+      {% if group.label %}<p class="lf-nav-group">{{ group.label }}</p>{% endif %}
+      {% for item in group.items %}
+        <a class="lf-nav-item" href="{{ item.url }}" title="{{ item.label }}"{% if item.active %} aria-current="page"{% endif %}>
+          <i data-lucide="{{ item.icon }}" class="w-5 h-5 shrink-0" aria-hidden="true"></i>
+          <span class="lf-nav-text">{{ item.label }}</span>
+          {% if item.count %}<span class="lf-nav-count lf-nav-text">{{ item.count }}</span>{% endif %}
+        </a>
+      {% endfor %}
+    {% endfor %}
+  </nav>
+</aside>

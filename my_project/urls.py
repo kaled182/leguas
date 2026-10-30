@@ -25,6 +25,7 @@ from django.urls import include, path, re_path
 from django.views.generic import RedirectView
 
 from core.media_access import media_auth
+from core.views_design import design_system
 
 
 def redirect_mixed(request):
@@ -76,6 +77,7 @@ urlpatterns = [
 
     path("health/", healthcheck, name="healthcheck"),
     path("media-auth/", media_auth, name="media-auth"),
+    path("_design/", design_system, name="design-system"),
     path("admin/", admin.site.urls),
     # path('', redirect_mixed, name='redirect_mixed'),
     # path('old/', include('management.urls')),  # Para acessar na raiz

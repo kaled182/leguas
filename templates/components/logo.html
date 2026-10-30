@@ -1,0 +1,5 @@
+{% load static %}{# Horizontal: símbolo e nome. tone: negativo (fundo roxo) ou cor (fundo claro). #}
+<span class="lf-logo">
+  <img class="lf-logo-symbol object-contain" src="{% static 'brand/logo/logo-simbolo-' %}{{ tone|default:'negativo' }}.svg" alt="">
+  <img class="lf-logo-word" src="{% static 'brand/logo/logo-wordmark-' %}{{ tone|default:'negativo' }}.svg" alt="Léguas Franzinas">
+</span>

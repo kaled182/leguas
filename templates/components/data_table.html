@@ -1,0 +1,37 @@
+{% load ui %}{# columns: [{key, label, numeric, sortable}], rows: [{cells: [...], action_url, action_label}], page: Page, empty_*, export_url #}
+{% if rows %}
+<div class="lf-table-wrap" tabindex="0" role="region" aria-label="{{ caption|default:'Tabela de dados' }}">
+  <table class="lf-table">
+    {% if caption %}<caption class="sr-only">{{ caption }}</caption>{% endif %}
+    <thead>
+      <tr>
+        {% for column in columns %}
+          <th scope="col"{% if column.numeric %} class="lf-num"{% endif %}>
+            {% if column.sortable %}<a href="{% query_with sort=column.key page=None %}">{{ column.label }}</a>{% else %}{{ column.label }}{% endif %}
+          </th>
+        {% endfor %}
+        {% if has_actions %}<th scope="col"><span class="sr-only">Ações</span></th>{% endif %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+      <tr>
+        {% for cell in row.cells %}<td{% if cell.numeric %} class="lf-num"{% endif %}>{{ cell.text }}</td>{% endfor %}
+        {% if has_actions %}<td class="lf-num">{% if row.action_url %}<a href="{{ row.action_url }}">{{ row.action_label|default:"Abrir" }}</a>{% endif %}</td>{% endif %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<div class="lf-table-foot">
+  {% with shown=rows|length %}{% firstof total shown as count %}<span>{{ count|pt_int }} resultado{{ count|pluralize }}</span>{% endwith %}
+  <span class="flex items-center gap-2">
+    {% if export_url %}{% include "components/button.html" with label="Exportar CSV" url=export_url icon="download" %}{% endif %}
+    {% if page.has_previous %}<a class="lf-btn lf-btn-ghost" href="{% query_with page=page.previous_page_number %}">Anterior</a>{% endif %}
+    {% if page %}<span>Página {{ page.number }} de {{ page.paginator.num_pages }}</span>{% endif %}
+    {% if page.has_next %}<a class="lf-btn lf-btn-ghost" href="{% query_with page=page.next_page_number %}">Seguinte</a>{% endif %}
+  </span>
+</div>
+{% else %}
+  {% include "components/empty_state.html" with title=empty_title|default:"Sem resultados" message=empty_message action_label=empty_action_label action_url=empty_action_url %}
+{% endif %}

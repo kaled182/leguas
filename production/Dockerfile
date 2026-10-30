@@ -5,6 +5,15 @@
 # Stage 2: runtime    — copia só o que interessa (image enxuta)
 # ════════════════════════════════════════════════════════════════════
 
+# Compila o Tailwind. O Node fica só nesta stage.
+FROM node:22-alpine AS css
+WORKDIR /src/theme
+COPY theme/package.json theme/package-lock.json ./
+RUN npm ci
+WORKDIR /src
+COPY . .
+RUN cd theme && npx tailwindcss -c tailwind.config.js -i static/src/input.css -o ../static/brand/app.css --minify
+
 # ─────────────────────────── STAGE 1: BUILDER ──────────────────────
 FROM python:3.11-slim AS builder
 
@@ -84,6 +93,9 @@ WORKDIR /app
 
 # Copiar app code
 COPY --chown=django:django . /app/
+
+# CSS compilado pela stage css
+COPY --from=css --chown=django:django /src/static/brand/app.css /app/static/brand/app.css
 
 # Criar dirs necessários e dar permissão ao user django
 RUN mkdir -p /app/staticfiles /app/media /app/logs /app/database/backups && \

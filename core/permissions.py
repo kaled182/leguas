@@ -37,6 +37,7 @@ PORTAL_PATTERNS = tuple(re.compile(p) for p in (
 OPERATOR_PATTERNS = tuple(re.compile(p) for p in (
     r"^/$",
     r"^/sla/prazos/$",
+    r"^/_design/$",
     r"^/driversapp/admin/(?!pagamentos|tickets-cainiao)",
     r"^/driversapp/empresas-parceiras/$",
     r"^/driversapp/api/(waybill-lookup|complaints|admin/reclamacoes)",

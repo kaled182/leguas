@@ -1,0 +1,7 @@
+{% load ui %}{# label, value (já formatado), note, delta, delta_tone, url. O número fica em neutro. #}
+{% if url %}<a class="lf-kpi" href="{{ url }}">{% else %}<div class="lf-kpi">{% endif %}
+  <span class="lf-kpi-label">{{ label }}</span>
+  <span class="lf-kpi-value">{{ value }}</span>
+  {% if delta %}<span>{% include "components/status_badge.html" with label=delta tone=delta_tone|default:"neutral" %}</span>{% endif %}
+  {% if note %}<span class="lf-kpi-note">{{ note }}</span>{% endif %}
+{% if url %}</a>{% else %}</div>{% endif %}

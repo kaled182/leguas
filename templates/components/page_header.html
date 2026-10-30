@@ -1,0 +1,12 @@
+{# title, subtitle, date, action_label, action_url, action_modal #}
+<div class="lf-page-header">
+  <div class="min-w-0">
+    <h1 class="lf-page-title">{{ title }}</h1>
+    {% if subtitle or date %}<p class="lf-page-subtitle">{{ subtitle }}{% if subtitle and date %} · {% endif %}{% if date %}{{ date|date:"d/m/Y" }}{% endif %}</p>{% endif %}
+  </div>
+  {% if action_label %}
+  <div class="lf-page-actions">
+    {% include "components/button.html" with label=action_label url=action_url modal=action_modal variant="primary" %}
+  </div>
+  {% endif %}
+</div>

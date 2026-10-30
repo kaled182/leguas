@@ -100,3 +100,7 @@ coverage.xml
 .recovery_keys.txt
 production/.recovery_keys.txt
 *.env.bak
+
+# CSS compilado pelo build (ver docs/rebrand/04-design-system.md)
+static/brand/app.css
+theme/node_modules/

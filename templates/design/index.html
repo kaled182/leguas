@@ -1,0 +1,114 @@
+{% extends "brand/base.html" %}
+{% load ui %}
+{% block title %}Sistema de design{% endblock %}
+{% block body %}
+<div class="flex min-h-screen flex-col lg:flex-row">
+  {% include "components/sidebar.html" with groups=nav_groups %}
+  <div class="min-w-0 flex-1">
+    {% include "components/topbar.html" with hubs=hubs selected_date=today user_name=request.user.username %}
+    <main class="flex flex-col gap-10 p-4 md:p-6">
+      {% include "components/page_header.html" with title="Sistema de design" subtitle="Componentes base da Léguas Gestão" date=today action_label="Abrir modal" action_modal="demo-modal" %}
+
+      <section class="flex flex-col gap-3" aria-labelledby="s-colors">
+        <h2 id="s-colors" class="text-lg">Cores</h2>
+        <div class="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-7">
+          {% for token in color_tokens %}
+          <div class="rounded-lg border border-edge p-2 text-xs">
+            <div class="mb-2 h-12 rounded" data-swatch="{{ token }}"></div>
+            <code class="break-all">{{ token }}</code>
+          </div>
+          {% endfor %}
+        </div>
+      </section>
+
+      <section class="flex flex-col gap-3" aria-labelledby="s-type">
+        <h2 id="s-type" class="text-lg">Tipografia e logótipo</h2>
+        <p class="font-light">Poppins 300: corpo de texto longo.</p>
+        <p>Poppins 400: texto corrido.</p>
+        <p class="font-semibold">Poppins 600: subtítulos.</p>
+        <p class="font-bold">Poppins 700: títulos e números.</p>
+        <div class="flex flex-wrap items-center gap-6">
+          <div class="rounded-lg bg-brand-purple p-4">{% include "components/logo.html" with tone="negativo" %}</div>
+          <div class="rounded-lg border border-edge bg-white p-4">{% include "components/logo.html" with tone="cor" %}</div>
+        </div>
+      </section>
+
+      <section class="flex flex-col gap-3" aria-labelledby="s-kpi">
+        <h2 id="s-kpi" class="text-lg">KpiCard e Skeleton</h2>
+        <div class="lf-kpi-grid">
+          {% include "components/kpi_card.html" with label="Volume do dia" value=demo.volume note="Média de 7 dias: 3 410" %}
+          {% include "components/kpi_card.html" with label="Entregues" value=demo.delivered delta="+2,1 % vs. semana passada" delta_tone="success" %}
+          {% include "components/kpi_card.html" with label="Taxa de entrega" value=demo.rate delta="−0,4 pp" delta_tone="danger" %}
+          {% include "components/kpi_card.html" with label="A pagar esta semana" value=demo.money url="#" %}
+        </div>
+        <div class="lf-kpi-grid">{% include "components/skeleton.html" with kind="kpi" %}{% include "components/skeleton.html" with kind="kpi" %}</div>
+      </section>
+
+      <section class="flex flex-col gap-3" aria-labelledby="s-btn">
+        <h2 id="s-btn" class="text-lg">Button e StatusBadge</h2>
+        <div class="flex flex-wrap items-center gap-2">
+          {% include "components/button.html" with label="Guardar" variant="primary" %}
+          {% include "components/button.html" with label="Exportar" variant="secondary" icon="download" %}
+          {% include "components/button.html" with label="Cancelar" variant="ghost" %}
+          {% include "components/button.html" with label="Apagar" variant="danger" modal="demo-danger" %}
+          {% include "components/button.html" with label="Indisponível" variant="primary" disabled=True %}
+        </div>
+        <div class="flex flex-wrap gap-2">
+          {% for status in statuses %}{% include "components/status_badge.html" with label=status|status_label tone=status|status_tone title=status %}{% endfor %}
+          {% include "components/status_badge.html" with label="Pendente" tone="brand" %}
+        </div>
+      </section>
+
+      <section class="flex flex-col gap-3" aria-labelledby="s-form">
+        <h2 id="s-form" class="text-lg">FilterBar, Input, Select e DatePicker</h2>
+        {% include "components/filter_bar.html" with fields=filter_fields %}
+        <div class="grid gap-3 md:grid-cols-2">
+          {% include "components/input.html" with name="demo_ok" label="Nome" help="Nome completo do motorista." %}
+          {% include "components/input.html" with name="demo_error" label="NIF" value="123" error="O NIF tem 9 dígitos. Corrija e guarde de novo." %}
+        </div>
+      </section>
+
+      <section class="flex flex-col gap-3" aria-labelledby="s-table">
+        <h2 id="s-table" class="text-lg">DataTable</h2>
+        {% include "components/data_table.html" with caption="Motoristas de exemplo" columns=table_columns rows=table_rows has_actions=True page=table_page total=table_total export_url="#" %}
+        {% include "components/data_table.html" with columns=table_columns rows=empty_rows empty_title="Sem motoristas" empty_message="Adicione o primeiro motorista." empty_action_label="Novo motorista" empty_action_url="#" %}
+      </section>
+
+      <section class="flex flex-col gap-3" aria-labelledby="s-feedback">
+        <h2 id="s-feedback" class="text-lg">Alert, AttentionItem e Toast</h2>
+        {% include "components/alert.html" with tone="success" title="Guardado." message="As alterações ficaram registadas." %}
+        {% include "components/alert.html" with tone="warning" title="Atenção." message="34 pacotes parados há mais de 7 dias." %}
+        {% include "components/alert.html" with tone="danger" title="Erro." message="Não foi possível guardar. Tente de novo." %}
+        {% include "components/attention_item.html" with label="Pacotes parados há mais de 7 dias" count="34" url="#" %}
+        {% include "components/attention_item.html" with label="Cadastros por aprovar" count="2" tone="brand" url="#" %}
+        <div>{% include "components/button.html" with label="Mostrar toast" variant="ghost" %}</div>
+      </section>
+
+      <section class="grid gap-4 lg:grid-cols-2" aria-label="ChartContainer">
+        {% include "components/chart_container.html" with id="demo-chart" title="Entregas por dia" subtitle="Últimos 14 dias" %}
+        {% include "components/chart_container.html" with id="demo-line" title="Taxa de entrega" subtitle="Últimos 14 dias" %}
+      </section>
+    </main>
+  </div>
+</div>
+{% include "components/modal.html" with id="demo-modal" title="Confirmar alteração" message="Quer guardar esta alteração?" confirm_label="Guardar" %}
+{% include "components/modal.html" with id="demo-danger" title="Apagar registo" message="Esta ação não pode ser desfeita." confirm_label="Apagar" confirm_variant="danger" %}
+{% endblock %}
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('[data-swatch]').forEach((el) => {
+    el.style.background = `var(${el.dataset.swatch})`;
+  });
+  document.querySelectorAll('.lf-btn').forEach((el) => {
+    if (el.textContent.trim() === 'Mostrar toast') el.addEventListener('click', () => lfToast('Guardado.', 'success'));
+  });
+  if (!window.Chart) return;
+  const c = lfChartColors();
+  const labels = Array.from({ length: 14 }, (_, i) => `${17 + i}/10`);
+  const a = [3100, 3220, 3310, 2890, 3050, 3400, 3380, 3120, 3290, 3440, 3360, 3010, 3180, 3510];
+  new Chart(document.getElementById('demo-chart'), { type: 'bar', data: { labels, datasets: [{ label: 'Entregues', data: a, backgroundColor: c.primary }, { label: 'Falhadas', data: a.map((v) => Math.round(v * 0.05)), backgroundColor: c.danger }] }, options: { responsive: true, maintainAspectRatio: false } });
+  new Chart(document.getElementById('demo-line'), { type: 'line', data: { labels, datasets: [{ label: 'Taxa de entrega', data: [94.1, 94.8, 95.2, 93.9, 94.4, 95.1, 95.4, 94.7, 94.9, 95.3, 95, 94.2, 94.6, 95.5], borderColor: c.secondary, tension: .3 }] }, options: { responsive: true, maintainAspectRatio: false } });
+});
+</script>
+{% endblock %}

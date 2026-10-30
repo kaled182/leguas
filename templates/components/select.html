@@ -1,0 +1,8 @@
+{# name, label, options: [{value, label}], value, error #}
+<div class="lf-field">
+  <label class="lf-label" for="id_{{ name }}">{{ label }}</label>
+  <select class="lf-control" id="id_{{ name }}" name="{{ name }}"{% if error %} aria-invalid="true"{% endif %}>
+    {% for option in options %}<option value="{{ option.value }}"{% if option.value == value %} selected{% endif %}>{{ option.label }}</option>{% endfor %}
+  </select>
+  {% if error %}<p class="lf-error">{{ error }}</p>{% endif %}
+</div>

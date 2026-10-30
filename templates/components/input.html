@@ -1,0 +1,6 @@
+{# name, label, value, type, placeholder, help, error, required #}
+<div class="lf-field">
+  <label class="lf-label" for="id_{{ name }}">{{ label }}</label>
+  <input class="lf-control" id="id_{{ name }}" name="{{ name }}" type="{{ type|default:'text' }}" value="{{ value|default:'' }}"{% if placeholder %} placeholder="{{ placeholder }}"{% endif %}{% if required %} required{% endif %}{% if error %} aria-invalid="true" aria-describedby="err_{{ name }}"{% endif %}>
+  {% if error %}<p class="lf-error" id="err_{{ name }}">{{ error }}</p>{% elif help %}<p class="lf-help">{{ help }}</p>{% endif %}
+</div>

@@ -1,0 +1,13 @@
+{# fields: [{kind (text|select|date), name, label, value, options}]. Método GET: os filtros ficam no URL. #}
+<form class="lf-filters" method="get" role="search">
+  {% for field in fields %}
+    {% if field.kind == "select" %}
+      {% include "components/select.html" with name=field.name label=field.label options=field.options value=field.value %}
+    {% elif field.kind == "date" %}
+      {% include "components/date_picker.html" with name=field.name label=field.label value=field.value %}
+    {% else %}
+      {% include "components/input.html" with name=field.name label=field.label value=field.value %}
+    {% endif %}
+  {% endfor %}
+  {% include "components/button.html" with label="Filtrar" type="submit" variant="ghost" %}
+</form>

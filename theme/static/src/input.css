@@ -1,3 +1,113 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  html { font-family: var(--font-sans); color: var(--color-text); background: var(--color-bg); }
+  body { font-weight: var(--weight-text); line-height: 1.5; }
+  h1, h2, h3 { font-weight: var(--weight-title); text-wrap: balance; }
+  :focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+  [x-cloak] { display: none !important; }
+}
+
+@layer components {
+  /* Button */
+  .lf-btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); min-height: var(--touch-target); padding: 0 var(--space-4); border: 1px solid transparent; border-radius: var(--radius-md); font-size: var(--text-sm); font-weight: var(--weight-subtitle); cursor: pointer; text-decoration: none; transition: background var(--duration-fast) var(--ease-standard); }
+  .lf-btn:disabled, .lf-btn[aria-disabled="true"] { opacity: .5; cursor: not-allowed; }
+  .lf-btn-primary { background: var(--color-primary); color: var(--color-on-primary); }
+  .lf-btn-primary:hover { background: var(--color-primary-hover); }
+  .lf-btn-secondary { background: var(--color-accent); color: var(--color-on-accent); }
+  .lf-btn-secondary:hover { background: var(--brand-orange-dark); }
+  .lf-btn-ghost { background: transparent; color: var(--color-text); border-color: var(--color-border); }
+  .lf-btn-ghost:hover { background: var(--color-surface-alt); }
+  .lf-btn-danger { background: var(--tone-danger-fg); color: var(--color-surface); }
+  .lf-btn-danger:hover { opacity: .9; }
+
+  /* Campos */
+  .lf-field { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
+  .lf-label { font-size: var(--text-xs); font-weight: var(--weight-subtitle); color: var(--color-text-muted); }
+  .lf-control { width: 100%; min-height: var(--touch-target); padding: 0 var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); color: var(--color-text); font-size: var(--text-sm); }
+  .lf-control[aria-invalid="true"] { border-color: var(--danger); }
+  .lf-help { font-size: var(--text-xs); color: var(--color-text-muted); }
+  .lf-error { font-size: var(--text-xs); color: var(--tone-danger-fg); }
+
+  /* PageHeader */
+  .lf-page-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-4); margin-bottom: var(--space-6); }
+  .lf-page-title { font-size: var(--text-xl); color: var(--color-text); }
+  .lf-page-subtitle { font-size: var(--text-sm); color: var(--color-text-muted); }
+  .lf-page-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+
+  /* KpiCard */
+  .lf-kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--space-4); }
+  .lf-kpi { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; padding: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); text-decoration: none; }
+  .lf-kpi-label { min-height: 2.5em; font-size: var(--text-xs); font-weight: var(--weight-subtitle); color: var(--color-text-muted); }
+  .lf-kpi-value { font-size: var(--text-kpi); font-weight: var(--weight-title); line-height: 1.1; color: var(--color-text); font-variant-numeric: tabular-nums; }
+  .lf-kpi-note { font-size: var(--text-xs); color: var(--color-text-muted); }
+
+  /* StatusBadge */
+  .lf-badge { display: inline-flex; align-items: center; gap: var(--space-1); padding: 2px var(--space-2); border-radius: var(--radius-full); font-size: var(--text-xs); font-weight: var(--weight-subtitle); white-space: nowrap; }
+  .lf-tone-success { background: var(--tone-success-bg); color: var(--tone-success-fg); }
+  .lf-tone-danger { background: var(--tone-danger-bg); color: var(--tone-danger-fg); }
+  .lf-tone-warning { background: var(--tone-warning-bg); color: var(--tone-warning-fg); }
+  .lf-tone-neutral { background: var(--tone-neutral-bg); color: var(--tone-neutral-fg); }
+  .lf-tone-brand { background: var(--tone-brand-bg); color: var(--tone-brand-fg); }
+
+  /* DataTable */
+  .lf-table-wrap { overflow-x: auto; max-height: 70vh; border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); }
+  .lf-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: var(--text-sm); }
+  .lf-table th { position: sticky; top: 0; z-index: var(--z-sticky); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--color-border); background: var(--color-surface-alt); color: var(--color-text-muted); font-size: var(--text-xs); font-weight: var(--weight-subtitle); text-align: left; white-space: nowrap; }
+  .lf-table td { padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--color-border); color: var(--color-text); }
+  .lf-table tbody tr:hover td { background: var(--color-surface-alt); }
+  .lf-num { text-align: right !important; font-variant-numeric: tabular-nums; }
+  .lf-table-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); padding-top: var(--space-3); font-size: var(--text-sm); color: var(--color-text-muted); }
+
+  /* FilterBar */
+  .lf-filters { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--space-3); margin-bottom: var(--space-4); }
+  .lf-filters > .lf-field { flex: 1 1 160px; }
+
+  /* Alert e AttentionItem */
+  .lf-alert { display: flex; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); font-size: var(--text-sm); }
+  .lf-attention { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-3) var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); color: var(--color-text); text-decoration: none; font-size: var(--text-sm); }
+  .lf-attention:hover { background: var(--color-surface-alt); }
+
+  /* EmptyState e Skeleton */
+  .lf-empty { display: flex; flex-direction: column; align-items: center; gap: var(--space-2); padding: var(--space-10) var(--space-4); text-align: center; color: var(--color-text-muted); font-size: var(--text-sm); }
+  .lf-empty-title { font-size: var(--text-md); font-weight: var(--weight-subtitle); color: var(--color-text); }
+  .lf-skeleton { display: block; border-radius: var(--radius-sm); background: var(--color-surface-alt); animation: lf-pulse 1.4s ease-in-out infinite; }
+  .lf-skeleton-line { height: 1em; }
+  .lf-skeleton-kpi { height: 6rem; border-radius: var(--radius-lg); }
+
+  /* Modal e Toast */
+  .lf-modal { width: min(32rem, calc(100vw - 2rem)); padding: 0; border: 0; border-radius: var(--radius-lg); background: var(--color-surface); color: var(--color-text); box-shadow: var(--shadow-lg); }
+  .lf-modal::backdrop { background: var(--color-overlay); }
+  .lf-modal-head { display: flex; align-items: center; justify-content: space-between; padding: var(--space-4) var(--space-5); border-bottom: 1px solid var(--color-border); font-weight: var(--weight-subtitle); }
+  .lf-modal-body { padding: var(--space-5); font-size: var(--text-sm); }
+  .lf-modal-foot { display: flex; justify-content: flex-end; gap: var(--space-2); padding: var(--space-4) var(--space-5); border-top: 1px solid var(--color-border); }
+  .lf-toasts { position: fixed; right: var(--space-4); bottom: var(--space-4); z-index: var(--z-toast); display: flex; flex-direction: column; gap: var(--space-2); max-width: min(24rem, calc(100vw - 2rem)); }
+  .lf-toast { padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); box-shadow: var(--shadow-md); font-size: var(--text-sm); }
+
+  /* ChartContainer */
+  .lf-chart { padding: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); }
+  .lf-chart-title { font-size: var(--text-sm); font-weight: var(--weight-subtitle); color: var(--color-text); }
+  .lf-chart-canvas { position: relative; height: 240px; margin-top: var(--space-3); }
+
+  /* Sidebar e Topbar */
+  .lf-sidebar { display: flex; flex-direction: column; gap: var(--space-4); width: var(--sidebar-width); min-height: 100%; padding: var(--space-4) var(--space-3); background: var(--color-sidebar); color: var(--color-on-sidebar); transition: width var(--duration-base) var(--ease-standard); }
+  .lf-sidebar[data-collapsed="true"] { width: var(--sidebar-width-collapsed); }
+  .lf-sidebar[data-collapsed="true"] .lf-nav-text, .lf-sidebar[data-collapsed="true"] .lf-nav-group { display: none; }
+  .lf-logo { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
+  .lf-logo-symbol { flex: none; width: 40px; height: 40px; }
+  .lf-logo-word { width: 100px; height: 30px; object-fit: contain; object-position: left; }
+  .lf-sidebar[data-collapsed="true"] .lf-logo-word { display: none; }
+  .lf-nav-group { padding: var(--space-2) var(--space-3) var(--space-1); font-size: var(--text-xs); font-weight: var(--weight-subtitle); letter-spacing: .08em; color: rgb(255 255 255 / 70%); text-transform: uppercase; }
+  .lf-nav-item { display: flex; align-items: center; gap: var(--space-3); min-height: var(--touch-target); padding: 0 var(--space-3); border-left: 3px solid transparent; border-radius: var(--radius-sm); color: var(--color-on-sidebar); font-size: var(--text-sm); text-decoration: none; }
+  .lf-nav-item:hover { background: rgb(255 255 255 / 10%); }
+  .lf-nav-item[aria-current="page"] { border-left-color: var(--brand-orange); background: rgb(255 255 255 / 12%); font-weight: var(--weight-subtitle); }
+  .lf-nav-count { margin-left: auto; padding: 0 var(--space-2); border-radius: var(--radius-full); background: var(--brand-orange); color: var(--brand-purple); font-size: var(--text-xs); font-weight: var(--weight-subtitle); }
+  .lf-topbar { position: sticky; top: 0; z-index: var(--z-sticky); display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--color-border); background: var(--color-surface); }
+  .lf-topbar-search { flex: 1 1 220px; min-width: 0; }
+  .lf-kbd { padding: 0 var(--space-1); border: 1px solid var(--color-border); border-radius: var(--radius-sm); font-size: var(--text-xs); color: var(--color-text-muted); }
+}
+
+@keyframes lf-pulse { 50% { opacity: .55; } }
+@media (prefers-reduced-motion: reduce) { .lf-skeleton { animation: none; } }

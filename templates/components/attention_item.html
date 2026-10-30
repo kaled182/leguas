@@ -1,0 +1,5 @@
+{# label, count, tone, url #}
+<a class="lf-attention" href="{{ url }}">
+  <span>{{ label }}</span>
+  {% include "components/status_badge.html" with label=count tone=tone|default:"warning" %}
+</a>

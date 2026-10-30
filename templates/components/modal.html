@@ -1,0 +1,14 @@
+{# id, title, message, confirm_label, confirm_variant. Abre com data-modal-open="id". #}
+<dialog id="{{ id }}" class="lf-modal" aria-labelledby="{{ id }}-title">
+  <div class="lf-modal-head">
+    <span id="{{ id }}-title">{{ title }}</span>
+    <button type="button" class="lf-btn lf-btn-ghost" data-modal-close aria-label="Fechar">
+      <i data-lucide="x" class="w-4 h-4" aria-hidden="true"></i>
+    </button>
+  </div>
+  <div class="lf-modal-body">{{ message }}</div>
+  <div class="lf-modal-foot">
+    <button type="button" class="lf-btn lf-btn-ghost" data-modal-close>Cancelar</button>
+    <button type="button" class="lf-btn lf-btn-{{ confirm_variant|default:'primary' }}" data-modal-close>{{ confirm_label|default:"Confirmar" }}</button>
+  </div>
+</dialog>

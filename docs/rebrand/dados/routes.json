@@ -1,0 +1,7841 @@
+[
+{
+"url": "/",
+"name": "dashboard_leguas:home",
+"view": "dashboard_leguas.views_home.DashboardView",
+"templates": [
+"dashboard_leguas/home.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/dashboard_v2/",
+"name": "dashboard_leguas:dashboard_v2",
+"view": "dashboard_leguas.views.DashboardV2",
+"templates": [
+"dashboard_leguas/index.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/sla/prazos/",
+"name": "dashboard_leguas:sla_rules",
+"view": "dashboard_leguas.views_sla.sla_rules",
+"templates": [
+"dashboard_leguas/sla_rules.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/health/",
+"name": "healthcheck",
+"view": "my_project.urls.healthcheck",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/admin/",
+"name": "admin:index",
+"view": "django.contrib.admin.sites.AdminSite.index",
+"templates": [
+"admin/index.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/login/",
+"name": "admin:login",
+"view": "django.contrib.admin.sites.AdminSite.login",
+"templates": [
+"admin/login.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/logout/",
+"name": "admin:logout",
+"view": "django.contrib.admin.sites.AdminSite.logout",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/password_change/",
+"name": "admin:password_change",
+"view": "django.contrib.admin.sites.AdminSite.password_change",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/password_change/done/",
+"name": "admin:password_change_done",
+"view": "django.contrib.admin.sites.AdminSite.password_change_done",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/autocomplete/",
+"name": "admin:autocomplete",
+"view": "django.contrib.admin.sites.AdminSite.autocomplete_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/jsi18n/",
+"name": "admin:jsi18n",
+"view": "django.contrib.admin.sites.AdminSite.i18n_javascript",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/r/<path:content_type_id>/<path:object_id>/",
+"name": "admin:view_on_site",
+"view": "django.contrib.contenttypes.views.shortcut",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/auth/group/",
+"name": "admin:auth_group_changelist",
+"view": "django.contrib.admin.options.ModelAdmin.changelist_view",
+"templates": [
+"admin/change_list.html",
+"admin/invalid_setup.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/admin/auth/group/add/",
+"name": "admin:auth_group_add",
+"view": "django.contrib.admin.options.ModelAdmin.add_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/auth/group/<path:object_id>/history/",
+"name": "admin:auth_group_history",
+"view": "django.contrib.admin.options.ModelAdmin.history_view",
+"templates": [
+"admin/object_history.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/auth/group/<path:object_id>/delete/",
+"name": "admin:auth_group_delete",
+"view": "django.contrib.admin.options.ModelAdmin.delete_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/auth/group/<path:object_id>/change/",
+"name": "admin:auth_group_change",
+"view": "django.contrib.admin.options.ModelAdmin.change_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/auth/group/<path:object_id>/",
+"name": "admin:",
+"view": "django.views.generic.base.RedirectView",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/auth/user/<id>/password/",
+"name": "admin:auth_user_password_change",
+"view": "django.contrib.auth.admin.UserAdmin.user_change_password",
+"templates": [
+"admin/auth/user/change_password.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/admin/auth/user/",
+"name": "admin:auth_user_changelist",
+"view": "django.contrib.admin.options.ModelAdmin.changelist_view",
+"templates": [
+"admin/change_list.html",
+"admin/invalid_setup.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/admin/auth/user/add/",
+"name": "admin:auth_user_add",
+"view": "django.contrib.auth.admin.UserAdmin.add_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/auth/user/<path:object_id>/history/",
+"name": "admin:auth_user_history",
+"view": "django.contrib.admin.options.ModelAdmin.history_view",
+"templates": [
+"admin/object_history.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/auth/user/<path:object_id>/delete/",
+"name": "admin:auth_user_delete",
+"view": "django.contrib.admin.options.ModelAdmin.delete_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/auth/user/<path:object_id>/change/",
+"name": "admin:auth_user_change",
+"view": "django.contrib.admin.options.ModelAdmin.change_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/auth/user/<path:object_id>/",
+"name": "admin:",
+"view": "django.views.generic.base.RedirectView",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/django_celery_beat/periodictask/",
+"name": "admin:django_celery_beat_periodictask_changelist",
+"view": "django_celery_beat.admin.PeriodicTaskAdmin.changelist_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/django_celery_beat/periodictask/add/",
+"name": "admin:django_celery_beat_periodictask_add",
+"view": "django.contrib.admin.options.ModelAdmin.add_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/django_celery_beat/periodictask/<path:object_id>/history/",
+"name": "admin:django_celery_beat_periodictask_history",
+"view": "django.contrib.admin.options.ModelAdmin.history_view",
+"templates": [
+"admin/object_history.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/django_celery_beat/periodictask/<path:object_id>/delete/",
+"name": "admin:django_celery_beat_periodictask_delete",
+"view": "django.contrib.admin.options.ModelAdmin.delete_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/django_celery_beat/periodictask/<path:object_id>/change/",
+"name": "admin:django_celery_beat_periodictask_change",
+"view": "django.contrib.admin.options.ModelAdmin.change_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/django_celery_beat/periodictask/<path:object_id>/",
+"name": "admin:",
+"view": "django.views.generic.base.RedirectView",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/django_celery_beat/clockedschedule/",
+"name": "admin:django_celery_beat_clockedschedule_changelist",
+"view": "django.contrib.admin.options.ModelAdmin.changelist_view",
+"templates": [
+"admin/change_list.html",
+"admin/invalid_setup.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/admin/django_celery_beat/clockedschedule/add/",
+"name": "admin:django_celery_beat_clockedschedule_add",
+"view": "django.contrib.admin.options.ModelAdmin.add_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/django_celery_beat/clockedschedule/<path:object_id>/history/",
+"name": "admin:django_celery_beat_clockedschedule_history",
+"view": "django.contrib.admin.options.ModelAdmin.history_view",
+"templates": [
+"admin/object_history.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/django_celery_beat/clockedschedule/<path:object_id>/delete/",
+"name": "admin:django_celery_beat_clockedschedule_delete",
+"view": "django.contrib.admin.options.ModelAdmin.delete_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/django_celery_beat/clockedschedule/<path:object_id>/change/",
+"name": "admin:django_celery_beat_clockedschedule_change",
+"view": "django.contrib.admin.options.ModelAdmin.change_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/django_celery_beat/clockedschedule/<path:object_id>/",
+"name": "admin:",
+"view": "django.views.generic.base.RedirectView",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/django_celery_beat/crontabschedule/",
+"name": "admin:django_celery_beat_crontabschedule_changelist",
+"view": "django.contrib.admin.options.ModelAdmin.changelist_view",
+"templates": [
+"admin/change_list.html",
+"admin/invalid_setup.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/admin/django_celery_beat/crontabschedule/add/",
+"name": "admin:django_celery_beat_crontabschedule_add",
+"view": "django.contrib.admin.options.ModelAdmin.add_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/django_celery_beat/crontabschedule/<path:object_id>/history/",
+"name": "admin:django_celery_beat_crontabschedule_history",
+"view": "django.contrib.admin.options.ModelAdmin.history_view",
+"templates": [
+"admin/object_history.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/django_celery_beat/crontabschedule/<path:object_id>/delete/",
+"name": "admin:django_celery_beat_crontabschedule_delete",
+"view": "django.contrib.admin.options.ModelAdmin.delete_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/django_celery_beat/crontabschedule/<path:object_id>/change/",
+"name": "admin:django_celery_beat_crontabschedule_change",
+"view": "django.contrib.admin.options.ModelAdmin.change_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/django_celery_beat/crontabschedule/<path:object_id>/",
+"name": "admin:",
+"view": "django.views.generic.base.RedirectView",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/django_celery_beat/solarschedule/",
+"name": "admin:django_celery_beat_solarschedule_changelist",
+"view": "django.contrib.admin.options.ModelAdmin.changelist_view",
+"templates": [
+"admin/change_list.html",
+"admin/invalid_setup.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/admin/django_celery_beat/solarschedule/add/",
+"name": "admin:django_celery_beat_solarschedule_add",
+"view": "django.contrib.admin.options.ModelAdmin.add_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/django_celery_beat/solarschedule/<path:object_id>/history/",
+"name": "admin:django_celery_beat_solarschedule_history",
+"view": "django.contrib.admin.options.ModelAdmin.history_view",
+"templates": [
+"admin/object_history.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/django_celery_beat/solarschedule/<path:object_id>/delete/",
+"name": "admin:django_celery_beat_solarschedule_delete",
+"view": "django.contrib.admin.options.ModelAdmin.delete_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/django_celery_beat/solarschedule/<path:object_id>/change/",
+"name": "admin:django_celery_beat_solarschedule_change",
+"view": "django.contrib.admin.options.ModelAdmin.change_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/django_celery_beat/solarschedule/<path:object_id>/",
+"name": "admin:",
+"view": "django.views.generic.base.RedirectView",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/django_celery_beat/intervalschedule/",
+"name": "admin:django_celery_beat_intervalschedule_changelist",
+"view": "django.contrib.admin.options.ModelAdmin.changelist_view",
+"templates": [
+"admin/change_list.html",
+"admin/invalid_setup.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/admin/django_celery_beat/intervalschedule/add/",
+"name": "admin:django_celery_beat_intervalschedule_add",
+"view": "django.contrib.admin.options.ModelAdmin.add_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/django_celery_beat/intervalschedule/<path:object_id>/history/",
+"name": "admin:django_celery_beat_intervalschedule_history",
+"view": "django.contrib.admin.options.ModelAdmin.history_view",
+"templates": [
+"admin/object_history.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/django_celery_beat/intervalschedule/<path:object_id>/delete/",
+"name": "admin:django_celery_beat_intervalschedule_delete",
+"view": "django.contrib.admin.options.ModelAdmin.delete_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/django_celery_beat/intervalschedule/<path:object_id>/change/",
+"name": "admin:django_celery_beat_intervalschedule_change",
+"view": "django.contrib.admin.options.ModelAdmin.change_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/django_celery_beat/intervalschedule/<path:object_id>/",
+"name": "admin:",
+"view": "django.views.generic.base.RedirectView",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/customauth/driveraccess/",
+"name": "admin:customauth_driveraccess_changelist",
+"view": "django.contrib.admin.options.ModelAdmin.changelist_view",
+"templates": [
+"admin/change_list.html",
+"admin/invalid_setup.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/admin/customauth/driveraccess/add/",
+"name": "admin:customauth_driveraccess_add",
+"view": "django.contrib.admin.options.ModelAdmin.add_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/customauth/driveraccess/<path:object_id>/history/",
+"name": "admin:customauth_driveraccess_history",
+"view": "django.contrib.admin.options.ModelAdmin.history_view",
+"templates": [
+"admin/object_history.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/customauth/driveraccess/<path:object_id>/delete/",
+"name": "admin:customauth_driveraccess_delete",
+"view": "django.contrib.admin.options.ModelAdmin.delete_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/customauth/driveraccess/<path:object_id>/change/",
+"name": "admin:customauth_driveraccess_change",
+"view": "django.contrib.admin.options.ModelAdmin.change_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/customauth/driveraccess/<path:object_id>/",
+"name": "admin:",
+"view": "django.views.generic.base.RedirectView",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/customauth/driverloginotp/",
+"name": "admin:customauth_driverloginotp_changelist",
+"view": "django.contrib.admin.options.ModelAdmin.changelist_view",
+"templates": [
+"admin/change_list.html",
+"admin/invalid_setup.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/admin/customauth/driverloginotp/add/",
+"name": "admin:customauth_driverloginotp_add",
+"view": "django.contrib.admin.options.ModelAdmin.add_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/customauth/driverloginotp/<path:object_id>/history/",
+"name": "admin:customauth_driverloginotp_history",
+"view": "django.contrib.admin.options.ModelAdmin.history_view",
+"templates": [
+"admin/object_history.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/customauth/driverloginotp/<path:object_id>/delete/",
+"name": "admin:customauth_driverloginotp_delete",
+"view": "django.contrib.admin.options.ModelAdmin.delete_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/customauth/driverloginotp/<path:object_id>/change/",
+"name": "admin:customauth_driverloginotp_change",
+"view": "django.contrib.admin.options.ModelAdmin.change_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/customauth/driverloginotp/<path:object_id>/",
+"name": "admin:",
+"view": "django.views.generic.base.RedirectView",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/drivers_app/driverprofile/",
+"name": "admin:drivers_app_driverprofile_changelist",
+"view": "django.contrib.admin.options.ModelAdmin.changelist_view",
+"templates": [
+"admin/change_list.html",
+"admin/invalid_setup.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/admin/drivers_app/driverprofile/add/",
+"name": "admin:drivers_app_driverprofile_add",
+"view": "django.contrib.admin.options.ModelAdmin.add_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/drivers_app/driverprofile/<path:object_id>/history/",
+"name": "admin:drivers_app_driverprofile_history",
+"view": "django.contrib.admin.options.ModelAdmin.history_view",
+"templates": [
+"admin/object_history.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/drivers_app/driverprofile/<path:object_id>/delete/",
+"name": "admin:drivers_app_driverprofile_delete",
+"view": "django.contrib.admin.options.ModelAdmin.delete_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/drivers_app/driverprofile/<path:object_id>/change/",
+"name": "admin:drivers_app_driverprofile_change",
+"view": "django.contrib.admin.options.ModelAdmin.change_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/drivers_app/driverprofile/<path:object_id>/",
+"name": "admin:",
+"view": "django.views.generic.base.RedirectView",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/drivers_app/driverdocument/",
+"name": "admin:drivers_app_driverdocument_changelist",
+"view": "django.contrib.admin.options.ModelAdmin.changelist_view",
+"templates": [
+"admin/change_list.html",
+"admin/invalid_setup.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/admin/drivers_app/driverdocument/add/",
+"name": "admin:drivers_app_driverdocument_add",
+"view": "django.contrib.admin.options.ModelAdmin.add_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/drivers_app/driverdocument/<path:object_id>/history/",
+"name": "admin:drivers_app_driverdocument_history",
+"view": "django.contrib.admin.options.ModelAdmin.history_view",
+"templates": [
+"admin/object_history.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/drivers_app/driverdocument/<path:object_id>/delete/",
+"name": "admin:drivers_app_driverdocument_delete",
+"view": "django.contrib.admin.options.ModelAdmin.delete_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/drivers_app/driverdocument/<path:object_id>/change/",
+"name": "admin:drivers_app_driverdocument_change",
+"view": "django.contrib.admin.options.ModelAdmin.change_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/drivers_app/driverdocument/<path:object_id>/",
+"name": "admin:",
+"view": "django.views.generic.base.RedirectView",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/drivers_app/vehicle/",
+"name": "admin:drivers_app_vehicle_changelist",
+"view": "django.contrib.admin.options.ModelAdmin.changelist_view",
+"templates": [
+"admin/change_list.html",
+"admin/invalid_setup.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/admin/drivers_app/vehicle/add/",
+"name": "admin:drivers_app_vehicle_add",
+"view": "django.contrib.admin.options.ModelAdmin.add_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/drivers_app/vehicle/<path:object_id>/history/",
+"name": "admin:drivers_app_vehicle_history",
+"view": "django.contrib.admin.options.ModelAdmin.history_view",
+"templates": [
+"admin/object_history.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/drivers_app/vehicle/<path:object_id>/delete/",
+"name": "admin:drivers_app_vehicle_delete",
+"view": "django.contrib.admin.options.ModelAdmin.delete_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/drivers_app/vehicle/<path:object_id>/change/",
+"name": "admin:drivers_app_vehicle_change",
+"view": "django.contrib.admin.options.ModelAdmin.change_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/drivers_app/vehicle/<path:object_id>/",
+"name": "admin:",
+"view": "django.views.generic.base.RedirectView",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/drivers_app/vehicledocument/",
+"name": "admin:drivers_app_vehicledocument_changelist",
+"view": "django.contrib.admin.options.ModelAdmin.changelist_view",
+"templates": [
+"admin/change_list.html",
+"admin/invalid_setup.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/admin/drivers_app/vehicledocument/add/",
+"name": "admin:drivers_app_vehicledocument_add",
+"view": "django.contrib.admin.options.ModelAdmin.add_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/drivers_app/vehicledocument/<path:object_id>/history/",
+"name": "admin:drivers_app_vehicledocument_history",
+"view": "django.contrib.admin.options.ModelAdmin.history_view",
+"templates": [
+"admin/object_history.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/drivers_app/vehicledocument/<path:object_id>/delete/",
+"name": "admin:drivers_app_vehicledocument_delete",
+"view": "django.contrib.admin.options.ModelAdmin.delete_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/drivers_app/vehicledocument/<path:object_id>/change/",
+"name": "admin:drivers_app_vehicledocument_change",
+"view": "django.contrib.admin.options.ModelAdmin.change_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/drivers_app/vehicledocument/<path:object_id>/",
+"name": "admin:",
+"view": "django.views.generic.base.RedirectView",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/settlements/partnerinvoice/",
+"name": "admin:settlements_partnerinvoice_changelist",
+"view": "django.contrib.admin.options.ModelAdmin.changelist_view",
+"templates": [
+"admin/change_list.html",
+"admin/invalid_setup.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/admin/settlements/partnerinvoice/add/",
+"name": "admin:settlements_partnerinvoice_add",
+"view": "django.contrib.admin.options.ModelAdmin.add_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/settlements/partnerinvoice/<path:object_id>/history/",
+"name": "admin:settlements_partnerinvoice_history",
+"view": "django.contrib.admin.options.ModelAdmin.history_view",
+"templates": [
+"admin/object_history.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/settlements/partnerinvoice/<path:object_id>/delete/",
+"name": "admin:settlements_partnerinvoice_delete",
+"view": "django.contrib.admin.options.ModelAdmin.delete_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/settlements/partnerinvoice/<path:object_id>/change/",
+"name": "admin:settlements_partnerinvoice_change",
+"view": "django.contrib.admin.options.ModelAdmin.change_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/settlements/partnerinvoice/<path:object_id>/",
+"name": "admin:",
+"view": "django.views.generic.base.RedirectView",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/settlements/driversettlement/",
+"name": "admin:settlements_driversettlement_changelist",
+"view": "django.contrib.admin.options.ModelAdmin.changelist_view",
+"templates": [
+"admin/change_list.html",
+"admin/invalid_setup.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/admin/settlements/driversettlement/add/",
+"name": "admin:settlements_driversettlement_add",
+"view": "django.contrib.admin.options.ModelAdmin.add_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/settlements/driversettlement/<path:object_id>/history/",
+"name": "admin:settlements_driversettlement_history",
+"view": "django.contrib.admin.options.ModelAdmin.history_view",
+"templates": [
+"admin/object_history.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/settlements/driversettlement/<path:object_id>/delete/",
+"name": "admin:settlements_driversettlement_delete",
+"view": "django.contrib.admin.options.ModelAdmin.delete_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/settlements/driversettlement/<path:object_id>/change/",
+"name": "admin:settlements_driversettlement_change",
+"view": "django.contrib.admin.options.ModelAdmin.change_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/settlements/driversettlement/<path:object_id>/",
+"name": "admin:",
+"view": "django.views.generic.base.RedirectView",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/settlements/driverclaim/",
+"name": "admin:settlements_driverclaim_changelist",
+"view": "django.contrib.admin.options.ModelAdmin.changelist_view",
+"templates": [
+"admin/change_list.html",
+"admin/invalid_setup.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/admin/settlements/driverclaim/add/",
+"name": "admin:settlements_driverclaim_add",
+"view": "django.contrib.admin.options.ModelAdmin.add_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/settlements/driverclaim/<path:object_id>/history/",
+"name": "admin:settlements_driverclaim_history",
+"view": "django.contrib.admin.options.ModelAdmin.history_view",
+"templates": [
+"admin/object_history.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/settlements/driverclaim/<path:object_id>/delete/",
+"name": "admin:settlements_driverclaim_delete",
+"view": "django.contrib.admin.options.ModelAdmin.delete_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/settlements/driverclaim/<path:object_id>/change/",
+"name": "admin:settlements_driverclaim_change",
+"view": "django.contrib.admin.options.ModelAdmin.change_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/settlements/driverclaim/<path:object_id>/",
+"name": "admin:",
+"view": "django.views.generic.base.RedirectView",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/accounting/imposto/",
+"name": "admin:accounting_imposto_changelist",
+"view": "django.contrib.admin.options.ModelAdmin.changelist_view",
+"templates": [
+"admin/change_list.html",
+"admin/invalid_setup.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/admin/accounting/imposto/add/",
+"name": "admin:accounting_imposto_add",
+"view": "django.contrib.admin.options.ModelAdmin.add_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/accounting/imposto/<path:object_id>/history/",
+"name": "admin:accounting_imposto_history",
+"view": "django.contrib.admin.options.ModelAdmin.history_view",
+"templates": [
+"admin/object_history.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/accounting/imposto/<path:object_id>/delete/",
+"name": "admin:accounting_imposto_delete",
+"view": "django.contrib.admin.options.ModelAdmin.delete_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/accounting/imposto/<path:object_id>/change/",
+"name": "admin:accounting_imposto_change",
+"view": "django.contrib.admin.options.ModelAdmin.change_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/accounting/imposto/<path:object_id>/",
+"name": "admin:",
+"view": "django.views.generic.base.RedirectView",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/accounting/fornecedortag/",
+"name": "admin:accounting_fornecedortag_changelist",
+"view": "django.contrib.admin.options.ModelAdmin.changelist_view",
+"templates": [
+"admin/change_list.html",
+"admin/invalid_setup.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/admin/accounting/fornecedortag/add/",
+"name": "admin:accounting_fornecedortag_add",
+"view": "django.contrib.admin.options.ModelAdmin.add_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/accounting/fornecedortag/<path:object_id>/history/",
+"name": "admin:accounting_fornecedortag_history",
+"view": "django.contrib.admin.options.ModelAdmin.history_view",
+"templates": [
+"admin/object_history.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/accounting/fornecedortag/<path:object_id>/delete/",
+"name": "admin:accounting_fornecedortag_delete",
+"view": "django.contrib.admin.options.ModelAdmin.delete_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/accounting/fornecedortag/<path:object_id>/change/",
+"name": "admin:accounting_fornecedortag_change",
+"view": "django.contrib.admin.options.ModelAdmin.change_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/accounting/fornecedortag/<path:object_id>/",
+"name": "admin:",
+"view": "django.views.generic.base.RedirectView",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/accounting/fornecedor/",
+"name": "admin:accounting_fornecedor_changelist",
+"view": "django.contrib.admin.options.ModelAdmin.changelist_view",
+"templates": [
+"admin/change_list.html",
+"admin/invalid_setup.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/admin/accounting/fornecedor/add/",
+"name": "admin:accounting_fornecedor_add",
+"view": "django.contrib.admin.options.ModelAdmin.add_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/accounting/fornecedor/<path:object_id>/history/",
+"name": "admin:accounting_fornecedor_history",
+"view": "django.contrib.admin.options.ModelAdmin.history_view",
+"templates": [
+"admin/object_history.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/accounting/fornecedor/<path:object_id>/delete/",
+"name": "admin:accounting_fornecedor_delete",
+"view": "django.contrib.admin.options.ModelAdmin.delete_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/accounting/fornecedor/<path:object_id>/change/",
+"name": "admin:accounting_fornecedor_change",
+"view": "django.contrib.admin.options.ModelAdmin.change_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/accounting/fornecedor/<path:object_id>/",
+"name": "admin:",
+"view": "django.views.generic.base.RedirectView",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/accounting/approvalrule/",
+"name": "admin:accounting_approvalrule_changelist",
+"view": "django.contrib.admin.options.ModelAdmin.changelist_view",
+"templates": [
+"admin/change_list.html",
+"admin/invalid_setup.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/admin/accounting/approvalrule/add/",
+"name": "admin:accounting_approvalrule_add",
+"view": "django.contrib.admin.options.ModelAdmin.add_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/accounting/approvalrule/<path:object_id>/history/",
+"name": "admin:accounting_approvalrule_history",
+"view": "django.contrib.admin.options.ModelAdmin.history_view",
+"templates": [
+"admin/object_history.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/accounting/approvalrule/<path:object_id>/delete/",
+"name": "admin:accounting_approvalrule_delete",
+"view": "django.contrib.admin.options.ModelAdmin.delete_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/accounting/approvalrule/<path:object_id>/change/",
+"name": "admin:accounting_approvalrule_change",
+"view": "django.contrib.admin.options.ModelAdmin.change_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/accounting/approvalrule/<path:object_id>/",
+"name": "admin:",
+"view": "django.views.generic.base.RedirectView",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/accounting/billapproval/",
+"name": "admin:accounting_billapproval_changelist",
+"view": "django.contrib.admin.options.ModelAdmin.changelist_view",
+"templates": [
+"admin/change_list.html",
+"admin/invalid_setup.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/admin/accounting/billapproval/add/",
+"name": "admin:accounting_billapproval_add",
+"view": "django.contrib.admin.options.ModelAdmin.add_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/accounting/billapproval/<path:object_id>/history/",
+"name": "admin:accounting_billapproval_history",
+"view": "django.contrib.admin.options.ModelAdmin.history_view",
+"templates": [
+"admin/object_history.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/accounting/billapproval/<path:object_id>/delete/",
+"name": "admin:accounting_billapproval_delete",
+"view": "django.contrib.admin.options.ModelAdmin.delete_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/accounting/billapproval/<path:object_id>/change/",
+"name": "admin:accounting_billapproval_change",
+"view": "django.contrib.admin.options.ModelAdmin.change_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/accounting/billapproval/<path:object_id>/",
+"name": "admin:",
+"view": "django.views.generic.base.RedirectView",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/accounting/costcenter/",
+"name": "admin:accounting_costcenter_changelist",
+"view": "django.contrib.admin.options.ModelAdmin.changelist_view",
+"templates": [
+"admin/change_list.html",
+"admin/invalid_setup.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/admin/accounting/costcenter/add/",
+"name": "admin:accounting_costcenter_add",
+"view": "django.contrib.admin.options.ModelAdmin.add_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/accounting/costcenter/<path:object_id>/history/",
+"name": "admin:accounting_costcenter_history",
+"view": "django.contrib.admin.options.ModelAdmin.history_view",
+"templates": [
+"admin/object_history.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/accounting/costcenter/<path:object_id>/delete/",
+"name": "admin:accounting_costcenter_delete",
+"view": "django.contrib.admin.options.ModelAdmin.delete_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/accounting/costcenter/<path:object_id>/change/",
+"name": "admin:accounting_costcenter_change",
+"view": "django.contrib.admin.options.ModelAdmin.change_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/accounting/costcenter/<path:object_id>/",
+"name": "admin:",
+"view": "django.views.generic.base.RedirectView",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/accounting/expensecategory/",
+"name": "admin:accounting_expensecategory_changelist",
+"view": "django.contrib.admin.options.ModelAdmin.changelist_view",
+"templates": [
+"admin/change_list.html",
+"admin/invalid_setup.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/admin/accounting/expensecategory/add/",
+"name": "admin:accounting_expensecategory_add",
+"view": "django.contrib.admin.options.ModelAdmin.add_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/accounting/expensecategory/<path:object_id>/history/",
+"name": "admin:accounting_expensecategory_history",
+"view": "django.contrib.admin.options.ModelAdmin.history_view",
+"templates": [
+"admin/object_history.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/accounting/expensecategory/<path:object_id>/delete/",
+"name": "admin:accounting_expensecategory_delete",
+"view": "django.contrib.admin.options.ModelAdmin.delete_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/accounting/expensecategory/<path:object_id>/change/",
+"name": "admin:accounting_expensecategory_change",
+"view": "django.contrib.admin.options.ModelAdmin.change_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/accounting/expensecategory/<path:object_id>/",
+"name": "admin:",
+"view": "django.views.generic.base.RedirectView",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/accounting/bill/",
+"name": "admin:accounting_bill_changelist",
+"view": "django.contrib.admin.options.ModelAdmin.changelist_view",
+"templates": [
+"admin/change_list.html",
+"admin/invalid_setup.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/admin/accounting/bill/add/",
+"name": "admin:accounting_bill_add",
+"view": "django.contrib.admin.options.ModelAdmin.add_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/accounting/bill/<path:object_id>/history/",
+"name": "admin:accounting_bill_history",
+"view": "django.contrib.admin.options.ModelAdmin.history_view",
+"templates": [
+"admin/object_history.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/accounting/bill/<path:object_id>/delete/",
+"name": "admin:accounting_bill_delete",
+"view": "django.contrib.admin.options.ModelAdmin.delete_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/accounting/bill/<path:object_id>/change/",
+"name": "admin:accounting_bill_change",
+"view": "django.contrib.admin.options.ModelAdmin.change_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/accounting/bill/<path:object_id>/",
+"name": "admin:",
+"view": "django.views.generic.base.RedirectView",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/payroll/irstable/",
+"name": "admin:payroll_irstable_changelist",
+"view": "django.contrib.admin.options.ModelAdmin.changelist_view",
+"templates": [
+"admin/change_list.html",
+"admin/invalid_setup.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/admin/payroll/irstable/add/",
+"name": "admin:payroll_irstable_add",
+"view": "django.contrib.admin.options.ModelAdmin.add_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/payroll/irstable/<path:object_id>/history/",
+"name": "admin:payroll_irstable_history",
+"view": "django.contrib.admin.options.ModelAdmin.history_view",
+"templates": [
+"admin/object_history.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/payroll/irstable/<path:object_id>/delete/",
+"name": "admin:payroll_irstable_delete",
+"view": "django.contrib.admin.options.ModelAdmin.delete_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/payroll/irstable/<path:object_id>/change/",
+"name": "admin:payroll_irstable_change",
+"view": "django.contrib.admin.options.ModelAdmin.change_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/payroll/irstable/<path:object_id>/",
+"name": "admin:",
+"view": "django.views.generic.base.RedirectView",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/payroll/employee/",
+"name": "admin:payroll_employee_changelist",
+"view": "django.contrib.admin.options.ModelAdmin.changelist_view",
+"templates": [
+"admin/change_list.html",
+"admin/invalid_setup.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/admin/payroll/employee/add/",
+"name": "admin:payroll_employee_add",
+"view": "django.contrib.admin.options.ModelAdmin.add_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/payroll/employee/<path:object_id>/history/",
+"name": "admin:payroll_employee_history",
+"view": "django.contrib.admin.options.ModelAdmin.history_view",
+"templates": [
+"admin/object_history.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/payroll/employee/<path:object_id>/delete/",
+"name": "admin:payroll_employee_delete",
+"view": "django.contrib.admin.options.ModelAdmin.delete_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/payroll/employee/<path:object_id>/change/",
+"name": "admin:payroll_employee_change",
+"view": "django.contrib.admin.options.ModelAdmin.change_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/payroll/employee/<path:object_id>/",
+"name": "admin:",
+"view": "django.views.generic.base.RedirectView",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/payroll/payroll/",
+"name": "admin:payroll_payroll_changelist",
+"view": "django.contrib.admin.options.ModelAdmin.changelist_view",
+"templates": [
+"admin/change_list.html",
+"admin/invalid_setup.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/admin/payroll/payroll/add/",
+"name": "admin:payroll_payroll_add",
+"view": "django.contrib.admin.options.ModelAdmin.add_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/payroll/payroll/<path:object_id>/history/",
+"name": "admin:payroll_payroll_history",
+"view": "django.contrib.admin.options.ModelAdmin.history_view",
+"templates": [
+"admin/object_history.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/payroll/payroll/<path:object_id>/delete/",
+"name": "admin:payroll_payroll_delete",
+"view": "django.contrib.admin.options.ModelAdmin.delete_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/payroll/payroll/<path:object_id>/change/",
+"name": "admin:payroll_payroll_change",
+"view": "django.contrib.admin.options.ModelAdmin.change_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/payroll/payroll/<path:object_id>/",
+"name": "admin:",
+"view": "django.views.generic.base.RedirectView",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/system_config/systemconfiguration/",
+"name": "admin:system_config_systemconfiguration_changelist",
+"view": "django.contrib.admin.options.ModelAdmin.changelist_view",
+"templates": [
+"admin/change_list.html",
+"admin/invalid_setup.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/admin/system_config/systemconfiguration/add/",
+"name": "admin:system_config_systemconfiguration_add",
+"view": "django.contrib.admin.options.ModelAdmin.add_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/system_config/systemconfiguration/<path:object_id>/history/",
+"name": "admin:system_config_systemconfiguration_history",
+"view": "django.contrib.admin.options.ModelAdmin.history_view",
+"templates": [
+"admin/object_history.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/system_config/systemconfiguration/<path:object_id>/delete/",
+"name": "admin:system_config_systemconfiguration_delete",
+"view": "django.contrib.admin.options.ModelAdmin.delete_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/system_config/systemconfiguration/<path:object_id>/change/",
+"name": "admin:system_config_systemconfiguration_change",
+"view": "django.contrib.admin.options.ModelAdmin.change_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/system_config/systemconfiguration/<path:object_id>/",
+"name": "admin:",
+"view": "django.views.generic.base.RedirectView",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/system_config/configurationaudit/",
+"name": "admin:system_config_configurationaudit_changelist",
+"view": "django.contrib.admin.options.ModelAdmin.changelist_view",
+"templates": [
+"admin/change_list.html",
+"admin/invalid_setup.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/admin/system_config/configurationaudit/add/",
+"name": "admin:system_config_configurationaudit_add",
+"view": "django.contrib.admin.options.ModelAdmin.add_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/system_config/configurationaudit/<path:object_id>/history/",
+"name": "admin:system_config_configurationaudit_history",
+"view": "django.contrib.admin.options.ModelAdmin.history_view",
+"templates": [
+"admin/object_history.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/system_config/configurationaudit/<path:object_id>/delete/",
+"name": "admin:system_config_configurationaudit_delete",
+"view": "django.contrib.admin.options.ModelAdmin.delete_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/system_config/configurationaudit/<path:object_id>/change/",
+"name": "admin:system_config_configurationaudit_change",
+"view": "django.contrib.admin.options.ModelAdmin.change_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/system_config/configurationaudit/<path:object_id>/",
+"name": "admin:",
+"view": "django.views.generic.base.RedirectView",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/system_config/cronjobexecution/",
+"name": "admin:system_config_cronjobexecution_changelist",
+"view": "django.contrib.admin.options.ModelAdmin.changelist_view",
+"templates": [
+"admin/change_list.html",
+"admin/invalid_setup.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/admin/system_config/cronjobexecution/add/",
+"name": "admin:system_config_cronjobexecution_add",
+"view": "django.contrib.admin.options.ModelAdmin.add_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/system_config/cronjobexecution/<path:object_id>/history/",
+"name": "admin:system_config_cronjobexecution_history",
+"view": "django.contrib.admin.options.ModelAdmin.history_view",
+"templates": [
+"admin/object_history.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/system_config/cronjobexecution/<path:object_id>/delete/",
+"name": "admin:system_config_cronjobexecution_delete",
+"view": "django.contrib.admin.options.ModelAdmin.delete_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/system_config/cronjobexecution/<path:object_id>/change/",
+"name": "admin:system_config_cronjobexecution_change",
+"view": "django.contrib.admin.options.ModelAdmin.change_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/system_config/cronjobexecution/<path:object_id>/",
+"name": "admin:",
+"view": "django.views.generic.base.RedirectView",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/core/partner/",
+"name": "admin:core_partner_changelist",
+"view": "django.contrib.admin.options.ModelAdmin.changelist_view",
+"templates": [
+"admin/change_list.html",
+"admin/invalid_setup.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/admin/core/partner/add/",
+"name": "admin:core_partner_add",
+"view": "django.contrib.admin.options.ModelAdmin.add_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/core/partner/<path:object_id>/history/",
+"name": "admin:core_partner_history",
+"view": "django.contrib.admin.options.ModelAdmin.history_view",
+"templates": [
+"admin/object_history.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/core/partner/<path:object_id>/delete/",
+"name": "admin:core_partner_delete",
+"view": "django.contrib.admin.options.ModelAdmin.delete_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/core/partner/<path:object_id>/change/",
+"name": "admin:core_partner_change",
+"view": "django.contrib.admin.options.ModelAdmin.change_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/core/partner/<path:object_id>/",
+"name": "admin:",
+"view": "django.views.generic.base.RedirectView",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/core/partnerintegration/",
+"name": "admin:core_partnerintegration_changelist",
+"view": "django.contrib.admin.options.ModelAdmin.changelist_view",
+"templates": [
+"admin/change_list.html",
+"admin/invalid_setup.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/admin/core/partnerintegration/add/",
+"name": "admin:core_partnerintegration_add",
+"view": "django.contrib.admin.options.ModelAdmin.add_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/core/partnerintegration/<path:object_id>/history/",
+"name": "admin:core_partnerintegration_history",
+"view": "django.contrib.admin.options.ModelAdmin.history_view",
+"templates": [
+"admin/object_history.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/core/partnerintegration/<path:object_id>/delete/",
+"name": "admin:core_partnerintegration_delete",
+"view": "django.contrib.admin.options.ModelAdmin.delete_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/core/partnerintegration/<path:object_id>/change/",
+"name": "admin:core_partnerintegration_change",
+"view": "django.contrib.admin.options.ModelAdmin.change_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/core/partnerintegration/<path:object_id>/",
+"name": "admin:",
+"view": "django.views.generic.base.RedirectView",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/core/synclog/",
+"name": "admin:core_synclog_changelist",
+"view": "django.contrib.admin.options.ModelAdmin.changelist_view",
+"templates": [
+"admin/change_list.html",
+"admin/invalid_setup.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/admin/core/synclog/add/",
+"name": "admin:core_synclog_add",
+"view": "django.contrib.admin.options.ModelAdmin.add_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/core/synclog/<path:object_id>/history/",
+"name": "admin:core_synclog_history",
+"view": "django.contrib.admin.options.ModelAdmin.history_view",
+"templates": [
+"admin/object_history.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/core/synclog/<path:object_id>/delete/",
+"name": "admin:core_synclog_delete",
+"view": "django.contrib.admin.options.ModelAdmin.delete_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/core/synclog/<path:object_id>/change/",
+"name": "admin:core_synclog_change",
+"view": "django.contrib.admin.options.ModelAdmin.change_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/core/synclog/<path:object_id>/",
+"name": "admin:",
+"view": "django.views.generic.base.RedirectView",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/fleet_management/vehicle/",
+"name": "admin:fleet_management_vehicle_changelist",
+"view": "django.contrib.admin.options.ModelAdmin.changelist_view",
+"templates": [
+"admin/change_list.html",
+"admin/invalid_setup.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/admin/fleet_management/vehicle/add/",
+"name": "admin:fleet_management_vehicle_add",
+"view": "django.contrib.admin.options.ModelAdmin.add_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/fleet_management/vehicle/<path:object_id>/history/",
+"name": "admin:fleet_management_vehicle_history",
+"view": "django.contrib.admin.options.ModelAdmin.history_view",
+"templates": [
+"admin/object_history.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/fleet_management/vehicle/<path:object_id>/delete/",
+"name": "admin:fleet_management_vehicle_delete",
+"view": "django.contrib.admin.options.ModelAdmin.delete_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/fleet_management/vehicle/<path:object_id>/change/",
+"name": "admin:fleet_management_vehicle_change",
+"view": "django.contrib.admin.options.ModelAdmin.change_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/fleet_management/vehicle/<path:object_id>/",
+"name": "admin:",
+"view": "django.views.generic.base.RedirectView",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/fleet_management/vehicleassignment/",
+"name": "admin:fleet_management_vehicleassignment_changelist",
+"view": "django.contrib.admin.options.ModelAdmin.changelist_view",
+"templates": [
+"admin/change_list.html",
+"admin/invalid_setup.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/admin/fleet_management/vehicleassignment/add/",
+"name": "admin:fleet_management_vehicleassignment_add",
+"view": "django.contrib.admin.options.ModelAdmin.add_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/fleet_management/vehicleassignment/<path:object_id>/history/",
+"name": "admin:fleet_management_vehicleassignment_history",
+"view": "django.contrib.admin.options.ModelAdmin.history_view",
+"templates": [
+"admin/object_history.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/fleet_management/vehicleassignment/<path:object_id>/delete/",
+"name": "admin:fleet_management_vehicleassignment_delete",
+"view": "django.contrib.admin.options.ModelAdmin.delete_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/fleet_management/vehicleassignment/<path:object_id>/change/",
+"name": "admin:fleet_management_vehicleassignment_change",
+"view": "django.contrib.admin.options.ModelAdmin.change_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/fleet_management/vehicleassignment/<path:object_id>/",
+"name": "admin:",
+"view": "django.views.generic.base.RedirectView",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/fleet_management/vehiclemaintenance/",
+"name": "admin:fleet_management_vehiclemaintenance_changelist",
+"view": "django.contrib.admin.options.ModelAdmin.changelist_view",
+"templates": [
+"admin/change_list.html",
+"admin/invalid_setup.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/admin/fleet_management/vehiclemaintenance/add/",
+"name": "admin:fleet_management_vehiclemaintenance_add",
+"view": "django.contrib.admin.options.ModelAdmin.add_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/fleet_management/vehiclemaintenance/<path:object_id>/history/",
+"name": "admin:fleet_management_vehiclemaintenance_history",
+"view": "django.contrib.admin.options.ModelAdmin.history_view",
+"templates": [
+"admin/object_history.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/fleet_management/vehiclemaintenance/<path:object_id>/delete/",
+"name": "admin:fleet_management_vehiclemaintenance_delete",
+"view": "django.contrib.admin.options.ModelAdmin.delete_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/fleet_management/vehiclemaintenance/<path:object_id>/change/",
+"name": "admin:fleet_management_vehiclemaintenance_change",
+"view": "django.contrib.admin.options.ModelAdmin.change_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/fleet_management/vehiclemaintenance/<path:object_id>/",
+"name": "admin:",
+"view": "django.views.generic.base.RedirectView",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/fleet_management/vehicleincident/",
+"name": "admin:fleet_management_vehicleincident_changelist",
+"view": "django.contrib.admin.options.ModelAdmin.changelist_view",
+"templates": [
+"admin/change_list.html",
+"admin/invalid_setup.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/admin/fleet_management/vehicleincident/add/",
+"name": "admin:fleet_management_vehicleincident_add",
+"view": "django.contrib.admin.options.ModelAdmin.add_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/fleet_management/vehicleincident/<path:object_id>/history/",
+"name": "admin:fleet_management_vehicleincident_history",
+"view": "django.contrib.admin.options.ModelAdmin.history_view",
+"templates": [
+"admin/object_history.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/fleet_management/vehicleincident/<path:object_id>/delete/",
+"name": "admin:fleet_management_vehicleincident_delete",
+"view": "django.contrib.admin.options.ModelAdmin.delete_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/fleet_management/vehicleincident/<path:object_id>/change/",
+"name": "admin:fleet_management_vehicleincident_change",
+"view": "django.contrib.admin.options.ModelAdmin.change_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/fleet_management/vehicleincident/<path:object_id>/",
+"name": "admin:",
+"view": "django.views.generic.base.RedirectView",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/pricing/postalzone/",
+"name": "admin:pricing_postalzone_changelist",
+"view": "django.contrib.admin.options.ModelAdmin.changelist_view",
+"templates": [
+"admin/change_list.html",
+"admin/invalid_setup.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/admin/pricing/postalzone/add/",
+"name": "admin:pricing_postalzone_add",
+"view": "django.contrib.admin.options.ModelAdmin.add_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/pricing/postalzone/<path:object_id>/history/",
+"name": "admin:pricing_postalzone_history",
+"view": "django.contrib.admin.options.ModelAdmin.history_view",
+"templates": [
+"admin/object_history.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/pricing/postalzone/<path:object_id>/delete/",
+"name": "admin:pricing_postalzone_delete",
+"view": "django.contrib.admin.options.ModelAdmin.delete_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/pricing/postalzone/<path:object_id>/change/",
+"name": "admin:pricing_postalzone_change",
+"view": "django.contrib.admin.options.ModelAdmin.change_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/pricing/postalzone/<path:object_id>/",
+"name": "admin:",
+"view": "django.views.generic.base.RedirectView",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/pricing/partnertariff/",
+"name": "admin:pricing_partnertariff_changelist",
+"view": "django.contrib.admin.options.ModelAdmin.changelist_view",
+"templates": [
+"admin/change_list.html",
+"admin/invalid_setup.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/admin/pricing/partnertariff/add/",
+"name": "admin:pricing_partnertariff_add",
+"view": "django.contrib.admin.options.ModelAdmin.add_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/pricing/partnertariff/<path:object_id>/history/",
+"name": "admin:pricing_partnertariff_history",
+"view": "django.contrib.admin.options.ModelAdmin.history_view",
+"templates": [
+"admin/object_history.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/pricing/partnertariff/<path:object_id>/delete/",
+"name": "admin:pricing_partnertariff_delete",
+"view": "django.contrib.admin.options.ModelAdmin.delete_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/pricing/partnertariff/<path:object_id>/change/",
+"name": "admin:pricing_partnertariff_change",
+"view": "django.contrib.admin.options.ModelAdmin.change_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/pricing/partnertariff/<path:object_id>/",
+"name": "admin:",
+"view": "django.views.generic.base.RedirectView",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/geozonas/areacp4/",
+"name": "admin:geozonas_areacp4_changelist",
+"view": "django.contrib.admin.options.ModelAdmin.changelist_view",
+"templates": [
+"admin/change_list.html",
+"admin/invalid_setup.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/admin/geozonas/areacp4/add/",
+"name": "admin:geozonas_areacp4_add",
+"view": "django.contrib.admin.options.ModelAdmin.add_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/geozonas/areacp4/<path:object_id>/history/",
+"name": "admin:geozonas_areacp4_history",
+"view": "django.contrib.admin.options.ModelAdmin.history_view",
+"templates": [
+"admin/object_history.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/geozonas/areacp4/<path:object_id>/delete/",
+"name": "admin:geozonas_areacp4_delete",
+"view": "django.contrib.admin.options.ModelAdmin.delete_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/geozonas/areacp4/<path:object_id>/change/",
+"name": "admin:geozonas_areacp4_change",
+"view": "django.contrib.admin.options.ModelAdmin.change_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/geozonas/areacp4/<path:object_id>/",
+"name": "admin:",
+"view": "django.views.generic.base.RedirectView",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/geozonas/concelho/",
+"name": "admin:geozonas_concelho_changelist",
+"view": "django.contrib.admin.options.ModelAdmin.changelist_view",
+"templates": [
+"admin/change_list.html",
+"admin/invalid_setup.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/admin/geozonas/concelho/add/",
+"name": "admin:geozonas_concelho_add",
+"view": "django.contrib.admin.options.ModelAdmin.add_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/geozonas/concelho/<path:object_id>/history/",
+"name": "admin:geozonas_concelho_history",
+"view": "django.contrib.admin.options.ModelAdmin.history_view",
+"templates": [
+"admin/object_history.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/geozonas/concelho/<path:object_id>/delete/",
+"name": "admin:geozonas_concelho_delete",
+"view": "django.contrib.admin.options.ModelAdmin.delete_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/geozonas/concelho/<path:object_id>/change/",
+"name": "admin:geozonas_concelho_change",
+"view": "django.contrib.admin.options.ModelAdmin.change_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/geozonas/concelho/<path:object_id>/",
+"name": "admin:",
+"view": "django.views.generic.base.RedirectView",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/geozonas/freguesia/",
+"name": "admin:geozonas_freguesia_changelist",
+"view": "django.contrib.admin.options.ModelAdmin.changelist_view",
+"templates": [
+"admin/change_list.html",
+"admin/invalid_setup.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/admin/geozonas/freguesia/add/",
+"name": "admin:geozonas_freguesia_add",
+"view": "django.contrib.admin.options.ModelAdmin.add_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/geozonas/freguesia/<path:object_id>/history/",
+"name": "admin:geozonas_freguesia_history",
+"view": "django.contrib.admin.options.ModelAdmin.history_view",
+"templates": [
+"admin/object_history.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/geozonas/freguesia/<path:object_id>/delete/",
+"name": "admin:geozonas_freguesia_delete",
+"view": "django.contrib.admin.options.ModelAdmin.delete_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/geozonas/freguesia/<path:object_id>/change/",
+"name": "admin:geozonas_freguesia_change",
+"view": "django.contrib.admin.options.ModelAdmin.change_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/geozonas/freguesia/<path:object_id>/",
+"name": "admin:",
+"view": "django.views.generic.base.RedirectView",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/geozonas/localidade/",
+"name": "admin:geozonas_localidade_changelist",
+"view": "django.contrib.admin.options.ModelAdmin.changelist_view",
+"templates": [
+"admin/change_list.html",
+"admin/invalid_setup.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/admin/geozonas/localidade/add/",
+"name": "admin:geozonas_localidade_add",
+"view": "django.contrib.admin.options.ModelAdmin.add_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/geozonas/localidade/<path:object_id>/history/",
+"name": "admin:geozonas_localidade_history",
+"view": "django.contrib.admin.options.ModelAdmin.history_view",
+"templates": [
+"admin/object_history.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/geozonas/localidade/<path:object_id>/delete/",
+"name": "admin:geozonas_localidade_delete",
+"view": "django.contrib.admin.options.ModelAdmin.delete_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/geozonas/localidade/<path:object_id>/change/",
+"name": "admin:geozonas_localidade_change",
+"view": "django.contrib.admin.options.ModelAdmin.change_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/geozonas/localidade/<path:object_id>/",
+"name": "admin:",
+"view": "django.views.generic.base.RedirectView",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/geozonas/codigopostal/",
+"name": "admin:geozonas_codigopostal_changelist",
+"view": "django.contrib.admin.options.ModelAdmin.changelist_view",
+"templates": [
+"admin/change_list.html",
+"admin/invalid_setup.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/admin/geozonas/codigopostal/add/",
+"name": "admin:geozonas_codigopostal_add",
+"view": "django.contrib.admin.options.ModelAdmin.add_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/geozonas/codigopostal/<path:object_id>/history/",
+"name": "admin:geozonas_codigopostal_history",
+"view": "django.contrib.admin.options.ModelAdmin.history_view",
+"templates": [
+"admin/object_history.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/geozonas/codigopostal/<path:object_id>/delete/",
+"name": "admin:geozonas_codigopostal_delete",
+"view": "django.contrib.admin.options.ModelAdmin.delete_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/geozonas/codigopostal/<path:object_id>/change/",
+"name": "admin:geozonas_codigopostal_change",
+"view": "django.contrib.admin.options.ModelAdmin.change_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/geozonas/codigopostal/<path:object_id>/",
+"name": "admin:",
+"view": "django.views.generic.base.RedirectView",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/geozonas/zonageo/",
+"name": "admin:geozonas_zonageo_changelist",
+"view": "django.contrib.admin.options.ModelAdmin.changelist_view",
+"templates": [
+"admin/change_list.html",
+"admin/invalid_setup.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/admin/geozonas/zonageo/add/",
+"name": "admin:geozonas_zonageo_add",
+"view": "django.contrib.admin.options.ModelAdmin.add_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/geozonas/zonageo/<path:object_id>/history/",
+"name": "admin:geozonas_zonageo_history",
+"view": "django.contrib.admin.options.ModelAdmin.history_view",
+"templates": [
+"admin/object_history.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/geozonas/zonageo/<path:object_id>/delete/",
+"name": "admin:geozonas_zonageo_delete",
+"view": "django.contrib.admin.options.ModelAdmin.delete_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/geozonas/zonageo/<path:object_id>/change/",
+"name": "admin:geozonas_zonageo_change",
+"view": "django.contrib.admin.options.ModelAdmin.change_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/geozonas/zonageo/<path:object_id>/",
+"name": "admin:",
+"view": "django.views.generic.base.RedirectView",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/geozonas/ingestjob/",
+"name": "admin:geozonas_ingestjob_changelist",
+"view": "django.contrib.admin.options.ModelAdmin.changelist_view",
+"templates": [
+"admin/change_list.html",
+"admin/invalid_setup.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/admin/geozonas/ingestjob/add/",
+"name": "admin:geozonas_ingestjob_add",
+"view": "django.contrib.admin.options.ModelAdmin.add_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/geozonas/ingestjob/<path:object_id>/history/",
+"name": "admin:geozonas_ingestjob_history",
+"view": "django.contrib.admin.options.ModelAdmin.history_view",
+"templates": [
+"admin/object_history.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/geozonas/ingestjob/<path:object_id>/delete/",
+"name": "admin:geozonas_ingestjob_delete",
+"view": "django.contrib.admin.options.ModelAdmin.delete_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/geozonas/ingestjob/<path:object_id>/change/",
+"name": "admin:geozonas_ingestjob_change",
+"view": "django.contrib.admin.options.ModelAdmin.change_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/geozonas/ingestjob/<path:object_id>/",
+"name": "admin:",
+"view": "django.views.generic.base.RedirectView",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/contracts/contractsettings/",
+"name": "admin:contracts_contractsettings_changelist",
+"view": "django.contrib.admin.options.ModelAdmin.changelist_view",
+"templates": [
+"admin/change_list.html",
+"admin/invalid_setup.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/admin/contracts/contractsettings/add/",
+"name": "admin:contracts_contractsettings_add",
+"view": "django.contrib.admin.options.ModelAdmin.add_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/contracts/contractsettings/<path:object_id>/history/",
+"name": "admin:contracts_contractsettings_history",
+"view": "django.contrib.admin.options.ModelAdmin.history_view",
+"templates": [
+"admin/object_history.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/contracts/contractsettings/<path:object_id>/delete/",
+"name": "admin:contracts_contractsettings_delete",
+"view": "django.contrib.admin.options.ModelAdmin.delete_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/contracts/contractsettings/<path:object_id>/change/",
+"name": "admin:contracts_contractsettings_change",
+"view": "django.contrib.admin.options.ModelAdmin.change_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/contracts/contractsettings/<path:object_id>/",
+"name": "admin:",
+"view": "django.views.generic.base.RedirectView",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/contracts/hubcontractterms/",
+"name": "admin:contracts_hubcontractterms_changelist",
+"view": "django.contrib.admin.options.ModelAdmin.changelist_view",
+"templates": [
+"admin/change_list.html",
+"admin/invalid_setup.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/admin/contracts/hubcontractterms/add/",
+"name": "admin:contracts_hubcontractterms_add",
+"view": "django.contrib.admin.options.ModelAdmin.add_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/contracts/hubcontractterms/<path:object_id>/history/",
+"name": "admin:contracts_hubcontractterms_history",
+"view": "django.contrib.admin.options.ModelAdmin.history_view",
+"templates": [
+"admin/object_history.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/contracts/hubcontractterms/<path:object_id>/delete/",
+"name": "admin:contracts_hubcontractterms_delete",
+"view": "django.contrib.admin.options.ModelAdmin.delete_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/contracts/hubcontractterms/<path:object_id>/change/",
+"name": "admin:contracts_hubcontractterms_change",
+"view": "django.contrib.admin.options.ModelAdmin.change_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/contracts/hubcontractterms/<path:object_id>/",
+"name": "admin:",
+"view": "django.views.generic.base.RedirectView",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/contracts/hubzonetariff/",
+"name": "admin:contracts_hubzonetariff_changelist",
+"view": "django.contrib.admin.options.ModelAdmin.changelist_view",
+"templates": [
+"admin/change_list.html",
+"admin/invalid_setup.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/admin/contracts/hubzonetariff/add/",
+"name": "admin:contracts_hubzonetariff_add",
+"view": "django.contrib.admin.options.ModelAdmin.add_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/contracts/hubzonetariff/<path:object_id>/history/",
+"name": "admin:contracts_hubzonetariff_history",
+"view": "django.contrib.admin.options.ModelAdmin.history_view",
+"templates": [
+"admin/object_history.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/contracts/hubzonetariff/<path:object_id>/delete/",
+"name": "admin:contracts_hubzonetariff_delete",
+"view": "django.contrib.admin.options.ModelAdmin.delete_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/contracts/hubzonetariff/<path:object_id>/change/",
+"name": "admin:contracts_hubzonetariff_change",
+"view": "django.contrib.admin.options.ModelAdmin.change_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/contracts/hubzonetariff/<path:object_id>/",
+"name": "admin:",
+"view": "django.views.generic.base.RedirectView",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/contracts/generatedcontract/",
+"name": "admin:contracts_generatedcontract_changelist",
+"view": "django.contrib.admin.options.ModelAdmin.changelist_view",
+"templates": [
+"admin/change_list.html",
+"admin/invalid_setup.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/admin/contracts/generatedcontract/add/",
+"name": "admin:contracts_generatedcontract_add",
+"view": "django.contrib.admin.options.ModelAdmin.add_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/contracts/generatedcontract/<path:object_id>/history/",
+"name": "admin:contracts_generatedcontract_history",
+"view": "django.contrib.admin.options.ModelAdmin.history_view",
+"templates": [
+"admin/object_history.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/contracts/generatedcontract/<path:object_id>/delete/",
+"name": "admin:contracts_generatedcontract_delete",
+"view": "django.contrib.admin.options.ModelAdmin.delete_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/contracts/generatedcontract/<path:object_id>/change/",
+"name": "admin:contracts_generatedcontract_change",
+"view": "django.contrib.admin.options.ModelAdmin.change_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/contracts/generatedcontract/<path:object_id>/",
+"name": "admin:",
+"view": "django.views.generic.base.RedirectView",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/app_api/driverapptoken/",
+"name": "admin:app_api_driverapptoken_changelist",
+"view": "django.contrib.admin.options.ModelAdmin.changelist_view",
+"templates": [
+"admin/change_list.html",
+"admin/invalid_setup.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/admin/app_api/driverapptoken/add/",
+"name": "admin:app_api_driverapptoken_add",
+"view": "django.contrib.admin.options.ModelAdmin.add_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/app_api/driverapptoken/<path:object_id>/history/",
+"name": "admin:app_api_driverapptoken_history",
+"view": "django.contrib.admin.options.ModelAdmin.history_view",
+"templates": [
+"admin/object_history.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/app_api/driverapptoken/<path:object_id>/delete/",
+"name": "admin:app_api_driverapptoken_delete",
+"view": "django.contrib.admin.options.ModelAdmin.delete_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/app_api/driverapptoken/<path:object_id>/change/",
+"name": "admin:app_api_driverapptoken_change",
+"view": "django.contrib.admin.options.ModelAdmin.change_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/app_api/driverapptoken/<path:object_id>/",
+"name": "admin:",
+"view": "django.views.generic.base.RedirectView",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/app_api/incidencepacket/",
+"name": "admin:app_api_incidencepacket_changelist",
+"view": "django.contrib.admin.options.ModelAdmin.changelist_view",
+"templates": [
+"admin/change_list.html",
+"admin/invalid_setup.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/admin/app_api/incidencepacket/add/",
+"name": "admin:app_api_incidencepacket_add",
+"view": "django.contrib.admin.options.ModelAdmin.add_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/app_api/incidencepacket/<path:object_id>/history/",
+"name": "admin:app_api_incidencepacket_history",
+"view": "django.contrib.admin.options.ModelAdmin.history_view",
+"templates": [
+"admin/object_history.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/app_api/incidencepacket/<path:object_id>/delete/",
+"name": "admin:app_api_incidencepacket_delete",
+"view": "django.contrib.admin.options.ModelAdmin.delete_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/app_api/incidencepacket/<path:object_id>/change/",
+"name": "admin:app_api_incidencepacket_change",
+"view": "django.contrib.admin.options.ModelAdmin.change_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/app_api/incidencepacket/<path:object_id>/",
+"name": "admin:",
+"view": "django.views.generic.base.RedirectView",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/app_api/ocrcorrectionlearning/",
+"name": "admin:app_api_ocrcorrectionlearning_changelist",
+"view": "django.contrib.admin.options.ModelAdmin.changelist_view",
+"templates": [
+"admin/change_list.html",
+"admin/invalid_setup.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/admin/app_api/ocrcorrectionlearning/add/",
+"name": "admin:app_api_ocrcorrectionlearning_add",
+"view": "django.contrib.admin.options.ModelAdmin.add_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/app_api/ocrcorrectionlearning/<path:object_id>/history/",
+"name": "admin:app_api_ocrcorrectionlearning_history",
+"view": "django.contrib.admin.options.ModelAdmin.history_view",
+"templates": [
+"admin/object_history.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/app_api/ocrcorrectionlearning/<path:object_id>/delete/",
+"name": "admin:app_api_ocrcorrectionlearning_delete",
+"view": "django.contrib.admin.options.ModelAdmin.delete_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/app_api/ocrcorrectionlearning/<path:object_id>/change/",
+"name": "admin:app_api_ocrcorrectionlearning_change",
+"view": "django.contrib.admin.options.ModelAdmin.change_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/app_api/ocrcorrectionlearning/<path:object_id>/",
+"name": "admin:",
+"view": "django.views.generic.base.RedirectView",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/app_api/ocrscanattempt/",
+"name": "admin:app_api_ocrscanattempt_changelist",
+"view": "django.contrib.admin.options.ModelAdmin.changelist_view",
+"templates": [
+"admin/change_list.html",
+"admin/invalid_setup.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/admin/app_api/ocrscanattempt/add/",
+"name": "admin:app_api_ocrscanattempt_add",
+"view": "django.contrib.admin.options.ModelAdmin.add_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/app_api/ocrscanattempt/<path:object_id>/history/",
+"name": "admin:app_api_ocrscanattempt_history",
+"view": "django.contrib.admin.options.ModelAdmin.history_view",
+"templates": [
+"admin/object_history.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/app_api/ocrscanattempt/<path:object_id>/delete/",
+"name": "admin:app_api_ocrscanattempt_delete",
+"view": "django.contrib.admin.options.ModelAdmin.delete_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/app_api/ocrscanattempt/<path:object_id>/change/",
+"name": "admin:app_api_ocrscanattempt_change",
+"view": "django.contrib.admin.options.ModelAdmin.change_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/app_api/ocrscanattempt/<path:object_id>/",
+"name": "admin:",
+"view": "django.views.generic.base.RedirectView",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/^(?P<app_label>auth|django_celery_beat|customauth|drivers_app|settlements|accounting|payroll|system_config|core|fleet_management|pricing|geozonas|contracts|app_api)/$",
+"name": "admin:app_list",
+"view": "django.contrib.admin.sites.AdminSite.app_index",
+"templates": [
+"admin/app_index.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/admin/(?P<url>.*)$",
+"name": "admin:",
+"view": "django.contrib.admin.sites.AdminSite.catch_all_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/auth/",
+"name": "customauth:authenticate",
+"view": "customauth.views.authenticate_view",
+"templates": [
+"customauth/login.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/auth/authenticate/",
+"name": "customauth:authenticate",
+"view": "customauth.views.authenticate_view",
+"templates": [
+"customauth/login.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/auth/login/",
+"name": "customauth:login",
+"view": "customauth.views.authenticate_view",
+"templates": [
+"customauth/login.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/auth/logout/",
+"name": "customauth:logout",
+"view": "customauth.views.logout_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/auth/driver/",
+"name": "customauth:driver_login",
+"view": "customauth.driver_auth_views.driver_login",
+"templates": [
+"customauth/driver_login.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/auth/driver/login/",
+"name": "customauth:driver_login_alias",
+"view": "customauth.driver_auth_views.driver_login",
+"templates": [
+"customauth/driver_login.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/auth/driver/logout/",
+"name": "customauth:driver_logout",
+"view": "customauth.driver_auth_views.driver_logout",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/auth/driver/send-code/",
+"name": "customauth:driver_login_send_code",
+"view": "customauth.driver_auth_views.driver_login_send_code",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/auth/driver/verify-code/",
+"name": "customauth:driver_login_verify_code",
+"view": "customauth.driver_auth_views.driver_login_verify_code",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/auth/driver/credentials/<int:driver_id>/",
+"name": "customauth:admin_driver_credentials",
+"view": "customauth.driver_auth_views.admin_driver_credentials",
+"templates": [
+"customauth/admin_driver_credentials.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/auth/empresa/",
+"name": "customauth:empresa_login",
+"view": "customauth.empresa_auth_views.empresa_login",
+"templates": [
+"customauth/empresa_login.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/auth/empresa/login/",
+"name": "customauth:empresa_login_alias",
+"view": "customauth.empresa_auth_views.empresa_login",
+"templates": [
+"customauth/empresa_login.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/auth/empresa/logout/",
+"name": "customauth:empresa_logout",
+"view": "customauth.empresa_auth_views.empresa_logout",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/auth/empresa/credentials/<int:empresa_id>/",
+"name": "customauth:admin_empresa_credentials",
+"view": "customauth.empresa_auth_views.admin_empresa_credentials",
+"templates": [
+"customauth/admin_empresa_credentials.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/management/tools/qr-generator/",
+"name": "management:qr-generator",
+"view": "management.tools_views.qr_generator_view",
+"templates": [
+"management/tools/qr_generator.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/driversapp/cadastro/",
+"name": "drivers_app:public_register",
+"view": "drivers_app.views.public_driver_register",
+"templates": [
+"drivers_app/driver_public_register.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/driversapp/cadastro-completo/",
+"name": "drivers_app:public_register_full",
+"view": "drivers_app.views.public_driver_register_full",
+"templates": [
+"drivers_app/driver_public_register_full.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/driversapp/logout/",
+"name": "drivers_app:driver_logout",
+"view": "drivers_app.views.driver_logout_view",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/driversapp/portal/<int:driver_id>/",
+"name": "drivers_app:driver_portal",
+"view": "drivers_app.portal_views.driver_portal",
+"templates": [
+"drivers_app/portal/dashboard.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/driversapp/portal/<int:driver_id>/relatorios/",
+"name": "drivers_app:driver_portal_reports",
+"view": "drivers_app.portal_views.driver_portal_reports",
+"templates": [
+"drivers_app/portal/reports.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/driversapp/portal/<int:driver_id>/faturas/",
+"name": "drivers_app:driver_portal_invoices",
+"view": "drivers_app.portal_views.driver_portal_invoices",
+"templates": [
+"drivers_app/portal/invoices.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/driversapp/portal/<int:driver_id>/perfil/",
+"name": "drivers_app:driver_portal_profile",
+"view": "drivers_app.portal_views.driver_portal_profile",
+"templates": [
+"drivers_app/portal/profile.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/driversapp/portal/<int:driver_id>/indicacoes/",
+"name": "drivers_app:driver_portal_referrals",
+"view": "drivers_app.portal_views.driver_portal_referrals",
+"templates": [
+"drivers_app/portal/referrals.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/driversapp/portal/<int:driver_id>/pudos/",
+"name": "drivers_app:driver_portal_pudos",
+"view": "drivers_app.portal_views.driver_portal_pudos",
+"templates": [
+"drivers_app/portal/pudos.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/driversapp/portal/<int:driver_id>/editar/",
+"name": "drivers_app:driver_admin_edit",
+"view": "drivers_app.ficha_views.driver_ficha",
+"templates": [
+"drivers_app/portal/admin_ficha.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/driversapp/portal/<int:driver_id>/unify/search/",
+"name": "drivers_app:driver_unify_search",
+"view": "drivers_app.portal_admin_views.driver_unify_search",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/driversapp/portal/<int:driver_id>/unify/preview/<int:target_id>/",
+"name": "drivers_app:driver_unify_preview",
+"view": "drivers_app.portal_admin_views.driver_unify_preview",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/driversapp/portal/<int:driver_id>/unify/execute/",
+"name": "drivers_app:driver_unify_execute",
+"view": "drivers_app.portal_admin_views.driver_unify_execute",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/driversapp/portal/<int:driver_id>/documentos/",
+"name": "drivers_app:driver_documents",
+"view": "drivers_app.portal_admin_views.driver_documents",
+"templates": [
+"drivers_app/portal/admin_documents.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/driversapp/portal/<int:driver_id>/veiculos/",
+"name": "drivers_app:driver_vehicles",
+"view": "drivers_app.portal_admin_views.driver_vehicles",
+"templates": [
+"drivers_app/portal/admin_vehicles.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/driversapp/portal/<int:driver_id>/helpers/",
+"name": "drivers_app:driver_helpers",
+"view": "drivers_app.portal_admin_views.driver_helpers",
+"templates": [
+"drivers_app/portal/admin_helpers.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/driversapp/portal/<int:driver_id>/reclamacoes/",
+"name": "drivers_app:driver_complaints",
+"view": "drivers_app.portal_admin_views.driver_complaints",
+"templates": [
+"drivers_app/portal/admin_complaints.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/driversapp/portal/<int:driver_id>/descontos/",
+"name": "drivers_app:driver_claims",
+"view": "drivers_app.portal_admin_views.driver_claims",
+"templates": [
+"drivers_app/portal/admin_claims.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/driversapp/portal/<int:driver_id>/descontos/<int:claim_id>/recorrer/",
+"name": "drivers_app:driver_claim_appeal",
+"view": "drivers_app.portal_admin_views.driver_claim_appeal",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/driversapp/portal/<int:driver_id>/descontos/<int:claim_id>/decidir/",
+"name": "drivers_app:driver_claim_action",
+"view": "drivers_app.portal_admin_views.driver_claim_action",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/driversapp/portal/<int:driver_id>/descontos/<int:claim_id>/aplicar/",
+"name": "drivers_app:driver_claim_apply_now",
+"view": "drivers_app.portal_admin_views.driver_claim_apply_now",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/driversapp/portal/<int:driver_id>/descontos/aplicar-todos/",
+"name": "drivers_app:driver_claims_apply_all",
+"view": "drivers_app.portal_admin_views.driver_claims_apply_all",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/driversapp/portal/<int:driver_id>/reclamacoes/<int:complaint_id>/aplicar-desconto/",
+"name": "drivers_app:driver_complaint_apply_claim",
+"view": "drivers_app.portal_admin_views.driver_complaint_apply_claim",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/driversapp/portal/<int:driver_id>/logins/",
+"name": "drivers_app:driver_logins",
+"view": "drivers_app.portal_admin_views.driver_logins",
+"templates": [
+"drivers_app/portal/admin_logins.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/driversapp/portal/<int:driver_id>/logins/<int:mapping_id>/transfer/preview/",
+"name": "drivers_app:driver_login_transfer_preview",
+"view": "drivers_app.portal_admin_views.driver_login_transfer_preview",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/driversapp/portal/<int:driver_id>/logins/<int:mapping_id>/transfer/",
+"name": "drivers_app:driver_login_transfer",
+"view": "drivers_app.portal_admin_views.driver_login_transfer",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/driversapp/portal/<int:driver_id>/financeiro/",
+"name": "drivers_app:driver_financeiro",
+"view": "drivers_app.portal_admin_views.driver_financeiro",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/driversapp/portal/<int:driver_id>/pf/<int:pre_invoice_id>/",
+"name": "drivers_app:driver_pre_invoice_detail",
+"view": "drivers_app.portal_admin_views.driver_pre_invoice_detail",
+"templates": [
+"drivers_app/portal/admin_pf_detail.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/driversapp/portal/<int:driver_id>/pf/<int:pre_invoice_id>/upload-recibo/",
+"name": "drivers_app:driver_pre_invoice_upload_recibo",
+"view": "drivers_app.portal_views.driver_pre_invoice_upload_recibo",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/driversapp/portal/<int:driver_id>/pf/<int:pre_invoice_id>/clear-recibo/",
+"name": "drivers_app:driver_pre_invoice_clear_recibo",
+"view": "drivers_app.portal_views.driver_pre_invoice_clear_recibo",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/driversapp/portal/<int:driver_id>/pf/<int:pre_invoice_id>/pdf/",
+"name": "drivers_app:driver_pre_invoice_pdf",
+"view": "drivers_app.portal_views.driver_pre_invoice_pdf",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/driversapp/portal/<int:driver_id>/caderneta/<int:year>/pdf/",
+"name": "drivers_app:driver_caderneta_pdf",
+"view": "drivers_app.portal_views.driver_caderneta_pdf",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/driversapp/admin/pedidos-alteracao/",
+"name": "drivers_app:change_requests_list",
+"view": "drivers_app.admin_change_requests.change_requests_list",
+"templates": [
+"drivers_app/admin/change_requests_list.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/driversapp/admin/pedidos-alteracao/<int:pk>/acao/",
+"name": "drivers_app:change_request_action",
+"view": "drivers_app.admin_change_requests.change_request_action",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/driversapp/admin/",
+"name": "drivers_app:drivers_central",
+"view": "drivers_app.central_views.drivers_central",
+"templates": [
+"drivers_app/admin/drivers_central.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/driversapp/admin/central/",
+"name": "drivers_app:drivers_central_alias",
+"view": "drivers_app.central_views.drivers_central",
+"templates": [
+"drivers_app/admin/drivers_central.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/driversapp/admin/pagamentos/",
+"name": "drivers_app:payments_dashboard",
+"view": "drivers_app.payments_views.payments_dashboard",
+"templates": [
+"drivers_app/admin/payments.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/driversapp/admin/pagamentos/lote/",
+"name": "drivers_app:payments_bulk",
+"view": "drivers_app.payments_views.payments_bulk",
+"templates": [],
+"json": false,
+"post": true
+},
+{
+"url": "/driversapp/admin/atividade/recalcular/",
+"name": "drivers_app:drivers_activity_refresh",
+"view": "drivers_app.central_views.drivers_activity_refresh",
+"templates": [],
+"json": false,
+"post": true
+},
+{
+"url": "/driversapp/admin/criar/",
+"name": "drivers_app:admin_create_driver",
+"view": "drivers_app.views.admin_create_driver",
+"templates": [
+"drivers_app/admin_create_driver.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/driversapp/admin/aprovar/",
+"name": "drivers_app:admin_approve_drivers",
+"view": "drivers_app.views.admin_approve_drivers",
+"templates": [
+"drivers_app/admin_approve_drivers.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/driversapp/admin/aprovar/<int:driver_id>/",
+"name": "drivers_app:admin_approve_driver_action",
+"view": "drivers_app.views.admin_approve_driver_action",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/driversapp/api/referrals/search/",
+"name": "drivers_app:referral-search",
+"view": "drivers_app.views.referral_search_drivers",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/driversapp/api/referrals/<int:driver_id>/",
+"name": "drivers_app:referral-list",
+"view": "drivers_app.views.referral_list",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/driversapp/api/referrals/<int:driver_id>/add/",
+"name": "drivers_app:referral-add",
+"view": "drivers_app.views.referral_add",
+"templates": [],
+"json": true,
+"post": true
+},
+{
+"url": "/driversapp/api/referrals/item/<int:referral_id>/update/",
+"name": "drivers_app:referral-update",
+"view": "drivers_app.views.referral_update",
+"templates": [],
+"json": true,
+"post": true
+},
+{
+"url": "/driversapp/api/referrals/item/<int:referral_id>/delete/",
+"name": "drivers_app:referral-delete",
+"view": "drivers_app.views.referral_delete",
+"templates": [],
+"json": true,
+"post": true
+},
+{
+"url": "/driversapp/empresas-parceiras/",
+"name": "drivers_app:empresas-parceiras",
+"view": "drivers_app.views.empresas_parceiras_list",
+"templates": [
+"drivers_app/empresas_parceiras.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/driversapp/api/empresas-parceiras/create/",
+"name": "drivers_app:empresa-parceira-create",
+"view": "drivers_app.views.empresa_parceira_create",
+"templates": [],
+"json": true,
+"post": true
+},
+{
+"url": "/driversapp/api/empresas-parceiras/<int:empresa_id>/update/",
+"name": "drivers_app:empresa-parceira-update",
+"view": "drivers_app.views.empresa_parceira_update",
+"templates": [],
+"json": true,
+"post": true
+},
+{
+"url": "/driversapp/api/empresas-parceiras/<int:empresa_id>/delete/",
+"name": "drivers_app:empresa-parceira-delete",
+"view": "drivers_app.views.empresa_parceira_delete",
+"templates": [],
+"json": true,
+"post": true
+},
+{
+"url": "/driversapp/api/empresas-parceiras/<int:empresa_id>/motoristas/",
+"name": "drivers_app:empresa-parceira-motoristas",
+"view": "drivers_app.views.empresa_parceira_motoristas",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/driversapp/api/empresas-parceiras/<int:empresa_id>/motoristas/search/",
+"name": "drivers_app:empresa-parceira-search-drivers",
+"view": "drivers_app.views.empresa_parceira_search_drivers",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/driversapp/api/empresas-parceiras/<int:empresa_id>/motoristas/<int:driver_id>/assign/",
+"name": "drivers_app:empresa-parceira-assign-driver",
+"view": "drivers_app.views.empresa_parceira_assign_driver",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/driversapp/api/empresas-parceiras/<int:empresa_id>/motoristas/<int:driver_id>/remove/",
+"name": "drivers_app:empresa-parceira-remove-driver",
+"view": "drivers_app.views.empresa_parceira_remove_driver",
+"templates": [],
+"json": true,
+"post": true
+},
+{
+"url": "/driversapp/api/empresas-parceiras/<int:empresa_id>/prefaturas/",
+"name": "drivers_app:empresa-parceira-prefaturas",
+"view": "drivers_app.views.empresa_parceira_prefaturas",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/driversapp/api/empresas-parceiras/<int:empresa_id>/auto-emit/",
+"name": "drivers_app:empresa-auto-emit-config",
+"view": "drivers_app.views.empresa_auto_emit_config",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/driversapp/api/empresas-parceiras/<int:empresa_id>/auto-emit/run-now/",
+"name": "drivers_app:empresa-auto-emit-run-now",
+"view": "drivers_app.views.empresa_auto_emit_run_now",
+"templates": [],
+"json": true,
+"post": true
+},
+{
+"url": "/driversapp/api/empresas-parceiras/<int:empresa_id>/lancamentos/create/",
+"name": "drivers_app:empresa-lancamento-create",
+"view": "drivers_app.views.empresa_lancamento_create",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/driversapp/api/empresas-parceiras/lancamentos/<int:lancamento_id>/update/",
+"name": "drivers_app:empresa-lancamento-update",
+"view": "drivers_app.views.empresa_lancamento_update",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/driversapp/api/empresas-parceiras/lancamentos/<int:lancamento_id>/delete/",
+"name": "drivers_app:empresa-lancamento-delete",
+"view": "drivers_app.views.empresa_lancamento_delete",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/driversapp/empresas-parceiras/<int:empresa_id>/prefatura/pdf/",
+"name": "drivers_app:empresa-parceira-prefatura-pdf",
+"view": "drivers_app.views.empresa_parceira_prefatura_pdf",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/driversapp/admin/reclamacoes/",
+"name": "drivers_app:admin_complaints_dashboard",
+"view": "drivers_app.views.admin_complaints_dashboard",
+"templates": [
+"drivers_app/admin_complaints.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/driversapp/api/admin/reclamacoes/list/",
+"name": "drivers_app:admin_complaints_list_api",
+"view": "drivers_app.views.admin_complaints_list_api",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/driversapp/api/admin/reclamacoes/driver-search/",
+"name": "drivers_app:admin_complaints_driver_search",
+"view": "drivers_app.views.admin_complaints_driver_search",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/driversapp/admin/tickets-cainiao/",
+"name": "drivers_app:admin_tickets_cainiao",
+"view": "drivers_app.views_ticket_import.admin_tickets_cainiao",
+"templates": [
+"drivers_app/admin_tickets_cainiao.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/driversapp/api/tickets-cainiao/preview/",
+"name": "drivers_app:tickets_import_preview",
+"view": "drivers_app.views_ticket_import.tickets_import_preview",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/driversapp/api/tickets-cainiao/upload/",
+"name": "drivers_app:tickets_import_upload",
+"view": "drivers_app.views_ticket_import.tickets_import_upload",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/driversapp/api/tickets-cainiao/<int:batch_id>/rows/",
+"name": "drivers_app:tickets_import_rows_api",
+"view": "drivers_app.views_ticket_import.tickets_import_rows_api",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/driversapp/api/tickets-cainiao/row/<int:row_id>/update/",
+"name": "drivers_app:tickets_import_row_update",
+"view": "drivers_app.views_ticket_import.tickets_import_row_update",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/driversapp/api/tickets-cainiao/<int:batch_id>/bulk-select/",
+"name": "drivers_app:tickets_import_bulk_select",
+"view": "drivers_app.views_ticket_import.tickets_import_bulk_select",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/driversapp/api/tickets-cainiao/row/<int:row_id>/attach/",
+"name": "drivers_app:tickets_import_row_attach",
+"view": "drivers_app.views_ticket_import.tickets_import_row_attach",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/driversapp/api/tickets-cainiao/attach/<int:att_id>/delete/",
+"name": "drivers_app:tickets_import_attach_delete",
+"view": "drivers_app.views_ticket_import.tickets_import_attach_delete",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/driversapp/api/tickets-cainiao/<int:batch_id>/bulk-action/",
+"name": "drivers_app:tickets_import_bulk_action",
+"view": "drivers_app.views_ticket_import.tickets_import_bulk_action",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/driversapp/api/tickets-cainiao/<int:batch_id>/auto-close/",
+"name": "drivers_app:tickets_import_auto_close",
+"view": "drivers_app.views_ticket_import.tickets_import_auto_close",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/driversapp/api/tickets-cainiao/<int:batch_id>/reresolve-drivers/",
+"name": "drivers_app:tickets_import_reresolve_drivers",
+"view": "drivers_app.views_ticket_import.tickets_import_reresolve_drivers",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/driversapp/api/tickets-cainiao/row/<int:row_id>/open/",
+"name": "drivers_app:tickets_import_open_one",
+"view": "drivers_app.views_ticket_import.tickets_import_open_one",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/driversapp/api/tickets-cainiao/<int:batch_id>/bulk-open/",
+"name": "drivers_app:tickets_import_bulk_open",
+"view": "drivers_app.views_ticket_import.tickets_import_bulk_open",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/driversapp/api/tickets-cainiao/<int:batch_id>/export/zip/",
+"name": "drivers_app:tickets_import_export_zip",
+"view": "drivers_app.views_ticket_import.tickets_import_export_zip",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/driversapp/api/tickets-cainiao/<int:batch_id>/export/xlsx/",
+"name": "drivers_app:tickets_import_export_xlsx",
+"view": "drivers_app.views_ticket_import.tickets_import_export_xlsx",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/driversapp/api/tickets-cainiao/driver-search/",
+"name": "drivers_app:tickets_import_driver_search",
+"view": "drivers_app.views_ticket_import.tickets_import_driver_search",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/driversapp/api/complaints/<int:driver_id>/",
+"name": "drivers_app:driver-complaints-api",
+"view": "drivers_app.views.driver_complaints_api",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/driversapp/api/complaints/<int:driver_id>/create/",
+"name": "drivers_app:driver-complaint-create",
+"view": "drivers_app.views.driver_complaint_create",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/driversapp/api/waybill-lookup/",
+"name": "drivers_app:waybill-lookup-for-complaint",
+"view": "drivers_app.views.waybill_lookup_for_complaint",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/driversapp/api/complaints/ocr-extract/",
+"name": "drivers_app:complaint-ocr-extract",
+"view": "drivers_app.views.complaint_ocr_extract",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/driversapp/api/complaints/item/<int:complaint_id>/update/",
+"name": "drivers_app:driver-complaint-update",
+"view": "drivers_app.views.driver_complaint_update",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/driversapp/api/complaints/item/<int:complaint_id>/notificar-whatsapp/",
+"name": "drivers_app:driver-complaint-notify-whatsapp",
+"view": "drivers_app.views.driver_complaint_notify_whatsapp",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/driversapp/api/complaints/item/<int:complaint_id>/mark-lost/",
+"name": "drivers_app:driver-complaint-mark-lost",
+"view": "drivers_app.views.driver_complaint_mark_lost",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/driversapp/api/complaints/item/<int:complaint_id>/delete/",
+"name": "drivers_app:driver-complaint-delete",
+"view": "drivers_app.views.driver_complaint_delete",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/driversapp/api/complaints/item/<int:complaint_id>/attachment/add/",
+"name": "drivers_app:driver-complaint-attachment-add",
+"view": "drivers_app.views.driver_complaint_add_attachment",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/driversapp/api/complaints/attachment/<int:attachment_id>/delete/",
+"name": "drivers_app:driver-complaint-attachment-delete",
+"view": "drivers_app.views.driver_complaint_delete_attachment",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/driversapp/complaints/<int:complaint_id>/pdf/",
+"name": "drivers_app:driver-complaint-pdf",
+"view": "drivers_app.views.driver_complaint_pdf",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/api/app/v1/auth/request-code",
+"name": "app_api:request_code",
+"view": "app_api.views.request_code",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/api/app/v1/auth/verify-code",
+"name": "app_api:verify_code",
+"view": "app_api.views.verify_code",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/api/app/v1/auth/logout",
+"name": "app_api:logout",
+"view": "app_api.views.logout",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/api/app/v1/me",
+"name": "app_api:me",
+"view": "app_api.views.me",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/api/app/v1/invoices",
+"name": "app_api:invoices",
+"view": "app_api.views.invoices",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/api/app/v1/invoices/<int:pk>",
+"name": "app_api:invoice_detail",
+"view": "app_api.views.invoice_detail",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/api/app/v1/invoices/<int:pk>/pdf",
+"name": "app_api:invoice_pdf",
+"view": "app_api.views.invoice_pdf",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/api/app/v1/discounts",
+"name": "app_api:discounts",
+"view": "app_api.views.discounts",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/api/app/v1/complaints",
+"name": "app_api:complaints",
+"view": "app_api.views.complaints",
+"templates": [],
+"json": true,
+"post": true
+},
+{
+"url": "/api/app/v1/sorting",
+"name": "app_api:sorting",
+"view": "app_api.views.sorting",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/api/app/v1/incidences/add",
+"name": "app_api:incidences_add",
+"view": "app_api.views.incidences_add",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/api/app/v1/incidences/history",
+"name": "app_api:incidences_history",
+"view": "app_api.views.incidences_history",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/api/app/v1/incidences/drivers",
+"name": "app_api:incidences_drivers",
+"view": "app_api.views.incidences_drivers",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/api/app/v1/incidences/scan",
+"name": "app_api:incidences_process_scan",
+"view": "app_api.views.incidences_process_scan",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/api/app/v1/incidences/ocr",
+"name": "app_api:incidences_process_ocr_alias",
+"view": "app_api.views.incidences_process_scan",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/api/app/v1/incidences/complete",
+"name": "app_api:incidences_complete",
+"view": "app_api.views.incidences_complete",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/api/app/v1/incidences/confirm-ocr",
+"name": "app_api:incidences_confirm_ocr",
+"view": "app_api.views.incidences_confirm_ocr",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/converter/",
+"name": "converter",
+"view": "converter.views.converter_view",
+"templates": [
+"converter.html",
+"converter_table.html"
+],
+"json": true,
+"post": false
+},
+{
+"url": "/converter/validate-addresses/",
+"name": "validate_addresses",
+"view": "converter.views_geoapi.validate_addresses",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/financial/",
+"name": "financial-dashboard",
+"view": "settlements.views.financial_dashboard",
+"templates": [
+"settlements/financial_dashboard_v2.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/settlements/calendar/",
+"name": "holiday-list",
+"view": "settlements.holiday_views.holiday_list",
+"templates": [
+"settlements/holiday_calendar.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/settlements/calendar/create/",
+"name": "holiday-create",
+"view": "settlements.holiday_views.holiday_create",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/calendar/<int:holiday_id>/update/",
+"name": "holiday-update",
+"view": "settlements.holiday_views.holiday_update",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/calendar/<int:holiday_id>/delete/",
+"name": "holiday-delete",
+"view": "settlements.holiday_views.holiday_delete",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/calendar/import-preset/",
+"name": "holiday-import-preset",
+"view": "settlements.holiday_views.holiday_import_preset",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/calendar/check/",
+"name": "holiday-check",
+"view": "settlements.holiday_views.holiday_check",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/calendar/blackout/create/",
+"name": "bonus-blackout-create",
+"view": "settlements.holiday_views.blackout_create",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/calendar/blackout/<int:blackout_id>/delete/",
+"name": "bonus-blackout-delete",
+"view": "settlements.holiday_views.blackout_delete",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/invoices/",
+"name": "invoice-list",
+"view": "settlements.views.invoice_list",
+"templates": [
+"settlements/invoice_list_v2.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/settlements/invoices/<int:invoice_id>/status/",
+"name": "invoice-change-status",
+"view": "settlements.views.invoice_change_status",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/invoices/<int:invoice_id>/",
+"name": "invoice-detail",
+"view": "settlements.views.invoice_detail",
+"templates": [
+"settlements/invoice_detail.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/settlements/invoices/<int:invoice_id>/pdf/",
+"name": "invoice-pdf",
+"view": "settlements.views.invoice_download_pdf",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/settlements/invoices/cainiao/upload/",
+"name": "cainiao-billing-upload",
+"view": "settlements.views_cainiao_billing.cainiao_billing_upload",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/settlements/invoices/cainiao/<int:import_id>/",
+"name": "cainiao-billing-detail",
+"view": "settlements.views_cainiao_billing.cainiao_billing_detail",
+"templates": [
+"settlements/cainiao_billing_detail.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/settlements/invoices/cainiao/<int:import_id>/delete/",
+"name": "cainiao-billing-delete",
+"view": "settlements.views_cainiao_billing.cainiao_billing_delete",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/invoices/cainiao/<int:import_id>/reresolve/",
+"name": "cainiao-billing-reresolve",
+"view": "settlements.views_cainiao_billing.cainiao_billing_reresolve",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/settlements/invoices/cainiao/<int:import_id>/export/<str:kind>/",
+"name": "cainiao-billing-export",
+"view": "settlements.views_cainiao_billing.cainiao_billing_export_xlsx",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/settlements/invoices/cainiao/<int:import_id>/create-overrides/",
+"name": "cainiao-billing-create-overrides",
+"view": "settlements.views_cainiao_billing.cainiao_billing_create_overrides",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/settlements/invoices/cainiao/<int:import_id>/claims/<int:line_id>/assign/",
+"name": "cainiao-billing-assign-claim",
+"view": "settlements.views_cainiao_billing.cainiao_billing_assign_claim",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/invoices/cainiao/<int:import_id>/claims/bulk/",
+"name": "cainiao-billing-assign-claims-bulk",
+"view": "settlements.views_cainiao_billing.cainiao_billing_assign_claims_bulk",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/settlements/settlements/",
+"name": "settlement-list",
+"view": "settlements.views.settlement_list",
+"templates": [
+"settlements/settlement_list_v2.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/settlements/pacote/<str:waybill>/",
+"name": "package-360",
+"view": "settlements.views.package_360",
+"templates": [
+"settlements/package_360.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/settlements/claims/",
+"name": "claim-list",
+"view": "settlements.views.claim_list",
+"templates": [
+"settlements/claim_list_v2.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/settlements/claims/appeals/",
+"name": "claim-appeals",
+"view": "settlements.views.claim_list",
+"templates": [
+"settlements/claim_list_v2.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/settlements/recursos/",
+"name": "appeals-inbox",
+"view": "settlements.views.appeals_inbox",
+"templates": [
+"settlements/appeals_inbox.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/settlements/recursos/<int:claim_id>/motivo/",
+"name": "appeals-set-reason",
+"view": "settlements.views.appeals_set_reason",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/claims/<int:claim_id>/notificar-whatsapp/",
+"name": "claim-notify-whatsapp",
+"view": "settlements.views.claim_notify_whatsapp",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/claims/<int:claim_id>/",
+"name": "claim-detail",
+"view": "settlements.views.claim_detail",
+"templates": [
+"settlements/claim_detail.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/settlements/claims/<int:claim_id>/update/",
+"name": "claim-update",
+"view": "settlements.views.claim_update",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/settlements/claims/<int:claim_id>/delete/",
+"name": "claim-delete",
+"view": "settlements.views.claim_delete",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/settlements/pre-invoices/",
+"name": "pre-invoice-admin-list",
+"view": "settlements.views.pre_invoice_admin_list",
+"templates": [
+"settlements/pre_invoice_admin_list.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/settlements/pre-invoices/<int:pre_invoice_id>/status/",
+"name": "pre-invoice-change-status",
+"view": "settlements.views.pre_invoice_change_status",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/pre-invoices/empresa-lancamento/<int:lancamento_id>/status/",
+"name": "empresa-lancamento-change-status",
+"view": "settlements.views.empresa_lancamento_change_status",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/pre-invoices/bulk-status/",
+"name": "pre-invoice-bulk-status",
+"view": "settlements.views.pre_invoice_bulk_status",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/pre-invoices/driver/<int:driver_id>/",
+"name": "pre-invoices-driver",
+"view": "settlements.views.driver_pre_invoices_api",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/drivers/<int:driver_id>/fleet-invoice-lines/",
+"name": "driver-fleet-invoice-lines",
+"view": "settlements.views.driver_fleet_invoice_lines_api",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/drivers/<int:driver_id>/delivery-report/",
+"name": "driver-delivery-report",
+"view": "settlements.views.driver_delivery_report",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/drivers/<int:driver_id>/day-waybills/",
+"name": "driver-day-waybills",
+"view": "settlements.views.driver_day_waybills",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/transfers/create/",
+"name": "waybill-transfer-create",
+"view": "settlements.views.waybill_transfer_create",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/transfers/<int:override_id>/delete/",
+"name": "waybill-transfer-delete",
+"view": "settlements.views.waybill_transfer_delete",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/drivers/dropdown/",
+"name": "drivers-dropdown",
+"view": "settlements.views.drivers_dropdown",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/price-overrides/create/",
+"name": "price-override-create",
+"view": "settlements.views.package_price_override_create",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/price-overrides/<int:override_id>/delete/",
+"name": "price-override-delete",
+"view": "settlements.views.package_price_override_delete",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/waybill/<str:waybill>/history/",
+"name": "waybill-history",
+"view": "settlements.views.waybill_history",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/not-arrived/",
+"name": "cainiao-not-arrived",
+"view": "settlements.cainiao_views.cainiao_not_arrived",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/not-arrived/xlsx/",
+"name": "cainiao-not-arrived-xlsx",
+"view": "settlements.cainiao_views.cainiao_not_arrived_xlsx",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/settlements/cainiao/not-arrived/scan-xlsx/",
+"name": "cainiao-not-arrived-scan-xlsx",
+"view": "settlements.cainiao_views.cainiao_not_arrived_scan_xlsx",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/not-arrived/whatsapp-driver/",
+"name": "cainiao-whatsapp-driver-stuck",
+"view": "settlements.cainiao_views.cainiao_whatsapp_driver_stuck",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/not-arrived/bulk-resolve/",
+"name": "waybill-bulk-resolve",
+"view": "settlements.cainiao_views.waybill_bulk_resolve",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/forecast-orphans/",
+"name": "cainiao-forecast-orphans",
+"view": "settlements.cainiao_views.cainiao_forecast_orphans",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/resolutions/",
+"name": "cainiao-resolutions-list",
+"view": "settlements.cainiao_views.cainiao_resolutions_list",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/diagnose/<str:waybill>/",
+"name": "cainiao-waybill-diagnose",
+"view": "settlements.cainiao_views.cainiao_waybill_diagnose",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/flags/",
+"name": "waybill-flag-list",
+"view": "settlements.cainiao_views.waybill_flag_list",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/flags/bulk/",
+"name": "waybill-flag-bulk",
+"view": "settlements.cainiao_views.waybill_flag_bulk",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/waybill/<str:waybill>/flag/",
+"name": "waybill-flag-get",
+"view": "settlements.cainiao_views.waybill_flag_get",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/waybill/<str:waybill>/flag/create/",
+"name": "waybill-flag-create",
+"view": "settlements.cainiao_views.waybill_flag_create",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/waybill/<str:waybill>/flag/clear/",
+"name": "waybill-flag-clear",
+"view": "settlements.cainiao_views.waybill_flag_clear",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/snapshots/",
+"name": "cainiao-snapshot-list",
+"view": "settlements.cainiao_views.cainiao_snapshot_list",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/snapshots/create/",
+"name": "cainiao-snapshot-create",
+"view": "settlements.cainiao_views.cainiao_snapshot_create",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/snapshots/diff/",
+"name": "cainiao-snapshot-diff",
+"view": "settlements.cainiao_views.cainiao_snapshot_diff",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/snapshots/<int:snapshot_id>/",
+"name": "cainiao-snapshot-detail",
+"view": "settlements.cainiao_views.cainiao_snapshot_detail",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/snapshots/<int:snapshot_id>/xlsx/",
+"name": "cainiao-snapshot-xlsx",
+"view": "settlements.cainiao_views.cainiao_snapshot_xlsx",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/settlements/waybill/<str:waybill>/lifecycle/",
+"name": "cainiao-waybill-lifecycle",
+"view": "settlements.cainiao_views.cainiao_waybill_lifecycle",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/priority-settings/",
+"name": "cainiao-priority-settings-get",
+"view": "settlements.cainiao_views.priority_settings_get",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/priority-settings/save/",
+"name": "cainiao-priority-settings-save",
+"view": "settlements.cainiao_views.priority_settings_save",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/packages/",
+"name": "cainiao-packages-page",
+"view": "settlements.cainiao_views.cainiao_packages_page",
+"templates": [
+"settlements/cainiao_packages.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/settlements/cainiao/packages/search/",
+"name": "cainiao-packages-search",
+"view": "settlements.cainiao_views.cainiao_packages_search",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/waybill/<str:waybill>/tags/",
+"name": "waybill-tags-list",
+"view": "settlements.cainiao_views.waybill_tags_list",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/waybill/<str:waybill>/tags/add/",
+"name": "waybill-tag-add",
+"view": "settlements.cainiao_views.waybill_tag_add",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/waybill/tags/<int:tag_id>/delete/",
+"name": "waybill-tag-delete",
+"view": "settlements.cainiao_views.waybill_tag_delete",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/waybill/<str:waybill>/watch/",
+"name": "waybill-watch-toggle",
+"view": "settlements.cainiao_views.waybill_watch_toggle",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/waybill/watch/list/",
+"name": "waybill-watch-list",
+"view": "settlements.cainiao_views.waybill_watch_list",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/saved-filters/",
+"name": "cainiao-saved-filters",
+"view": "settlements.cainiao_views.saved_filters",
+"templates": [],
+"json": true,
+"post": true
+},
+{
+"url": "/settlements/cainiao/returns/",
+"name": "cainiao-returns-list",
+"view": "settlements.cainiao_views.waybill_return_list",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/returns/bulk/",
+"name": "cainiao-returns-bulk",
+"view": "settlements.cainiao_views.waybill_return_bulk",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/waybill/<str:waybill>/return/",
+"name": "waybill-return-get",
+"view": "settlements.cainiao_views.waybill_return_get",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/waybill/<str:waybill>/return/save/",
+"name": "waybill-return-create",
+"view": "settlements.cainiao_views.waybill_return_create",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/waybill/<str:waybill>/return/delete/",
+"name": "waybill-return-delete",
+"view": "settlements.cainiao_views.waybill_return_delete",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/return-batches/",
+"name": "cainiao-return-batches-list",
+"view": "settlements.cainiao_views.return_batch_list",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/return-batches/<int:batch_id>/xlsx/",
+"name": "cainiao-return-batch-xlsx",
+"view": "settlements.cainiao_views.return_batch_xlsx",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/settlements/cainiao/hubs-with-counts/",
+"name": "cainiao-hubs-with-counts",
+"view": "settlements.cainiao_views.cainiao_hubs_with_counts",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/parcel-list/preview/",
+"name": "cainiao-parcel-list-preview",
+"view": "settlements.cainiao_views.cainiao_parcel_list_preview",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/parcel-list/import/",
+"name": "cainiao-parcel-list-import",
+"view": "settlements.cainiao_views.cainiao_parcel_list_import",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/detect-xlsx-type/",
+"name": "cainiao-detect-xlsx-type",
+"view": "settlements.cainiao_views.cainiao_detect_xlsx_type",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/waybill/<str:waybill>/resolve/",
+"name": "waybill-resolve",
+"view": "settlements.cainiao_views.waybill_resolve",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/waybill/<str:waybill>/unresolve/",
+"name": "waybill-unresolve",
+"view": "settlements.cainiao_views.waybill_unresolve",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/waybill/<str:waybill>/resolution/",
+"name": "waybill-get-resolution",
+"view": "settlements.cainiao_views.waybill_get_resolution",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/waybill/<str:waybill>/comments/",
+"name": "waybill-comments-list",
+"view": "settlements.cainiao_views.waybill_comments_list",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/waybill/<str:waybill>/comments/add/",
+"name": "waybill-comments-add",
+"view": "settlements.cainiao_views.waybill_comments_add",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/waybill/comments/<int:comment_id>/delete/",
+"name": "waybill-comments-delete",
+"view": "settlements.cainiao_views.waybill_comments_delete",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/drivers/<int:driver_id>/pre-invoice-preview/",
+"name": "driver-pre-invoice-preview",
+"view": "settlements.views.driver_pre_invoice_preview",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/drivers/<int:driver_id>/yearly-heatmap/",
+"name": "driver-yearly-heatmap",
+"view": "settlements.views.driver_yearly_heatmap",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/drivers/<int:driver_id>/account-statement/",
+"name": "driver-account-statement",
+"view": "settlements.views.driver_account_statement",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/empresas/<int:empresa_id>/lote-preview/",
+"name": "empresa-lote-preview",
+"view": "settlements.views.empresa_lote_preview",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/empresas/<int:empresa_id>/lote-emit/",
+"name": "empresa-lote-emit",
+"view": "settlements.views.empresa_lote_emit",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/empresas/<int:empresa_id>/whatsapp-lote/",
+"name": "empresa-whatsapp-lote",
+"view": "settlements.views.empresa_whatsapp_lote",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/empresas/<int:empresa_id>/portal/",
+"name": "empresa-portal-dashboard",
+"view": "settlements.views_fleet_portal.empresa_portal_dashboard",
+"templates": [
+"settlements/portal_empresa/dashboard.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/settlements/empresas/<int:empresa_id>/portal/faturas/",
+"name": "empresa-portal-invoices",
+"view": "settlements.views_fleet_portal.empresa_portal_invoices",
+"templates": [
+"settlements/portal_empresa/invoices.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/settlements/empresas/<int:empresa_id>/portal/relatorios/",
+"name": "empresa-portal-reports",
+"view": "settlements.views_fleet_portal.empresa_portal_reports",
+"templates": [
+"settlements/portal_empresa/reports.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/settlements/empresas/<int:empresa_id>/portal/faturas/<int:fleet_invoice_id>/anexos/upload/",
+"name": "empresa-portal-attachment-upload",
+"view": "settlements.views_fleet_portal.empresa_portal_attachment_upload",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/empresas/<int:empresa_id>/portal/anexos/<int:attachment_id>/delete/",
+"name": "empresa-portal-attachment-delete",
+"view": "settlements.views_fleet_portal.empresa_portal_attachment_delete",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/empresas/<int:empresa_id>/portal/motoristas/",
+"name": "empresa-portal-drivers",
+"view": "settlements.views_fleet_portal.empresa_portal_drivers",
+"templates": [
+"settlements/portal_empresa/drivers.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/settlements/empresas/<int:empresa_id>/portal/claims/",
+"name": "empresa-portal-claims",
+"view": "settlements.views_fleet_portal.empresa_portal_claims",
+"templates": [
+"settlements/portal_empresa/claims.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/settlements/empresas/<int:empresa_id>/portal/perfil/",
+"name": "empresa-portal-profile",
+"view": "settlements.views_fleet_portal.empresa_portal_profile",
+"templates": [
+"settlements/portal_empresa/profile.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/settlements/empresas/<int:empresa_id>/portal/documentos/",
+"name": "empresa-portal-documents",
+"view": "settlements.views_fleet_portal.empresa_portal_documents",
+"templates": [
+"settlements/portal_empresa/documents.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/settlements/empresas/<int:empresa_id>/portal/documentos/upload/",
+"name": "empresa-portal-document-upload",
+"view": "settlements.views_fleet_portal.empresa_portal_document_upload",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/empresas/<int:empresa_id>/portal/documentos/<int:document_id>/delete/",
+"name": "empresa-portal-document-delete",
+"view": "settlements.views_fleet_portal.empresa_portal_document_delete",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/empresas/<int:empresa_id>/portal/contratos/",
+"name": "empresa-portal-contracts",
+"view": "settlements.views_fleet_portal.empresa_portal_contracts",
+"templates": [
+"settlements/portal_empresa/contracts.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/settlements/empresas/<int:empresa_id>/portal/contratos/create/",
+"name": "empresa-portal-contract-create",
+"view": "settlements.views_fleet_portal.empresa_portal_contract_create",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/empresas/<int:empresa_id>/portal/contratos/<int:contract_id>/update/",
+"name": "empresa-portal-contract-update",
+"view": "settlements.views_fleet_portal.empresa_portal_contract_update",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/empresas/<int:empresa_id>/portal/contratos/<int:contract_id>/delete/",
+"name": "empresa-portal-contract-delete",
+"view": "settlements.views_fleet_portal.empresa_portal_contract_delete",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/empresas/<int:empresa_id>/dashboard-stats/",
+"name": "empresa-dashboard-stats",
+"view": "settlements.views.empresa_dashboard_stats",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/empresas/<int:empresa_id>/fleet-invoices/",
+"name": "empresa-fleet-invoices-list",
+"view": "settlements.views.empresa_fleet_invoices_list",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/fleet-invoices/<int:fleet_invoice_id>/",
+"name": "fleet-invoice-detail",
+"view": "settlements.views.empresa_fleet_invoice_detail",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/fleet-invoices/<int:fleet_invoice_id>/status/",
+"name": "fleet-invoice-change-status",
+"view": "settlements.views.empresa_fleet_invoice_change_status",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/fleet-invoices/<int:fleet_invoice_id>/delete/",
+"name": "fleet-invoice-delete",
+"view": "settlements.views.empresa_fleet_invoice_delete",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/fleet-invoices/<int:fleet_invoice_id>/pdf/",
+"name": "fleet-invoice-pdf",
+"view": "settlements.views.empresa_fleet_invoice_pdf",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/fleet-invoices/<int:fleet_invoice_id>/recalcular/",
+"name": "fleet-invoice-recalculate",
+"view": "settlements.views.empresa_fleet_invoice_recalculate",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/pre-invoices/driver/<int:driver_id>/create/",
+"name": "pre-invoice-create",
+"view": "settlements.views.driver_pre_invoice_create",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/pre-invoices/<int:pre_invoice_id>/update/",
+"name": "pre-invoice-update",
+"view": "settlements.views.driver_pre_invoice_update",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/pre-invoices/<int:pre_invoice_id>/bonus/add/",
+"name": "pre-invoice-bonus-add",
+"view": "settlements.views.pre_invoice_add_bonus",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/pre-invoices/bonus/<int:bonus_id>/delete/",
+"name": "pre-invoice-bonus-delete",
+"view": "settlements.views.pre_invoice_delete_bonus",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/pre-invoices/<int:pre_invoice_id>/extra/add/",
+"name": "pre-invoice-extra-add",
+"view": "settlements.views.pre_invoice_add_extra",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/pre-invoices/extra/<int:extra_id>/delete/",
+"name": "pre-invoice-extra-delete",
+"view": "settlements.views.pre_invoice_delete_extra",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/pre-invoices/<int:pre_invoice_id>/pacote-perdido/add/",
+"name": "pre-invoice-lost-add",
+"view": "settlements.views.pre_invoice_add_lost_package",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/pre-invoices/pacote-perdido/<int:package_id>/delete/",
+"name": "pre-invoice-lost-delete",
+"view": "settlements.views.pre_invoice_delete_lost_package",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/pre-invoices/<int:pre_invoice_id>/adiantamento/add/",
+"name": "pre-invoice-advance-add",
+"view": "settlements.views.pre_invoice_add_advance",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/pre-invoices/adiantamento/<int:advance_id>/delete/",
+"name": "pre-invoice-advance-delete",
+"view": "settlements.views.pre_invoice_delete_advance",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/pre-invoices/<int:pre_invoice_id>/linha/add/",
+"name": "pre-invoice-linha-add",
+"view": "settlements.views.pre_invoice_line_add",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/pre-invoices/linha/<int:line_id>/update/",
+"name": "pre-invoice-linha-update",
+"view": "settlements.views.pre_invoice_line_update",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/pre-invoices/linha/<int:line_id>/delete/",
+"name": "pre-invoice-linha-delete",
+"view": "settlements.views.pre_invoice_line_delete",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/pre-invoices/<int:pre_invoice_id>/recalculate/",
+"name": "pre-invoice-recalculate",
+"view": "settlements.views.driver_pre_invoice_recalculate",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/pre-invoices/<int:pre_invoice_id>/delete/",
+"name": "pre-invoice-delete",
+"view": "settlements.views.driver_pre_invoice_delete",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/pre-invoices/<int:pre_invoice_id>/pdf/",
+"name": "pre-invoice-pdf",
+"view": "settlements.views.driver_pre_invoice_pdf",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/pre-invoices/<int:pre_invoice_id>/upload-fatura/",
+"name": "pre-invoice-upload-fatura",
+"view": "settlements.views.pre_invoice_upload_fatura",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/pre-invoices/<int:pre_invoice_id>/whatsapp/",
+"name": "pre-invoice-send-whatsapp",
+"view": "settlements.views.pre_invoice_send_whatsapp",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/pre-invoices/import/<int:partner_id>/preview/",
+"name": "pre-invoice-import-preview",
+"view": "settlements.views.import_partner_sheet_preview",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/pre-invoices/import/<int:partner_id>/",
+"name": "pre-invoice-import",
+"view": "settlements.views.import_partner_sheet",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/pre-invoices/empresa-lancamento/<int:lancamento_id>/detail/",
+"name": "empresa-lancamento-detail",
+"view": "settlements.views.empresa_lancamento_detail_api",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/pre-invoices/empresa-lancamento/<int:lancamento_id>/update/",
+"name": "empresa-lancamento-update",
+"view": "settlements.views.empresa_lancamento_update",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/pre-invoices/empresa-lancamento/<int:lancamento_id>/pdf/",
+"name": "empresa-lancamento-pdf",
+"view": "settlements.views.empresa_lancamento_pdf",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/import/preview/",
+"name": "cainiao-import-preview",
+"view": "settlements.cainiao_views.cainiao_import_preview",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/import/confirm/",
+"name": "cainiao-import-confirm",
+"view": "settlements.cainiao_views.cainiao_import_confirm",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/driver/<int:driver_id>/helpers/",
+"name": "cainiao-helpers-api",
+"view": "settlements.cainiao_views.cainiao_helpers_api",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/drivers/",
+"name": "cainiao-drivers-list",
+"view": "settlements.cainiao_views.cainiao_drivers_list",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/link-driver/",
+"name": "cainiao-link-driver",
+"view": "settlements.cainiao_views.cainiao_link_driver",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/create-driver/",
+"name": "cainiao-create-driver",
+"view": "settlements.cainiao_views.cainiao_create_driver",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/import/forecast/preview/",
+"name": "cainiao-import-forecast-preview",
+"view": "settlements.cainiao_views.cainiao_import_forecast_preview",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/import/forecast/",
+"name": "cainiao-import-forecast",
+"view": "settlements.cainiao_views.cainiao_import_forecast",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/forecast/cp4/",
+"name": "cainiao-forecast-cp4",
+"view": "settlements.cainiao_views.cainiao_forecast_cp4",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/forecast/manual/",
+"name": "cainiao-manual-forecast-list",
+"view": "settlements.cainiao_views.cainiao_manual_forecast_list",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/forecast/manual/save/",
+"name": "cainiao-manual-forecast-save",
+"view": "settlements.cainiao_views.cainiao_manual_forecast_save",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/forecast/manual/<int:manual_id>/delete/",
+"name": "cainiao-manual-forecast-delete",
+"view": "settlements.cainiao_views.cainiao_manual_forecast_delete",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/forecast/reset/",
+"name": "cainiao-forecast-reset",
+"view": "settlements.cainiao_views.cainiao_forecast_reset",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/forecast/pdf/",
+"name": "cainiao-forecast-pdf",
+"view": "settlements.cainiao_views.cainiao_forecast_pdf",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/settlements/cainiao/forecast/excel/",
+"name": "cainiao-forecast-excel",
+"view": "settlements.cainiao_views.cainiao_forecast_excel",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/settlements/cainiao/planning/preview/",
+"name": "cainiao-planning-preview",
+"view": "settlements.cainiao_views.cainiao_planning_preview",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/planning/import/",
+"name": "cainiao-planning-import",
+"view": "settlements.cainiao_views.cainiao_planning_import",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/operation/preview/",
+"name": "cainiao-operation-preview",
+"view": "settlements.cainiao_views.cainiao_operation_preview",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/operation/import/",
+"name": "cainiao-operation-import",
+"view": "settlements.cainiao_views.cainiao_operation_import",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/reliable-sync/",
+"name": "cainiao-reliable-sync",
+"view": "settlements.views_reliable_sync.api_reliable_sync",
+"templates": [],
+"json": true,
+"post": true
+},
+{
+"url": "/settlements/cainiao/operation/audit/",
+"name": "cainiao-operation-audit",
+"view": "settlements.cainiao_views.cainiao_operation_audit",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/driver-stat/preview/",
+"name": "cainiao-driver-stat-preview",
+"view": "settlements.cainiao_views.cainiao_driver_stat_preview",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/driver-stat/import/",
+"name": "cainiao-driver-stat-import",
+"view": "settlements.cainiao_views.cainiao_driver_stat_import",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/driver-stat/guided-import/",
+"name": "cainiao-driver-stat-guided-import",
+"view": "settlements.cainiao_views.cainiao_driver_stat_guided_import",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/courier-backfill/status/",
+"name": "cainiao-courier-backfill-status",
+"view": "settlements.cainiao_views.cainiao_courier_backfill_status",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/courier-backfill/",
+"name": "cainiao-courier-backfill",
+"view": "settlements.cainiao_views.cainiao_courier_backfill",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/cleanup-stale/",
+"name": "cainiao-cleanup-stale",
+"view": "settlements.cainiao_views.cainiao_cleanup_stale_rows_view",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/mark-stale-armazem/",
+"name": "cainiao-mark-stale-armazem",
+"view": "settlements.cainiao_views.cainiao_mark_stale_armazem_view",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/roll-forward/",
+"name": "cainiao-roll-forward",
+"view": "settlements.cainiao_views.cainiao_roll_forward_view",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/consolidate-waybills/",
+"name": "cainiao-consolidate-waybills",
+"view": "settlements.cainiao_views.cainiao_consolidate_waybills_view",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/dedup-signatures/",
+"name": "cainiao-dedup-signatures",
+"view": "settlements.cainiao_views.cainiao_dedup_signatures_view",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/debug-headers/",
+"name": "cainiao-debug-headers",
+"view": "settlements.cainiao_views.cainiao_debug_headers_view",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/mark-deliveries-courier-id/",
+"name": "cainiao-mark-deliveries-courier-id",
+"view": "settlements.cainiao_views.cainiao_mark_deliveries_courier_id",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/unmapped/lookup/",
+"name": "cainiao-unmapped-lookup",
+"view": "settlements.views_courier_onboarding.cainiao_unmapped_lookup",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/unmapped/create-driver/",
+"name": "cainiao-unmapped-create-driver",
+"view": "settlements.views_courier_onboarding.cainiao_unmapped_create_driver",
+"templates": [],
+"json": true,
+"post": true
+},
+{
+"url": "/settlements/cainiao/existing-logins/",
+"name": "cainiao-existing-logins",
+"view": "settlements.cainiao_views.cainiao_existing_logins",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/driver-detail/preview/",
+"name": "cainiao-driver-detail-preview",
+"view": "settlements.cainiao_views.cainiao_driver_detail_preview",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/driver-detail/import/",
+"name": "cainiao-driver-detail-import",
+"view": "settlements.cainiao_views.cainiao_driver_detail_import",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/pre-invoices/report/summary/",
+"name": "pre-invoice-report-summary",
+"view": "settlements.views.pre_invoice_report_summary",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/pre-invoices/report/pdf/",
+"name": "pre-invoice-report-pdf",
+"view": "settlements.views.pre_invoice_report_pdf",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/settlements/cainiao/hubs/",
+"name": "cainiao-hubs-list",
+"view": "settlements.cainiao_views.cainiao_hubs_list",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/hubs/create/",
+"name": "cainiao-hub-create",
+"view": "settlements.cainiao_views.cainiao_hub_create",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/hubs/<int:hub_id>/update/",
+"name": "cainiao-hub-update",
+"view": "settlements.cainiao_views.cainiao_hub_update",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/hubs/<int:hub_id>/delete/",
+"name": "cainiao-hub-delete",
+"view": "settlements.cainiao_views.cainiao_hub_delete",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/hubs/<int:hub_id>/cp4/add/",
+"name": "cainiao-hub-cp4-add",
+"view": "settlements.cainiao_views.cainiao_hub_cp4_add",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/hubs/<int:hub_id>/cp4/remove/",
+"name": "cainiao-hub-cp4-remove",
+"view": "settlements.cainiao_views.cainiao_hub_cp4_remove",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/drivers-by-status/",
+"name": "cainiao-drivers-by-status",
+"view": "settlements.cainiao_views.cainiao_drivers_by_status",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/driver-packages/",
+"name": "cainiao-driver-packages",
+"view": "settlements.cainiao_views.cainiao_driver_packages",
+"templates": [
+"settlements/cainiao_driver_packages.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/settlements/cainiao/waybill/<str:waybill>/",
+"name": "cainiao-waybill-detail",
+"view": "settlements.cainiao_views.cainiao_waybill_detail",
+"templates": [
+"settlements/cainiao_waybill_detail.html",
+"settlements/cainiao_waybill_not_found.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/settlements/cainiao/waybill-search/",
+"name": "cainiao-waybill-search",
+"view": "settlements.cainiao_views.cainiao_waybill_search",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/map/",
+"name": "cainiao-map",
+"view": "settlements.cainiao_views.cainiao_map_view",
+"templates": [
+"settlements/cainiao_map.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/settlements/cainiao/map-pins/",
+"name": "cainiao-map-pins",
+"view": "settlements.cainiao_views.cainiao_map_pins",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/map-overlays/",
+"name": "cainiao-map-overlays",
+"view": "settlements.cainiao_views.cainiao_map_overlays",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/map-missing-coords/",
+"name": "cainiao-map-missing-coords",
+"view": "settlements.cainiao_views.cainiao_map_missing_coords",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cainiao/map/compare/",
+"name": "cainiao-map-compare",
+"view": "settlements.cainiao_views.cainiao_map_compare",
+"templates": [
+"settlements/cainiao_map_compare.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/settlements/forecast-plan/",
+"name": "forecast-plan-get-or-create",
+"view": "settlements.forecast_plan_views.forecast_plan_get_or_create",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/forecast-plan/<int:plan_id>/assign/",
+"name": "forecast-plan-assign",
+"view": "settlements.forecast_plan_views.forecast_plan_assign",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/forecast-plan/assignment/<int:assignment_id>/delete/",
+"name": "forecast-plan-delete-assignment",
+"view": "settlements.forecast_plan_views.forecast_plan_delete_assignment",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/forecast-plan/<int:plan_id>/clear/",
+"name": "forecast-plan-clear",
+"view": "settlements.forecast_plan_views.forecast_plan_clear",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/forecast-plan/<int:plan_id>/auto-distribute/",
+"name": "forecast-plan-auto-distribute",
+"view": "settlements.forecast_plan_views.forecast_plan_auto_distribute",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/forecast-plan/<int:plan_id>/toggle-skip/",
+"name": "forecast-plan-toggle-skip",
+"view": "settlements.forecast_plan_views.forecast_plan_toggle_skip",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/forecast-plan/<int:plan_id>/publish/",
+"name": "forecast-plan-publish",
+"view": "settlements.forecast_plan_views.forecast_plan_publish",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/forecast-plan/<int:plan_id>/unpublish/",
+"name": "forecast-plan-unpublish",
+"view": "settlements.forecast_plan_views.forecast_plan_unpublish",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/forecast-plan/<int:plan_id>/clone-to/",
+"name": "forecast-plan-clone-to",
+"view": "settlements.forecast_plan_views.forecast_plan_clone_to",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/forecast-plan/history/",
+"name": "forecast-plan-history",
+"view": "settlements.forecast_plan_views.forecast_plan_history",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/drivers/<int:driver_id>/set-capacity/",
+"name": "driver-set-capacity",
+"view": "settlements.forecast_plan_views.driver_set_capacity",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/adiantamentos/",
+"name": "cash-entries-dashboard",
+"view": "settlements.views_cash_entries.cash_entries_dashboard",
+"templates": [
+"settlements/cash_entries_dashboard.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/settlements/cash-entries/list/",
+"name": "cash-entry-list",
+"view": "settlements.views_cash_entries.cash_entry_list",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cash-entries/create/",
+"name": "cash-entry-create",
+"view": "settlements.views_cash_entries.cash_entry_create",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cash-entries/bulk-create/",
+"name": "cash-entry-bulk-create",
+"view": "settlements.views_cash_entries.cash_entry_bulk_create",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cash-entries/<int:entry_id>/update/",
+"name": "cash-entry-update",
+"view": "settlements.views_cash_entries.cash_entry_update",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cash-entries/<int:entry_id>/cancel/",
+"name": "cash-entry-cancel",
+"view": "settlements.views_cash_entries.cash_entry_cancel",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/cash-entries/<int:entry_id>/delete/",
+"name": "cash-entry-delete",
+"view": "settlements.views_cash_entries.cash_entry_delete",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/pre-invoices/<int:pre_invoice_id>/pending-entries/",
+"name": "pre-invoice-pending-entries",
+"view": "settlements.views_cash_entries.pre_invoice_pending_entries",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/pre-invoices/<int:pre_invoice_id>/attach-entries/",
+"name": "pre-invoice-attach-entries",
+"view": "settlements.views_cash_entries.pre_invoice_attach_entries",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/socios/",
+"name": "shareholder-dashboard",
+"view": "settlements.views_shareholder.shareholder_dashboard",
+"templates": [
+"settlements/shareholder_dashboard.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/settlements/socios/list/",
+"name": "shareholder-list",
+"view": "settlements.views_shareholder.shareholder_list_api",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/socios/create/",
+"name": "shareholder-create",
+"view": "settlements.views_shareholder.shareholder_create",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/socios/<int:shareholder_id>/update/",
+"name": "shareholder-update",
+"view": "settlements.views_shareholder.shareholder_update",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/socios/<int:shareholder_id>/delete/",
+"name": "shareholder-delete",
+"view": "settlements.views_shareholder.shareholder_delete",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/reembolsos/",
+"name": "reimbursement-list",
+"view": "settlements.views_shareholder.reimbursement_list_api",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/reembolsos/create/",
+"name": "reimbursement-create",
+"view": "settlements.views_shareholder.reimbursement_create",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/reembolsos/<int:reimbursement_id>/mark-paid/",
+"name": "reimbursement-mark-paid",
+"view": "settlements.views_shareholder.reimbursement_mark_paid",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/reembolsos/<int:reimbursement_id>/cancel/",
+"name": "reimbursement-cancel",
+"view": "settlements.views_shareholder.reimbursement_cancel",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/reembolsos/<int:reimbursement_id>/update/",
+"name": "reimbursement-update",
+"view": "settlements.views_shareholder.reimbursement_update",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/reembolsos/<int:reimbursement_id>/delete/",
+"name": "reimbursement-delete",
+"view": "settlements.views_shareholder.reimbursement_delete",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/reembolsos/bulk-mark-paid/",
+"name": "reimbursement-bulk-mark-paid",
+"view": "settlements.views_shareholder.reimbursement_bulk_mark_paid",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/settlements/pudo/fake-delivery-suspects/",
+"name": "pudo-fake-delivery-suspects",
+"view": "settlements.views_pudo.fake_delivery_suspects",
+"templates": [
+"settlements/pudo_fake_delivery_suspects.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/settlements/pudo/fake-delivery-suspects/<int:task_id>/confirm/",
+"name": "pudo-fake-delivery-confirm",
+"view": "settlements.views_pudo.confirm_fake_delivery",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/accounting/",
+"name": "accounting:dashboard",
+"view": "accounting.views.dashboard",
+"templates": [
+"accounting/dashboard.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/accounting/hub/",
+"name": "accounting:hub_financeiro",
+"view": "accounting.views_hub.hub_financeiro",
+"templates": [
+"accounting/hub.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/accounting/auditoria/",
+"name": "accounting:audit_timeline",
+"view": "accounting.views_audit.audit_timeline",
+"templates": [
+"accounting/audit_timeline.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/accounting/exec/",
+"name": "accounting:executive_dashboard",
+"view": "accounting.views_exec.executive_dashboard",
+"templates": [
+"accounting/executive_dashboard.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/accounting/periodos/",
+"name": "accounting:period_lock_list",
+"view": "accounting.views_period_lock.period_lock_list",
+"templates": [
+"accounting/period_lock_list.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/accounting/periodos/toggle/",
+"name": "accounting:period_lock_toggle",
+"view": "accounting.views_period_lock.period_lock_toggle",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/accounting/reconciliacao-bancaria/",
+"name": "accounting:bank_reconciliation",
+"view": "accounting.views_reconciliation.bank_reconciliation",
+"templates": [
+"accounting/bank_reconciliation.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/accounting/reconciliacao-bancaria/<int:tx_id>/confirm/",
+"name": "accounting:bank_match_confirm",
+"view": "accounting.views_reconciliation.bank_match_confirm",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/accounting/reconciliacao-bancaria/<int:tx_id>/clear/",
+"name": "accounting:bank_match_clear",
+"view": "accounting.views_reconciliation.bank_match_clear",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/accounting/a-pagar/",
+"name": "accounting:payables_inbox",
+"view": "accounting.views_payables.payables_inbox",
+"templates": [
+"accounting/payables_inbox.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/accounting/pendentes-regularizacao/",
+"name": "accounting:pending_reconciliation",
+"view": "accounting.views_payables.pending_reconciliation",
+"templates": [
+"accounting/pending_reconciliation.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/accounting/a-pagar/marcar-pago/",
+"name": "accounting:payables_mark_paid",
+"view": "accounting.views_payables.payables_mark_paid",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/accounting/a-pagar/sem-pf/",
+"name": "accounting:payables_no_pf",
+"view": "accounting.views_payables.payables_drivers_without_pf",
+"templates": [
+"accounting/payables_no_pf.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/accounting/a-pagar/sem-ff/",
+"name": "accounting:payables_no_ff",
+"view": "accounting.views_payables.payables_fleets_without_invoice",
+"templates": [
+"accounting/payables_no_ff.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/accounting/a-pagar/pf/<int:pf_id>/health/",
+"name": "accounting:payables_pf_health",
+"view": "accounting.views_payables.payables_pf_health",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/accounting/a-pagar/pf/<int:pf_id>/compare/",
+"name": "accounting:payables_pf_compare",
+"view": "accounting.views_payables.payables_pf_compare",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/accounting/a-pagar/pf/<int:pf_id>/notes/",
+"name": "accounting:payables_pf_notes",
+"view": "accounting.views_payables.payables_pf_notes",
+"templates": [],
+"json": true,
+"post": true
+},
+{
+"url": "/accounting/a-pagar/calendario/",
+"name": "accounting:payables_calendar",
+"view": "accounting.views_payables.payables_calendar",
+"templates": [
+"accounting/payables_calendar.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/accounting/a-pagar/forecast/",
+"name": "accounting:payables_forecast",
+"view": "accounting.views_payables.payables_forecast",
+"templates": [
+"accounting/payables_forecast.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/accounting/receitas/",
+"name": "accounting:revenue_list",
+"view": "accounting.views.revenue_list",
+"templates": [
+"accounting/revenue_list.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/accounting/receitas/nova/",
+"name": "accounting:revenue_create",
+"view": "accounting.views.revenue_create",
+"templates": [
+"accounting/revenue_form.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/accounting/receitas/<int:pk>/",
+"name": "accounting:revenue_detail",
+"view": "accounting.views.revenue_detail",
+"templates": [
+"accounting/revenue_detail.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/accounting/receitas/<int:pk>/editar/",
+"name": "accounting:revenue_edit",
+"view": "accounting.views.revenue_edit",
+"templates": [
+"accounting/revenue_form.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/accounting/receitas/<int:pk>/deletar/",
+"name": "accounting:revenue_delete",
+"view": "accounting.views.revenue_delete",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/accounting/despesas/",
+"name": "accounting:expense_list",
+"view": "accounting.views.expense_list",
+"templates": [
+"accounting/expense_list.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/accounting/despesas/nova/",
+"name": "accounting:expense_create",
+"view": "accounting.views.expense_create",
+"templates": [
+"accounting/expense_form.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/accounting/despesas/<int:pk>/",
+"name": "accounting:expense_detail",
+"view": "accounting.views.expense_detail",
+"templates": [
+"accounting/expense_detail.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/accounting/despesas/<int:pk>/editar/",
+"name": "accounting:expense_edit",
+"view": "accounting.views.expense_edit",
+"templates": [
+"accounting/expense_form.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/accounting/despesas/<int:pk>/deletar/",
+"name": "accounting:expense_delete",
+"view": "accounting.views.expense_delete",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/accounting/despesas/<int:pk>/toggle-pagamento/",
+"name": "accounting:expense_toggle_payment",
+"view": "accounting.views.expense_toggle_payment",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/accounting/relatorios/",
+"name": "accounting:reports",
+"view": "accounting.views.reports",
+"templates": [
+"accounting/reports.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/accounting/contas-a-pagar/",
+"name": "accounting:bill_list",
+"view": "accounting.views.bill_list",
+"templates": [
+"accounting/bill_list.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/accounting/contas-a-pagar/nova/",
+"name": "accounting:bill_create",
+"view": "accounting.views.bill_create",
+"templates": [
+"accounting/bill_form.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/accounting/contas-a-pagar/lixeira/",
+"name": "accounting:bill_trash",
+"view": "accounting.views.bill_trash",
+"templates": [
+"accounting/bill_trash.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/accounting/contas-a-pagar/<int:pk>/restaurar/",
+"name": "accounting:bill_restore",
+"view": "accounting.views.bill_restore",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/accounting/contas-a-pagar/<int:pk>/eliminar-definitivo/",
+"name": "accounting:bill_hard_delete",
+"view": "accounting.views.bill_hard_delete",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/accounting/contas-a-pagar/<int:pk>/",
+"name": "accounting:bill_detail",
+"view": "accounting.views.bill_detail",
+"templates": [
+"accounting/bill_detail.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/accounting/contas-a-pagar/<int:pk>/editar/",
+"name": "accounting:bill_edit",
+"view": "accounting.views.bill_edit",
+"templates": [
+"accounting/bill_form.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/accounting/contas-a-pagar/<int:pk>/apagar/",
+"name": "accounting:bill_delete",
+"view": "accounting.views.bill_delete",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/accounting/contas-a-pagar/<int:pk>/marcar-paga/",
+"name": "accounting:bill_mark_paid",
+"view": "accounting.views.bill_mark_paid",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/accounting/contas-a-pagar/anexo/<int:pk>/apagar/",
+"name": "accounting:bill_attachment_delete",
+"view": "accounting.views.bill_attachment_delete",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/accounting/contas-a-pagar/<int:pk>/gerar-proxima/",
+"name": "accounting:bill_generate_next",
+"view": "accounting.views.bill_generate_next",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/accounting/contas-a-pagar/<int:pk>/aprovar/",
+"name": "accounting:bill_approve",
+"view": "accounting.views.bill_approve",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/accounting/contas-a-pagar/<int:pk>/rejeitar/",
+"name": "accounting:bill_reject",
+"view": "accounting.views.bill_reject",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/accounting/dre/",
+"name": "accounting:dre",
+"view": "accounting.views.dre",
+"templates": [
+"accounting/dre.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/accounting/dre/export/",
+"name": "accounting:dre_export",
+"view": "accounting.views_dre_export.dre_export",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/accounting/fluxo-caixa/",
+"name": "accounting:cash_flow",
+"view": "accounting.views.cash_flow_projection",
+"templates": [
+"accounting/cash_flow.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/accounting/break-even/",
+"name": "accounting:break_even",
+"view": "accounting.views.break_even_monitor",
+"templates": [
+"accounting/break_even.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/accounting/break-even/data/",
+"name": "accounting:break_even_data",
+"view": "accounting.views.break_even_data",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/accounting/extractos/",
+"name": "accounting:bank_statement_list",
+"view": "accounting.views.bank_statement_list",
+"templates": [
+"accounting/bank_statement_list.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/accounting/extractos/upload/",
+"name": "accounting:bank_statement_upload",
+"view": "accounting.views.bank_statement_upload",
+"templates": [
+"accounting/bank_statement_upload.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/accounting/extractos/<int:pk>/",
+"name": "accounting:bank_statement_detail",
+"view": "accounting.views.bank_statement_detail",
+"templates": [
+"accounting/bank_statement_detail.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/accounting/extractos/transacao/<int:pk>/conciliar/",
+"name": "accounting:bank_transaction_match",
+"view": "accounting.views.bank_transaction_match",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/accounting/extractos/transacao/<int:pk>/desconciliar/",
+"name": "accounting:bank_transaction_unmatch",
+"view": "accounting.views.bank_transaction_unmatch",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/accounting/fornecedores/",
+"name": "accounting:fornecedor_list",
+"view": "accounting.views_suppliers.fornecedor_list",
+"templates": [
+"accounting/fornecedor_list.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/accounting/fornecedores/novo/",
+"name": "accounting:fornecedor_create",
+"view": "accounting.views_suppliers.fornecedor_create",
+"templates": [
+"accounting/fornecedor_form.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/accounting/fornecedores/<int:pk>/editar/",
+"name": "accounting:fornecedor_edit",
+"view": "accounting.views_suppliers.fornecedor_edit",
+"templates": [
+"accounting/fornecedor_form.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/accounting/fornecedores/<int:pk>/toggle-ativo/",
+"name": "accounting:fornecedor_toggle_active",
+"view": "accounting.views_suppliers.fornecedor_toggle_active",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/accounting/fornecedores/tags/",
+"name": "accounting:fornecedor_tag_list",
+"view": "accounting.views_suppliers.fornecedor_tag_list",
+"templates": [
+"accounting/fornecedor_tag_list.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/accounting/fornecedores/tags/<int:pk>/apagar/",
+"name": "accounting:fornecedor_tag_delete",
+"view": "accounting.views_suppliers.fornecedor_tag_delete",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/accounting/fornecedores/api/search/",
+"name": "accounting:fornecedor_search_api",
+"view": "accounting.views_suppliers.fornecedor_search_api",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/accounting/fornecedores/api/quick-create/",
+"name": "accounting:fornecedor_quick_create_api",
+"view": "accounting.views_suppliers.fornecedor_quick_create_api",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/accounting/fornecedores/api/<int:pk>/",
+"name": "accounting:fornecedor_detail_api",
+"view": "accounting.views_suppliers.fornecedor_detail_api",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/accounting/impostos/",
+"name": "accounting:imposto_list",
+"view": "accounting.views_taxes.imposto_list",
+"templates": [
+"accounting/imposto_list.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/accounting/impostos/novo/",
+"name": "accounting:imposto_create",
+"view": "accounting.views_taxes.imposto_create",
+"templates": [
+"accounting/imposto_form.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/accounting/impostos/ocr-extract/",
+"name": "accounting:imposto_ocr_extract",
+"view": "accounting.views_taxes.imposto_ocr_extract",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/accounting/impostos/<int:pk>/editar/",
+"name": "accounting:imposto_edit",
+"view": "accounting.views_taxes.imposto_edit",
+"templates": [
+"accounting/imposto_form.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/accounting/impostos/<int:pk>/marcar-pago/",
+"name": "accounting:imposto_mark_paid",
+"view": "accounting.views_taxes.imposto_mark_paid",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/accounting/impostos/<int:pk>/anular/",
+"name": "accounting:imposto_anular",
+"view": "accounting.views_taxes.imposto_anular",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/accounting/impostos/planos/",
+"name": "accounting:plano_list",
+"view": "accounting.views_taxes.plano_list",
+"templates": [
+"accounting/plano_list.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/accounting/impostos/planos/<int:pk>/",
+"name": "accounting:plano_detail",
+"view": "accounting.views_taxes.plano_detail",
+"templates": [
+"accounting/plano_detail.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/accounting/tesouraria/",
+"name": "accounting:treasury_dashboard",
+"view": "accounting.views_treasury.treasury_dashboard",
+"templates": [
+"accounting/treasury_dashboard.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/accounting/ocr/extract/",
+"name": "accounting:ocr_extract",
+"view": "accounting.views_ocr.ocr_extract_api",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/accounting/centros-custo/",
+"name": "accounting:cost_center_list",
+"view": "accounting.views_cost_centers.cost_center_list",
+"templates": [
+"accounting/cost_center_list.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/accounting/centros-custo/novo/",
+"name": "accounting:cost_center_create",
+"view": "accounting.views_cost_centers.cost_center_create",
+"templates": [
+"accounting/cost_center_form.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/accounting/centros-custo/<int:pk>/editar/",
+"name": "accounting:cost_center_edit",
+"view": "accounting.views_cost_centers.cost_center_edit",
+"templates": [
+"accounting/cost_center_form.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/accounting/centros-custo/<int:pk>/toggle-ativo/",
+"name": "accounting:cost_center_toggle_active",
+"view": "accounting.views_cost_centers.cost_center_toggle_active",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/accounting/centros-custo/sync-hubs/",
+"name": "accounting:cost_center_sync_hubs",
+"view": "accounting.views_cost_centers.cost_center_sync_hubs",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/accounting/categorias/",
+"name": "accounting:category_list",
+"view": "accounting.views_categories.category_list",
+"templates": [
+"accounting/category_list.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/accounting/categorias/nova/",
+"name": "accounting:category_create",
+"view": "accounting.views_categories.category_create",
+"templates": [
+"accounting/category_form.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/accounting/categorias/<int:pk>/editar/",
+"name": "accounting:category_edit",
+"view": "accounting.views_categories.category_edit",
+"templates": [
+"accounting/category_form.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/payroll/funcionarios/",
+"name": "payroll:employee_list",
+"view": "payroll.views.employee_list",
+"templates": [
+"payroll/employee_list.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/payroll/funcionarios/novo/",
+"name": "payroll:employee_create",
+"view": "payroll.views.employee_create",
+"templates": [
+"payroll/employee_form.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/payroll/funcionarios/<int:pk>/",
+"name": "payroll:employee_edit",
+"view": "payroll.views.employee_edit",
+"templates": [
+"payroll/employee_form.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/payroll/funcionarios/<int:pk>/delete/",
+"name": "payroll:employee_delete",
+"view": "payroll.views.employee_delete",
+"templates": [],
+"json": false,
+"post": true
+},
+{
+"url": "/payroll/folhas/",
+"name": "payroll:payroll_list",
+"view": "payroll.views.payroll_list",
+"templates": [
+"payroll/payroll_list.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/payroll/folhas/gerar/",
+"name": "payroll:payroll_generate",
+"view": "payroll.views.payroll_generate",
+"templates": [
+"payroll/payroll_generate.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/payroll/folhas/<int:pk>/",
+"name": "payroll:payroll_detail",
+"view": "payroll.views.payroll_detail",
+"templates": [
+"payroll/payroll_detail.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/payroll/folhas/<int:pk>/recalc/",
+"name": "payroll:payroll_recalc",
+"view": "payroll.views.payroll_recalc",
+"templates": [],
+"json": false,
+"post": true
+},
+{
+"url": "/payroll/folhas/<int:pk>/aprovar/",
+"name": "payroll:payroll_approve",
+"view": "payroll.views.payroll_approve",
+"templates": [],
+"json": false,
+"post": true
+},
+{
+"url": "/payroll/folhas/<int:pk>/pagar/",
+"name": "payroll:payroll_pay",
+"view": "payroll.views.payroll_pay",
+"templates": [],
+"json": false,
+"post": true
+},
+{
+"url": "/payroll/folhas/<int:pk>/cancelar/",
+"name": "payroll:payroll_cancel",
+"view": "payroll.views.payroll_cancel",
+"templates": [],
+"json": false,
+"post": true
+},
+{
+"url": "/payroll/folhas/<int:pk>/component/add/",
+"name": "payroll:component_add",
+"view": "payroll.views.payroll_component_add",
+"templates": [],
+"json": false,
+"post": true
+},
+{
+"url": "/payroll/folhas/<int:pk>/component/<int:cid>/delete/",
+"name": "payroll:component_delete",
+"view": "payroll.views.payroll_component_delete",
+"templates": [],
+"json": false,
+"post": true
+},
+{
+"url": "/payroll/folhas/<int:pk>/recibo.pdf",
+"name": "payroll:payroll_pdf",
+"view": "payroll.views.payroll_recibo_pdf",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/core/partners/",
+"name": "core:partner-list",
+"view": "core.views.partner_list",
+"templates": [
+"core/partner_list.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/core/partners/create/",
+"name": "core:partner-create",
+"view": "core.views.partner_create",
+"templates": [
+"core/partner_form.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/core/partners/<int:pk>/",
+"name": "core:partner-detail",
+"view": "core.views.partner_detail",
+"templates": [
+"core/partner_detail.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/core/partners/<int:pk>/edit/",
+"name": "core:partner-edit",
+"view": "core.views.partner_edit",
+"templates": [
+"core/partner_form.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/core/partners/<int:pk>/toggle-status/",
+"name": "core:partner-toggle-status",
+"view": "core.views.partner_toggle_status",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/core/partners/<int:pk>/delete/",
+"name": "core:partner-delete",
+"view": "core.views.partner_delete",
+"templates": [],
+"json": false,
+"post": true
+},
+{
+"url": "/core/partners/<int:pk>/financial/",
+"name": "core:partner-financial",
+"view": "core.views.partner_financial_dashboard",
+"templates": [
+"core/partner_financial.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/core/partners/<int:pk>/financial/generate-preview/",
+"name": "core:partner-financial-preview",
+"view": "core.views.partner_financial_preview",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/core/partners/<int:pk>/financial/generate/",
+"name": "core:partner-financial-generate",
+"view": "core.views.partner_financial_generate",
+"templates": [],
+"json": true,
+"post": true
+},
+{
+"url": "/core/pre-invoices/<int:pre_invoice_id>/price-override/",
+"name": "core:pre-invoice-price-override",
+"view": "core.views.pre_invoice_price_override_create",
+"templates": [],
+"json": true,
+"post": true
+},
+{
+"url": "/core/partners/<int:pk>/link-courier/",
+"name": "core:partner-link-courier",
+"view": "core.views.partner_link_courier",
+"templates": [],
+"json": true,
+"post": true
+},
+{
+"url": "/core/partners/<int:pk>/drivers-search/",
+"name": "core:partner-drivers-search",
+"view": "core.views.partner_drivers_search",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/core/cainiao/detect-lost-packages/",
+"name": "core:cainiao-detect-lost-packages",
+"view": "core.views.cainiao_detect_lost_packages",
+"templates": [],
+"json": true,
+"post": true
+},
+{
+"url": "/core/partners/<int:pk>/bonus-rules/",
+"name": "core:partner-bonus-rules",
+"view": "core.views.partner_bonus_rules",
+"templates": [
+"core/partner_bonus_rules.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/core/partners/<int:pk>/bonus-rules/save/",
+"name": "core:partner-bonus-rule-save",
+"view": "core.views.partner_bonus_rule_save",
+"templates": [],
+"json": true,
+"post": true
+},
+{
+"url": "/core/partners/<int:pk>/bonus-rules/<int:rule_id>/delete/",
+"name": "core:partner-bonus-rule-delete",
+"view": "core.views.partner_bonus_rule_delete",
+"templates": [],
+"json": true,
+"post": true
+},
+{
+"url": "/core/drivers/<int:driver_id>/account/",
+"name": "core:driver-account",
+"view": "core.views.driver_account_statement",
+"templates": [
+"core/driver_account.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/core/drivers/<int:driver_id>/couriers/",
+"name": "core:driver-couriers-list",
+"view": "core.views.driver_courier_logins_list",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/core/drivers/<int:driver_id>/couriers/save/",
+"name": "core:driver-courier-save",
+"view": "core.views.driver_courier_login_save",
+"templates": [],
+"json": true,
+"post": true
+},
+{
+"url": "/core/drivers/<int:driver_id>/couriers/<int:mapping_id>/delete/",
+"name": "core:driver-courier-delete",
+"view": "core.views.driver_courier_login_delete",
+"templates": [],
+"json": true,
+"post": true
+},
+{
+"url": "/core/pre-invoice/sign/<str:token>/",
+"name": "core:pre-invoice-remote-sign",
+"view": "core.views.pre_invoice_remote_sign",
+"templates": [
+"core/pre_invoice_sign.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/core/pre-invoices/<int:pre_invoice_id>/send-whatsapp/",
+"name": "core:pre-invoice-send-whatsapp",
+"view": "core.views.pre_invoice_send_whatsapp",
+"templates": [],
+"json": true,
+"post": true
+},
+{
+"url": "/core/partners/<int:partner_id>/saft-export/",
+"name": "core:partner-saft-export",
+"view": "core.views.pre_invoice_saft_export",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/core/financial-alerts/",
+"name": "core:financial-alerts",
+"view": "core.views.financial_alerts_list",
+"templates": [
+"core/financial_alerts.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/core/financial-alerts/<int:alert_id>/resolve/",
+"name": "core:financial-alert-resolve",
+"view": "core.views.financial_alert_resolve",
+"templates": [],
+"json": true,
+"post": true
+},
+{
+"url": "/core/partners/<int:partner_pk>/integrations/create/",
+"name": "core:integration-create",
+"view": "core.views.integration_create",
+"templates": [
+"core/integration_form.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/core/integrations/<int:pk>/edit/",
+"name": "core:integration-edit",
+"view": "core.views.integration_edit",
+"templates": [
+"core/integration_form.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/core/integrations/<int:pk>/toggle-status/",
+"name": "core:integration-toggle-status",
+"view": "core.views.integration_toggle_status",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/core/integrations/dashboard/",
+"name": "core:integrations-dashboard",
+"view": "core.views.integrations_dashboard",
+"templates": [
+"core/integrations_dashboard.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/pricing/zones/",
+"name": "pricing:zone-list",
+"view": "pricing.views.zone_list",
+"templates": [
+"pricing/zone_list.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/pricing/zones/create/",
+"name": "pricing:zone-create",
+"view": "pricing.views.zone_create",
+"templates": [
+"pricing/zone_form.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/pricing/zones/import/",
+"name": "pricing:zone-import",
+"view": "pricing.views.zone_import_csv",
+"templates": [
+"pricing/zone_import.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/pricing/zones/<int:pk>/",
+"name": "pricing:zone-detail",
+"view": "pricing.views.zone_detail",
+"templates": [
+"pricing/zone_detail.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/pricing/zones/<int:pk>/edit/",
+"name": "pricing:zone-edit",
+"view": "pricing.views.zone_edit",
+"templates": [
+"pricing/zone_form.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/pricing/zones/<int:pk>/toggle-status/",
+"name": "pricing:zone-toggle-status",
+"view": "pricing.views.zone_toggle_status",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/pricing/tariffs/",
+"name": "pricing:tariff-list",
+"view": "pricing.views.tariff_list",
+"templates": [
+"pricing/tariff_list.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/pricing/tariffs/create/",
+"name": "pricing:tariff-create",
+"view": "pricing.views.tariff_create",
+"templates": [
+"pricing/tariff_form.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/pricing/tariffs/import/",
+"name": "pricing:tariff-import",
+"view": "pricing.views.tariff_import_csv",
+"templates": [
+"pricing/tariff_import.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/pricing/tariffs/<int:pk>/",
+"name": "pricing:tariff-detail",
+"view": "pricing.views.tariff_detail",
+"templates": [
+"pricing/tariff_detail.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/pricing/tariffs/<int:pk>/edit/",
+"name": "pricing:tariff-edit",
+"view": "pricing.views.tariff_edit",
+"templates": [
+"pricing/tariff_form.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/pricing/tariffs/<int:pk>/toggle-status/",
+"name": "pricing:tariff-toggle-status",
+"view": "pricing.views.tariff_toggle_status",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/pricing/calculator/",
+"name": "pricing:price-calculator",
+"view": "pricing.views.price_calculator",
+"templates": [
+"pricing/price_calculator.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/fleet/dashboard/",
+"name": "fleet:dashboard",
+"view": "fleet_management.views.fleet_dashboard",
+"templates": [
+"fleet_management/fleet_dashboard.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/fleet/vehicles/",
+"name": "fleet:vehicle_list",
+"view": "fleet_management.views.vehicle_list",
+"templates": [
+"fleet_management/vehicle_list.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/fleet/vehicles/create/",
+"name": "fleet:vehicle_create",
+"view": "fleet_management.views.vehicle_create",
+"templates": [
+"fleet_management/vehicle_form.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/fleet/vehicles/<int:pk>/",
+"name": "fleet:vehicle_detail",
+"view": "fleet_management.views.vehicle_detail",
+"templates": [
+"fleet_management/vehicle_detail.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/fleet/vehicles/<int:pk>/edit/",
+"name": "fleet:vehicle_edit",
+"view": "fleet_management.views.vehicle_edit",
+"templates": [
+"fleet_management/vehicle_form.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/fleet/vehicles/<int:pk>/toggle-status/",
+"name": "fleet:vehicle_toggle_status",
+"view": "fleet_management.views.vehicle_toggle_status",
+"templates": [],
+"json": false,
+"post": true
+},
+{
+"url": "/fleet/maintenance/",
+"name": "fleet:maintenance_list",
+"view": "fleet_management.views.maintenance_list",
+"templates": [
+"fleet_management/maintenance_list.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/fleet/maintenance/calendar/",
+"name": "fleet:maintenance_calendar",
+"view": "fleet_management.views.maintenance_calendar",
+"templates": [
+"fleet_management/maintenance_calendar.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/fleet/maintenance/create/",
+"name": "fleet:maintenance_create",
+"view": "fleet_management.views.maintenance_create",
+"templates": [
+"fleet_management/maintenance_form.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/fleet/maintenance/<int:pk>/",
+"name": "fleet:maintenance_detail",
+"view": "fleet_management.views.maintenance_detail",
+"templates": [
+"fleet_management/maintenance_detail.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/fleet/maintenance/<int:pk>/edit/",
+"name": "fleet:maintenance_edit",
+"view": "fleet_management.views.maintenance_edit",
+"templates": [
+"fleet_management/maintenance_form.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/fleet/incidents/",
+"name": "fleet:incident_list",
+"view": "fleet_management.views.incident_list",
+"templates": [
+"fleet_management/incident_list.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/geozonas/api/zonas/export/",
+"name": "geozonas:api-zonas-export",
+"view": "geozonas.views.api_zonas_export",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/system/",
+"name": "system_config:index",
+"view": "system_config.views.system_config_view",
+"templates": [
+"system_config/config.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/system/save/",
+"name": "system_config:save",
+"view": "system_config.views.save_config",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/system/recovery-keys/",
+"name": "system_config:recovery_keys_index",
+"view": "system_config.views_recovery.recovery_keys_index",
+"templates": [
+"system_config/recovery_keys.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/system/recovery-keys/download/",
+"name": "system_config:recovery_keys_download",
+"view": "system_config.views_recovery.recovery_keys_download_env",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/system/atualizacao/",
+"name": "system_config:updates_index",
+"view": "system_config.views_updates.updates_index",
+"templates": [
+"system_config/updates.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/system/atualizacao/sugestao/criar/",
+"name": "system_config:suggestion_create",
+"view": "system_config.views_updates.suggestion_create",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/system/atualizacao/sugestao/<int:suggestion_id>/atualizar/",
+"name": "system_config:suggestion_update_status",
+"view": "system_config.views_updates.suggestion_update_status",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/system/atualizacao/github/configurar/",
+"name": "system_config:github_save_config",
+"view": "system_config.views_updates.github_save_config",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/system/atualizacao/verificar/",
+"name": "system_config:updates_check",
+"view": "system_config.views_updates.updates_check",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/system/atualizacao/aplicar/",
+"name": "system_config:updates_apply",
+"view": "system_config.views_updates.updates_apply",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/system/atualizacao/status/",
+"name": "system_config:updates_status",
+"view": "system_config.views_updates.updates_status",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/system/users/",
+"name": "system_config:user_list",
+"view": "system_config.user_views.user_list",
+"templates": [
+"system_config/users/list.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/system/users/create/",
+"name": "system_config:user_create",
+"view": "system_config.user_views.user_create",
+"templates": [
+"system_config/users/form.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/system/users/<int:pk>/edit/",
+"name": "system_config:user_edit",
+"view": "system_config.user_views.user_edit",
+"templates": [
+"system_config/users/form.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/system/users/<int:pk>/delete/",
+"name": "system_config:user_delete",
+"view": "system_config.user_views.user_delete",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/system/users/<int:pk>/toggle-active/",
+"name": "system_config:user_toggle_active",
+"view": "system_config.user_views.user_toggle_active",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/system/users/<int:pk>/reset-password/",
+"name": "system_config:user_reset_password",
+"view": "system_config.user_views.user_reset_password",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/system/whatsapp/",
+"name": "system_config:whatsapp_dashboard",
+"view": "system_config.views.whatsapp_dashboard",
+"templates": [
+"system_config/whatsapp_dashboard.html"
+],
+"json": true,
+"post": true
+},
+{
+"url": "/system/whatsapp/start/",
+"name": "system_config:whatsapp_start_session",
+"view": "system_config.views.whatsapp_start_session",
+"templates": [],
+"json": true,
+"post": true
+},
+{
+"url": "/system/whatsapp/status/",
+"name": "system_config:whatsapp_status",
+"view": "system_config.views.whatsapp_status",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/system/whatsapp/ensure/",
+"name": "system_config:whatsapp_ensure",
+"view": "system_config.views.whatsapp_ensure",
+"templates": [],
+"json": true,
+"post": true
+},
+{
+"url": "/system/whatsapp/qrcode/",
+"name": "system_config:whatsapp_qrcode",
+"view": "system_config.views.whatsapp_qrcode",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/system/whatsapp/webhook/",
+"name": "system_config:whatsapp_webhook",
+"view": "system_config.views.whatsapp_webhook",
+"templates": [],
+"json": true,
+"post": true
+},
+{
+"url": "/system/whatsapp/diagnose/",
+"name": "system_config:whatsapp_diagnose",
+"view": "system_config.views.whatsapp_diagnose",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/system/whatsapp/logout/",
+"name": "system_config:whatsapp_logout",
+"view": "system_config.views.whatsapp_logout",
+"templates": [],
+"json": true,
+"post": true
+},
+{
+"url": "/system/whatsapp/send-test/",
+"name": "system_config:whatsapp_send_test",
+"view": "system_config.views.whatsapp_send_test",
+"templates": [],
+"json": true,
+"post": true
+},
+{
+"url": "/system/whatsapp/update-config/",
+"name": "system_config:whatsapp_update_config",
+"view": "system_config.views.whatsapp_update_config",
+"templates": [],
+"json": true,
+"post": true
+},
+{
+"url": "/system/whatsapp/generate-token/",
+"name": "system_config:whatsapp_generate_token",
+"view": "system_config.views.whatsapp_generate_token",
+"templates": [],
+"json": true,
+"post": true
+},
+{
+"url": "/system/backups/",
+"name": "system_config:backups_manager",
+"view": "system_config.backup_views.backups_manager",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/system/backups/delete/",
+"name": "system_config:backup_delete",
+"view": "system_config.backup_views.delete_backup",
+"templates": [],
+"json": true,
+"post": true
+},
+{
+"url": "/system/backups/restore/",
+"name": "system_config:backup_restore",
+"view": "system_config.backup_views.restore_backup",
+"templates": [],
+"json": true,
+"post": true
+},
+{
+"url": "/system/backups/upload-cloud/",
+"name": "system_config:backup_upload_cloud",
+"view": "system_config.backup_views.upload_backup_to_cloud",
+"templates": [],
+"json": true,
+"post": true
+},
+{
+"url": "/system/backups/download/<str:filename>/",
+"name": "system_config:backup_download",
+"view": "system_config.backup_views.download_backup",
+"templates": [],
+"json": true,
+"post": false
+},
+{
+"url": "/system/typebot/test-connection/",
+"name": "system_config:typebot_test_connection",
+"view": "system_config.views.typebot_test_connection",
+"templates": [],
+"json": true,
+"post": true
+},
+{
+"url": "/system/typebot/auto-login/",
+"name": "system_config:typebot_auto_login",
+"view": "system_config.views.typebot_auto_login",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/system/typebot/generate-secret/",
+"name": "system_config:typebot_generate_secret",
+"view": "system_config.views.typebot_generate_encryption_secret",
+"templates": [],
+"json": true,
+"post": true
+},
+{
+"url": "/analytics/incidents/",
+"name": "analytics:incidents_report",
+"view": "analytics.views.incidents_report",
+"templates": [
+"analytics/incidents_report.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/analytics/vehicles/",
+"name": "analytics:vehicles_report",
+"view": "analytics.views.vehicles_performance_report",
+"templates": [
+"analytics/vehicles_performance_report.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/analytics/reports/fleet-costs/",
+"name": "analytics:fleet_cost_report",
+"view": "analytics.views.fleet_cost_report",
+"templates": [
+"analytics/fleet_cost_report.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/analytics/integrations/status/",
+"name": "analytics:api_status_dashboard",
+"view": "analytics.views.api_status_dashboard",
+"templates": [
+"analytics/api_status_dashboard.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/analytics/integrations/logs/",
+"name": "analytics:sync_logs_list",
+"view": "analytics.views.sync_logs_list",
+"templates": [
+"analytics/sync_logs_list.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/analytics/integrations/logs/<int:log_id>/retry/",
+"name": "analytics:retry_failed_sync",
+"view": "analytics.views.retry_failed_sync",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/contracts/portal/<int:driver_id>/",
+"name": "contracts:driver_contracts",
+"view": "contracts.views.driver_contracts",
+"templates": [
+"contracts/driver_contracts.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/contracts/portal/<int:driver_id>/sign/<int:template_id>/",
+"name": "contracts:driver_contract_sign",
+"view": "contracts.views.driver_contract_sign",
+"templates": [
+"contracts/driver_contract_sign.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/contracts/portal/<int:driver_id>/view/<int:contract_id>/",
+"name": "contracts:driver_contract_view",
+"view": "contracts.views.driver_contract_view",
+"templates": [
+"contracts/driver_contract_view.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/contracts/admin/templates/",
+"name": "contracts:admin_templates_list",
+"view": "contracts.views.admin_templates_list",
+"templates": [
+"contracts/admin_templates_list.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/contracts/admin/templates/create/",
+"name": "contracts:admin_template_create",
+"view": "contracts.views.admin_template_create",
+"templates": [
+"contracts/admin_template_form.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/contracts/admin/templates/<int:pk>/edit/",
+"name": "contracts:admin_template_edit",
+"view": "contracts.views.admin_template_edit",
+"templates": [
+"contracts/admin_template_form.html"
+],
+"json": false,
+"post": true
+},
+{
+"url": "/contracts/admin/signed/",
+"name": "contracts:admin_signed_contracts",
+"view": "contracts.views.admin_signed_contracts",
+"templates": [
+"contracts/admin_signed_list.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/contracts/admin/missing/",
+"name": "contracts:admin_missing_contracts",
+"view": "contracts.views.admin_missing_contracts",
+"templates": [
+"contracts/admin_missing_list.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/contracts/admin/contract/<int:pk>/revoke/",
+"name": "contracts:admin_revoke_contract",
+"view": "contracts.views.admin_revoke_contract",
+"templates": [],
+"json": false,
+"post": false
+},
+{
+"url": "/contracts/admin/gerar/<int:driver_id>/",
+"name": "contracts:contract_generator",
+"view": "contracts.views_generator.contract_generator",
+"templates": [
+"contracts/generator.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/contracts/admin/gerar/<int:driver_id>/registar/",
+"name": "contracts:contract_generator_save",
+"view": "contracts.views_generator.contract_generator_save",
+"templates": [],
+"json": false,
+"post": true
+},
+{
+"url": "/contracts/admin/gerado/<int:pk>/",
+"name": "contracts:generated_contract_view",
+"view": "contracts.views_generator.generated_contract_view",
+"templates": [
+"contracts/generated_view.html"
+],
+"json": false,
+"post": false
+},
+{
+"url": "/contracts/admin/gerado/<int:pk>/acao/",
+"name": "contracts:generated_contract_action",
+"view": "contracts.views_generator.generated_contract_action",
+"templates": [],
+"json": false,
+"post": true
+}
+]

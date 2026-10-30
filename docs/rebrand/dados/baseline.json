@@ -1,0 +1,6489 @@
+{
+"pages": [
+{
+"url": "/auth/",
+"probe": "/auth/",
+"name": "customauth:authenticate",
+"view": "customauth.views.authenticate_view",
+"tpl": [
+"customauth/login.html"
+],
+"group": "Autenticação",
+"comp": [
+"Formulário"
+],
+"prof": [
+"anonimo",
+"admin",
+"operador",
+"leitor",
+"motorista",
+"empresa"
+],
+"q": 9,
+"ms": 10,
+"load": 659,
+"html": 0,
+"html_top": [],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "Login - Leguas Monitoring",
+"inline": 3,
+"dark": true
+},
+{
+"url": "/auth/authenticate/",
+"probe": "/auth/authenticate/",
+"name": "customauth:authenticate",
+"view": "customauth.views.authenticate_view",
+"tpl": [
+"customauth/login.html"
+],
+"group": "Autenticação",
+"comp": [
+"Formulário"
+],
+"prof": [
+"anonimo",
+"admin",
+"operador",
+"leitor",
+"motorista",
+"empresa"
+],
+"q": 9,
+"ms": 9,
+"load": 852,
+"html": 0,
+"html_top": [],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "Login - Leguas Monitoring",
+"inline": 3,
+"dark": true
+},
+{
+"url": "/auth/driver/",
+"probe": "/auth/driver/",
+"name": "customauth:driver_login",
+"view": "customauth.driver_auth_views.driver_login",
+"tpl": [
+"customauth/driver_login.html"
+],
+"group": "Autenticação",
+"comp": [
+"Formulário",
+"Hero/gradiente",
+"Separadores"
+],
+"prof": [
+"anonimo",
+"admin",
+"operador",
+"leitor",
+"motorista",
+"empresa"
+],
+"q": 9,
+"ms": 9,
+"load": 1275,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 2,
+"title": "Login Motorista · Léguas Franzinas",
+"inline": 0,
+"dark": false
+},
+{
+"url": "/auth/driver/credentials/<int:driver_id>/",
+"probe": "/auth/driver/credentials/1/",
+"name": "customauth:admin_driver_credentials",
+"view": "customauth.driver_auth_views.admin_driver_credentials",
+"tpl": [
+"customauth/admin_driver_credentials.html"
+],
+"group": "Autenticação",
+"comp": [
+"Formulário",
+"Hero/gradiente"
+],
+"prof": [
+"admin",
+"operador"
+],
+"q": 11,
+"ms": 22,
+"load": 1537,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Credenciais — Ana Silva - Leguas Franzinas",
+"inline": 5,
+"dark": true
+},
+{
+"url": "/auth/driver/login/",
+"probe": "/auth/driver/login/",
+"name": "customauth:driver_login_alias",
+"view": "customauth.driver_auth_views.driver_login",
+"tpl": [
+"customauth/driver_login.html"
+],
+"group": "Autenticação",
+"comp": [
+"Formulário",
+"Hero/gradiente",
+"Separadores"
+],
+"prof": [
+"anonimo",
+"admin",
+"operador",
+"leitor",
+"motorista",
+"empresa"
+],
+"q": 9,
+"ms": 9,
+"load": 850,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 2,
+"title": "Login Motorista · Léguas Franzinas",
+"inline": 0,
+"dark": false
+},
+{
+"url": "/auth/empresa/",
+"probe": "/auth/empresa/",
+"name": "customauth:empresa_login",
+"view": "customauth.empresa_auth_views.empresa_login",
+"tpl": [
+"customauth/empresa_login.html"
+],
+"group": "Autenticação",
+"comp": [
+"Formulário",
+"Hero/gradiente"
+],
+"prof": [
+"anonimo",
+"admin",
+"operador",
+"leitor",
+"motorista",
+"empresa"
+],
+"q": 9,
+"ms": 9,
+"load": 1063,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 2,
+"title": "Login Frota · Léguas Franzinas",
+"inline": 0,
+"dark": false
+},
+{
+"url": "/auth/empresa/credentials/<int:empresa_id>/",
+"probe": "/auth/empresa/credentials/1/",
+"name": "customauth:admin_empresa_credentials",
+"view": "customauth.empresa_auth_views.admin_empresa_credentials",
+"tpl": [
+"customauth/admin_empresa_credentials.html"
+],
+"group": "Autenticação",
+"comp": [
+"Formulário",
+"Hero/gradiente"
+],
+"prof": [
+"admin",
+"operador"
+],
+"q": 11,
+"ms": 19,
+"load": 1824,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "Credenciais — Frota Exemplo, Lda. - Leguas Franzinas",
+"inline": 5,
+"dark": true
+},
+{
+"url": "/auth/empresa/login/",
+"probe": "/auth/empresa/login/",
+"name": "customauth:empresa_login_alias",
+"view": "customauth.empresa_auth_views.empresa_login",
+"tpl": [
+"customauth/empresa_login.html"
+],
+"group": "Autenticação",
+"comp": [
+"Formulário",
+"Hero/gradiente"
+],
+"prof": [
+"anonimo",
+"admin",
+"operador",
+"leitor",
+"motorista",
+"empresa"
+],
+"q": 9,
+"ms": 9,
+"load": 739,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 2,
+"title": "Login Frota · Léguas Franzinas",
+"inline": 0,
+"dark": false
+},
+{
+"url": "/auth/login/",
+"probe": "/auth/login/",
+"name": "customauth:login",
+"view": "customauth.views.authenticate_view",
+"tpl": [
+"customauth/login.html"
+],
+"group": "Autenticação",
+"comp": [
+"Formulário"
+],
+"prof": [
+"anonimo",
+"admin",
+"operador",
+"leitor",
+"motorista",
+"empresa"
+],
+"q": 9,
+"ms": 9,
+"load": 733,
+"html": 0,
+"html_top": [],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "Login - Leguas Monitoring",
+"inline": 3,
+"dark": true
+},
+{
+"url": "/core/drivers/<int:driver_id>/account/",
+"probe": "/core/drivers/1/account/",
+"name": "core:driver-account",
+"view": "core.views.driver_account_statement",
+"tpl": [
+"core/driver_account.html"
+],
+"group": "Clientes (sem menu)",
+"comp": [
+"KPI",
+"Tabela"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 28,
+"load": 1674,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "Conta-Corrente — Ana Silva - Leguas Franzinas",
+"inline": 6,
+"dark": true
+},
+{
+"url": "/core/financial-alerts/",
+"probe": "/core/financial-alerts/",
+"name": "core:financial-alerts",
+"view": "core.views.financial_alerts_list",
+"tpl": [
+"core/financial_alerts.html"
+],
+"group": "Clientes (sem menu)",
+"comp": [],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 19,
+"load": 1265,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "Alertas Financeiros - Leguas Franzinas",
+"inline": 6,
+"dark": true
+},
+{
+"url": "/core/integrations/<int:pk>/edit/",
+"probe": "/core/integrations/1/edit/",
+"name": "core:integration-edit",
+"view": "core.views.integration_edit",
+"tpl": [
+"core/integration_form.html"
+],
+"group": "Clientes (sem menu)",
+"comp": [
+"Formulário"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 22,
+"load": 1304,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "Editar Integração - Plataforma Exemplo - Leguas Franzinas",
+"inline": 7,
+"dark": true
+},
+{
+"url": "/core/partners/<int:partner_pk>/integrations/create/",
+"probe": "/core/partners/1/integrations/create/",
+"name": "core:integration-create",
+"view": "core.views.integration_create",
+"tpl": [
+"core/integration_form.html"
+],
+"group": "Clientes (sem menu)",
+"comp": [
+"Formulário"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 24,
+"load": 1132,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "Nova Integração - Plataforma Exemplo - Leguas Franzinas",
+"inline": 7,
+"dark": true
+},
+{
+"url": "/core/partners/<int:pk>/",
+"probe": "/core/partners/1/",
+"name": "core:partner-detail",
+"view": "core.views.partner_detail",
+"tpl": [
+"core/partner_detail.html"
+],
+"group": "Clientes (sem menu)",
+"comp": [
+"Filtros",
+"Formulário",
+"Hero/gradiente",
+"KPI",
+"Modal",
+"Separadores",
+"Tabela"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 52,
+"load": 3826,
+"html": 34,
+"html_top": [
+"expected-named-entity",
+"unexpected-end-tag",
+"unexpected-end-tag-implies-table-voodoo",
+"unexpected-end-tag-in-select",
+"unexpected-start-tag-implies-table-voodoo",
+"unexpected-start-tag-in-select"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "Plataforma Exemplo - Leguas Franzinas",
+"inline": 72,
+"dark": true
+},
+{
+"url": "/core/partners/<int:pk>/bonus-rules/",
+"probe": "/core/partners/1/bonus-rules/",
+"name": "core:partner-bonus-rules",
+"view": "core.views.partner_bonus_rules",
+"tpl": [
+"core/partner_bonus_rules.html"
+],
+"group": "Clientes (sem menu)",
+"comp": [
+"Modal",
+"Tabela"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 22,
+"load": 1357,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Regras de Bónus — Plataforma Exemplo - Leguas Franzinas",
+"inline": 5,
+"dark": true
+},
+{
+"url": "/core/partners/<int:pk>/edit/",
+"probe": "/core/partners/1/edit/",
+"name": "core:partner-edit",
+"view": "core.views.partner_edit",
+"tpl": [
+"core/partner_form.html"
+],
+"group": "Clientes (sem menu)",
+"comp": [
+"Formulário"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 27,
+"load": 2386,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "Editar Plataforma Exemplo - Leguas Franzinas",
+"inline": 5,
+"dark": true
+},
+{
+"url": "/core/partners/<int:pk>/financial/",
+"probe": "/core/partners/1/financial/",
+"name": "core:partner-financial",
+"view": "core.views.partner_financial_dashboard",
+"tpl": [
+"core/partner_financial.html"
+],
+"group": "Clientes (sem menu)",
+"comp": [
+"Filtros",
+"Hero/gradiente",
+"KPI",
+"Modal",
+"Tabela"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 44,
+"load": 2134,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Financeiro — Plataforma Exemplo - Leguas Franzinas",
+"inline": 5,
+"dark": true
+},
+{
+"url": "/core/partners/create/",
+"probe": "/core/partners/create/",
+"name": "core:partner-create",
+"view": "core.views.partner_create",
+"tpl": [
+"core/partner_form.html"
+],
+"group": "Clientes (sem menu)",
+"comp": [
+"Formulário"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 31,
+"load": 1076,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "Novo Parceiro - Leguas Franzinas",
+"inline": 5,
+"dark": true
+},
+{
+"url": "/contracts/admin/gerado/<int:pk>/",
+"probe": "/contracts/admin/gerado/1/",
+"name": "contracts:generated_contract_view",
+"view": "contracts.views_generator.generated_contract_view",
+"tpl": [
+"contracts/generated_view.html"
+],
+"group": "Contratos (sem menu)",
+"comp": [],
+"prof": [
+"admin",
+"operador"
+],
+"q": 10,
+"ms": null,
+"load": 161,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 2,
+"title": "Contrato de Prestação de Serviços n.º 1 · Ana Silva",
+"inline": 0,
+"dark": false
+},
+{
+"url": "/contracts/admin/gerar/<int:driver_id>/",
+"probe": "/contracts/admin/gerar/1/",
+"name": "contracts:contract_generator",
+"view": "contracts.views_generator.contract_generator",
+"tpl": [
+"contracts/generator.html"
+],
+"group": "Contratos (sem menu)",
+"comp": [
+"Filtros",
+"Formulário"
+],
+"prof": [
+"admin",
+"operador"
+],
+"q": 21,
+"ms": null,
+"load": 392,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 2,
+"title": "Contrato · Ana Silva · Léguas Franzinas",
+"inline": 32,
+"dark": false
+},
+{
+"url": "/contracts/admin/templates/<int:pk>/edit/",
+"probe": "/contracts/admin/templates/1/edit/",
+"name": "contracts:admin_template_edit",
+"view": "contracts.views.admin_template_edit",
+"tpl": [
+"contracts/admin_template_form.html"
+],
+"group": "Contratos (sem menu)",
+"comp": [
+"Filtros",
+"Formulário",
+"Hero/gradiente"
+],
+"prof": [
+"admin",
+"operador"
+],
+"q": 0,
+"ms": 17,
+"load": 1528,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "Editar seed-893 - Leguas Franzinas",
+"inline": 4,
+"dark": true
+},
+{
+"url": "/converter/",
+"probe": "/converter/",
+"name": "converter",
+"view": "converter.views.converter_view",
+"tpl": [
+"converter.html"
+],
+"group": "Ferramentas (sem menu)",
+"comp": [
+"Formulário",
+"Hero/gradiente"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 19,
+"ms": 22,
+"load": 866,
+"html": 0,
+"html_top": [],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 2,
+"title": "Conversor de Lista para XLSX",
+"inline": 0,
+"dark": false
+},
+{
+"url": "/accounting/",
+"probe": "/accounting/",
+"name": "accounting:dashboard",
+"view": "accounting.views.dashboard",
+"tpl": [
+"accounting/dashboard.html"
+],
+"group": "Finanças (sem menu)",
+"comp": [
+"Tabela"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 22,
+"load": 794,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 2,
+"title": "Dashboard - Contabilidade",
+"inline": 0,
+"dark": false
+},
+{
+"url": "/accounting/a-pagar/calendario/",
+"probe": "/accounting/a-pagar/calendario/",
+"name": "accounting:payables_calendar",
+"view": "accounting.views_payables.payables_calendar",
+"tpl": [
+"accounting/payables_calendar.html"
+],
+"group": "Finanças (sem menu)",
+"comp": [],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 30,
+"load": 1191,
+"html": 3,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "Calendário de Pagamentos - Leguas Franzinas",
+"inline": 6,
+"dark": true
+},
+{
+"url": "/accounting/a-pagar/forecast/",
+"probe": "/accounting/a-pagar/forecast/",
+"name": "accounting:payables_forecast",
+"view": "accounting.views_payables.payables_forecast",
+"tpl": [
+"accounting/payables_forecast.html"
+],
+"group": "Finanças (sem menu)",
+"comp": [
+"KPI",
+"Tabela"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 31,
+"load": 1501,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Forecast 30 dias - Leguas Franzinas",
+"inline": 6,
+"dark": true
+},
+{
+"url": "/accounting/a-pagar/sem-ff/",
+"probe": "/accounting/a-pagar/sem-ff/",
+"name": "accounting:payables_no_ff",
+"view": "accounting.views_payables.payables_fleets_without_invoice",
+"tpl": [
+"accounting/payables_no_ff.html"
+],
+"group": "Finanças (sem menu)",
+"comp": [
+"Filtros",
+"KPI",
+"Tabela"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 61,
+"load": 1094,
+"html": 2,
+"html_top": [
+"expected-named-entity",
+"expected-tag-name"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Frotas sem Pré-Fatura - Leguas Franzinas",
+"inline": 6,
+"dark": true
+},
+{
+"url": "/accounting/a-pagar/sem-pf/",
+"probe": "/accounting/a-pagar/sem-pf/",
+"name": "accounting:payables_no_pf",
+"view": "accounting.views_payables.payables_drivers_without_pf",
+"tpl": [
+"accounting/payables_no_pf.html"
+],
+"group": "Finanças (sem menu)",
+"comp": [
+"Filtros",
+"KPI",
+"Tabela"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 75,
+"load": 1184,
+"html": 2,
+"html_top": [
+"expected-named-entity",
+"expected-tag-name"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Motoristas sem Pré-Fatura - Leguas Franzinas",
+"inline": 6,
+"dark": true
+},
+{
+"url": "/accounting/categorias/<int:pk>/editar/",
+"probe": "/accounting/categorias/1/editar/",
+"name": "accounting:category_edit",
+"view": "accounting.views_categories.category_edit",
+"tpl": [
+"accounting/category_form.html"
+],
+"group": "Finanças (sem menu)",
+"comp": [
+"Formulário"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 19,
+"load": 977,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "Editar Categoria - Leguas Franzinas",
+"inline": 6,
+"dark": true
+},
+{
+"url": "/accounting/categorias/nova/",
+"probe": "/accounting/categorias/nova/",
+"name": "accounting:category_create",
+"view": "accounting.views_categories.category_create",
+"tpl": [
+"accounting/category_form.html"
+],
+"group": "Finanças (sem menu)",
+"comp": [
+"Formulário"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 19,
+"load": 1002,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "Nova Categoria - Leguas Franzinas",
+"inline": 6,
+"dark": true
+},
+{
+"url": "/accounting/centros-custo/<int:pk>/editar/",
+"probe": "/accounting/centros-custo/1/editar/",
+"name": "accounting:cost_center_edit",
+"view": "accounting.views_cost_centers.cost_center_edit",
+"tpl": [
+"accounting/cost_center_form.html"
+],
+"group": "Finanças (sem menu)",
+"comp": [
+"Formulário"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 20,
+"load": 897,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "Editar Centro de Custo - Leguas Franzinas",
+"inline": 6,
+"dark": true
+},
+{
+"url": "/accounting/centros-custo/novo/",
+"probe": "/accounting/centros-custo/novo/",
+"name": "accounting:cost_center_create",
+"view": "accounting.views_cost_centers.cost_center_create",
+"tpl": [
+"accounting/cost_center_form.html"
+],
+"group": "Finanças (sem menu)",
+"comp": [
+"Formulário"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 20,
+"load": 934,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "Novo Centro de Custo - Leguas Franzinas",
+"inline": 6,
+"dark": true
+},
+{
+"url": "/accounting/contas-a-pagar/<int:pk>/",
+"probe": "/accounting/contas-a-pagar/1/",
+"name": "accounting:bill_detail",
+"view": "accounting.views.bill_detail",
+"tpl": [
+"accounting/bill_detail.html"
+],
+"group": "Finanças (sem menu)",
+"comp": [
+"Formulário"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 25,
+"load": 1168,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "seed-626 - Leguas Franzinas",
+"inline": 6,
+"dark": true
+},
+{
+"url": "/accounting/contas-a-pagar/<int:pk>/editar/",
+"probe": "/accounting/contas-a-pagar/1/editar/",
+"name": "accounting:bill_edit",
+"view": "accounting.views.bill_edit",
+"tpl": [
+"accounting/bill_form.html"
+],
+"group": "Finanças (sem menu)",
+"comp": [
+"Formulário",
+"Hero/gradiente",
+"Modal"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 36,
+"load": 1863,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [
+"<i data-lucide=\"receipt-percent\" class=\"w-3.5 h-3.5\"></i> icon name was not found in the provided icons object."
+],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "Editar Conta a Pagar - Leguas Franzinas",
+"inline": 9,
+"dark": true
+},
+{
+"url": "/accounting/contas-a-pagar/lixeira/",
+"probe": "/accounting/contas-a-pagar/lixeira/",
+"name": "accounting:bill_trash",
+"view": "accounting.views.bill_trash",
+"tpl": [
+"accounting/bill_trash.html"
+],
+"group": "Finanças (sem menu)",
+"comp": [
+"Tabela"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 20,
+"load": 1084,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Lixeira — Contas a Pagar - Leguas Franzinas",
+"inline": 6,
+"dark": true
+},
+{
+"url": "/accounting/contas-a-pagar/nova/",
+"probe": "/accounting/contas-a-pagar/nova/",
+"name": "accounting:bill_create",
+"view": "accounting.views.bill_create",
+"tpl": [
+"accounting/bill_form.html"
+],
+"group": "Finanças (sem menu)",
+"comp": [
+"Formulário",
+"Hero/gradiente",
+"Modal"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 39,
+"load": 1353,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [
+"<i data-lucide=\"receipt-percent\" class=\"w-3.5 h-3.5\"></i> icon name was not found in the provided icons object."
+],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "Nova Conta a Pagar - Leguas Franzinas",
+"inline": 9,
+"dark": true
+},
+{
+"url": "/accounting/despesas/<int:pk>/editar/",
+"probe": "/accounting/despesas/1/editar/",
+"name": "accounting:expense_edit",
+"view": "accounting.views.expense_edit",
+"tpl": [
+"accounting/expense_form.html"
+],
+"group": "Finanças (sem menu)",
+"comp": [
+"Formulário"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 19,
+"load": 981,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 2,
+"title": "Editar Despesa",
+"inline": 0,
+"dark": false
+},
+{
+"url": "/accounting/despesas/nova/",
+"probe": "/accounting/despesas/nova/",
+"name": "accounting:expense_create",
+"view": "accounting.views.expense_create",
+"tpl": [
+"accounting/expense_form.html"
+],
+"group": "Finanças (sem menu)",
+"comp": [
+"Formulário"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 21,
+"load": 924,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 2,
+"title": "Nova Despesa",
+"inline": 0,
+"dark": false
+},
+{
+"url": "/accounting/extractos/<int:pk>/",
+"probe": "/accounting/extractos/1/",
+"name": "accounting:bank_statement_detail",
+"view": "accounting.views.bank_statement_detail",
+"tpl": [
+"accounting/bank_statement_detail.html"
+],
+"group": "Finanças (sem menu)",
+"comp": [
+"Tabela"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 32,
+"load": 1145,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "seed-656 - Leguas Franzinas",
+"inline": 6,
+"dark": true
+},
+{
+"url": "/accounting/extractos/upload/",
+"probe": "/accounting/extractos/upload/",
+"name": "accounting:bank_statement_upload",
+"view": "accounting.views.bank_statement_upload",
+"tpl": [
+"accounting/bank_statement_upload.html"
+],
+"group": "Finanças (sem menu)",
+"comp": [
+"Formulário"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 15,
+"load": 1274,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "Importar Extracto - Leguas Franzinas",
+"inline": 6,
+"dark": true
+},
+{
+"url": "/accounting/fornecedores/<int:pk>/editar/",
+"probe": "/accounting/fornecedores/1/editar/",
+"name": "accounting:fornecedor_edit",
+"view": "accounting.views_suppliers.fornecedor_edit",
+"tpl": [
+"accounting/fornecedor_form.html"
+],
+"group": "Finanças (sem menu)",
+"comp": [
+"Formulário"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 30,
+"load": 996,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "Editar Fornecedor - Leguas Franzinas",
+"inline": 6,
+"dark": true
+},
+{
+"url": "/accounting/fornecedores/novo/",
+"probe": "/accounting/fornecedores/novo/",
+"name": "accounting:fornecedor_create",
+"view": "accounting.views_suppliers.fornecedor_create",
+"tpl": [
+"accounting/fornecedor_form.html"
+],
+"group": "Finanças (sem menu)",
+"comp": [
+"Formulário"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 36,
+"load": 893,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "Novo Fornecedor - Leguas Franzinas",
+"inline": 6,
+"dark": true
+},
+{
+"url": "/accounting/fornecedores/tags/",
+"probe": "/accounting/fornecedores/tags/",
+"name": "accounting:fornecedor_tag_list",
+"view": "accounting.views_suppliers.fornecedor_tag_list",
+"tpl": [
+"accounting/fornecedor_tag_list.html"
+],
+"group": "Finanças (sem menu)",
+"comp": [
+"Formulário",
+"Tabela"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 19,
+"load": 1525,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Tags de Fornecedor - Leguas Franzinas",
+"inline": 6,
+"dark": true
+},
+{
+"url": "/accounting/impostos/<int:pk>/editar/",
+"probe": "/accounting/impostos/1/editar/",
+"name": "accounting:imposto_edit",
+"view": "accounting.views_taxes.imposto_edit",
+"tpl": [
+"accounting/imposto_form.html"
+],
+"group": "Finanças (sem menu)",
+"comp": [
+"Formulário",
+"Modal"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 30,
+"load": 2229,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "Editar Imposto - Leguas Franzinas",
+"inline": 6,
+"dark": true
+},
+{
+"url": "/accounting/impostos/novo/",
+"probe": "/accounting/impostos/novo/",
+"name": "accounting:imposto_create",
+"view": "accounting.views_taxes.imposto_create",
+"tpl": [
+"accounting/imposto_form.html"
+],
+"group": "Finanças (sem menu)",
+"comp": [
+"Formulário",
+"Modal"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 29,
+"load": 1101,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Novo Imposto - Leguas Franzinas",
+"inline": 7,
+"dark": true
+},
+{
+"url": "/accounting/receitas/<int:pk>/editar/",
+"probe": "/accounting/receitas/1/editar/",
+"name": "accounting:revenue_edit",
+"view": "accounting.views.revenue_edit",
+"tpl": [
+"accounting/revenue_form.html"
+],
+"group": "Finanças (sem menu)",
+"comp": [
+"Formulário"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 20,
+"load": 688,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 2,
+"title": "Editar Receita",
+"inline": 0,
+"dark": false
+},
+{
+"url": "/accounting/receitas/nova/",
+"probe": "/accounting/receitas/nova/",
+"name": "accounting:revenue_create",
+"view": "accounting.views.revenue_create",
+"tpl": [
+"accounting/revenue_form.html"
+],
+"group": "Finanças (sem menu)",
+"comp": [
+"Formulário"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 20,
+"load": 812,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 2,
+"title": "Nova Receita",
+"inline": 0,
+"dark": false
+},
+{
+"url": "/payroll/folhas/<int:pk>/",
+"probe": "/payroll/folhas/1/",
+"name": "payroll:payroll_detail",
+"view": "payroll.views.payroll_detail",
+"tpl": [
+"payroll/payroll_detail.html"
+],
+"group": "Finanças (sem menu)",
+"comp": [
+"Filtros",
+"Formulário",
+"Tabela"
+],
+"prof": [
+"admin",
+"operador"
+],
+"q": 0,
+"ms": 32,
+"load": 1067,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "Folha — seed-684 1099/1098 - Leguas Franzinas",
+"inline": 7,
+"dark": true
+},
+{
+"url": "/payroll/folhas/gerar/",
+"probe": "/payroll/folhas/gerar/",
+"name": "payroll:payroll_generate",
+"view": "payroll.views.payroll_generate",
+"tpl": [
+"payroll/payroll_generate.html"
+],
+"group": "Finanças (sem menu)",
+"comp": [
+"Formulário"
+],
+"prof": [
+"admin",
+"operador"
+],
+"q": 10,
+"ms": null,
+"load": 1306,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "Gerar Folhas - Leguas Franzinas",
+"inline": 6,
+"dark": true
+},
+{
+"url": "/payroll/funcionarios/",
+"probe": "/payroll/funcionarios/",
+"name": "payroll:employee_list",
+"view": "payroll.views.employee_list",
+"tpl": [
+"payroll/employee_list.html"
+],
+"group": "Finanças (sem menu)",
+"comp": [
+"KPI",
+"Tabela"
+],
+"prof": [
+"admin",
+"operador"
+],
+"q": 0,
+"ms": 21,
+"load": 1263,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Funcionários — Folha de Pagamento - Leguas Franzinas",
+"inline": 6,
+"dark": true
+},
+{
+"url": "/payroll/funcionarios/<int:pk>/",
+"probe": "/payroll/funcionarios/1/",
+"name": "payroll:employee_edit",
+"view": "payroll.views.employee_edit",
+"tpl": [
+"payroll/employee_form.html"
+],
+"group": "Finanças (sem menu)",
+"comp": [
+"Formulário"
+],
+"prof": [
+"admin",
+"operador"
+],
+"q": 0,
+"ms": 27,
+"load": 1244,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "Editar — seed-684 - Leguas Franzinas",
+"inline": 6,
+"dark": true
+},
+{
+"url": "/payroll/funcionarios/novo/",
+"probe": "/payroll/funcionarios/novo/",
+"name": "payroll:employee_create",
+"view": "payroll.views.employee_create",
+"tpl": [
+"payroll/employee_form.html"
+],
+"group": "Finanças (sem menu)",
+"comp": [
+"Formulário"
+],
+"prof": [
+"admin",
+"operador"
+],
+"q": 0,
+"ms": 26,
+"load": 1096,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "Novo Funcionário - Leguas Franzinas",
+"inline": 6,
+"dark": true
+},
+{
+"url": "/accounting/contas-a-pagar/",
+"probe": "/accounting/contas-a-pagar/",
+"name": "accounting:bill_list",
+"view": "accounting.views.bill_list",
+"tpl": [
+"accounting/bill_list.html"
+],
+"group": "Finanças › A pagar › Contas a pagar",
+"comp": [
+"Filtros",
+"KPI",
+"Tabela"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 35,
+"load": 1318,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Contas a Pagar - Leguas Franzinas",
+"inline": 6,
+"dark": true
+},
+{
+"url": "/payroll/folhas/",
+"probe": "/payroll/folhas/",
+"name": "payroll:payroll_list",
+"view": "payroll.views.payroll_list",
+"tpl": [
+"payroll/payroll_list.html"
+],
+"group": "Finanças › A pagar › Folha de pagamento",
+"comp": [
+"Filtros",
+"KPI",
+"Tabela"
+],
+"prof": [
+"admin",
+"operador"
+],
+"q": 0,
+"ms": 27,
+"load": 1159,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Folhas de Pagamento - Leguas Franzinas",
+"inline": 6,
+"dark": true
+},
+{
+"url": "/accounting/fornecedores/",
+"probe": "/accounting/fornecedores/",
+"name": "accounting:fornecedor_list",
+"view": "accounting.views_suppliers.fornecedor_list",
+"tpl": [
+"accounting/fornecedor_list.html"
+],
+"group": "Finanças › A pagar › Fornecedores",
+"comp": [
+"Filtros",
+"Formulário",
+"KPI",
+"Tabela"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 27,
+"load": 1491,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Fornecedores - Leguas Franzinas",
+"inline": 6,
+"dark": true
+},
+{
+"url": "/accounting/a-pagar/",
+"probe": "/accounting/a-pagar/",
+"name": "accounting:payables_inbox",
+"view": "accounting.views_payables.payables_inbox",
+"tpl": [
+"accounting/payables_inbox.html"
+],
+"group": "Finanças › A pagar › Inbox",
+"comp": [
+"Filtros",
+"Hero/gradiente",
+"KPI",
+"Modal",
+"Tabela"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 46,
+"load": 1429,
+"html": 9,
+"html_top": [
+"expected-named-entity"
+],
+"err": [
+"Error: <rect> attribute height: Unexpected end of attribute. Expected length, \"\".",
+"Error: <rect> attribute y: Unexpected end of attribute. Expected length, \"\".",
+"h is not defined",
+"i is not defined"
+],
+"warn": [
+"Alpine Expression Error: h is not defined\n\nExpression: \"80 - Math.min(70, ((h.paid_total + h.pending_total) / Math.max(1, Math.max(...health.data.history.map(x => x.paid_total + x.pending_total)))) * 70)\"\n\n JSHandle@node",
+"Alpine Expression Error: h is not defined\n\nExpression: \"Math.min(70, ((h.paid_total + h.pending_total) / Math.max(1, Math.max(...health.data.history.map(x => x.paid_total + x.pending_total)))) * 70)\"\n\n JSHandle@node",
+"Alpine Expression Error: h is not defined\n\nExpression: \"h.month_label\"\n\n JSHandle@node",
+"Alpine Expression Error: h is not defined\n\nExpression: \"h.pending_total > 0 ? 'fill-amber-400' : 'fill-emerald-400'\"\n\n JSHandle@node",
+"Alpine Expression Error: i is not defined\n\nExpression: \"i * 60 + 30\"\n\n JSHandle@node",
+"Alpine Expression Error: i is not defined\n\nExpression: \"i * 60 + 6\"\n\n JSHandle@node"
+],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "A Pagar — Inbox Unificado - Leguas Franzinas",
+"inline": 21,
+"dark": true
+},
+{
+"url": "/accounting/pendentes-regularizacao/",
+"probe": "/accounting/pendentes-regularizacao/",
+"name": "accounting:pending_reconciliation",
+"view": "accounting.views_payables.pending_reconciliation",
+"tpl": [
+"accounting/pending_reconciliation.html"
+],
+"group": "Finanças › A pagar › Pendentes de regularização",
+"comp": [
+"KPI",
+"Tabela"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 28,
+"load": 1329,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Pendentes de Regularização - Leguas Franzinas",
+"inline": 6,
+"dark": true
+},
+{
+"url": "/accounting/extractos/",
+"probe": "/accounting/extractos/",
+"name": "accounting:bank_statement_list",
+"view": "accounting.views.bank_statement_list",
+"tpl": [
+"accounting/bank_statement_list.html",
+"accounting/_analysis_tabs.html"
+],
+"group": "Finanças › A receber › Extratos OFX",
+"comp": [
+"Tabela"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 19,
+"load": 1509,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Conciliação Bancária - Leguas Franzinas",
+"inline": 6,
+"dark": true
+},
+{
+"url": "/settlements/invoices/",
+"probe": "/settlements/invoices/",
+"name": "invoice-list",
+"view": "settlements.views.invoice_list",
+"tpl": [
+"settlements/invoice_list_v2.html"
+],
+"group": "Finanças › A receber › Faturas de clientes",
+"comp": [
+"Filtros",
+"Formulário",
+"Hero/gradiente",
+"KPI",
+"Tabela"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 16,
+"ms": 29,
+"load": 1773,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Faturas de Parceiros - Leguas Franzinas",
+"inline": 7,
+"dark": true
+},
+{
+"url": "/accounting/reconciliacao-bancaria/",
+"probe": "/accounting/reconciliacao-bancaria/",
+"name": "accounting:bank_reconciliation",
+"view": "accounting.views_reconciliation.bank_reconciliation",
+"tpl": [
+"accounting/bank_reconciliation.html"
+],
+"group": "Finanças › A receber › Reconciliação bancária",
+"comp": [
+"Filtros",
+"Formulário",
+"KPI"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 40,
+"load": 1116,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "Reconciliação Bancária - Leguas Franzinas",
+"inline": 6,
+"dark": true
+},
+{
+"url": "/accounting/break-even/",
+"probe": "/accounting/break-even/",
+"name": "accounting:break_even",
+"view": "accounting.views.break_even_monitor",
+"tpl": [
+"accounting/break_even.html",
+"accounting/_analysis_tabs.html"
+],
+"group": "Finanças › Análise › Break-even",
+"comp": [
+"Filtros",
+"Gráfico",
+"KPI",
+"Tabela"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 184,
+"load": 1785,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [
+"Unexpected number"
+],
+"warn": [
+"<i data-lucide=\"crystal-ball\" class=\"w-4 h-4 text-violet-500\"></i> icon name was not found in the provided icons object."
+],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "Monitor da Operação · Break-Even - Leguas Franzinas",
+"inline": 24,
+"dark": true
+},
+{
+"url": "/accounting/categorias/",
+"probe": "/accounting/categorias/",
+"name": "accounting:category_list",
+"view": "accounting.views_categories.category_list",
+"tpl": [
+"accounting/category_list.html"
+],
+"group": "Finanças › Análise › Categorias",
+"comp": [
+"Filtros",
+"Tabela"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 21,
+"load": 1388,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Categorias de Despesa - Leguas Franzinas",
+"inline": 6,
+"dark": true
+},
+{
+"url": "/accounting/centros-custo/",
+"probe": "/accounting/centros-custo/",
+"name": "accounting:cost_center_list",
+"view": "accounting.views_cost_centers.cost_center_list",
+"tpl": [
+"accounting/cost_center_list.html"
+],
+"group": "Finanças › Análise › Centros de custo",
+"comp": [
+"Filtros",
+"Formulário",
+"KPI",
+"Tabela"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 29,
+"load": 1744,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Centros de Custo - Leguas Franzinas",
+"inline": 6,
+"dark": true
+},
+{
+"url": "/accounting/dre/",
+"probe": "/accounting/dre/",
+"name": "accounting:dre",
+"view": "accounting.views.dre",
+"tpl": [
+"accounting/dre.html",
+"accounting/_analysis_tabs.html"
+],
+"group": "Finanças › Análise › DRE",
+"comp": [
+"Filtros",
+"KPI",
+"Tabela"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 77,
+"load": 1898,
+"html": 5,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Demonstração de Resultados - Leguas Franzinas",
+"inline": 6,
+"dark": true
+},
+{
+"url": "/accounting/fluxo-caixa/",
+"probe": "/accounting/fluxo-caixa/",
+"name": "accounting:cash_flow",
+"view": "accounting.views.cash_flow_projection",
+"tpl": [
+"accounting/cash_flow.html",
+"accounting/_analysis_tabs.html"
+],
+"group": "Finanças › Análise › Fluxo de caixa",
+"comp": [
+"Filtros",
+"KPI",
+"Tabela"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 41,
+"load": 1559,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Projecção de Fluxo de Caixa - Leguas Franzinas",
+"inline": 6,
+"dark": true
+},
+{
+"url": "/accounting/auditoria/",
+"probe": "/accounting/auditoria/",
+"name": "accounting:audit_timeline",
+"view": "accounting.views_audit.audit_timeline",
+"tpl": [
+"accounting/audit_timeline.html"
+],
+"group": "Finanças › Controlo › Auditoria",
+"comp": [
+"Filtros"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 59,
+"load": 1450,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "Auditoria - Leguas Franzinas",
+"inline": 6,
+"dark": true
+},
+{
+"url": "/settlements/calendar/",
+"probe": "/settlements/calendar/",
+"name": "holiday-list",
+"view": "settlements.holiday_views.holiday_list",
+"tpl": [
+"settlements/holiday_calendar.html"
+],
+"group": "Finanças › Controlo › Calendário",
+"comp": [
+"Filtros",
+"Modal",
+"Tabela"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 13,
+"ms": 27,
+"load": 2182,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [
+"Unexpected token ','"
+],
+"warn": [
+"Alpine Expression Error: Unexpected token ','\n\nExpression: \"openEdit(1, , \"2000-01-01\", true, \"national\", \"\", \"\")\"\n\n JSHandle@node",
+"Alpine Expression Error: Unexpected token ','\n\nExpression: \"openEdit(10, , \"2000-12-25\", true, \"national\", \"\", \"\")\"\n\n JSHandle@node",
+"Alpine Expression Error: Unexpected token ','\n\nExpression: \"openEdit(11, , \"2026-02-17\", false, \"national\", \"\", \"Feriado móvel — adicionar entrada nova nos anos seguintes\")\"\n\n JSHandle@node",
+"Alpine Expression Error: Unexpected token ','\n\nExpression: \"openEdit(12, , \"2026-04-03\", false, \"national\", \"\", \"Feriado móvel — adicionar entrada nova nos anos seguintes\")\"\n\n JSHandle@node",
+"Alpine Expression Error: Unexpected token ','\n\nExpression: \"openEdit(13, , \"2026-04-05\", false, \"national\", \"\", \"Feriado móvel — adicionar entrada nova nos anos seguintes\")\"\n\n JSHandle@node",
+"Alpine Expression Error: Unexpected token ','\n\nExpression: \"openEdit(14, , \"2026-06-04\", false, \"national\", \"\", \"Feriado móvel — adicionar entrada nova nos anos seguintes\")\"\n\n JSHandle@node",
+"Alpine Expression Error: Unexpected token ','\n\nExpression: \"openEdit(15, , \"2026-10-30\", false, \"national\", \"\", \"\")\"\n\n JSHandle@node",
+"Alpine Expression Error: Unexpected token ','\n\nExpression: \"openEdit(16, , \"2026-10-30\", false, \"national\", \"\", \"\")\"\n\n JSHandle@node",
+"Alpine Expression Error: Unexpected token ','\n\nExpression: \"openEdit(2, , \"2000-04-25\", true, \"national\", \"\", \"\")\"\n\n JSHandle@node",
+"Alpine Expression Error: Unexpected token ','\n\nExpression: \"openEdit(3, , \"2000-05-01\", true, \"national\", \"\", \"\")\"\n\n JSHandle@node",
+"Alpine Expression Error: Unexpected token ','\n\nExpression: \"openEdit(4, , \"2000-06-10\", true, \"national\", \"\", \"\")\"\n\n JSHandle@node",
+"Alpine Expression Error: Unexpected token ','\n\nExpression: \"openEdit(5, , \"2000-08-15\", true, \"national\", \"\", \"\")\"\n\n JSHandle@node",
+"Alpine Expression Error: Unexpected token ','\n\nExpression: \"openEdit(6, , \"2000-10-05\", true, \"national\", \"\", \"\")\"\n\n JSHandle@node",
+"Alpine Expression Error: Unexpected token ','\n\nExpression: \"openEdit(7, , \"2000-11-01\", true, \"national\", \"\", \"\")\"\n\n JSHandle@node",
+"Alpine Expression Error: Unexpected token ','\n\nExpression: \"openEdit(8, , \"2000-12-01\", true, \"national\", \"\", \"\")\"\n\n JSHandle@node",
+"Alpine Expression Error: Unexpected token ','\n\nExpression: \"openEdit(9, , \"2000-12-08\", true, \"national\", \"\", \"\")\"\n\n JSHandle@node"
+],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Calendário de Feriados - Leguas Franzinas",
+"inline": 8,
+"dark": true
+},
+{
+"url": "/accounting/periodos/",
+"probe": "/accounting/periodos/",
+"name": "accounting:period_lock_list",
+"view": "accounting.views_period_lock.period_lock_list",
+"tpl": [
+"accounting/period_lock_list.html"
+],
+"group": "Finanças › Controlo › Fechos de período",
+"comp": [
+"Formulário",
+"Tabela"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 31,
+"load": 1760,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Fechos de Período - Leguas Franzinas",
+"inline": 6,
+"dark": true
+},
+{
+"url": "/settlements/socios/",
+"probe": "/settlements/socios/",
+"name": "shareholder-dashboard",
+"view": "settlements.views_shareholder.shareholder_dashboard",
+"tpl": [
+"settlements/shareholder_dashboard.html"
+],
+"group": "Finanças › Controlo › Sócios e reembolsos",
+"comp": [
+"Filtros",
+"KPI",
+"Modal",
+"Tabela"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 9,
+"ms": 22,
+"load": 1634,
+"html": 13,
+"html_top": [
+"expected-named-entity",
+"unexpected-end-tag",
+"unexpected-end-tag-implies-table-voodoo",
+"unexpected-end-tag-in-select",
+"unexpected-start-tag-implies-table-voodoo",
+"unexpected-start-tag-in-select"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Sócios e Reembolsos - Leguas Franzinas",
+"inline": 26,
+"dark": true
+},
+{
+"url": "/accounting/impostos/",
+"probe": "/accounting/impostos/",
+"name": "accounting:imposto_list",
+"view": "accounting.views_taxes.imposto_list",
+"tpl": [
+"accounting/imposto_list.html"
+],
+"group": "Finanças › Impostos › Impostos",
+"comp": [
+"Filtros",
+"Formulário",
+"KPI",
+"Modal",
+"Tabela"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 27,
+"load": 1550,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Impostos - Leguas Franzinas",
+"inline": 6,
+"dark": true
+},
+{
+"url": "/accounting/impostos/planos/",
+"probe": "/accounting/impostos/planos/",
+"name": "accounting:plano_list",
+"view": "accounting.views_taxes.plano_list",
+"tpl": [
+"accounting/plano_list.html"
+],
+"group": "Finanças › Impostos › Planos prestacionais",
+"comp": [
+"Filtros",
+"Hero/gradiente",
+"KPI",
+"Modal",
+"Tabela"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 22,
+"load": 1087,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Planos Prestacionais - Leguas Franzinas",
+"inline": 6,
+"dark": true
+},
+{
+"url": "/settlements/adiantamentos/",
+"probe": "/settlements/adiantamentos/",
+"name": "cash-entries-dashboard",
+"view": "settlements.views_cash_entries.cash_entries_dashboard",
+"tpl": [
+"settlements/cash_entries_dashboard.html"
+],
+"group": "Finanças › Pagamentos a motoristas › Conta-corrente",
+"comp": [
+"Filtros",
+"KPI",
+"Modal",
+"Tabela"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 9,
+"ms": 18,
+"load": 1177,
+"html": 15,
+"html_top": [
+"expected-named-entity",
+"unexpected-end-tag",
+"unexpected-end-tag-implies-table-voodoo",
+"unexpected-end-tag-in-select",
+"unexpected-start-tag-implies-table-voodoo",
+"unexpected-start-tag-in-select"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Conta-Corrente Motoristas - Leguas Franzinas",
+"inline": 21,
+"dark": true
+},
+{
+"url": "/driversapp/admin/pagamentos/",
+"probe": "/driversapp/admin/pagamentos/",
+"name": "drivers_app:payments_dashboard",
+"view": "drivers_app.payments_views.payments_dashboard",
+"tpl": [
+"drivers_app/admin/payments.html"
+],
+"group": "Finanças › Pagamentos a motoristas › Pagamentos",
+"comp": [
+"Formulário",
+"Gráfico",
+"Hero/gradiente",
+"KPI",
+"Tabela"
+],
+"prof": [
+"admin",
+"operador"
+],
+"q": 37,
+"ms": 53,
+"load": 1940,
+"html": 4,
+"html_top": [
+"expected-named-entity",
+"named-entity-without-semicolon"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Pagamentos a Motoristas - Leguas Franzinas",
+"inline": 10,
+"dark": true
+},
+{
+"url": "/accounting/exec/",
+"probe": "/accounting/exec/",
+"name": "accounting:executive_dashboard",
+"view": "accounting.views_exec.executive_dashboard",
+"tpl": [
+"accounting/executive_dashboard.html"
+],
+"group": "Finanças › Visão geral › Resumo executivo",
+"comp": [
+"Filtros",
+"Gráfico",
+"KPI",
+"Tabela"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 161,
+"load": 1814,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Resumo Executivo · September De 2026 - Leguas Franzinas",
+"inline": 17,
+"dark": true
+},
+{
+"url": "/accounting/tesouraria/",
+"probe": "/accounting/tesouraria/",
+"name": "accounting:treasury_dashboard",
+"view": "accounting.views_treasury.treasury_dashboard",
+"tpl": [
+"accounting/treasury_dashboard.html"
+],
+"group": "Finanças › Visão geral › Tesouraria",
+"comp": [
+"Gráfico",
+"KPI",
+"Tabela"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 69,
+"load": 6088,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [
+"<i data-lucide=\"receipt-percent\" class=\"w-4 h-4 text-violet-500\"></i> icon name was not found in the provided icons object."
+],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Posição de Tesouraria - Leguas Franzinas",
+"inline": 8,
+"dark": true
+},
+{
+"url": "/accounting/hub/",
+"probe": "/accounting/hub/",
+"name": "accounting:hub_financeiro",
+"view": "accounting.views_hub.hub_financeiro",
+"tpl": [
+"accounting/hub.html"
+],
+"group": "Finanças › Visão geral › Visão financeira",
+"comp": [
+"Tabela"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 73,
+"load": 1488,
+"html": 3,
+"html_top": [
+"expected-named-entity",
+"unexpected-end-tag",
+"unexpected-start-tag-implies-end-tag"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Hub Financeiro - Leguas Franzinas",
+"inline": 37,
+"dark": true
+},
+{
+"url": "/fleet/maintenance/<int:pk>/",
+"probe": "/fleet/maintenance/1/",
+"name": "fleet:maintenance_detail",
+"view": "fleet_management.views.maintenance_detail",
+"tpl": [
+"fleet_management/maintenance_detail.html"
+],
+"group": "Frota (sem menu)",
+"comp": [
+"Hero/gradiente"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 20,
+"load": 1490,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Manutenção - seed-775 - Leguas Franzinas",
+"inline": 5,
+"dark": true
+},
+{
+"url": "/fleet/maintenance/<int:pk>/edit/",
+"probe": "/fleet/maintenance/1/edit/",
+"name": "fleet:maintenance_edit",
+"view": "fleet_management.views.maintenance_edit",
+"tpl": [
+"fleet_management/maintenance_form.html"
+],
+"group": "Frota (sem menu)",
+"comp": [
+"Formulário",
+"Hero/gradiente"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 23,
+"load": 1440,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "Editar Manutenção - Leguas Franzinas",
+"inline": 5,
+"dark": true
+},
+{
+"url": "/fleet/maintenance/calendar/",
+"probe": "/fleet/maintenance/calendar/",
+"name": "fleet:maintenance_calendar",
+"view": "fleet_management.views.maintenance_calendar",
+"tpl": [
+"fleet_management/maintenance_calendar.html"
+],
+"group": "Frota (sem menu)",
+"comp": [
+"Hero/gradiente",
+"Modal"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 17,
+"load": 1445,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [
+"https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.css"
+],
+"hscroll": true,
+"shots": 4,
+"title": "Calendário de Manutenções - Leguas Franzinas",
+"inline": 52,
+"dark": true
+},
+{
+"url": "/fleet/maintenance/create/",
+"probe": "/fleet/maintenance/create/",
+"name": "fleet:maintenance_create",
+"view": "fleet_management.views.maintenance_create",
+"tpl": [
+"fleet_management/maintenance_form.html"
+],
+"group": "Frota (sem menu)",
+"comp": [
+"Formulário",
+"Hero/gradiente"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 25,
+"load": 996,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "Agendar Manutenção - Leguas Franzinas",
+"inline": 5,
+"dark": true
+},
+{
+"url": "/fleet/vehicles/<int:pk>/edit/",
+"probe": "/fleet/vehicles/1/edit/",
+"name": "fleet:vehicle_edit",
+"view": "fleet_management.views.vehicle_edit",
+"tpl": [
+"fleet_management/vehicle_form.html"
+],
+"group": "Frota (sem menu)",
+"comp": [
+"Formulário",
+"Hero/gradiente"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 23,
+"load": 1257,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "Editar Veículo - Leguas Franzinas",
+"inline": 5,
+"dark": true
+},
+{
+"url": "/fleet/vehicles/create/",
+"probe": "/fleet/vehicles/create/",
+"name": "fleet:vehicle_create",
+"view": "fleet_management.views.vehicle_create",
+"tpl": [
+"fleet_management/vehicle_form.html"
+],
+"group": "Frota (sem menu)",
+"comp": [
+"Formulário",
+"Hero/gradiente"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 26,
+"load": 1181,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "Novo Veículo - Leguas Franzinas",
+"inline": 5,
+"dark": true
+},
+{
+"url": "/",
+"probe": "/",
+"name": "dashboard_leguas:home",
+"view": "dashboard_leguas.views_home.DashboardView",
+"tpl": [
+"dashboard_leguas/home.html"
+],
+"group": "Hoje › Painel do dia",
+"comp": [
+"Filtros",
+"Gráfico",
+"Hero/gradiente",
+"KPI",
+"Tabela"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 34,
+"ms": 184,
+"load": 3210,
+"html": 15,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Dashboard Operacional - Leguas Franzinas",
+"inline": 18,
+"dark": true
+},
+{
+"url": "/driversapp/admin/central/",
+"probe": "/driversapp/admin/central/",
+"name": "drivers_app:drivers_central_alias",
+"view": "drivers_app.central_views.drivers_central",
+"tpl": [
+"drivers_app/admin/drivers_central.html"
+],
+"group": "Motoristas (sem menu)",
+"comp": [
+"Filtros",
+"Formulário",
+"Gráfico",
+"Hero/gradiente",
+"KPI",
+"Tabela"
+],
+"prof": [
+"admin",
+"operador"
+],
+"q": 39,
+"ms": 40,
+"load": 1263,
+"html": 12,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Central de Motoristas - Leguas Franzinas",
+"inline": 10,
+"dark": true
+},
+{
+"url": "/driversapp/admin/reclamacoes/",
+"probe": "/driversapp/admin/reclamacoes/",
+"name": "drivers_app:admin_complaints_dashboard",
+"view": "drivers_app.views.admin_complaints_dashboard",
+"tpl": [
+"drivers_app/admin_complaints.html"
+],
+"group": "Motoristas (sem menu)",
+"comp": [
+"Filtros",
+"Hero/gradiente",
+"KPI",
+"Modal"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 11,
+"ms": 21,
+"load": 1928,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Painel de Reclamações - Leguas Franzinas",
+"inline": 20,
+"dark": true
+},
+{
+"url": "/driversapp/admin/tickets-cainiao/",
+"probe": "/driversapp/admin/tickets-cainiao/",
+"name": "drivers_app:admin_tickets_cainiao",
+"view": "drivers_app.views_ticket_import.admin_tickets_cainiao",
+"tpl": [
+"drivers_app/admin_tickets_cainiao.html"
+],
+"group": "Motoristas (sem menu)",
+"comp": [
+"Hero/gradiente",
+"KPI",
+"Modal",
+"Tabela"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 11,
+"ms": 20,
+"load": 1005,
+"html": 8,
+"html_top": [
+"expected-named-entity",
+"unexpected-end-tag",
+"unexpected-end-tag-implies-table-voodoo",
+"unexpected-end-tag-in-select",
+"unexpected-start-tag-implies-table-voodoo",
+"unexpected-start-tag-in-select"
+],
+"err": [
+"Failed to load resource: the server responded with a status of 404 (Not Found)"
+],
+"warn": [],
+"bad": [
+[
+404,
+"http://rbweb:8000/media/seed/documento.pdf"
+]
+],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Processador de Tickets Cainiao - Leguas Franzinas",
+"inline": 23,
+"dark": true
+},
+{
+"url": "/driversapp/cadastro-completo/",
+"probe": "/driversapp/cadastro-completo/",
+"name": "drivers_app:public_register_full",
+"view": "drivers_app.views.public_driver_register_full",
+"tpl": [
+"drivers_app/driver_public_register_full.html"
+],
+"group": "Motoristas (sem menu)",
+"comp": [
+"Filtros",
+"Formulário",
+"Hero/gradiente"
+],
+"prof": [
+"anonimo",
+"admin",
+"operador",
+"leitor",
+"motorista",
+"empresa"
+],
+"q": 9,
+"ms": 10,
+"load": 1007,
+"html": 0,
+"html_top": [],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 2,
+"title": "Cadastro Completo de Motoristas - Leguas Franzinas",
+"inline": 4,
+"dark": false
+},
+{
+"url": "/driversapp/cadastro/",
+"probe": "/driversapp/cadastro/",
+"name": "drivers_app:public_register",
+"view": "drivers_app.views.public_driver_register",
+"tpl": [
+"drivers_app/driver_public_register.html"
+],
+"group": "Motoristas (sem menu)",
+"comp": [
+"Formulário",
+"Hero/gradiente"
+],
+"prof": [
+"anonimo",
+"admin",
+"operador",
+"leitor",
+"motorista",
+"empresa"
+],
+"q": 9,
+"ms": 9,
+"load": 653,
+"html": 0,
+"html_top": [],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 2,
+"title": "Cadastro de Motoristas - Léguas Franzinas",
+"inline": 0,
+"dark": false
+},
+{
+"url": "/fleet/maintenance/",
+"probe": "/fleet/maintenance/",
+"name": "fleet:maintenance_list",
+"view": "fleet_management.views.maintenance_list",
+"tpl": [
+"fleet_management/maintenance_list.html"
+],
+"group": "Operação › Frota › Manutenções",
+"comp": [
+"Filtros",
+"Hero/gradiente",
+"Tabela"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 22,
+"load": 1769,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Manutenções - Leguas Franzinas",
+"inline": 5,
+"dark": true
+},
+{
+"url": "/fleet/dashboard/",
+"probe": "/fleet/dashboard/",
+"name": "fleet:dashboard",
+"view": "fleet_management.views.fleet_dashboard",
+"tpl": [
+"fleet_management/fleet_dashboard.html"
+],
+"group": "Operação › Frota › Painel",
+"comp": [
+"Hero/gradiente"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 29,
+"load": 1072,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "Dashboard Frota - Leguas Franzinas",
+"inline": 6,
+"dark": true
+},
+{
+"url": "/fleet/vehicles/",
+"probe": "/fleet/vehicles/",
+"name": "fleet:vehicle_list",
+"view": "fleet_management.views.vehicle_list",
+"tpl": [
+"fleet_management/vehicle_list.html"
+],
+"group": "Operação › Frota › Veículos",
+"comp": [
+"Filtros",
+"Hero/gradiente"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 24,
+"load": 1880,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Veículos - Leguas Franzinas",
+"inline": 5,
+"dark": true
+},
+{
+"url": "/driversapp/admin/aprovar/",
+"probe": "/driversapp/admin/aprovar/",
+"name": "drivers_app:admin_approve_drivers",
+"view": "drivers_app.views.admin_approve_drivers",
+"tpl": [
+"drivers_app/admin_approve_drivers.html"
+],
+"group": "Operação › Motoristas › Aprovar cadastros",
+"comp": [
+"Filtros",
+"Formulário",
+"Hero/gradiente",
+"Modal"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 17,
+"ms": null,
+"load": 2146,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Aprovar Motoristas - Leguas Franzinas",
+"inline": 12,
+"dark": true
+},
+{
+"url": "/driversapp/admin/",
+"probe": "/driversapp/admin/",
+"name": "drivers_app:drivers_central",
+"view": "drivers_app.central_views.drivers_central",
+"tpl": [
+"drivers_app/admin/drivers_central.html"
+],
+"group": "Operação › Motoristas › Central",
+"comp": [
+"Filtros",
+"Formulário",
+"Gráfico",
+"Hero/gradiente",
+"KPI",
+"Tabela"
+],
+"prof": [
+"admin",
+"operador"
+],
+"q": 39,
+"ms": 52,
+"load": 3809,
+"html": 12,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Central de Motoristas - Leguas Franzinas",
+"inline": 10,
+"dark": true
+},
+{
+"url": "/driversapp/admin/criar/",
+"probe": "/driversapp/admin/criar/",
+"name": "drivers_app:admin_create_driver",
+"view": "drivers_app.views.admin_create_driver",
+"tpl": [
+"drivers_app/admin_create_driver.html"
+],
+"group": "Operação › Motoristas › Novo motorista",
+"comp": [
+"Formulário",
+"Hero/gradiente"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 9,
+"ms": 17,
+"load": 957,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Cadastrar Motorista - Leguas Franzinas",
+"inline": 6,
+"dark": true
+},
+{
+"url": "/driversapp/admin/pedidos-alteracao/",
+"probe": "/driversapp/admin/pedidos-alteracao/",
+"name": "drivers_app:change_requests_list",
+"view": "drivers_app.admin_change_requests.change_requests_list",
+"tpl": [
+"drivers_app/admin/change_requests_list.html"
+],
+"group": "Operação › Motoristas › Pedidos de alteração",
+"comp": [
+"Formulário",
+"Hero/gradiente",
+"Modal"
+],
+"prof": [
+"admin",
+"operador"
+],
+"q": 14,
+"ms": 25,
+"load": 1488,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "Pedidos de Alteração de Perfil - Leguas Franzinas",
+"inline": 12,
+"dark": true
+},
+{
+"url": "/settlements/packages/",
+"probe": "/settlements/packages/",
+"name": "cainiao-packages-page",
+"view": "settlements.cainiao_views.cainiao_packages_page",
+"tpl": [
+"settlements/cainiao_packages.html"
+],
+"group": "Operação › Pacotes › Pesquisa",
+"comp": [
+"Filtros",
+"Hero/gradiente",
+"KPI",
+"Modal",
+"Tabela"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 10,
+"ms": 18,
+"load": 2996,
+"html": 4,
+"html_top": [
+"expected-named-entity",
+"unexpected-end-tag",
+"unexpected-end-tag-implies-table-voodoo",
+"unexpected-start-tag-implies-table-voodoo"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Pesquisa Global de Pacotes - Leguas Franzinas",
+"inline": 329,
+"dark": true
+},
+{
+"url": "/settlements/claims/",
+"probe": "/settlements/claims/",
+"name": "claim-list",
+"view": "settlements.views.claim_list",
+"tpl": [
+"settlements/claim_list_v2.html"
+],
+"group": "Operação › Pacotes › Reclamações",
+"comp": [
+"Filtros",
+"Formulário",
+"Hero/gradiente",
+"KPI",
+"Modal",
+"Tabela"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 21,
+"ms": 37,
+"load": 1076,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Reclamações de Motoristas - Leguas Franzinas",
+"inline": 6,
+"dark": true
+},
+{
+"url": "/settlements/recursos/",
+"probe": "/settlements/recursos/",
+"name": "appeals-inbox",
+"view": "settlements.views.appeals_inbox",
+"tpl": [
+"settlements/appeals_inbox.html"
+],
+"group": "Operação › Pacotes › Recursos",
+"comp": [
+"Formulário",
+"Hero/gradiente",
+"KPI",
+"Tabela"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 14,
+"ms": 32,
+"load": 1118,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "Central de Recursos - Leguas Franzinas",
+"inline": 5,
+"dark": true
+},
+{
+"url": "/settlements/pudo/fake-delivery-suspects/",
+"probe": "/settlements/pudo/fake-delivery-suspects/",
+"name": "pudo-fake-delivery-suspects",
+"view": "settlements.views_pudo.fake_delivery_suspects",
+"tpl": [
+"settlements/pudo_fake_delivery_suspects.html"
+],
+"group": "Operação › Pacotes › Suspeitas de entrega falsa (PUDO)",
+"comp": [
+"Filtros",
+"Formulário",
+"Tabela"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 24,
+"load": 1657,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Suspeitas Fake Delivery (PUDO) - Leguas Franzinas",
+"inline": 6,
+"dark": true
+},
+{
+"url": "/settlements/cainiao/map/",
+"probe": "/settlements/cainiao/map/",
+"name": "cainiao-map",
+"view": "settlements.cainiao_views.cainiao_map_view",
+"tpl": [
+"settlements/cainiao_map.html",
+"system_config/_leaflet_tiles.html"
+],
+"group": "Operação/Finanças (sem menu)",
+"comp": [
+"Filtros",
+"Hero/gradiente",
+"Mapa",
+"Modal",
+"Tabela"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 13,
+"ms": 22,
+"load": 2401,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Mapa de Entregas - Leguas Franzinas",
+"inline": 26,
+"dark": true
+},
+{
+"url": "/settlements/cainiao/map/compare/",
+"probe": "/settlements/cainiao/map/compare/",
+"name": "cainiao-map-compare",
+"view": "settlements.cainiao_views.cainiao_map_compare",
+"tpl": [
+"settlements/cainiao_map_compare.html",
+"system_config/_leaflet_tiles.html"
+],
+"group": "Operação/Finanças (sem menu)",
+"comp": [
+"Filtros",
+"Mapa"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 10,
+"ms": 19,
+"load": 1836,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Comparar Mapas - Leguas Franzinas",
+"inline": 38,
+"dark": true
+},
+{
+"url": "/settlements/cainiao/waybill/<str:waybill>/",
+"probe": "/settlements/cainiao/waybill/LF000001/",
+"name": "cainiao-waybill-detail",
+"view": "settlements.cainiao_views.cainiao_waybill_detail",
+"tpl": [
+"settlements/cainiao_waybill_detail.html",
+"system_config/_leaflet_tiles.html"
+],
+"group": "Operação/Finanças (sem menu)",
+"comp": [
+"Hero/gradiente",
+"Mapa"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 21,
+"ms": 63,
+"load": 1693,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [
+"init is not defined"
+],
+"warn": [
+"Alpine Expression Error: init is not defined\n\nExpression: \"init()\"\n\n JSHandle@node"
+],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "LF000001 — Detalhe - Leguas Franzinas",
+"inline": 6,
+"dark": true
+},
+{
+"url": "/settlements/claims/<int:claim_id>/",
+"probe": "/settlements/claims/1/",
+"name": "claim-detail",
+"view": "settlements.views.claim_detail",
+"tpl": [
+"settlements/claim_detail.html"
+],
+"group": "Operação/Finanças (sem menu)",
+"comp": [
+"Formulário",
+"Hero/gradiente",
+"Modal"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 10,
+"ms": 26,
+"load": 1252,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [
+"Cannot read properties of null (reading 'addEventListener')"
+],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "Reclamação #1 - Leguas Franzinas",
+"inline": 7,
+"dark": true
+},
+{
+"url": "/settlements/claims/appeals/",
+"probe": "/settlements/claims/appeals/",
+"name": "claim-appeals",
+"view": "settlements.views.claim_list",
+"tpl": [
+"settlements/claim_list_v2.html"
+],
+"group": "Operação/Finanças (sem menu)",
+"comp": [
+"Filtros",
+"Formulário",
+"Hero/gradiente",
+"KPI",
+"Modal",
+"Tabela"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 20,
+"ms": 28,
+"load": 1977,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Reclamações de Motoristas - Leguas Franzinas",
+"inline": 6,
+"dark": true
+},
+{
+"url": "/settlements/financial/",
+"probe": "/settlements/financial/",
+"name": "financial-dashboard",
+"view": "settlements.views.financial_dashboard",
+"tpl": [
+"settlements/financial_dashboard_v2.html",
+"accounting/_analysis_tabs.html"
+],
+"group": "Operação/Finanças (sem menu)",
+"comp": [
+"Hero/gradiente"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 26,
+"ms": 47,
+"load": 1874,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "Dashboard Financeiro - Leguas Franzinas",
+"inline": 6,
+"dark": true
+},
+{
+"url": "/settlements/invoices/<int:invoice_id>/",
+"probe": "/settlements/invoices/1/",
+"name": "invoice-detail",
+"view": "settlements.views.invoice_detail",
+"tpl": [
+"settlements/invoice_detail.html"
+],
+"group": "Operação/Finanças (sem menu)",
+"comp": [
+"Hero/gradiente"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 10,
+"ms": 23,
+"load": 1089,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "Fatura seed-1014 - Leguas Franzinas",
+"inline": 7,
+"dark": true
+},
+{
+"url": "/settlements/invoices/cainiao/<int:import_id>/",
+"probe": "/settlements/invoices/cainiao/1/",
+"name": "cainiao-billing-detail",
+"view": "settlements.views_cainiao_billing.cainiao_billing_detail",
+"tpl": [
+"settlements/cainiao_billing_detail.html"
+],
+"group": "Operação/Finanças (sem menu)",
+"comp": [
+"Formulário",
+"KPI",
+"Tabela"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 18,
+"ms": 51,
+"load": 985,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Pré-fatura Cainiao · 30/10–30/10/2026 - Leguas Franzinas",
+"inline": 6,
+"dark": true
+},
+{
+"url": "/settlements/pacote/<str:waybill>/",
+"probe": "/settlements/pacote/LF000001/",
+"name": "package-360",
+"view": "settlements.views.package_360",
+"tpl": [
+"settlements/package_360.html"
+],
+"group": "Operação/Finanças (sem menu)",
+"comp": [
+"Filtros",
+"Hero/gradiente"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 13,
+"ms": 29,
+"load": 1341,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Pacote LF000001 - Leguas Franzinas",
+"inline": 5,
+"dark": true
+},
+{
+"url": "/settlements/settlements/",
+"probe": "/settlements/settlements/",
+"name": "settlement-list",
+"view": "settlements.views.settlement_list",
+"tpl": [
+"settlements/settlement_list_v2.html"
+],
+"group": "Operação/Finanças (sem menu)",
+"comp": [
+"Filtros",
+"Hero/gradiente",
+"KPI",
+"Tabela"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 15,
+"ms": 31,
+"load": 1588,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Liquidações de Motoristas - Leguas Franzinas",
+"inline": 6,
+"dark": true
+},
+{
+"url": "/dashboard_v2/",
+"probe": "/dashboard_v2/",
+"name": "dashboard_leguas:dashboard_v2",
+"view": "dashboard_leguas.views.DashboardV2",
+"tpl": [
+"dashboard_leguas/index.html"
+],
+"group": "Outros",
+"comp": [],
+"prof": [
+"anonimo",
+"admin",
+"operador",
+"leitor",
+"motorista",
+"empresa"
+],
+"q": 9,
+"ms": 12,
+"load": 740,
+"html": 0,
+"html_top": [],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Léguas Dashboard",
+"inline": 12,
+"dark": true
+},
+{
+"url": "/sla/prazos/",
+"probe": "/sla/prazos/",
+"name": "dashboard_leguas:sla_rules",
+"view": "dashboard_leguas.views_sla.sla_rules",
+"tpl": [
+"dashboard_leguas/sla_rules.html"
+],
+"group": "Outros",
+"comp": [
+"Formulário",
+"Hero/gradiente",
+"Tabela"
+],
+"prof": [
+"admin",
+"operador"
+],
+"q": 16,
+"ms": 28,
+"load": 1221,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Prazos SLA por CP4 - Leguas Franzinas",
+"inline": 7,
+"dark": true
+},
+{
+"url": "/settlements/empresas/<int:empresa_id>/portal/",
+"probe": "/settlements/empresas/1/portal/",
+"name": "empresa-portal-dashboard",
+"view": "settlements.views_fleet_portal.empresa_portal_dashboard",
+"tpl": [
+"settlements/portal_empresa/dashboard.html"
+],
+"group": "Portal da frota",
+"comp": [
+"KPI",
+"Tabela"
+],
+"prof": [
+"admin",
+"operador",
+"empresa"
+],
+"q": 46,
+"ms": 73,
+"load": 1134,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "Frota Exemplo, Lda. — Portal da Frota · Léguas Franzinas",
+"inline": 30,
+"dark": true
+},
+{
+"url": "/settlements/empresas/<int:empresa_id>/portal/claims/",
+"probe": "/settlements/empresas/1/portal/claims/",
+"name": "empresa-portal-claims",
+"view": "settlements.views_fleet_portal.empresa_portal_claims",
+"tpl": [
+"settlements/portal_empresa/claims.html"
+],
+"group": "Portal da frota",
+"comp": [
+"Tabela"
+],
+"prof": [
+"admin",
+"operador",
+"empresa"
+],
+"q": 13,
+"ms": 22,
+"load": 723,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "Frota Exemplo, Lda. — Portal da Frota · Léguas Franzinas",
+"inline": 0,
+"dark": true
+},
+{
+"url": "/settlements/empresas/<int:empresa_id>/portal/contratos/",
+"probe": "/settlements/empresas/1/portal/contratos/",
+"name": "empresa-portal-contracts",
+"view": "settlements.views_fleet_portal.empresa_portal_contracts",
+"tpl": [
+"settlements/portal_empresa/contracts.html"
+],
+"group": "Portal da frota",
+"comp": [
+"Filtros",
+"Modal",
+"Tabela"
+],
+"prof": [
+"admin",
+"operador",
+"empresa"
+],
+"q": 12,
+"ms": 17,
+"load": 805,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "Frota Exemplo, Lda. — Portal da Frota · Léguas Franzinas",
+"inline": 2,
+"dark": true
+},
+{
+"url": "/settlements/empresas/<int:empresa_id>/portal/documentos/",
+"probe": "/settlements/empresas/1/portal/documentos/",
+"name": "empresa-portal-documents",
+"view": "settlements.views_fleet_portal.empresa_portal_documents",
+"tpl": [
+"settlements/portal_empresa/documents.html"
+],
+"group": "Portal da frota",
+"comp": [
+"Filtros",
+"Modal"
+],
+"prof": [
+"admin",
+"operador",
+"empresa"
+],
+"q": 12,
+"ms": 19,
+"load": 1400,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "Frota Exemplo, Lda. — Portal da Frota · Léguas Franzinas",
+"inline": 2,
+"dark": true
+},
+{
+"url": "/settlements/empresas/<int:empresa_id>/portal/faturas/",
+"probe": "/settlements/empresas/1/portal/faturas/",
+"name": "empresa-portal-invoices",
+"view": "settlements.views_fleet_portal.empresa_portal_invoices",
+"tpl": [
+"settlements/portal_empresa/invoices.html"
+],
+"group": "Portal da frota",
+"comp": [
+"Filtros",
+"Hero/gradiente",
+"Modal",
+"Tabela"
+],
+"prof": [
+"admin",
+"operador",
+"empresa"
+],
+"q": 12,
+"ms": 19,
+"load": 923,
+"html": 4,
+"html_top": [
+"expected-named-entity",
+"unexpected-end-tag",
+"unexpected-end-tag-implies-table-voodoo",
+"unexpected-start-tag-implies-table-voodoo"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "Frota Exemplo, Lda. — Portal da Frota · Léguas Franzinas",
+"inline": 4,
+"dark": true
+},
+{
+"url": "/settlements/empresas/<int:empresa_id>/portal/motoristas/",
+"probe": "/settlements/empresas/1/portal/motoristas/",
+"name": "empresa-portal-drivers",
+"view": "settlements.views_fleet_portal.empresa_portal_drivers",
+"tpl": [
+"settlements/portal_empresa/drivers.html"
+],
+"group": "Portal da frota",
+"comp": [
+"Tabela"
+],
+"prof": [
+"admin",
+"operador",
+"empresa"
+],
+"q": 14,
+"ms": 20,
+"load": 957,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "Frota Exemplo, Lda. — Portal da Frota · Léguas Franzinas",
+"inline": 0,
+"dark": true
+},
+{
+"url": "/settlements/empresas/<int:empresa_id>/portal/perfil/",
+"probe": "/settlements/empresas/1/portal/perfil/",
+"name": "empresa-portal-profile",
+"view": "settlements.views_fleet_portal.empresa_portal_profile",
+"tpl": [
+"settlements/portal_empresa/profile.html"
+],
+"group": "Portal da frota",
+"comp": [
+"Formulário"
+],
+"prof": [
+"admin",
+"operador",
+"empresa"
+],
+"q": 11,
+"ms": 14,
+"load": 991,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [
+"The specified value \"23,00\" cannot be parsed, or is out of range."
+],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "Frota Exemplo, Lda. — Portal da Frota · Léguas Franzinas",
+"inline": 0,
+"dark": true
+},
+{
+"url": "/settlements/empresas/<int:empresa_id>/portal/relatorios/",
+"probe": "/settlements/empresas/1/portal/relatorios/",
+"name": "empresa-portal-reports",
+"view": "settlements.views_fleet_portal.empresa_portal_reports",
+"tpl": [
+"settlements/portal_empresa/reports.html"
+],
+"group": "Portal da frota",
+"comp": [
+"Tabela"
+],
+"prof": [
+"admin",
+"operador",
+"empresa"
+],
+"q": 390,
+"ms": 548,
+"load": 2061,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "Frota Exemplo, Lda. — Portal da Frota · Léguas Franzinas",
+"inline": 13,
+"dark": true
+},
+{
+"url": "/contracts/portal/<int:driver_id>/",
+"probe": "/contracts/portal/1/",
+"name": "contracts:driver_contracts",
+"view": "contracts.views.driver_contracts",
+"tpl": [
+"contracts/driver_contracts.html",
+"drivers_app/portal/_app_ui.html"
+],
+"group": "Portal do motorista",
+"comp": [
+"Hero/gradiente",
+"Modal"
+],
+"prof": [
+"admin",
+"operador",
+"motorista"
+],
+"q": 0,
+"ms": 26,
+"load": 1056,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "Ana Silva · Léguas Franzinas",
+"inline": 4,
+"dark": true
+},
+{
+"url": "/contracts/portal/<int:driver_id>/sign/<int:template_id>/",
+"probe": "/contracts/portal/1/sign/1/",
+"name": "contracts:driver_contract_sign",
+"view": "contracts.views.driver_contract_sign",
+"tpl": [
+"contracts/driver_contract_sign.html",
+"drivers_app/portal/_app_ui.html"
+],
+"group": "Portal do motorista",
+"comp": [
+"Formulário",
+"Hero/gradiente",
+"Modal"
+],
+"prof": [
+"admin",
+"operador",
+"motorista"
+],
+"q": 0,
+"ms": 24,
+"load": 833,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "Ana Silva · Léguas Franzinas",
+"inline": 4,
+"dark": true
+},
+{
+"url": "/contracts/portal/<int:driver_id>/view/<int:contract_id>/",
+"probe": "/contracts/portal/1/view/1/",
+"name": "contracts:driver_contract_view",
+"view": "contracts.views.driver_contract_view",
+"tpl": [
+"contracts/driver_contract_view.html",
+"drivers_app/portal/_app_ui.html"
+],
+"group": "Portal do motorista",
+"comp": [
+"Hero/gradiente",
+"Modal"
+],
+"prof": [
+"admin",
+"operador",
+"motorista"
+],
+"q": 0,
+"ms": 22,
+"load": 1156,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "Ana Silva · Léguas Franzinas",
+"inline": 4,
+"dark": true
+},
+{
+"url": "/driversapp/portal/<int:driver_id>/",
+"probe": "/driversapp/portal/1/",
+"name": "drivers_app:driver_portal",
+"view": "drivers_app.portal_views.driver_portal",
+"tpl": [
+"drivers_app/portal/dashboard.html",
+"drivers_app/portal/_app_ui.html"
+],
+"group": "Portal do motorista",
+"comp": [
+"Filtros",
+"Hero/gradiente",
+"KPI",
+"Modal",
+"Tabela"
+],
+"prof": [
+"admin",
+"operador",
+"motorista"
+],
+"q": 98,
+"ms": 147,
+"load": 1716,
+"html": 4,
+"html_top": [
+"expected-named-entity",
+"unexpected-end-tag",
+"unexpected-end-tag-implies-table-voodoo",
+"unexpected-start-tag-implies-table-voodoo"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "Ana Silva · Léguas Franzinas",
+"inline": 10,
+"dark": true
+},
+{
+"url": "/driversapp/portal/<int:driver_id>/descontos/",
+"probe": "/driversapp/portal/1/descontos/",
+"name": "drivers_app:driver_claims",
+"view": "drivers_app.portal_admin_views.driver_claims",
+"tpl": [
+"drivers_app/portal/admin_claims.html",
+"drivers_app/portal/_app_ui.html"
+],
+"group": "Portal do motorista",
+"comp": [
+"Formulário",
+"Modal"
+],
+"prof": [
+"admin",
+"operador"
+],
+"q": 13,
+"ms": 38,
+"load": 1510,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Ana Silva - Leguas Franzinas",
+"inline": 10,
+"dark": true
+},
+{
+"url": "/driversapp/portal/<int:driver_id>/documentos/",
+"probe": "/driversapp/portal/1/documentos/",
+"name": "drivers_app:driver_documents",
+"view": "drivers_app.portal_admin_views.driver_documents",
+"tpl": [
+"drivers_app/portal/admin_documents.html",
+"drivers_app/portal/_app_ui.html"
+],
+"group": "Portal do motorista",
+"comp": [
+"Filtros",
+"Formulário",
+"Hero/gradiente",
+"KPI",
+"Modal"
+],
+"prof": [
+"admin",
+"operador"
+],
+"q": 12,
+"ms": 23,
+"load": 1630,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Ana Silva - Leguas Franzinas",
+"inline": 11,
+"dark": true
+},
+{
+"url": "/driversapp/portal/<int:driver_id>/editar/",
+"probe": "/driversapp/portal/1/editar/",
+"name": "drivers_app:driver_admin_edit",
+"view": "drivers_app.ficha_views.driver_ficha",
+"tpl": [
+"drivers_app/portal/admin_ficha.html",
+"drivers_app/portal/_app_ui.html"
+],
+"group": "Portal do motorista",
+"comp": [
+"Formulário",
+"Modal",
+"Tabela"
+],
+"prof": [
+"admin",
+"operador"
+],
+"q": 28,
+"ms": 93,
+"load": 2696,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Ana Silva - Leguas Franzinas",
+"inline": 20,
+"dark": true
+},
+{
+"url": "/driversapp/portal/<int:driver_id>/faturas/",
+"probe": "/driversapp/portal/1/faturas/",
+"name": "drivers_app:driver_portal_invoices",
+"view": "drivers_app.portal_views.driver_portal_invoices",
+"tpl": [
+"drivers_app/portal/invoices.html",
+"drivers_app/portal/_app_ui.html",
+"drivers_app/portal/_breakdown.html"
+],
+"group": "Portal do motorista",
+"comp": [
+"Filtros",
+"Formulário",
+"Hero/gradiente",
+"KPI",
+"Modal",
+"Tabela"
+],
+"prof": [
+"admin",
+"operador",
+"motorista"
+],
+"q": 39,
+"ms": 96,
+"load": 1151,
+"html": 3,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "Ana Silva · Léguas Franzinas",
+"inline": 4,
+"dark": true
+},
+{
+"url": "/driversapp/portal/<int:driver_id>/helpers/",
+"probe": "/driversapp/portal/1/helpers/",
+"name": "drivers_app:driver_helpers",
+"view": "drivers_app.portal_admin_views.driver_helpers",
+"tpl": [
+"drivers_app/portal/admin_helpers.html",
+"drivers_app/portal/_app_ui.html"
+],
+"group": "Portal do motorista",
+"comp": [
+"Formulário",
+"Hero/gradiente",
+"Modal"
+],
+"prof": [
+"admin",
+"operador"
+],
+"q": 12,
+"ms": 22,
+"load": 1823,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Ana Silva - Leguas Franzinas",
+"inline": 11,
+"dark": true
+},
+{
+"url": "/driversapp/portal/<int:driver_id>/indicacoes/",
+"probe": "/driversapp/portal/1/indicacoes/",
+"name": "drivers_app:driver_portal_referrals",
+"view": "drivers_app.portal_views.driver_portal_referrals",
+"tpl": [
+"drivers_app/portal/referrals.html",
+"drivers_app/portal/_app_ui.html"
+],
+"group": "Portal do motorista",
+"comp": [
+"Filtros",
+"Hero/gradiente",
+"KPI",
+"Modal",
+"Tabela"
+],
+"prof": [
+"admin",
+"operador",
+"motorista"
+],
+"q": 18,
+"ms": 31,
+"load": 1321,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "Ana Silva · Léguas Franzinas",
+"inline": 4,
+"dark": true
+},
+{
+"url": "/driversapp/portal/<int:driver_id>/logins/",
+"probe": "/driversapp/portal/1/logins/",
+"name": "drivers_app:driver_logins",
+"view": "drivers_app.portal_admin_views.driver_logins",
+"tpl": [
+"drivers_app/portal/admin_logins.html",
+"drivers_app/portal/_app_ui.html"
+],
+"group": "Portal do motorista",
+"comp": [
+"Formulário",
+"Hero/gradiente",
+"Modal",
+"Tabela"
+],
+"prof": [
+"admin",
+"operador"
+],
+"q": 14,
+"ms": 25,
+"load": 1276,
+"html": 33,
+"html_top": [
+"expected-named-entity",
+"unexpected-end-tag",
+"unexpected-end-tag-implies-table-voodoo",
+"unexpected-implied-end-tag-in-table-row",
+"unexpected-start-tag-implies-table-voodoo"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Ana Silva - Leguas Franzinas",
+"inline": 13,
+"dark": true
+},
+{
+"url": "/driversapp/portal/<int:driver_id>/perfil/",
+"probe": "/driversapp/portal/1/perfil/",
+"name": "drivers_app:driver_portal_profile",
+"view": "drivers_app.portal_views.driver_portal_profile",
+"tpl": [
+"drivers_app/portal/profile.html",
+"drivers_app/portal/_app_ui.html"
+],
+"group": "Portal do motorista",
+"comp": [
+"Formulário",
+"Hero/gradiente",
+"Modal"
+],
+"prof": [
+"admin",
+"operador",
+"motorista"
+],
+"q": 14,
+"ms": 28,
+"load": 1633,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "Ana Silva · Léguas Franzinas",
+"inline": 4,
+"dark": true
+},
+{
+"url": "/driversapp/portal/<int:driver_id>/pf/<int:pre_invoice_id>/",
+"probe": "/driversapp/portal/1/pf/1/",
+"name": "drivers_app:driver_pre_invoice_detail",
+"view": "drivers_app.portal_admin_views.driver_pre_invoice_detail",
+"tpl": [
+"drivers_app/portal/admin_pf_detail.html",
+"drivers_app/portal/_app_ui.html",
+"drivers_app/portal/_breakdown.html"
+],
+"group": "Portal do motorista",
+"comp": [
+"Filtros",
+"Hero/gradiente",
+"KPI",
+"Modal",
+"Tabela"
+],
+"prof": [
+"admin",
+"operador"
+],
+"q": 37,
+"ms": 83,
+"load": 2081,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Ana Silva - Leguas Franzinas",
+"inline": 11,
+"dark": true
+},
+{
+"url": "/driversapp/portal/<int:driver_id>/pudos/",
+"probe": "/driversapp/portal/1/pudos/",
+"name": "drivers_app:driver_portal_pudos",
+"view": "drivers_app.portal_views.driver_portal_pudos",
+"tpl": [
+"drivers_app/portal/pudos.html",
+"drivers_app/portal/_app_ui.html"
+],
+"group": "Portal do motorista",
+"comp": [
+"Filtros",
+"Hero/gradiente",
+"KPI",
+"Modal",
+"Tabela"
+],
+"prof": [
+"admin",
+"operador",
+"motorista"
+],
+"q": 14,
+"ms": 30,
+"load": 1070,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "Ana Silva · Léguas Franzinas",
+"inline": 4,
+"dark": true
+},
+{
+"url": "/driversapp/portal/<int:driver_id>/reclamacoes/",
+"probe": "/driversapp/portal/1/reclamacoes/",
+"name": "drivers_app:driver_complaints",
+"view": "drivers_app.portal_admin_views.driver_complaints",
+"tpl": [
+"drivers_app/portal/admin_complaints.html",
+"drivers_app/portal/_app_ui.html"
+],
+"group": "Portal do motorista",
+"comp": [
+"Filtros",
+"Formulário",
+"KPI",
+"Modal"
+],
+"prof": [
+"admin",
+"operador"
+],
+"q": 29,
+"ms": 48,
+"load": 1881,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Ana Silva - Leguas Franzinas",
+"inline": 20,
+"dark": true
+},
+{
+"url": "/driversapp/portal/<int:driver_id>/relatorios/",
+"probe": "/driversapp/portal/1/relatorios/",
+"name": "drivers_app:driver_portal_reports",
+"view": "drivers_app.portal_views.driver_portal_reports",
+"tpl": [
+"drivers_app/portal/reports.html",
+"drivers_app/portal/_app_ui.html"
+],
+"group": "Portal do motorista",
+"comp": [
+"Filtros",
+"Hero/gradiente",
+"KPI",
+"Modal",
+"Tabela"
+],
+"prof": [
+"admin",
+"operador",
+"motorista"
+],
+"q": 40,
+"ms": 59,
+"load": 1148,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "Ana Silva · Léguas Franzinas",
+"inline": 14,
+"dark": true
+},
+{
+"url": "/driversapp/portal/<int:driver_id>/veiculos/",
+"probe": "/driversapp/portal/1/veiculos/",
+"name": "drivers_app:driver_vehicles",
+"view": "drivers_app.portal_admin_views.driver_vehicles",
+"tpl": [
+"drivers_app/portal/admin_vehicles.html",
+"drivers_app/portal/_app_ui.html"
+],
+"group": "Portal do motorista",
+"comp": [
+"Formulário",
+"Modal"
+],
+"prof": [
+"admin",
+"operador"
+],
+"q": 11,
+"ms": 22,
+"load": 1309,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Ana Silva - Leguas Franzinas",
+"inline": 11,
+"dark": true
+},
+{
+"url": "/pricing/calculator/",
+"probe": "/pricing/calculator/",
+"name": "pricing:price-calculator",
+"view": "pricing.views.price_calculator",
+"tpl": [
+"pricing/price_calculator.html"
+],
+"group": "Rede › Clientes e plataformas › Calculadora",
+"comp": [
+"Formulário",
+"Hero/gradiente"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 20,
+"load": 1459,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "Calculadora de Preços - Leguas Franzinas",
+"inline": 5,
+"dark": true
+},
+{
+"url": "/core/integrations/dashboard/",
+"probe": "/core/integrations/dashboard/",
+"name": "core:integrations-dashboard",
+"view": "core.views.integrations_dashboard",
+"tpl": [
+"core/integrations_dashboard.html"
+],
+"group": "Rede › Clientes e plataformas › Integrações",
+"comp": [
+"Hero/gradiente",
+"Tabela"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 22,
+"load": 1819,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Dashboard de Integrações - Leguas Franzinas",
+"inline": 5,
+"dark": true
+},
+{
+"url": "/core/partners/",
+"probe": "/core/partners/",
+"name": "core:partner-list",
+"view": "core.views.partner_list",
+"tpl": [
+"core/partner_list.html"
+],
+"group": "Rede › Clientes e plataformas › Lista",
+"comp": [
+"Filtros",
+"Formulário",
+"Hero/gradiente",
+"Modal"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 25,
+"load": 1704,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Parceiros - Leguas Franzinas",
+"inline": 5,
+"dark": true
+},
+{
+"url": "/pricing/tariffs/",
+"probe": "/pricing/tariffs/",
+"name": "pricing:tariff-list",
+"view": "pricing.views.tariff_list",
+"tpl": [
+"pricing/tariff_list.html"
+],
+"group": "Rede › Clientes e plataformas › Tarifas",
+"comp": [
+"Filtros",
+"Hero/gradiente"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 30,
+"load": 2034,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Tarifas - Leguas Franzinas",
+"inline": 5,
+"dark": true
+},
+{
+"url": "/pricing/zones/",
+"probe": "/pricing/zones/",
+"name": "pricing:zone-list",
+"view": "pricing.views.zone_list",
+"tpl": [
+"pricing/zone_list.html"
+],
+"group": "Rede › Clientes e plataformas › Zonas postais",
+"comp": [
+"Filtros",
+"Hero/gradiente"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 22,
+"load": 1102,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Zonas Postais - Leguas Franzinas",
+"inline": 5,
+"dark": true
+},
+{
+"url": "/contracts/admin/signed/",
+"probe": "/contracts/admin/signed/",
+"name": "contracts:admin_signed_contracts",
+"view": "contracts.views.admin_signed_contracts",
+"tpl": [
+"contracts/admin_signed_list.html"
+],
+"group": "Rede › Contratos › Assinados",
+"comp": [
+"Filtros",
+"Formulário",
+"Hero/gradiente",
+"Modal",
+"Tabela"
+],
+"prof": [
+"admin",
+"operador"
+],
+"q": 0,
+"ms": 23,
+"load": 1199,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Contratos Assinados - Leguas Franzinas",
+"inline": 5,
+"dark": true
+},
+{
+"url": "/contracts/admin/templates/",
+"probe": "/contracts/admin/templates/",
+"name": "contracts:admin_templates_list",
+"view": "contracts.views.admin_templates_list",
+"tpl": [
+"contracts/admin_templates_list.html"
+],
+"group": "Rede › Contratos › Modelos",
+"comp": [
+"Hero/gradiente",
+"Tabela"
+],
+"prof": [
+"admin",
+"operador"
+],
+"q": 0,
+"ms": 22,
+"load": 1123,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Modelos de Contrato - Leguas Franzinas",
+"inline": 4,
+"dark": true
+},
+{
+"url": "/contracts/admin/templates/create/",
+"probe": "/contracts/admin/templates/create/",
+"name": "contracts:admin_template_create",
+"view": "contracts.views.admin_template_create",
+"tpl": [
+"contracts/admin_template_form.html"
+],
+"group": "Rede › Contratos › Modelos › Botão \"Novo modelo\"",
+"comp": [
+"Filtros",
+"Formulário",
+"Hero/gradiente"
+],
+"prof": [
+"admin",
+"operador"
+],
+"q": 0,
+"ms": 18,
+"load": 1286,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "Novo Template - Leguas Franzinas",
+"inline": 4,
+"dark": true
+},
+{
+"url": "/contracts/admin/missing/",
+"probe": "/contracts/admin/missing/",
+"name": "contracts:admin_missing_contracts",
+"view": "contracts.views.admin_missing_contracts",
+"tpl": [
+"contracts/admin_missing_list.html"
+],
+"group": "Rede › Contratos › Por assinar",
+"comp": [
+"Hero/gradiente",
+"Tabela"
+],
+"prof": [
+"admin",
+"operador"
+],
+"q": 0,
+"ms": 24,
+"load": 1154,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Drivers sem Contrato - Leguas Franzinas",
+"inline": 4,
+"dark": true
+},
+{
+"url": "/driversapp/empresas-parceiras/",
+"probe": "/driversapp/empresas-parceiras/",
+"name": "drivers_app:empresas-parceiras",
+"view": "drivers_app.views.empresas_parceiras_list",
+"tpl": [
+"drivers_app/empresas_parceiras.html"
+],
+"group": "Rede › Frotas subcontratadas",
+"comp": [
+"Filtros",
+"Hero/gradiente",
+"Modal",
+"Separadores",
+"Tabela"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 12,
+"ms": 20,
+"load": 2131,
+"html": 17,
+"html_top": [
+"expected-named-entity",
+"unexpected-end-tag",
+"unexpected-end-tag-implies-table-voodoo",
+"unexpected-start-tag-implies-table-voodoo"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Empresas Parceiras - Leguas Franzinas",
+"inline": 48,
+"dark": true
+},
+{
+"url": "/analytics/reports/fleet-costs/",
+"probe": "/analytics/reports/fleet-costs/",
+"name": "analytics:fleet_cost_report",
+"view": "analytics.views.fleet_cost_report",
+"tpl": [
+"analytics/fleet_cost_report.html"
+],
+"group": "Relatórios › Custos de frota",
+"comp": [
+"Filtros",
+"Hero/gradiente",
+"Tabela"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 23,
+"load": 1122,
+"html": 2,
+"html_top": [
+"end-tag-too-early",
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Custos de Frota - Relatórios - Leguas Franzinas",
+"inline": 5,
+"dark": true
+},
+{
+"url": "/analytics/integrations/status/",
+"probe": "/analytics/integrations/status/",
+"name": "analytics:api_status_dashboard",
+"view": "analytics.views.api_status_dashboard",
+"tpl": [
+"analytics/api_status_dashboard.html"
+],
+"group": "Relatórios › Estado das APIs",
+"comp": [
+"Hero/gradiente",
+"Tabela"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 29,
+"load": 955,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Status de Integrações - Analytics - Leguas Franzinas",
+"inline": 8,
+"dark": true
+},
+{
+"url": "/analytics/incidents/",
+"probe": "/analytics/incidents/",
+"name": "analytics:incidents_report",
+"view": "analytics.views.incidents_report",
+"tpl": [
+"analytics/incidents_report.html"
+],
+"group": "Relatórios › Incidências",
+"comp": [
+"Filtros",
+"Hero/gradiente"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 20,
+"load": 1108,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Relatório de Incidências - Leguas Franzinas",
+"inline": 5,
+"dark": true
+},
+{
+"url": "/analytics/vehicles/",
+"probe": "/analytics/vehicles/",
+"name": "analytics:vehicles_report",
+"view": "analytics.views.vehicles_performance_report",
+"tpl": [
+"analytics/vehicles_performance_report.html"
+],
+"group": "Relatórios › Performance de veículos",
+"comp": [
+"Filtros",
+"Hero/gradiente",
+"Tabela"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 28,
+"load": 1476,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Performance de Veículos - Leguas Franzinas",
+"inline": 5,
+"dark": true
+},
+{
+"url": "/analytics/integrations/logs/",
+"probe": "/analytics/integrations/logs/",
+"name": "analytics:sync_logs_list",
+"view": "analytics.views.sync_logs_list",
+"tpl": [
+"analytics/sync_logs_list.html"
+],
+"group": "Relatórios › Registos de sincronização",
+"comp": [
+"Filtros",
+"Formulário",
+"Hero/gradiente",
+"Tabela"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 15,
+"ms": null,
+"load": 1183,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Logs de Sincronização - Analytics - Leguas Franzinas",
+"inline": 6,
+"dark": true
+},
+{
+"url": "/system/atualizacao/",
+"probe": "/system/atualizacao/",
+"name": "system_config:updates_index",
+"view": "system_config.views_updates.updates_index",
+"tpl": [
+"system_config/updates.html"
+],
+"group": "Sistema (sem menu)",
+"comp": [
+"Formulário",
+"Hero/gradiente",
+"Modal"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 25,
+"load": 1654,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [
+"<i data-lucide=\"github\" class=\"w-4 h-4\"></i> icon name was not found in the provided icons object.",
+"<i data-lucide=\"github\" class=\"w-5 h-5\"></i> icon name was not found in the provided icons object."
+],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "Atualização do Sistema - Leguas Franzinas",
+"inline": 16,
+"dark": true
+},
+{
+"url": "/system/recovery-keys/",
+"probe": "/system/recovery-keys/",
+"name": "system_config:recovery_keys_index",
+"view": "system_config.views_recovery.recovery_keys_index",
+"tpl": [
+"system_config/recovery_keys.html"
+],
+"group": "Sistema (sem menu)",
+"comp": [
+"Hero/gradiente",
+"Tabela"
+],
+"prof": [
+"admin"
+],
+"q": 0,
+"ms": 243,
+"load": 1330,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Recovery Keys - Leguas Franzinas",
+"inline": 6,
+"dark": true
+},
+{
+"url": "/system/users/<int:pk>/edit/",
+"probe": "/system/users/1/edit/",
+"name": "system_config:user_edit",
+"view": "system_config.user_views.user_edit",
+"tpl": [
+"system_config/users/form.html"
+],
+"group": "Sistema (sem menu)",
+"comp": [
+"Formulário",
+"Hero/gradiente"
+],
+"prof": [
+"admin"
+],
+"q": 0,
+"ms": 15,
+"load": 1260,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "Editar gestao · Sistema - Leguas Franzinas",
+"inline": 6,
+"dark": true
+},
+{
+"url": "/system/users/create/",
+"probe": "/system/users/create/",
+"name": "system_config:user_create",
+"view": "system_config.user_views.user_create",
+"tpl": [
+"system_config/users/form.html"
+],
+"group": "Sistema (sem menu)",
+"comp": [
+"Formulário",
+"Hero/gradiente"
+],
+"prof": [
+"admin"
+],
+"q": 0,
+"ms": 18,
+"load": 1096,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "Novo Utilizador · Sistema - Leguas Franzinas",
+"inline": 6,
+"dark": true
+},
+{
+"url": "/system/whatsapp/",
+"probe": "/system/whatsapp/",
+"name": "system_config:whatsapp_dashboard",
+"view": "system_config.views.whatsapp_dashboard",
+"tpl": [
+"system_config/whatsapp_dashboard.html"
+],
+"group": "Sistema (sem menu)",
+"comp": [
+"Filtros",
+"Hero/gradiente"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 27,
+"load": 1007,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "WhatsApp - Leguas Franzinas",
+"inline": 8,
+"dark": true
+},
+{
+"url": "/system/",
+"probe": "/system/",
+"name": "system_config:index",
+"view": "system_config.views.system_config_view",
+"tpl": [
+"system_config/config.html"
+],
+"group": "Sistema › Configurações",
+"comp": [
+"Formulário",
+"Hero/gradiente",
+"Modal",
+"Tabela"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 35,
+"load": 1490,
+"html": 4,
+"html_top": [
+"expected-named-entity",
+"unexpected-end-tag",
+"unexpected-end-tag-implies-table-voodoo",
+"unexpected-start-tag-implies-table-voodoo"
+],
+"err": [
+"Failed to load resource: the server responded with a status of 404 (Not Found)"
+],
+"warn": [],
+"bad": [
+[
+404,
+"http://rbweb:8000/media/seed/documento.pdf"
+]
+],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Configurações do Sistema - Leguas Franzinas",
+"inline": 20,
+"dark": true
+},
+{
+"url": "/management/tools/qr-generator/",
+"probe": "/management/tools/qr-generator/",
+"name": "management:qr-generator",
+"view": "management.tools_views.qr_generator_view",
+"tpl": [
+"management/tools/qr_generator.html"
+],
+"group": "Sistema › Ferramentas",
+"comp": [
+"Hero/gradiente"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 9,
+"ms": 15,
+"load": 1078,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "Gerador de QR Code - Leguas Franzinas",
+"inline": 6,
+"dark": true
+},
+{
+"url": "/system/users/",
+"probe": "/system/users/",
+"name": "system_config:user_list",
+"view": "system_config.user_views.user_list",
+"tpl": [
+"system_config/users/list.html"
+],
+"group": "Sistema › Utilizadores",
+"comp": [
+"Filtros",
+"Formulário",
+"Hero/gradiente",
+"KPI",
+"Modal",
+"Tabela"
+],
+"prof": [
+"admin"
+],
+"q": 0,
+"ms": 25,
+"load": 1619,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Utilizadores · Sistema - Leguas Franzinas",
+"inline": 12,
+"dark": true
+},
+{
+"url": "/pricing/tariffs/<int:pk>/edit/",
+"probe": "/pricing/tariffs/1/edit/",
+"name": "pricing:tariff-edit",
+"view": "pricing.views.tariff_edit",
+"tpl": [
+"pricing/tariff_form.html"
+],
+"group": "Tarifas (sem menu)",
+"comp": [
+"Formulário",
+"Hero/gradiente"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 25,
+"load": 1889,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "Editar Tarifa - Leguas Franzinas",
+"inline": 5,
+"dark": true
+},
+{
+"url": "/pricing/tariffs/create/",
+"probe": "/pricing/tariffs/create/",
+"name": "pricing:tariff-create",
+"view": "pricing.views.tariff_create",
+"tpl": [
+"pricing/tariff_form.html"
+],
+"group": "Tarifas (sem menu)",
+"comp": [
+"Formulário",
+"Hero/gradiente"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 28,
+"load": 1767,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "Nova Tarifa - Leguas Franzinas",
+"inline": 5,
+"dark": true
+},
+{
+"url": "/pricing/tariffs/import/",
+"probe": "/pricing/tariffs/import/",
+"name": "pricing:tariff-import",
+"view": "pricing.views.tariff_import_csv",
+"tpl": [
+"pricing/tariff_import.html"
+],
+"group": "Tarifas (sem menu)",
+"comp": [
+"Formulário",
+"Tabela"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 17,
+"load": 1018,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Importar Tarifas - CSV - Leguas Franzinas",
+"inline": 5,
+"dark": true
+},
+{
+"url": "/pricing/zones/<int:pk>/edit/",
+"probe": "/pricing/zones/1/edit/",
+"name": "pricing:zone-edit",
+"view": "pricing.views.zone_edit",
+"tpl": [
+"pricing/zone_form.html"
+],
+"group": "Tarifas (sem menu)",
+"comp": [
+"Formulário",
+"Hero/gradiente"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 21,
+"load": 2443,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "Editar Zona - Leguas Franzinas",
+"inline": 5,
+"dark": true
+},
+{
+"url": "/pricing/zones/create/",
+"probe": "/pricing/zones/create/",
+"name": "pricing:zone-create",
+"view": "pricing.views.zone_create",
+"tpl": [
+"pricing/zone_form.html"
+],
+"group": "Tarifas (sem menu)",
+"comp": [
+"Formulário",
+"Hero/gradiente"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 23,
+"load": 1762,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": false,
+"shots": 4,
+"title": "Nova Zona Postal - Leguas Franzinas",
+"inline": 5,
+"dark": true
+},
+{
+"url": "/pricing/zones/import/",
+"probe": "/pricing/zones/import/",
+"name": "pricing:zone-import",
+"view": "pricing.views.zone_import_csv",
+"tpl": [
+"pricing/zone_import.html"
+],
+"group": "Tarifas (sem menu)",
+"comp": [
+"Formulário",
+"Tabela"
+],
+"prof": [
+"admin",
+"operador",
+"leitor"
+],
+"q": 0,
+"ms": 20,
+"load": 1650,
+"html": 1,
+"html_top": [
+"expected-named-entity"
+],
+"err": [],
+"warn": [],
+"bad": [],
+"fail": [],
+"hscroll": true,
+"shots": 4,
+"title": "Importar Zonas Postais - CSV - Leguas Franzinas",
+"inline": 5,
+"dark": true
+}
+],
+"extra": [
+{
+"slug": "erro-404",
+"route": "(404)",
+"url": "/pagina-inexistente/",
+"prof": "admin",
+"vp": "desktop",
+"tema": "escuro",
+"load_ms": 28,
+"status": 404,
+"final": "/pagina-inexistente/",
+"dcl": 22,
+"load": 22,
+"dark": false,
+"inline_dom": 0,
+"hscroll": false,
+"h": 900,
+"title": "Not Found",
+"console": [
+[
+"error",
+"Failed to load resource: the server responded with a status of 404 (Not Found)"
+],
+[
+"error",
+"The Cross-Origin-Opener-Policy header has been ignored, because the URL's origin was untrustworthy. It was defined either in the final response or a redirect. Please deliver the response using the HTTPS protocol. You can"
+]
+],
+"failed": [],
+"bad": [
+[
+404,
+"http://rbweb:8000/pagina-inexistente/"
+]
+]
+},
+{
+"slug": "erro-404",
+"route": "(404)",
+"url": "/pagina-inexistente/",
+"prof": "admin",
+"vp": "desktop",
+"tema": "claro",
+"load_ms": 47,
+"status": 404,
+"final": "/pagina-inexistente/",
+"dcl": 25,
+"load": 25,
+"dark": false,
+"inline_dom": 0,
+"hscroll": false,
+"h": 900,
+"title": "Not Found",
+"html_err": 0,
+"html_err_top": [],
+"shot": true,
+"console": [
+[
+"error",
+"Failed to load resource: the server responded with a status of 404 (Not Found)"
+],
+[
+"error",
+"The Cross-Origin-Opener-Policy header has been ignored, because the URL's origin was untrustworthy. It was defined either in the final response or a redirect. Please deliver the response using the HTTPS protocol. You can"
+]
+],
+"failed": [],
+"bad": [
+[
+404,
+"http://rbweb:8000/pagina-inexistente/"
+]
+]
+},
+{
+"slug": "erro-404",
+"route": "(404)",
+"url": "/pagina-inexistente/",
+"prof": "admin",
+"vp": "mobile",
+"tema": "claro",
+"load_ms": 34,
+"status": 404,
+"final": "/pagina-inexistente/",
+"dcl": 29,
+"load": 30,
+"dark": false,
+"inline_dom": 0,
+"hscroll": false,
+"h": 2121,
+"title": "Not Found",
+"shot": true,
+"console": [
+[
+"error",
+"Failed to load resource: the server responded with a status of 404 (Not Found)"
+],
+[
+"error",
+"The Cross-Origin-Opener-Policy header has been ignored, because the URL's origin was untrustworthy. It was defined either in the final response or a redirect. Please deliver the response using the HTTPS protocol. You can"
+]
+],
+"failed": [],
+"bad": [
+[
+404,
+"http://rbweb:8000/pagina-inexistente/"
+]
+]
+},
+{
+"slug": "erro-404",
+"route": "(404)",
+"url": "/pagina-inexistente/",
+"prof": "admin",
+"vp": "mobile",
+"tema": "escuro",
+"load_ms": 21,
+"status": 404,
+"final": "/pagina-inexistente/",
+"dcl": 17,
+"load": 17,
+"dark": false,
+"inline_dom": 0,
+"hscroll": false,
+"h": 2121,
+"title": "Not Found",
+"console": [
+[
+"error",
+"Failed to load resource: the server responded with a status of 404 (Not Found)"
+],
+[
+"error",
+"The Cross-Origin-Opener-Policy header has been ignored, because the URL's origin was untrustworthy. It was defined either in the final response or a redirect. Please deliver the response using the HTTPS protocol. You can"
+]
+],
+"failed": [],
+"bad": [
+[
+404,
+"http://rbweb:8000/pagina-inexistente/"
+]
+]
+},
+{
+"slug": "erro-500",
+"route": "(500)",
+"url": "/accounting/relatorios/",
+"prof": "admin",
+"vp": "desktop",
+"tema": "claro",
+"load_ms": 48,
+"status": 500,
+"final": "/accounting/relatorios/",
+"dcl": 37,
+"load": 37,
+"dark": false,
+"inline_dom": 0,
+"hscroll": false,
+"h": 900,
+"title": "Server Error (500)",
+"html_err": 0,
+"html_err_top": [],
+"shot": true,
+"console": [
+[
+"error",
+"Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+],
+[
+"error",
+"The Cross-Origin-Opener-Policy header has been ignored, because the URL's origin was untrustworthy. It was defined either in the final response or a redirect. Please deliver the response using the HTTPS protocol. You can"
+]
+],
+"failed": [],
+"bad": [
+[
+500,
+"http://rbweb:8000/accounting/relatorios/"
+]
+]
+},
+{
+"slug": "erro-500",
+"route": "(500)",
+"url": "/accounting/relatorios/",
+"prof": "admin",
+"vp": "desktop",
+"tema": "escuro",
+"load_ms": 156,
+"status": 500,
+"final": "/accounting/relatorios/",
+"dcl": 147,
+"load": 148,
+"dark": false,
+"inline_dom": 0,
+"hscroll": false,
+"h": 900,
+"title": "Server Error (500)",
+"console": [
+[
+"error",
+"Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+],
+[
+"error",
+"The Cross-Origin-Opener-Policy header has been ignored, because the URL's origin was untrustworthy. It was defined either in the final response or a redirect. Please deliver the response using the HTTPS protocol. You can"
+]
+],
+"failed": [],
+"bad": [
+[
+500,
+"http://rbweb:8000/accounting/relatorios/"
+]
+]
+},
+{
+"slug": "erro-500",
+"route": "(500)",
+"url": "/accounting/relatorios/",
+"prof": "admin",
+"vp": "mobile",
+"tema": "escuro",
+"load_ms": 43,
+"status": 500,
+"final": "/accounting/relatorios/",
+"dcl": 37,
+"load": 39,
+"dark": false,
+"inline_dom": 0,
+"hscroll": false,
+"h": 2121,
+"title": "Server Error (500)",
+"console": [
+[
+"error",
+"Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+],
+[
+"error",
+"The Cross-Origin-Opener-Policy header has been ignored, because the URL's origin was untrustworthy. It was defined either in the final response or a redirect. Please deliver the response using the HTTPS protocol. You can"
+]
+],
+"failed": [],
+"bad": [
+[
+500,
+"http://rbweb:8000/accounting/relatorios/"
+]
+]
+},
+{
+"slug": "erro-500",
+"route": "(500)",
+"url": "/accounting/relatorios/",
+"prof": "admin",
+"vp": "mobile",
+"tema": "claro",
+"load_ms": 50,
+"status": 500,
+"final": "/accounting/relatorios/",
+"dcl": 41,
+"load": 42,
+"dark": false,
+"inline_dom": 0,
+"hscroll": false,
+"h": 2121,
+"title": "Server Error (500)",
+"shot": true,
+"console": [
+[
+"error",
+"Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+],
+[
+"error",
+"The Cross-Origin-Opener-Policy header has been ignored, because the URL's origin was untrustworthy. It was defined either in the final response or a redirect. Please deliver the response using the HTTPS protocol. You can"
+]
+],
+"failed": [],
+"bad": [
+[
+500,
+"http://rbweb:8000/accounting/relatorios/"
+]
+]
+},
+{
+"slug": "django-admin",
+"route": "/admin/",
+"url": "/admin/",
+"prof": "admin",
+"vp": "desktop",
+"tema": "claro",
+"load_ms": 235,
+"status": 200,
+"final": "/admin/",
+"dcl": 204,
+"load": 230,
+"dark": false,
+"inline_dom": 0,
+"hscroll": false,
+"h": 2803,
+"title": "Administração do site | Site de administração do Django",
+"html_err": 0,
+"html_err_top": [],
+"shot": true,
+"console": [
+[
+"error",
+"The Cross-Origin-Opener-Policy header has been ignored, because the URL's origin was untrustworthy. It was defined either in the final response or a redirect. Please deliver the response using the HTTPS protocol. You can"
+]
+],
+"failed": [],
+"bad": []
+},
+{
+"slug": "django-admin",
+"route": "/admin/",
+"url": "/admin/",
+"prof": "admin",
+"vp": "desktop",
+"tema": "escuro",
+"load_ms": 247,
+"status": 200,
+"final": "/admin/",
+"dcl": 100,
+"load": 156,
+"dark": true,
+"inline_dom": 0,
+"hscroll": false,
+"h": 2803,
+"title": "Administração do site | Site de administração do Django",
+"shot": true,
+"console": [
+[
+"error",
+"The Cross-Origin-Opener-Policy header has been ignored, because the URL's origin was untrustworthy. It was defined either in the final response or a redirect. Please deliver the response using the HTTPS protocol. You can"
+]
+],
+"failed": [],
+"bad": []
+},
+{
+"slug": "django-admin",
+"route": "/admin/",
+"url": "/admin/",
+"prof": "admin",
+"vp": "mobile",
+"tema": "claro",
+"load_ms": 349,
+"status": 200,
+"final": "/admin/",
+"dcl": 302,
+"load": 303,
+"dark": false,
+"inline_dom": 0,
+"hscroll": false,
+"h": 3206,
+"title": "Administração do site | Site de administração do Django",
+"shot": true,
+"console": [
+[
+"error",
+"The Cross-Origin-Opener-Policy header has been ignored, because the URL's origin was untrustworthy. It was defined either in the final response or a redirect. Please deliver the response using the HTTPS protocol. You can"
+]
+],
+"failed": [],
+"bad": []
+},
+{
+"slug": "django-admin",
+"route": "/admin/",
+"url": "/admin/",
+"prof": "admin",
+"vp": "mobile",
+"tema": "escuro",
+"load_ms": 307,
+"status": 200,
+"final": "/admin/",
+"dcl": 277,
+"load": 292,
+"dark": true,
+"inline_dom": 0,
+"hscroll": false,
+"h": 3206,
+"title": "Administração do site | Site de administração do Django",
+"shot": true,
+"console": [
+[
+"error",
+"The Cross-Origin-Opener-Policy header has been ignored, because the URL's origin was untrustworthy. It was defined either in the final response or a redirect. Please deliver the response using the HTTPS protocol. You can"
+]
+],
+"failed": [],
+"bad": []
+},
+{
+"slug": "modo-tv",
+"route": "/?tv=1",
+"url": "/?tv=1",
+"prof": "admin",
+"vp": "mobile",
+"tema": "escuro",
+"load_ms": 2233,
+"status": 200,
+"final": "/?tv=1",
+"dcl": 2223,
+"load": 2229,
+"dark": true,
+"inline_dom": 18,
+"hscroll": true,
+"h": 3582,
+"title": "Dashboard Operacional - Leguas Franzinas",
+"shot": true,
+"console": [
+[
+"error",
+"The Cross-Origin-Opener-Policy header has been ignored, because the URL's origin was untrustworthy. It was defined either in the final response or a redirect. Please deliver the response using the HTTPS protocol. You can"
+],
+[
+"warning",
+"cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation"
+]
+],
+"failed": [],
+"bad": []
+},
+{
+"slug": "modo-tv",
+"route": "/?tv=1",
+"url": "/?tv=1",
+"prof": "admin",
+"vp": "mobile",
+"tema": "claro",
+"load_ms": 2371,
+"status": 200,
+"final": "/?tv=1",
+"dcl": 2362,
+"load": 2366,
+"dark": false,
+"inline_dom": 18,
+"hscroll": true,
+"h": 3582,
+"title": "Dashboard Operacional - Leguas Franzinas",
+"shot": true,
+"console": [
+[
+"error",
+"The Cross-Origin-Opener-Policy header has been ignored, because the URL's origin was untrustworthy. It was defined either in the final response or a redirect. Please deliver the response using the HTTPS protocol. You can"
+],
+[
+"warning",
+"cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation"
+]
+],
+"failed": [],
+"bad": []
+},
+{
+"slug": "modo-tv",
+"route": "/?tv=1",
+"url": "/?tv=1",
+"prof": "admin",
+"vp": "desktop",
+"tema": "claro",
+"load_ms": 2516,
+"status": 200,
+"final": "/?tv=1",
+"dcl": 2473,
+"load": 2507,
+"dark": false,
+"inline_dom": 18,
+"hscroll": false,
+"h": 1836,
+"title": "Dashboard Operacional - Leguas Franzinas",
+"html_err": 19,
+"html_err_top": [
+"expected-named-entity"
+],
+"shot": true,
+"console": [
+[
+"error",
+"The Cross-Origin-Opener-Policy header has been ignored, because the URL's origin was untrustworthy. It was defined either in the final response or a redirect. Please deliver the response using the HTTPS protocol. You can"
+],
+[
+"warning",
+"cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation"
+]
+],
+"failed": [],
+"bad": []
+},
+{
+"slug": "modo-tv",
+"route": "/?tv=1",
+"url": "/?tv=1",
+"prof": "admin",
+"vp": "desktop",
+"tema": "escuro",
+"load_ms": 2702,
+"status": 200,
+"no_idle": true,
+"final": "/?tv=1",
+"dcl": 2650,
+"load": 2688,
+"dark": true,
+"inline_dom": 18,
+"hscroll": false,
+"h": 1836,
+"title": "Dashboard Operacional - Leguas Franzinas",
+"shot": true,
+"console": [
+[
+"error",
+"The Cross-Origin-Opener-Policy header has been ignored, because the URL's origin was untrustworthy. It was defined either in the final response or a redirect. Please deliver the response using the HTTPS protocol. You can"
+],
+[
+"warning",
+"cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation"
+]
+],
+"failed": [],
+"bad": []
+}
+]
+}

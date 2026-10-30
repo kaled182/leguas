@@ -20,6 +20,9 @@
 12. **Operador:** abra `/admin/`. Confirme que o acesso é recusado.
 13. **Operador:** abra a ficha da Cainiao em `/core/partners/`. Confirme que vê o painel de Courier ID, sem contrato nem preços.
 
+14. **Ficheiros:** abra um documento numa ficha de motorista com sessão. Depois, abra o mesmo URL numa janela anónima. Confirme que pede login.
+15. **Logótipos:** confirme que aparecem nos PDF e nas páginas de login.
+
 ## Rollback
 
 1. Altere `PERMISSIONS_ENFORCE=0` no `.env`.

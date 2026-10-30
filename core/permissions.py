@@ -9,6 +9,7 @@ GESTAO_GROUP = "Gestão"
 
 PUBLIC_PATHS = frozenset({
     "/health/",
+    "/media-auth/",
     "/auth/", "/auth/authenticate/", "/auth/login/", "/auth/logout/",
     "/auth/driver/", "/auth/driver/login/", "/auth/driver/logout/",
     "/auth/driver/send-code/", "/auth/driver/verify-code/",

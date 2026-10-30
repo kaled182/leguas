@@ -11,7 +11,7 @@
 
 ## Outros pendentes
 
-- **`/media/` sem login:** nomes adivinháveis. PR seguinte, com prioridade alta.
 - **Página pública de assinatura:** usa `settlements/base.html`, um layout interno.
 - **Traceback em resposta:** `converter/views_geoapi.py:101` e `drivers_app/views.py:2816` ainda devolvem detalhes da exceção.
 - **Limite por IP partilhado:** o limite por IP pode afetar motoristas na mesma rede do hub. Ajuste em `core/ratelimit.py`.
+- **`folium_map.html`:** página sem view, com uma ligação partida a `driversmanager_manager`.

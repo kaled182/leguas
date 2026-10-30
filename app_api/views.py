@@ -14,6 +14,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
+from core.media_access import signed_media_url
 from core.ratelimit import OTP_SEND_LIMIT, OTP_VERIFY_LIMIT, over_limit
 from customauth.otp_service import (
     OTPError,
@@ -596,7 +597,7 @@ def incidences_process_scan(request):
         "state": state or None,
         "country": country or None,
         "postal_code": postal_code or None,
-        "image_url": request.build_absolute_uri(default_storage.url(temp_path)),
+        "image_url": request.build_absolute_uri(signed_media_url(temp_path)),
         "image_path": temp_path,
         "confidence": confidence,
         "fields_requiring_review": fields_requiring_review,

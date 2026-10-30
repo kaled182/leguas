@@ -44,10 +44,17 @@
     }
 
     # ── Media files (uploads de utilizadores)
-    handle_path /media/* {
-        root * /srv/media
-        file_server
-        header Cache-Control "public, max-age=604800"   # 7 dias
+    # O Django autoriza cada pedido. Ver core/media_access.py.
+    handle /media/* {
+        route {
+            forward_auth web:8000 {
+                uri /media-auth/
+            }
+            uri strip_prefix /media
+            root * /srv/media
+            header Cache-Control "private, max-age=300"
+            file_server
+        }
     }
 
     # ── Tudo o resto vai para o Django via gunicorn

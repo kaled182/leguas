@@ -1,4 +1,5 @@
 """Construtores de dicts JSON para a API da app (campos reais dos modelos)."""
+from core.media_access import signed_media_url
 
 
 def _profile_username(profile):
@@ -112,7 +113,7 @@ def incidence_dict(incidence):
     image_url = ""
     if incidence.package_image:
         try:
-            image_url = incidence.package_image.url
+            image_url = signed_media_url(incidence.package_image.name)
         except Exception:  # noqa: BLE001
             image_url = str(incidence.package_image)
 

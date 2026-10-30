@@ -49,7 +49,7 @@
 | # | Gravidade | Problema | Local |
 |---|---|---|---|
 | B1 | Alto | 105 páginas abrem para qualquer utilizador autenticado sem `is_staff`, incluindo finanças | `accounting/views.py` e outras views só com `login_required` |
-| B2 | Alto | 3 rotas alteram dados com um GET, sem CSRF | `/core/integrations/<pk>/toggle-status/`, `/pricing/zones/<pk>/toggle-status/`, `/pricing/tariffs/<pk>/toggle-status/` |
+| B2 | Alto | 4 rotas alteram dados com um GET, sem CSRF | `/core/partners/<pk>/toggle-status/`, `/core/integrations/<pk>/toggle-status/`, `/pricing/zones/<pk>/toggle-status/`, `/pricing/tariffs/<pk>/toggle-status/` |
 | B3 | Médio | `/dashboard_v2/` abre sem login. A página é estática, mas mostra o menu interno | `dashboard_leguas/views.py:4` |
 | B4 | Médio | 5 rotas devolvem 500 porque o template não existe | `/accounting/receitas/`, `/despesas/`, `/relatorios/` |
 | B5 | Médio | Editar feriado falha no JS: `stringformat:"q"` devolve vazio | `settlements/templates/settlements/holiday_calendar.html:152` |
@@ -59,10 +59,10 @@
 | B9 | Médio | `init is not defined` na página do pacote. Local exato a confirmar | `/settlements/cainiao/waybill/<waybill>/` |
 | B10 | Médio | 4 rotas de frota e tarifas devolvem 500 com 1 registo | `03-sem-uso.md`, secção 5 |
 | B11 | Baixo | `driver_delivery_report` falha em motoristas com reclamações. A rota não tem ligações no código | `settlements/views.py:4231` |
-| B12 | Baixo | 3 ícones não existem no `lucide@latest`: `receipt-percent`, `crystal-ball`, `github` | Templates de `accounting` e `system_config` |
+| B12 | Baixo | 3 ícones não existem no `lucide@latest`. `github` saiu no Lucide 1.x. `receipt-percent` e `crystal-ball` também não existem nas versões 0.300.0 e 0.460.0 | Templates de `accounting` e `system_config` |
 | B13 | Baixo | CSS do FullCalendar bloqueado pelo browser (ORB) | `fleet_management/templates/fleet_management/maintenance_calendar.html:7` |
 
-**NOTA:** B1 só tem efeito se existirem utilizadores sem `is_staff`. O `usage_report` conta-os.
+**NOTA:** em 2026-10-30, produção tem 0 utilizadores ativos sem `is_staff`. B1 não afeta ninguém hoje. Todos os utilizadores `is_staff` veem finanças.
 
 ## Decisões pedidas
 

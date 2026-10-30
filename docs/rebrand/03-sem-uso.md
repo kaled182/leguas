@@ -12,7 +12,7 @@ Execute estes passos no servidor. O comando só lê dados e mostra só contagens
 1. Copie o comando para o container:
 
    ```bash
-   cd /root/leguas
+   cd /root/leguas-rebrand
    docker cp core/management/commands/usage_report.py leguas_web:/app/core/management/commands/usage_report.py
    ```
 

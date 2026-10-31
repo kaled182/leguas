@@ -1,0 +1,7 @@
+{% extends "settlements/base.html" %}
+{% block title %}Faturas de frotas subcontratadas{% endblock %}
+{% block content %}
+{% include "components/page_header.html" with title="Faturas de frotas subcontratadas" subtitle="O que a Léguas paga às frotas" %}
+{% include "components/filter_bar.html" with fields=filters %}
+{% include "components/data_table.html" with caption="Faturas de frotas subcontratadas" columns=columns rows=rows has_actions=True page=page total=total empty_title="Sem faturas" empty_message="Altere os filtros para ver outras faturas." %}
+{% endblock %}

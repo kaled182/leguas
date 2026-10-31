@@ -1,15 +1,33 @@
-{# groups: lista de {label, items: [{label, url, icon, active, count}]} #}
+{# groups: grupos com items. Cada item tem label, url, icon, active, count ou children. Máximo 2 níveis. #}
 <aside id="lf-sidebar" class="lf-sidebar" aria-label="Menu principal">
-  {% include "components/logo.html" with tone="negativo" %}
-  <nav class="flex flex-col gap-1">
+  <a href="/" aria-label="Painel do dia">{% include "components/logo.html" with tone="negativo" %}</a>
+  <nav class="lf-sidebar-nav">
     {% for group in groups %}
       {% if group.label %}<p class="lf-nav-group">{{ group.label }}</p>{% endif %}
       {% for item in group.items %}
+        {% if item.children %}
+        <details class="lf-nav-parent"{% if item.open %} open{% endif %}>
+          <summary class="lf-nav-item" title="{{ item.label }}">
+            <i data-lucide="{{ item.icon }}" class="w-5 h-5 shrink-0" aria-hidden="true"></i>
+            <span class="lf-nav-text">{{ item.label }}</span>
+            <i data-lucide="chevron-right" class="lf-nav-chevron w-4 h-4 shrink-0" aria-hidden="true"></i>
+          </summary>
+          <div class="lf-nav-sub">
+            {% for child in item.children %}
+            <a class="lf-nav-item" href="{{ child.url }}"{% if child.active %} aria-current="page"{% endif %}>
+              <span class="lf-nav-text">{{ child.label }}</span>
+              {% if child.count %}<span class="lf-nav-count lf-nav-text">{{ child.count }}</span>{% endif %}
+            </a>
+            {% endfor %}
+          </div>
+        </details>
+        {% else %}
         <a class="lf-nav-item" href="{{ item.url }}" title="{{ item.label }}"{% if item.active %} aria-current="page"{% endif %}>
           <i data-lucide="{{ item.icon }}" class="w-5 h-5 shrink-0" aria-hidden="true"></i>
           <span class="lf-nav-text">{{ item.label }}</span>
           {% if item.count %}<span class="lf-nav-count lf-nav-text">{{ item.count }}</span>{% endif %}
         </a>
+        {% endif %}
       {% endfor %}
     {% endfor %}
   </nav>

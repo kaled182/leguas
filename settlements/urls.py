@@ -4,7 +4,7 @@ from . import (
     cainiao_views, holiday_views,
     views, views_cash_entries, views_fleet_portal, views_pudo,
     views_shareholder, views_cainiao_billing, views_reliable_sync,
-    views_courier_onboarding,
+    views_courier_onboarding, views_fleet_invoices,
 )
 
 urlpatterns = [
@@ -522,6 +522,11 @@ urlpatterns = [
         "empresas/<int:empresa_id>/fleet-invoices/",
         views.empresa_fleet_invoices_list,
         name="empresa-fleet-invoices-list",
+    ),
+    path(
+        "fleet-invoices/",
+        views_fleet_invoices.fleet_invoice_list,
+        name="fleet-invoice-list",
     ),
     path(
         "fleet-invoices/<int:fleet_invoice_id>/",

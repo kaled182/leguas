@@ -405,6 +405,7 @@
       <!-- ── TAB: PRÉ-FATURAS ── -->
       <div x-show="activeTab === 'prefaturas'" class="p-5 space-y-4"
            x-init="$watch('activeTab', v => { if (v === 'prefaturas') { loadFleetInvoices(); } }); $watch('pfMes', () => loadFleetInvoices()); $watch('pfAno', () => loadFleetInvoices())">
+        <a :href="`/settlements/fleet-invoices/?empresa=${editId}`" class="text-sm font-semibold underline">Ver faturas</a>
 
         <!-- Dashboard agregado da frota -->
         <div class="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border border-purple-200 dark:border-purple-800 rounded-xl p-4">

@@ -16,7 +16,7 @@
     <tbody>
       {% for row in rows %}
       <tr>
-        {% for cell in row.cells %}<td{% if cell.numeric %} class="lf-num"{% endif %}>{{ cell.text }}</td>{% endfor %}
+        {% for cell in row.cells %}<td{% if cell.numeric %} class="lf-num"{% endif %}>{% if cell.tone %}{% include "components/status_badge.html" with label=cell.text tone=cell.tone %}{% elif cell.url %}<a href="{{ cell.url }}">{{ cell.text }}</a>{% else %}{{ cell.text }}{% endif %}</td>{% endfor %}
         {% if has_actions %}<td class="lf-num">{% if row.action_url %}<a href="{{ row.action_url }}">{{ row.action_label|default:"Abrir" }}</a>{% endif %}</td>{% endif %}
       </tr>
       {% endfor %}

@@ -1,6 +1,6 @@
 # Nova arquitetura de navegação — proposta
 
-**Estado:** aprovada em 2026-10-30. A Etapa A retirou do menu 11 entradas: Frota (4), relatórios de frota (3), Tarifas, Zonas e Calculadora (3) e Faturas Parceiros (1). Restam 46 entradas para a Fase 2.
+**Estado:** aprovada em 2026-10-30. A Etapa A retirou do menu 11 entradas: Frota (4), relatórios de frota (3), Tarifas, Zonas e Calculadora (3) e Faturas Parceiros (1). O menu está implementado em `core/navigation.py`, com 46 entradas menos as duplicadas. "Precisa de atenção" fica para a Fase 3.
 **Fonte:** `templates/layouts/partials/sidebar.html` (commit `469a7d8`).
 
 ## 1. Situação atual

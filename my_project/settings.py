@@ -211,6 +211,7 @@ TEMPLATES = [
                 "drivers_app.context_processors.portal_layout",
                 "system_config.context_processors.map_config",
                 "core.context_processors.user_access",
+                "core.context_processors.navigation",
             ],
         },
     },

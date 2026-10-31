@@ -26,6 +26,13 @@ def portal_layout(request):
 
 
 def drivers_counts(request):
+    """Contadores do pedido atual. O menu e os templates partilham o resultado."""
+    if not hasattr(request, "_drivers_counts"):
+        request._drivers_counts = _compute_drivers_counts(request)
+    return request._drivers_counts
+
+
+def _compute_drivers_counts(request):
     """
     Adiciona contadores de motoristas e pedidos pendentes ao contexto.
     Usado no menu lateral para badges de notificacao.

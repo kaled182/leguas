@@ -1,0 +1,45 @@
+{% load static %}<!doctype html>
+<html lang="pt-PT" class="h-full">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="{{ csrf_token }}">
+  <title>{% block title %}Painel{% endblock %} · Léguas Gestão</title>
+  <link rel="icon" href="{% static 'brand/favicon.ico' %}" sizes="any">
+  <link rel="apple-touch-icon" href="{% static 'brand/apple-touch-icon.png' %}">
+  <script>
+    try {
+      const saved = localStorage.getItem('lf-theme') || localStorage.getItem('management-theme');
+      if (saved === 'dark') document.documentElement.classList.add('dark');
+      if (localStorage.getItem('lf-sidebar') === 'true') document.documentElement.dataset.sidebar = 'collapsed';
+    } catch (e) { /* sem armazenamento */ }
+  </script>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,600;0,700;1,700&display=swap">
+  <link rel="stylesheet" href="{% static 'brand/tokens.css' %}">
+  <link rel="stylesheet" href="{% static 'brand/app.css' %}">
+  <script src="https://unpkg.com/lucide@1.65.0/dist/umd/lucide.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.17.5/dist/cdn.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.6.1"></script>
+  <script src="{% static 'brand/ui.js' %}" defer></script>
+  <script src="{% static 'brand/chart-theme.js' %}" defer></script>
+  {% block extra_head %}{% endblock %}
+</head>
+<body class="h-full bg-[var(--color-bg)] font-sans text-[var(--color-text)]">
+  <div id="notification-area" class="lf-notifications"></div>
+  <div id="lf-shell" class="lf-shell">
+    <div class="lf-overlay" data-drawer-close></div>
+    {% include "components/sidebar.html" with groups=menu_groups %}
+    <div class="lf-main-col">
+      {% include "components/topbar.html" %}
+      <main class="lf-main">
+        {% block content %}{% endblock %}
+      </main>
+    </div>
+  </div>
+  {% include "components/toast.html" %}
+  <script src="{% static 'brand/notifications.js' %}"></script>
+  <script>document.addEventListener('DOMContentLoaded', () => { if (window.lucide) lucide.createIcons(); });</script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

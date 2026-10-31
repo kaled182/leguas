@@ -115,3 +115,100 @@ class TailwindSafelistTests(SimpleTestCase):
 
         config = (Path(settings.BASE_DIR) / "theme/tailwind.config.js").read_text()
         self.assertIn("lf-(btn|tone|skeleton)-", config)
+
+
+class ShellTests(TestCase):
+    def login(self, **flags):
+        self.client.force_login(User.objects.create_user("u", password="x", **flags))
+
+    def test_title_uses_the_new_name(self):
+        self.login(is_staff=True, is_superuser=True)
+        self.assertContains(self.client.get("/"), "· Léguas Gestão</title>")
+
+    def test_no_tailwind_cdn_in_the_shell(self):
+        self.login(is_staff=True, is_superuser=True)
+        response = self.client.get("/")
+        self.assertNotContains(response, "cdn.tailwindcss.com")
+        self.assertContains(response, "brand/app.css")
+
+    def test_gestao_sees_finance_in_the_menu(self):
+        self.login(is_staff=True, is_superuser=True)
+        self.assertContains(self.client.get("/"), "Faturas de frotas subcontratadas")
+
+    def test_operator_menu_has_no_finance(self):
+        self.login(is_staff=True)
+        response = self.client.get("/")
+        self.assertNotContains(response, "Visão financeira")
+        self.assertContains(response, "Central")
+
+    def test_active_item_is_marked(self):
+        self.login(is_staff=True, is_superuser=True)
+        response = self.client.get("/driversapp/admin/central/")
+        self.assertContains(response, 'aria-current="page"')
+
+
+class GlobalSearchTests(TestCase):
+    def login(self, **flags):
+        self.client.force_login(User.objects.create_user("u", password="x", **flags))
+
+    def setUp(self):
+        from core.models import Partner
+        from drivers_app.models import DriverProfile
+        from settlements.models import CainiaoOperationTask
+        from django.utils import timezone
+
+        Partner.objects.create(name="Cainiao", nif="517307243", contact_email="c@example.test")
+        DriverProfile.objects.create(
+            nif="100000003", nome_completo="Ricardo Milhazes", telefone="910", email="r@example.test",
+        )
+        CainiaoOperationTask.objects.create(
+            waybill_number="LF123456", task_date=timezone.localdate(), task_status="Delivered",
+        )
+
+    def labels(self, q):
+        data = self.client.get("/search/", {"q": q}).json()
+        return {group["label"]: [r["label"] for r in group["results"]] for group in data["groups"]}
+
+    def test_finds_package_driver_partner_and_postal_code(self):
+        self.login(is_staff=True, is_superuser=True)
+        self.assertEqual(self.labels("LF1234")["Pacotes"], ["LF123456"])
+        self.assertEqual(self.labels("Milhazes")["Motoristas"], ["Ricardo Milhazes"])
+        self.assertEqual(self.labels("Cain")["Clientes e plataformas"], ["Cainiao"])
+        self.assertEqual(self.labels("4740")["CP4"], ["4740"])
+
+    def test_short_query_returns_nothing(self):
+        self.login(is_staff=True)
+        self.assertEqual(self.labels("L"), {})
+
+    def test_anonymous_cannot_search(self):
+        self.assertEqual(self.client.get("/search/", {"q": "LF12"}).status_code, 302)
+
+
+class FleetInvoiceListTests(TestCase):
+    def setUp(self):
+        from datetime import date
+
+        from drivers_app.models import EmpresaParceira
+        from settlements.models import FleetInvoice
+
+        self.a = EmpresaParceira.objects.create(nome="Frota A", nif="200000001")
+        self.b = EmpresaParceira.objects.create(nome="Frota B", nif="200000002")
+        dates = {"periodo_inicio": date(2026, 9, 1), "periodo_fim": date(2026, 9, 30)}
+        FleetInvoice.objects.create(numero="FF-1", empresa=self.a, status="PAGO", **dates)
+        FleetInvoice.objects.create(numero="FF-2", empresa=self.b, status="RASCUNHO", **dates)
+
+    def test_gestao_sees_and_filters(self):
+        self.client.force_login(User.objects.create_superuser("g", password="x"))
+        response = self.client.get("/settlements/fleet-invoices/", {"empresa": self.a.id})
+        self.assertContains(response, "FF-1")
+        self.assertNotContains(response, "FF-2")
+
+    def test_status_filter(self):
+        self.client.force_login(User.objects.create_superuser("g", password="x"))
+        response = self.client.get("/settlements/fleet-invoices/", {"estado": "RASCUNHO"})
+        self.assertContains(response, "FF-2")
+        self.assertNotContains(response, "FF-1")
+
+    def test_operator_is_refused(self):
+        self.client.force_login(User.objects.create_user("o", password="x", is_staff=True))
+        self.assertEqual(self.client.get("/settlements/fleet-invoices/").status_code, 403)

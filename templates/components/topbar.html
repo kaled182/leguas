@@ -1,22 +1,23 @@
-{# hubs: lista de nomes. selected_date: data. #}
 <header class="lf-topbar">
-  <button type="button" class="lf-btn lf-btn-ghost" data-sidebar-toggle aria-label="Encolher ou expandir o menu">
+  <button type="button" class="lf-btn lf-btn-ghost lg:hidden" data-drawer-open aria-label="Abrir o menu">
+    <i data-lucide="menu" class="w-4 h-4" aria-hidden="true"></i>
+  </button>
+  <button type="button" class="lf-btn lf-btn-ghost hidden lg:inline-flex" data-sidebar-toggle aria-label="Encolher ou expandir o menu">
     <i data-lucide="panel-left" class="w-4 h-4" aria-hidden="true"></i>
   </button>
-  <form class="lf-topbar-search" role="search" action="{{ search_url|default:'#' }}">
+  <div class="lf-search" role="search">
     <label class="sr-only" for="lf-global-search">Pesquisar</label>
-    <input id="lf-global-search" class="lf-control" type="search" name="q" placeholder="Pesquisar pacote, motorista, CP4, cliente ou contrato">
-  </form>
+    <input id="lf-global-search" class="lf-control" type="search" autocomplete="off" data-search-url="{% url 'global-search' %}" placeholder="Pesquisar pacote, motorista, CP4, cliente ou contrato">
+    <div id="lf-search-results" class="lf-search-results" hidden></div>
+  </div>
   <span class="lf-kbd hidden md:inline">Ctrl K</span>
-  <label class="sr-only" for="lf-hub">Hub</label>
-  <select id="lf-hub" class="lf-control w-auto" name="hub">
-    <option value="">Todos os hubs</option>
-    {% for hub in hubs %}<option>{{ hub }}</option>{% endfor %}
-  </select>
-  <label class="sr-only" for="lf-date">Data</label>
-  <input id="lf-date" class="lf-control w-auto" type="date" value="{{ selected_date|date:'Y-m-d' }}">
-  <button type="button" class="lf-btn lf-btn-ghost" data-theme-toggle aria-label="Alternar tema claro e escuro">
-    <i data-lucide="moon" class="w-4 h-4" aria-hidden="true"></i>
-  </button>
-  <span class="text-sm text-content-muted">{{ user_name }}</span>
+  <div class="lf-topbar-end">
+    <button type="button" class="lf-btn lf-btn-ghost" data-theme-toggle aria-label="Alternar tema claro e escuro">
+      <i data-lucide="moon" class="w-4 h-4" aria-hidden="true"></i>
+    </button>
+    <span class="hidden text-sm text-content-muted md:inline">{{ request.user.get_short_name|default:request.user.username }}</span>
+    <a class="lf-btn lf-btn-ghost" href="{% url 'customauth:logout' %}" aria-label="Terminar sessão">
+      <i data-lucide="log-out" class="w-4 h-4" aria-hidden="true"></i>
+    </a>
+  </div>
 </header>

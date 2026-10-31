@@ -203,6 +203,20 @@ def send_not_arrived_weekly_report():
         return {"sent": False, "reason": str(e)}
 
 
+def _with_last_seen(qs):
+    """Anota a última novidade real: o último lote que trouxe o pacote.
+
+    A task_date não serve para isto: o roll-forward muda-a todos os dias.
+    """
+    from django.db.models.functions import Coalesce
+
+    return qs.annotate(
+        last_seen=Coalesce(
+            "last_import_batch__created_at", "updated_at", "created_at",
+        ),
+    )
+
+
 @shared_task(name="settlements.roll_forward_active_packages")
 def roll_forward_active_packages(threshold_days=None, dry_run=False):
     """Move pacotes Driver_received "vivos" (com Task Date < hoje, mas
@@ -213,8 +227,8 @@ def roll_forward_active_packages(threshold_days=None, dry_run=False):
     diariamente, então fazemos o roll-forward para o pacote aparecer no
     relatório do dia actual como activo.
 
-    Pacotes Driver_received há mais de threshold_days vão para
-    `mark_stale_armazem` (gestão separada).
+    Pacotes sem novidade há mais de threshold_days ficam na data que têm
+    e vão para `mark_stale_armazem` (gestão separada).
 
     Args:
         threshold_days: pacotes com data >= hoje - threshold_days são
@@ -238,14 +252,15 @@ def roll_forward_active_packages(threshold_days=None, dry_run=False):
 
     today = timezone.now().date()
     cutoff_old = today - timedelta(days=threshold_days)
+    seen_cutoff = timezone.now() - timedelta(days=threshold_days)
 
-    # Pacotes Driver_received com task_date < hoje E data >= hoje - threshold.
-    # Excluímos hoje (já estão lá) e datas muito antigas (vão para stale).
-    qs = CainiaoOperationTask.objects.filter(
+    # Pacotes Driver_received com task_date < hoje, data >= hoje - threshold
+    # e novidade recente. Excluímos hoje (já estão lá) e o resto vai para stale.
+    qs = _with_last_seen(CainiaoOperationTask.objects.filter(
         task_status="Driver_received",
         task_date__lt=today,
         task_date__gte=cutoff_old,
-    )
+    )).filter(last_seen__gt=seen_cutoff)
 
     total = qs.count()
     if total == 0:
@@ -369,15 +384,15 @@ def mark_stale_armazem(threshold_days=None, dry_run=False):
     threshold_days = int(threshold_days)
 
     cutoff = timezone.now().date() - timedelta(days=threshold_days)
+    seen_cutoff = timezone.now() - timedelta(days=threshold_days)
 
-    # Pacotes "esquecidos" — qualquer courier com Driver_received há mais
-    # de threshold_days. A regra do operador: pacotes activos recentes
-    # (1-7 dias) são movidos para hoje pelo roll_forward; os mais antigos
+    # Pacotes "esquecidos" — qualquer courier com Driver_received e sem
+    # novidade há mais de threshold_days. A regra do operador: pacotes
+    # activos recentes são movidos para hoje pelo roll_forward; os outros
     # provavelmente foram entregues/perdidos sem o Cainiao actualizar.
-    qs = CainiaoOperationTask.objects.filter(
+    qs = _with_last_seen(CainiaoOperationTask.objects.filter(
         task_status="Driver_received",
-        task_date__lte=cutoff,
-    )
+    )).filter(last_seen__lte=seen_cutoff)
 
     total = qs.count()
     if total == 0:
@@ -434,7 +449,12 @@ def mark_stale_armazem(threshold_days=None, dry_run=False):
     CainiaoOperationTaskHistory.objects.bulk_create(history_objs, batch_size=1000)
 
     # UPDATE em massa — só toca em task_status (preserva courier/data)
-    updated = qs.update(task_status="Stale_Armazem")
+    ids = [r["id"] for r in rows]
+    updated = 0
+    for start in range(0, len(ids), 1000):
+        updated += CainiaoOperationTask.objects.filter(
+            id__in=ids[start:start + 1000],
+        ).update(task_status="Stale_Armazem")
 
     logger.info(
         "[StaleArmazem] marcados %d pacotes como Stale_Armazem "

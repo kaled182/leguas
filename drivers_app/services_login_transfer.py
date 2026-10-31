@@ -63,6 +63,25 @@ def preview_login_transfer(mapping, target):
 
 
 @transaction.atomic
+def _clear_source_login(source, mapping):
+    """Tira da ficha de origem o login transferido.
+
+    `apelido` e `courier_id_cainiao` também dão posse do login, por isso a
+    origem ficaria com as mesmas entregas que o destino. Só limpa o que é
+    deste login: outro apelido ou outro courier_id ficam na origem.
+    """
+    fields = []
+    if source.courier_id_cainiao == mapping.courier_id:
+        source.courier_id_cainiao = ""
+        fields.append("courier_id_cainiao")
+    if source.apelido and source.apelido.casefold() == mapping.courier_name.casefold():
+        source.apelido = ""
+        fields.append("apelido")
+    if fields:
+        source.save(update_fields=fields)
+    return fields
+
+
 def transfer_login(mapping, target, user=None, notes=""):
     """Move o login e os dados atribuíveis para `target`. Atómico + auditoria."""
     from drivers_app.models import CustomerComplaint, DriverMergeAudit
@@ -91,6 +110,7 @@ def transfer_login(mapping, target, user=None, notes=""):
     mapping.driver = target
     mapping.save(update_fields=["driver"])
     counts["mapping"] = 1
+    counts["source_cleared"] = _clear_source_login(source, mapping)
 
     DriverMergeAudit.objects.create(
         source_driver_repr=(

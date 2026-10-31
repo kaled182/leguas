@@ -141,6 +141,50 @@ class PortalAliasOwnerTests(TestCase):
         self.assertEqual(self._portal(self.old), {"W22"})
 
 
+class LoginTransferTests(TestCase):
+    def setUp(self):
+        from core.models import Partner
+        from settlements.models import DriverCourierMapping
+
+        self.today = timezone.localdate()
+        partner = Partner.objects.create(
+            name="CAINIAO", nif="500000000", contact_email="c@x.pt",
+        )
+        self.source = _driver("500000001", apelido="Login_LF", cid="C-1")
+        self.target = _driver("500000002", apelido="Destino_LF", cid="C-2")
+        self.mapping = DriverCourierMapping.objects.create(
+            driver=self.source, partner=partner,
+            courier_id="C-1", courier_name="Login_LF",
+        )
+
+    def _count(self, driver):
+        from .portal_views import _driver_base_queryset
+
+        return _driver_base_queryset(driver, self.today, self.today).count()
+
+    def test_tasks_stay_only_with_target(self):
+        from .services_login_transfer import transfer_login
+
+        _task("W30", self.today, name="Login_LF", cid="C-1")
+        counts = transfer_login(self.mapping, self.target)
+        self.source.refresh_from_db()
+        self.assertEqual((self.source.apelido, self.source.courier_id_cainiao), ("", ""))
+        self.assertEqual(counts["source_cleared"], ["courier_id_cainiao", "apelido"])
+        self.assertEqual((self._count(self.source), self._count(self.target)), (0, 1))
+
+    def test_other_identifiers_stay_on_source(self):
+        from .services_login_transfer import transfer_login
+
+        DriverProfile.objects.filter(pk=self.source.pk).update(
+            apelido="Outro_LF", courier_id_cainiao="C-9",
+        )
+        self.mapping.refresh_from_db()
+        counts = transfer_login(self.mapping, self.target)
+        self.source.refresh_from_db()
+        self.assertEqual((self.source.apelido, self.source.courier_id_cainiao), ("Outro_LF", "C-9"))
+        self.assertEqual(counts["source_cleared"], [])
+
+
 class RefreshActivityTests(TestCase):
     def test_inactivate_and_reactivate(self):
         today = timezone.localdate()

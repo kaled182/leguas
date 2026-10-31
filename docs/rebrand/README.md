@@ -1,6 +1,6 @@
-# Rebrand Léguas Gestão — Fase 0
+# Rebrand Léguas Gestão
 
-**Estado:** concluída, a aguardar decisões. Branch `rebrand/leguas-gestao`, sem push.
+**Estado:** Fases 0 a 4 concluídas. Comece em [RELATORIO-FINAL.md](RELATORIO-FINAL.md). Branch `rebrand/leguas-gestao`.
 **Base:** commit `469a7d8`, em 2026-10-30.
 
 | Ficheiro | Conteúdo |

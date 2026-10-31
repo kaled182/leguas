@@ -9,9 +9,6 @@
     <!-- Header compacto -->
     <div class="flex items-center justify-between mb-5">
         <div class="flex items-center gap-3">
-            <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-sm">
-                <i data-lucide="settings" class="w-5 h-5 text-white"></i>
-            </div>
             <div>
                 <h1 class="text-xl font-bold text-gray-900 dark:text-white">Configurações do Sistema</h1>
                 <p class="text-xs text-gray-500 dark:text-gray-400">Gerir todas as configurações</p>
@@ -119,7 +116,7 @@
 
                 <div class="px-3 pb-3 border-t border-gray-100 dark:border-gray-700 pt-3 space-y-2">
                     <button type="submit" form="config-form"
-                            class="w-full px-4 py-2.5 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white rounded-lg transition-all font-medium shadow-sm text-sm flex items-center justify-center gap-2">
+                            class="w-full px-4 py-2.5 bg-brand-purple text-white rounded-lg transition-all font-medium shadow-sm text-sm flex items-center justify-center gap-2">
                         <i data-lucide="save" class="w-4 h-4"></i>
                         Guardar
                     </button>
@@ -745,10 +742,10 @@
                         <!-- Typebot -->
                         <div x-show="infraTab === 'typebot'" class="space-y-5">
                             <!-- Status bar -->
-                            <div class="p-4 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 border border-purple-200 dark:border-purple-700 rounded-lg">
+                            <div class="p-4 bg-gray-50 dark:bg-gray-800/40 border border-purple-200 dark:border-purple-700 rounded-lg">
                                 <div class="flex items-center justify-between">
                                     <div class="flex items-center gap-3">
-                                        <div class="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-500 rounded-xl flex items-center justify-center">
+                                        <div class="w-10 h-10 bg-brand-purple rounded-xl flex items-center justify-center">
                                             <i data-lucide="bot" class="w-5 h-5 text-white"></i>
                                         </div>
                                         <div>
@@ -762,7 +759,7 @@
                                             <i data-lucide="activity" class="w-3.5 h-3.5"></i> Testar
                                         </button>
                                         <a href="{% url 'system_config:typebot_auto_login' %}" target="_blank"
-                                           class="px-3 py-1.5 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-lg text-xs font-medium flex items-center gap-1.5">
+                                           class="px-3 py-1.5 bg-brand-purple text-white rounded-lg text-xs font-medium flex items-center gap-1.5">
                                             <i data-lucide="external-link" class="w-3.5 h-3.5"></i> Abrir
                                         </a>
                                     </div>
@@ -1284,7 +1281,7 @@
                     <div x-show="confirmRestoreFile" x-cloak
                          class="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
                         <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md border border-gray-200 dark:border-gray-700 overflow-hidden">
-                            <div class="bg-gradient-to-r from-amber-500 to-orange-500 px-6 py-4 flex items-center gap-3">
+                            <div class="bg-brand-purple px-6 py-4 flex items-center gap-3">
                                 <div class="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center">
                                     <i data-lucide="alert-triangle" class="w-5 h-5 text-white"></i>
                                 </div>

@@ -6,7 +6,7 @@
 {# ─── KPIs principais (Hoje, Semana, Mês, Ano) ─── #}
 <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
 
-  <div class="bg-gradient-to-br from-emerald-500 to-green-600 rounded-2xl p-5 text-white shadow-md hover:shadow-lg transition">
+  <div class="bg-brand-purple rounded-2xl p-5 text-white shadow-md hover:shadow-lg transition">
     <div class="flex items-center justify-between mb-2">
       <span class="text-xs font-bold uppercase tracking-wider text-emerald-100">Hoje</span>
       <i data-lucide="sun" class="w-5 h-5 text-emerald-100"></i>
@@ -85,10 +85,10 @@
     {% if ranking.position %}
       <div class="text-center py-4">
         <div class="inline-flex items-center justify-center w-20 h-20 rounded-full
-          {% if ranking.position == 1 %}bg-gradient-to-br from-amber-400 to-yellow-500
-          {% elif ranking.position == 2 %}bg-gradient-to-br from-gray-300 to-gray-400
-          {% elif ranking.position == 3 %}bg-gradient-to-br from-orange-400 to-orange-600
-          {% else %}bg-gradient-to-br from-blue-400 to-blue-600{% endif %} text-white shadow-lg">
+          {% if ranking.position == 1 %}bg-brand-purple
+          {% elif ranking.position == 2 %}bg-brand-purple
+          {% elif ranking.position == 3 %}bg-brand-purple
+          {% else %}bg-brand-purple{% endif %} text-white shadow-lg">
           <span class="text-2xl font-extrabold">#{{ ranking.position }}</span>
         </div>
         <p class="text-sm text-gray-700 dark:text-gray-300 mt-3">

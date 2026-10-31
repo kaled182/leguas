@@ -5917,6 +5917,33 @@ def priority_settings_save(request):
     })
 
 
+PACKAGE_CSV_COLUMNS = (
+    ("N.º de envio", "waybill"), ("LP", "lp_number"), ("Estado", "task_status"),
+    ("Motorista", "courier_name"), ("CP4", "cp4"), ("Cidade", "city"),
+    ("Vendedor", "seller"), ("Recebido", "receipt_time"), ("Entregue", "delivery_time"),
+    ("Falha", "failure_time"), ("Tentativas", "n_attempts"), ("Dias no hub", "days_in_hub"),
+)
+
+
+def _csv_cell(value):
+    """Evita que o Excel execute uma célula como fórmula."""
+    text = "" if value is None else str(value)
+    return f"'{text}" if text[:1] in ("=", "+", "-", "@") else text
+
+
+def _packages_csv(rows):
+    import csv
+
+    response = HttpResponse(content_type="text/csv; charset=utf-8")
+    response["Content-Disposition"] = 'attachment; filename="pacotes.csv"'
+    response.write("\ufeff")
+    writer = csv.writer(response, delimiter=";")
+    writer.writerow([label for label, _key in PACKAGE_CSV_COLUMNS])
+    for row in rows:
+        writer.writerow([_csv_cell(row.get(key)) for _label, key in PACKAGE_CSV_COLUMNS])
+    return response
+
+
 @login_required
 def cainiao_packages_search(request):
     """Busca avançada global de pacotes.
@@ -6180,6 +6207,9 @@ def cainiao_packages_search(request):
                 op.courier_id_cainiao,
             ),
         })
+
+    if request.GET.get("export") == "csv":
+        return _packages_csv(rows)
 
     try:
         page_size = max(10, min(int(

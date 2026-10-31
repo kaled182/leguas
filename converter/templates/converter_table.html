@@ -49,11 +49,11 @@
     <!-- Heroicons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
 </head>
-<body class="bg-gradient-to-br from-indigo-500 to-purple-600 min-h-screen">
+<body class="bg-brand-purple min-h-screen">
     <div class="container mx-auto px-4 py-8">
         <div class="bg-white rounded-xl shadow-2xl overflow-hidden">
             <!-- Header -->
-            <div class="bg-gradient-to-r from-primary-600 to-primary-800 p-6 text-white">
+            <div class="bg-brand-purple p-6 text-white">
                 <div class="flex flex-wrap items-center justify-between">
                     <div class="w-full md:w-3/4">
                         <h2 class="text-3xl font-bold flex items-center">
@@ -94,7 +94,7 @@
                 
                 <!-- IA Confidence Report -->
                 {% if confidence_report %}
-                <div class="bg-gradient-to-r from-indigo-50 to-blue-50 rounded-xl p-6 mb-6 shadow-md">
+                <div class="bg-gray-50 dark:bg-gray-800/40 rounded-xl p-6 mb-6 shadow-md">
                     <h3 class="text-lg font-semibold text-primary-700 mb-3 flex items-center">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
@@ -244,7 +244,7 @@
                 <div class="rounded-xl overflow-hidden shadow-lg mb-6 border border-gray-200 max-h-[60vh] overflow-y-auto">
                     <table class="w-full" id="tabela-dados">
                         <thead>
-                            <tr class="bg-gradient-to-r from-primary-600 to-primary-700 text-white">
+                            <tr class="bg-brand-purple text-white">
                                 <th class="py-3 px-4 text-left w-12">#</th>
                                 <th class="py-3 px-4 text-left w-64">Endereço</th>
                                 <th class="py-3 px-4 text-left w-36">ID</th>

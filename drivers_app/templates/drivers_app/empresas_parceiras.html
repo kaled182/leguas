@@ -14,7 +14,7 @@
   <div class="flex items-center justify-between">
     <div>
       <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Frotas subcontratadas</h1>
-      <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Empresas subcontratantes que fornecem motoristas à Léguas Franzinas</p>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Empresas que fornecem motoristas à Léguas Franzinas</p>
     </div>
     <button @click="openCreate()"
             class="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold text-sm transition-colors shadow-sm">
@@ -140,7 +140,7 @@
   <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[94vh] flex flex-col border border-gray-200 dark:border-gray-700">
 
     <!-- Header -->
-    <div class="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-t-2xl px-6 py-4 flex items-center justify-between flex-shrink-0">
+    <div class="bg-brand-purple rounded-t-2xl px-6 py-4 flex items-center justify-between flex-shrink-0">
       <div class="flex items-center gap-3">
         <div class="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center">
           <i data-lucide="building-2" class="w-5 h-5 text-white"></i>
@@ -408,7 +408,7 @@
         <a :href="`/settlements/fleet-invoices/?empresa=${editId}`" class="text-sm font-semibold underline">Ver faturas</a>
 
         <!-- Dashboard agregado da frota -->
-        <div class="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border border-purple-200 dark:border-purple-800 rounded-xl p-4">
+        <div class="bg-gray-50 dark:bg-gray-800/40 border border-purple-200 dark:border-purple-800 rounded-xl p-4">
           <div class="flex items-center justify-between mb-3 gap-3 flex-wrap">
             <button @click="dashOpen = !dashOpen; if (dashOpen && !dashboard) loadDashboardStats(); $nextTick(() => lucide.createIcons())"
                     class="flex items-center gap-2 text-sm font-bold text-gray-700 dark:text-gray-300 hover:text-purple-600">
@@ -464,7 +464,7 @@
               <div class="bg-white dark:bg-gray-800 rounded-lg p-2.5">
                 <div class="text-[10px] uppercase text-gray-500 flex items-center gap-1">
                   Margem Léguas
-                  <span x-show="parseFloat(dashboard?.summary?.margem || 0) < 0" class="px-1 py-0.5 text-[8px] bg-rose-100 text-rose-700 rounded font-bold">⚠</span>
+                  <span x-show="parseFloat(dashboard?.summary?.margem || 0) < 0" class="px-1 py-0.5 text-[8px] bg-rose-100 text-rose-700 rounded font-bold"></span>
                 </div>
                 <div class="text-xl font-bold"
                      :class="parseFloat(dashboard?.summary?.margem || 0) < 0 ? 'text-rose-600' : 'text-emerald-600'"
@@ -588,7 +588,7 @@
             </div>
 
             <!-- Preview do total com IVA -->
-            <div class="md:col-span-2 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 border border-emerald-200 dark:border-emerald-700 rounded-xl p-3">
+            <div class="md:col-span-2 bg-gray-50 dark:bg-gray-800/40 border border-emerald-200 dark:border-emerald-700 rounded-xl p-3">
               <div class="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase mb-2">Resumo do Lançamento</div>
               <div class="grid grid-cols-4 gap-2 text-center">
                 <div>
@@ -744,7 +744,7 @@
                   </div>
 
                   {# Subtotal + IVA + Total c/ IVA #}
-                  <div class="bg-gradient-to-br from-violet-50 to-purple-50 dark:from-violet-900/20 dark:to-purple-900/20 rounded-lg p-3 mb-4 border border-violet-200 dark:border-violet-700/40"
+                  <div class="bg-gray-50 dark:bg-gray-800/40 rounded-lg p-3 mb-4 border border-violet-200 dark:border-violet-700/40"
                        x-show="parseFloat(fleetInvoiceDetail?.vat_amount || 0) > 0">
                     <div class="grid grid-cols-3 gap-3 text-sm">
                       <div>
@@ -985,7 +985,7 @@
 
         <!-- Totais da empresa com IVA -->
         <div x-show="!pfLoading && (pfData?.pre_invoices?.length > 0) || (pfData?.lancamentos?.length > 0)"
-             class="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 rounded-xl border border-emerald-200 dark:border-emerald-800 p-4">
+             class="bg-gray-50 dark:bg-gray-800/40 rounded-xl border border-emerald-200 dark:border-emerald-800 p-4">
           <div class="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase mb-3">Resumo da Empresa — Fatura Unificada</div>
           <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
             <div class="text-center">
@@ -1036,7 +1036,7 @@
      @keydown.escape.window="showMotoristas = false">
   <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-xl max-h-[85vh] flex flex-col border border-gray-200 dark:border-gray-700">
 
-    <div class="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-t-2xl px-6 py-4 flex items-center justify-between flex-shrink-0">
+    <div class="bg-brand-purple rounded-t-2xl px-6 py-4 flex items-center justify-between flex-shrink-0">
       <div class="flex items-center gap-3">
         <div class="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center">
           <i data-lucide="users" class="w-5 h-5 text-white"></i>

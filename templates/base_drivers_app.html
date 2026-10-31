@@ -31,7 +31,7 @@
         <button 
             onclick="myFunction()" 
             id="darkModeToggle"
-            class="group relative w-14 h-14 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center overflow-hidden"
+            class="group relative w-14 h-14 bg-brand-purple rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center overflow-hidden"
             title="Alternar tema"
         >
             <!-- Ícone Sol (modo claro) -->
@@ -64,8 +64,8 @@
 
         <!-- Informações do Usuário -->
         {% if request.user.is_authenticated %}
-          <div class="user-info flex items-center gap-3 px-6 py-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg m-4 transition-all">
-            <div class="w-10 h-10 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center flex-shrink-0">
+          <div class="user-info flex items-center gap-3 px-6 py-4 bg-gray-50 dark:bg-gray-800/40 rounded-lg m-4 transition-all">
+            <div class="w-10 h-10 bg-brand-purple rounded-full flex items-center justify-center flex-shrink-0">
               <i data-lucide="user" class="w-5 h-5 text-white"></i>
             </div>
             <div class="min-w-0">

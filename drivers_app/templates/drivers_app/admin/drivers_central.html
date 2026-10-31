@@ -5,43 +5,19 @@
 {% block content %}
 <div class="max-w-7xl mx-auto">
 
-  {# ─── Header ─── #}
-  <div class="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 rounded-2xl p-6 mb-6 shadow-lg">
-    <div class="flex flex-wrap items-center justify-between gap-4">
-      <div class="flex items-center gap-3">
-        <div class="bg-white/20 backdrop-blur-sm rounded-xl p-3">
-          <i data-lucide="users" class="w-7 h-7 text-white"></i>
-        </div>
-        <div>
-          <h1 class="text-2xl lg:text-3xl font-extrabold text-white">Central de Motoristas</h1>
-          <p class="text-white/80 text-sm">
-            {{ kpis.total }} motoristas no sistema ·
-            {% if last_check %}atividade verificada {{ last_check|date:"d/m H:i" }}{% else %}atividade ainda não calculada{% endif %}
-          </p>
-        </div>
-      </div>
-      <div class="flex flex-wrap items-center gap-2">
-        <form method="post" action="{% url 'drivers_app:drivers_activity_refresh' %}">
-          {% csrf_token %}
-          <input type="hidden" name="next" value="{{ request.get_full_path }}">
-          <button type="submit" title="Recalcula a última atividade de todos os motoristas"
-                  class="inline-flex items-center gap-1.5 px-3 py-2 bg-white/15 hover:bg-white/25 backdrop-blur-sm rounded-lg text-white text-sm font-medium">
-            <i data-lucide="refresh-cw" class="w-4 h-4"></i>
-            Recalcular atividade
-          </button>
-        </form>
-        <a href="{% url 'drivers_app:admin_approve_drivers' %}"
-           class="inline-flex items-center gap-1.5 px-3 py-2 bg-white/15 hover:bg-white/25 backdrop-blur-sm rounded-lg text-white text-sm font-medium">
-          <i data-lucide="user-check" class="w-4 h-4"></i>
-          Aprovar Cadastros
-          {% if kpis.pendentes %}<span class="ml-1 px-1.5 py-0.5 rounded bg-amber-500 text-white text-[10px] font-bold">{{ kpis.pendentes }}</span>{% endif %}
-        </a>
-        <a href="{% url 'drivers_app:admin_create_driver' %}"
-           class="inline-flex items-center gap-1.5 px-4 py-2 bg-white text-indigo-700 hover:bg-indigo-50 rounded-lg font-bold text-sm shadow">
-          <i data-lucide="user-plus" class="w-4 h-4"></i>
-          Cadastrar Motorista
-        </a>
-      </div>
+  <div class="lf-page-header">
+    <div class="min-w-0">
+      <h1 class="lf-page-title">Central de motoristas</h1>
+      <p class="lf-page-subtitle">{{ kpis.total }} motoristas · {% if last_check %}atividade verificada a {{ last_check|date:"d/m H:i" }}{% else %}atividade ainda não calculada{% endif %}</p>
+    </div>
+    <div class="lf-page-actions">
+      <form method="post" action="{% url 'drivers_app:drivers_activity_refresh' %}">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+        <button type="submit" class="lf-btn lf-btn-ghost" title="Recalcula a última atividade de todos os motoristas"><i data-lucide="refresh-cw" class="w-4 h-4" aria-hidden="true"></i>Recalcular atividade</button>
+      </form>
+      <a class="lf-btn lf-btn-ghost" href="{% url 'drivers_app:admin_approve_drivers' %}"><i data-lucide="user-check" class="w-4 h-4" aria-hidden="true"></i>Aprovar cadastros{% if kpis.pendentes %} ({{ kpis.pendentes }}){% endif %}</a>
+      <a class="lf-btn lf-btn-primary" href="{% url 'drivers_app:admin_create_driver' %}"><i data-lucide="user-plus" class="w-4 h-4" aria-hidden="true"></i>Novo motorista</a>
     </div>
   </div>
 
@@ -60,75 +36,79 @@
   {% endif %}
 
   {# ─── KPIs ─── #}
-  <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-    <a href="?tab=ativos" class="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-4 border border-emerald-200/50 dark:border-emerald-700/30 hover:shadow-md transition">
-      <div class="flex items-center justify-between">
-        <p class="text-xs uppercase font-bold text-emerald-700 dark:text-emerald-300">Ativos</p>
+  <div class="lf-kpi-grid">
+<a href="?tab=ativos" class="lf-kpi">
+      <div class="lf-kpi-note">
+        <p class="lf-kpi-label">Ativos</p>
         <i data-lucide="user-check" class="w-4 h-4 text-emerald-600 dark:text-emerald-400"></i>
       </div>
-      <p class="text-3xl font-extrabold text-emerald-700 dark:text-emerald-300 mt-1">{{ kpis.ativos }}</p>
-      <p class="text-[11px] text-emerald-700/70 dark:text-emerald-300/70">atividade nos últimos {{ inactivity_days }} dias</p>
+      <p class="lf-kpi-value">{{ kpis.ativos }}</p>
+      <p class="lf-kpi-note">atividade nos últimos {{ inactivity_days }} dias</p>
     </a>
-    <a href="?tab=inativos&sort=idle" class="bg-rose-50 dark:bg-rose-900/20 rounded-xl p-4 border border-rose-200/50 dark:border-rose-700/30 hover:shadow-md transition">
-      <div class="flex items-center justify-between">
-        <p class="text-xs uppercase font-bold text-rose-700 dark:text-rose-300">Inativos +{{ inactivity_days }}d</p>
+<a href="?tab=inativos&sort=idle" class="lf-kpi">
+      <div class="lf-kpi-note">
+        <p class="lf-kpi-label">Inativos +{{ inactivity_days }}d</p>
         <i data-lucide="user-x" class="w-4 h-4 text-rose-600 dark:text-rose-400"></i>
       </div>
-      <p class="text-3xl font-extrabold text-rose-700 dark:text-rose-300 mt-1">{{ kpis.inativos }}</p>
-      <p class="text-[11px] text-rose-700/70 dark:text-rose-300/70">{{ kpis.newly_inactive_7d }} novos nos últimos 7 dias</p>
+      <p class="lf-kpi-value">{{ kpis.inativos }}</p>
+      <p class="lf-kpi-note">{{ kpis.newly_inactive_7d }} novos nos últimos 7 dias</p>
     </a>
-    <a href="?tab=todos&flag=worked_today" class="bg-sky-50 dark:bg-sky-900/20 rounded-xl p-4 border border-sky-200/50 dark:border-sky-700/30 hover:shadow-md transition">
-      <div class="flex items-center justify-between">
-        <p class="text-xs uppercase font-bold text-sky-700 dark:text-sky-300">Trabalharam hoje</p>
+<a href="?tab=todos&flag=worked_today" class="lf-kpi">
+      <div class="lf-kpi-note">
+        <p class="lf-kpi-label">Trabalharam hoje</p>
         <i data-lucide="truck" class="w-4 h-4 text-sky-600 dark:text-sky-400"></i>
       </div>
-      <p class="text-3xl font-extrabold text-sky-700 dark:text-sky-300 mt-1">{{ kpis.worked_today }}</p>
-      <p class="text-[11px] text-sky-700/70 dark:text-sky-300/70">média {{ kpis.avg_drivers_day }}/dia (30 dias)</p>
+      <p class="lf-kpi-value">{{ kpis.worked_today }}</p>
+      <p class="lf-kpi-note">média {{ kpis.avg_drivers_day }}/dia (30 dias)</p>
     </a>
-    <div class="bg-indigo-50 dark:bg-indigo-900/20 rounded-xl p-4 border border-indigo-200/50 dark:border-indigo-700/30">
-      <div class="flex items-center justify-between">
-        <p class="text-xs uppercase font-bold text-indigo-700 dark:text-indigo-300">Entregas 30 dias</p>
+<div class="lf-kpi">
+      <div class="lf-kpi-note">
+        <p class="lf-kpi-label">Entregas 30 dias</p>
         <i data-lucide="package-check" class="w-4 h-4 text-indigo-600 dark:text-indigo-400"></i>
       </div>
-      <p class="text-3xl font-extrabold text-indigo-700 dark:text-indigo-300 mt-1">{{ kpis.deliveries_30d }}</p>
-      <p class="text-[11px] text-indigo-700/70 dark:text-indigo-300/70">{{ kpis.avg_per_driver_day }} por motorista/dia</p>
+      <p class="lf-kpi-value">{{ kpis.deliveries_30d }}</p>
+      <p class="lf-kpi-note">{{ kpis.avg_per_driver_day }} por motorista/dia</p>
     </div>
-    <a href="?tab=ativos&flag=no_contract" class="bg-orange-50 dark:bg-orange-900/20 rounded-xl p-4 border border-orange-200/50 dark:border-orange-700/30 hover:shadow-md transition">
-      <div class="flex items-center justify-between">
-        <p class="text-xs uppercase font-bold text-orange-700 dark:text-orange-300">Ativos sem contrato</p>
+</div>
+<details class="lf-more"><summary>Mais indicadores</summary>
+<div class="lf-kpi-grid">
+<a href="?tab=ativos&flag=no_contract" class="lf-kpi">
+      <div class="lf-kpi-note">
+        <p class="lf-kpi-label">Ativos sem contrato</p>
         <i data-lucide="file-warning" class="w-4 h-4 text-orange-600 dark:text-orange-400"></i>
       </div>
-      <p class="text-3xl font-extrabold text-orange-700 dark:text-orange-300 mt-1">{{ kpis.active_no_contract }}</p>
-      <div class="mt-1.5 h-1.5 rounded-full bg-orange-200/60 dark:bg-orange-900/50 overflow-hidden">
-        <div class="h-full bg-emerald-500" style="width: {{ kpis.contract_pct }}%"></div>
+      <p class="lf-kpi-value">{{ kpis.active_no_contract }}</p>
+      <div class="lf-kpi-note">
+        <div class="lf-kpi-note" style="width: {{ kpis.contract_pct }}%"></div>
       </div>
-      <p class="text-[11px] text-orange-700/70 dark:text-orange-300/70 mt-1">{{ kpis.contract_pct }}% dos ativos com contrato · {{ kpis.no_contract }} no total</p>
+      <p class="lf-kpi-note">{{ kpis.contract_pct }}% dos ativos com contrato · {{ kpis.no_contract }} no total</p>
     </a>
-    <a href="?tab=todos&flag=no_access" class="bg-slate-50 dark:bg-slate-800/40 rounded-xl p-4 border border-slate-200/50 dark:border-slate-700/30 hover:shadow-md transition">
-      <div class="flex items-center justify-between">
-        <p class="text-xs uppercase font-bold text-slate-700 dark:text-slate-300">Sem acesso ao portal</p>
+<a href="?tab=todos&flag=no_access" class="lf-kpi">
+      <div class="lf-kpi-note">
+        <p class="lf-kpi-label">Sem acesso ao portal</p>
         <i data-lucide="key-round" class="w-4 h-4 text-slate-500"></i>
       </div>
-      <p class="text-3xl font-extrabold text-slate-700 dark:text-slate-200 mt-1">{{ kpis.no_access }}</p>
-      <p class="text-[11px] text-slate-500">sem credenciais ativas</p>
+      <p class="lf-kpi-value">{{ kpis.no_access }}</p>
+      <p class="lf-kpi-note">sem credenciais ativas</p>
     </a>
-    <a href="?tab=todos&flag=pending_changes" class="bg-violet-50 dark:bg-violet-900/20 rounded-xl p-4 border border-violet-200/50 dark:border-violet-700/30 hover:shadow-md transition">
-      <div class="flex items-center justify-between">
-        <p class="text-xs uppercase font-bold text-violet-700 dark:text-violet-300">Pedidos de alteração</p>
+<a href="?tab=todos&flag=pending_changes" class="lf-kpi">
+      <div class="lf-kpi-note">
+        <p class="lf-kpi-label">Pedidos de alteração</p>
         <i data-lucide="inbox" class="w-4 h-4 text-violet-600 dark:text-violet-400"></i>
       </div>
-      <p class="text-3xl font-extrabold text-violet-700 dark:text-violet-300 mt-1">{{ kpis.pending_changes }}</p>
-      <p class="text-[11px] text-violet-700/70 dark:text-violet-300/70">motoristas a aguardar</p>
+      <p class="lf-kpi-value">{{ kpis.pending_changes }}</p>
+      <p class="lf-kpi-note">motoristas a aguardar</p>
     </a>
-    <a href="?tab=todos&sort=recent" class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200/50 dark:border-gray-700/50 hover:shadow-md transition">
-      <div class="flex items-center justify-between">
-        <p class="text-xs uppercase font-bold text-gray-500 dark:text-gray-400">Novos (30 dias)</p>
+<a href="?tab=todos&sort=recent" class="lf-kpi">
+      <div class="lf-kpi-note">
+        <p class="lf-kpi-label">Novos (30 dias)</p>
         <i data-lucide="sparkles" class="w-4 h-4 text-gray-400"></i>
       </div>
-      <p class="text-3xl font-extrabold text-gray-900 dark:text-white mt-1">{{ kpis.new_30d }}</p>
-      <p class="text-[11px] text-gray-500">{{ kpis.pendentes }} pendentes de aprovação</p>
+      <p class="lf-kpi-value">{{ kpis.new_30d }}</p>
+      <p class="lf-kpi-note">{{ kpis.pendentes }} pendentes de aprovação</p>
     </a>
-  </div>
+</div>
+</details>
 
   {# ─── Gráficos ─── #}
   <div x-data="{ open: localStorage.getItem('dc_charts') !== '0' }" class="mb-6">
@@ -299,11 +279,11 @@
             <td class="px-4 py-3">
               <div class="flex items-center gap-3">
                 <div class="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold text-white flex-shrink-0
-                  {% if d.status == 'ATIVO' and d.inactive_since %}bg-gradient-to-br from-gray-400 to-gray-500
-                  {% elif d.status == 'ATIVO' %}bg-gradient-to-br from-emerald-500 to-green-600
-                  {% elif d.status == 'PENDENTE' or d.status == 'EM_ANALISE' %}bg-gradient-to-br from-amber-500 to-orange-600
-                  {% elif d.status == 'BLOQUEADO' %}bg-gradient-to-br from-rose-500 to-red-600
-                  {% else %}bg-gradient-to-br from-gray-400 to-gray-500{% endif %}">
+                  {% if d.status == 'ATIVO' and d.inactive_since %}bg-brand-purple
+                  {% elif d.status == 'ATIVO' %}bg-brand-purple
+                  {% elif d.status == 'PENDENTE' or d.status == 'EM_ANALISE' %}bg-brand-purple
+                  {% elif d.status == 'BLOQUEADO' %}bg-brand-purple
+                  {% else %}bg-brand-purple{% endif %}">
                   {% if d.apelido %}{{ d.apelido|first|upper }}{% else %}{{ d.nome_completo|first|upper }}{% endif %}
                 </div>
                 <div class="min-w-0">
@@ -526,6 +506,7 @@
   Chart.defaults.color = text;
   Chart.defaults.font.family = 'inherit';
 
+  const brand = lfChartColors();
   new Chart(document.getElementById('chartDaily'), {
     data: {
       labels: data.days,
@@ -533,7 +514,7 @@
         { type: 'bar', label: 'Entregas', data: data.deliveries, yAxisID: 'y1',
           backgroundColor: dark ? 'rgba(129,140,248,0.35)' : 'rgba(99,102,241,0.25)', borderRadius: 3 },
         { type: 'line', label: 'Motoristas a trabalhar', data: data.drivers, yAxisID: 'y',
-          borderColor: '#10b981', backgroundColor: '#10b981', tension: 0.3, pointRadius: 2 },
+          borderColor: brand.success, backgroundColor: brand.success, tension: 0.3, pointRadius: 2 },
       ],
     },
     options: {
@@ -549,7 +530,8 @@
     },
   });
 
-  const idleColors = ['#10b981', '#34d399', '#f59e0b', '#f97316', '#ef4444', '#991b1b', '#9ca3af'];
+  // Vermelho só para quem está parado há mais de 30 dias.
+  const idleColors = [brand.success, brand.success, brand.warning, brand.primary, brand.secondary, brand.danger, brand.neutral];
   new Chart(document.getElementById('chartIdle'), {
     type: 'doughnut',
     data: {
@@ -573,8 +555,8 @@
     data: {
       labels: data.fleets.map(f => f.label),
       datasets: [
-        { label: 'Activos', data: data.fleets.map(f => f.ativos), backgroundColor: '#10b981', borderRadius: 3 },
-        { label: 'Inactivos', data: data.fleets.map(f => f.inativos), backgroundColor: dark ? '#6b7280' : '#d1d5db', borderRadius: 3 },
+        { label: 'Ativos', data: data.fleets.map(f => f.ativos), backgroundColor: brand.success, borderRadius: 3 },
+        { label: 'Inativos', data: data.fleets.map(f => f.inativos), backgroundColor: dark ? '#6b7280' : '#d1d5db', borderRadius: 3 },
       ],
     },
     options: {

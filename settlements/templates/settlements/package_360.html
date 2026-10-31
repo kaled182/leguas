@@ -11,7 +11,7 @@
     <div class="contents">
       <div class="min-w-0">
         <div class="flex flex-wrap items-center gap-2">
-          <h1 class="lf-page-title font-mono">{{ waybill }}</h1>
+          <h1 class="lf-page-title">{{ waybill }}</h1>
           {% if package.task_status %}{% include "components/status_badge.html" with label=package.task_status|status_label tone=package.task_status|status_tone title=package.task_status %}{% endif %}
         </div>
         <p class="lf-page-subtitle">{% if package.lp_number %}LP: <span class="font-mono">{{ package.lp_number }}</span> · {% endif %}Tudo sobre este pacote</p>

@@ -45,7 +45,7 @@
     <p class="text-2xl font-extrabold text-amber-700 dark:text-amber-300 mt-1">{{ kpis.custo_motorista|eur }}</p>
     <p class="text-[11px] text-amber-700 mt-0.5">@€{{ kpis.price_per_pkg|floatformat:3 }}/pacote</p>
   </div>
-  <div class="bg-gradient-to-br from-violet-500 to-purple-600 rounded-xl p-4 text-white shadow">
+  <div class="bg-brand-purple rounded-xl p-4 text-white shadow">
     <p class="text-xs uppercase font-bold text-violet-100">Margem Léguas</p>
     <p class="text-2xl font-extrabold mt-1">{{ kpis.margem|eur }}</p>
     <p class="text-[11px] text-violet-100 mt-0.5">Receita {{ kpis.receita_estimada|floatformat:0 }}€ - Custo {{ kpis.custo_motorista|floatformat:0 }}€</p>

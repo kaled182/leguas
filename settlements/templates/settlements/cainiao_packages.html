@@ -153,8 +153,8 @@
       <div>
         <label class="block text-[10px] uppercase font-semibold text-gray-500 mb-1">Período</label>
         <div class="flex gap-1">
-          <input type="date" x-model="filters.date_from" @change="search()" class="flex-1 px-2 py-2 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-700">
-          <input type="date" x-model="filters.date_to" @change="search()" class="flex-1 px-2 py-2 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-700">
+          <input type="date" x-model="filters.date_from" @change="search()" class="min-w-0 flex-1 px-2 py-2 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-700">
+          <input type="date" x-model="filters.date_to" @change="search()" class="min-w-0 flex-1 px-2 py-2 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-700">
         </div>
       </div>
       <div class="flex items-end gap-2">
@@ -270,7 +270,7 @@
                       :title="r.n_attempts + ' tentativa(s) falhada(s) em Operation Update'"
                       x-text="r.n_attempts"></span>
               </td>
-              <td class="px-2 py-1.5 text-xs font-mono text-gray-500" x-text="r.receipt_time || '—'"></td>
+              <td class="px-2 py-1.5 text-xs font-mono text-gray-500" x-text="lfDate(r.receipt_time) || '—'"></td>
               <td class="px-2 py-1.5 text-xs font-mono">
                 <template x-if="r.task_status === 'Delivered' && r.delivery_time">
                   <div class="flex items-center gap-1" :title="'Entregue em ' + r.delivery_time">
@@ -281,7 +281,7 @@
                 <template x-if="r.task_status === 'Attempt Failure'">
                   <div class="flex items-center gap-1" :title="'Falha em ' + (r.failure_time || r.task_date)">
                     <span class="px-1 py-0.5 rounded text-[9px] font-bold bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300">FALHA</span>
-                    <span class="text-rose-600 dark:text-rose-400" x-text="r.failure_time || r.task_date"></span>
+                    <span class="text-rose-600 dark:text-rose-400" x-text="lfDate(r.failure_time || r.task_date)"></span>
                   </div>
                 </template>
                 <template x-if="r.task_status !== 'Delivered' && r.task_status !== 'Attempt Failure' && r.is_returned">
@@ -443,7 +443,7 @@
        class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
     <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl border border-gray-200 dark:border-gray-700 overflow-hidden max-h-[90vh] flex flex-col">
       <!-- Header -->
-      <div class="bg-gradient-to-r from-orange-500 to-red-600 px-6 py-4 flex items-center justify-between flex-shrink-0">
+      <div class="bg-brand-purple px-6 py-4 flex items-center justify-between flex-shrink-0">
         <div class="flex items-center gap-3">
           <div class="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center">
             <i data-lucide="alert-triangle" class="w-5 h-5 text-white"></i>
@@ -881,8 +881,7 @@ function packagesApp() {
     },
 
     exportCsv() {
-      // Export do resultado actual (ainda não implementado — fallback para imprimir)
-      window.print();
+      window.location.href = '/settlements/cainiao/packages/search/?' + this._params() + '&export=csv';
     },
 
     async saveSettings() {

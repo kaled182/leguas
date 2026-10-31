@@ -212,3 +212,24 @@ class FleetInvoiceListTests(TestCase):
     def test_operator_is_refused(self):
         self.client.force_login(User.objects.create_user("o", password="x", is_staff=True))
         self.assertEqual(self.client.get("/settlements/fleet-invoices/").status_code, 403)
+
+
+class PackagesCsvTests(TestCase):
+    def test_export_uses_filters_and_blocks_formulas(self):
+        from django.utils import timezone
+        from settlements.models import CainiaoHub, CainiaoHubCP4, CainiaoOperationTask
+
+        hub = CainiaoHub.objects.create(name="Fão")
+        CainiaoHubCP4.objects.create(hub=hub, cp4="4740")
+        task = {"task_date": timezone.localdate(), "task_status": "Delivered", "zip_code": "4740-001"}
+        CainiaoOperationTask.objects.create(waybill_number="LF1", courier_name="=HYPERLINK()", **task)
+        CainiaoOperationTask.objects.create(waybill_number="ZZ2", courier_name="Ana", **task)
+        self.client.force_login(User.objects.create_superuser("g", password="x"))
+
+        response = self.client.get("/settlements/cainiao/packages/search/", {"export": "csv", "q": "LF1"})
+
+        body = response.content.decode("utf-8-sig")
+        self.assertEqual(response["Content-Type"], "text/csv; charset=utf-8")
+        self.assertIn("LF1", body)
+        self.assertNotIn("ZZ2", body)
+        self.assertIn("'=HYPERLINK()", body)

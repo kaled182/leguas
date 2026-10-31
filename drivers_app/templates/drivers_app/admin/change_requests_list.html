@@ -7,9 +7,6 @@
 
   <div class="flex items-center justify-between mb-6">
     <div class="flex items-center gap-3">
-      <div class="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center shadow-sm">
-        <i data-lucide="user-check" class="w-5 h-5 text-white"></i>
-      </div>
       <div>
         <h1 class="text-xl font-bold text-gray-900 dark:text-white">Pedidos de Alteração de Perfil</h1>
         <p class="text-xs text-gray-500 dark:text-gray-400">Aprovar / rejeitar pedidos enviados pelos motoristas</p>
@@ -55,7 +52,7 @@
       <div class="flex items-start gap-4">
         {# Driver avatar #}
         <a href="{% url 'drivers_app:driver_portal' r.driver_id %}"
-           class="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold flex-shrink-0">
+           class="w-10 h-10 rounded-full bg-brand-purple flex items-center justify-center text-white font-bold flex-shrink-0">
           {{ r.driver.apelido|default:r.driver.nome_completo|first|upper }}
         </a>
         <div class="flex-1 min-w-0">

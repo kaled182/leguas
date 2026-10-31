@@ -15,10 +15,7 @@
 
   <div class="flex items-center justify-between flex-wrap gap-3">
     <div>
-      <h1 class="text-2xl font-bold flex items-center gap-2">
-        <i data-lucide="file-text" class="w-6 h-6 text-emerald-500"></i>
-        {{ pf.employee.nome }} — {{ pf.periodo_label }}
-      </h1>
+      <h1 class="lf-page-title">{{ pf.employee.nome }} — {{ pf.periodo_label }}</h1>
       <p class="text-sm text-gray-500">
         <span class="pill pill-{{ pf.status }}">{{ pf.get_status_display }}</span>
         · NIF {{ pf.employee.nif|default:'—' }}

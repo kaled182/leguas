@@ -8,9 +8,6 @@
   {# ─── Header ─── #}
   <div class="flex items-center justify-between mb-6">
     <div class="flex items-center gap-3">
-      <div class="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-sm">
-        <i data-lucide="users" class="w-5 h-5 text-white"></i>
-      </div>
       <div>
         <h1 class="text-xl font-bold text-gray-900 dark:text-white">Utilizadores</h1>
         <p class="text-xs text-gray-500 dark:text-gray-400">Gestão de contas de acesso ao sistema</p>
@@ -23,7 +20,7 @@
         Configurações
       </a>
       <a href="{% url 'system_config:user_create' %}"
-         class="px-4 py-2 text-sm bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white rounded-lg shadow-sm font-medium inline-flex items-center gap-1.5">
+         class="px-4 py-2 text-sm bg-brand-purple text-white rounded-lg shadow-sm font-medium inline-flex items-center gap-1.5">
         <i data-lucide="user-plus" class="w-4 h-4"></i>
         Novo Utilizador
       </a>
@@ -106,9 +103,9 @@
             <td class="px-4 py-3">
               <div class="flex items-center gap-3">
                 <div class="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold text-white
-                  {% if u.is_superuser %}bg-gradient-to-br from-purple-500 to-pink-500
-                  {% elif u.is_staff %}bg-gradient-to-br from-blue-500 to-cyan-500
-                  {% else %}bg-gradient-to-br from-gray-400 to-gray-500{% endif %}">
+                  {% if u.is_superuser %}bg-brand-purple
+                  {% elif u.is_staff %}bg-brand-purple
+                  {% else %}bg-brand-purple{% endif %}">
                   {{ u.username|first|upper }}
                 </div>
                 <div>

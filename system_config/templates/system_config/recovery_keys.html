@@ -1,24 +1,18 @@
 {% extends 'layouts/admin_base.html' %}
 {% load static %}
-{% block title %}Recovery Keys{% endblock %}
+{% block title %}Chaves de recuperação{% endblock %}
 {% block content %}
 
 <div class="max-w-screen-xl mx-auto px-4 py-6 space-y-4" x-data="recoveryKeysPage()">
 
   {# ─── Header ─── #}
-  <div class="bg-brand-purple rounded-2xl p-6 text-white shadow-lg">
-    <div class="flex items-start justify-between flex-wrap gap-4">
-      <div>
-        <h1 class="lf-page-title">Recovery Keys</h1>
-        <p class="text-rose-100 text-sm mt-1">
-          Chaves críticas do sistema — copia para password manager. Sem estas chaves, alguns dados (backups, tokens) ficam irrecuperáveis.
-        </p>
-      </div>
-      <a href="{% url 'system_config:recovery_keys_download' %}"
-         class="px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur rounded-lg text-sm font-semibold inline-flex items-center gap-2">
-        <i data-lucide="download" class="w-4 h-4"></i>
-        Download .env
-      </a>
+  <div class="lf-page-header">
+    <div class="min-w-0">
+      <h1 class="lf-page-title">Chaves de recuperação</h1>
+      <p class="lf-page-subtitle">Guarde estas chaves num gestor de palavras-passe. Sem elas, os backups e os tokens ficam irrecuperáveis.</p>
+    </div>
+    <div class="lf-page-actions">
+      <a href="{% url 'system_config:recovery_keys_download' %}" class="lf-btn lf-btn-primary"><i data-lucide="download" class="w-4 h-4" aria-hidden="true"></i>Descarregar .env</a>
     </div>
   </div>
 
@@ -29,7 +23,7 @@
       <strong>Como guardar com segurança:</strong>
       <ol class="list-decimal list-inside mt-1 space-y-0.5 text-xs">
         <li>Clica <strong>Download .env</strong> para baixar todas as chaves</li>
-        <li>Move o ficheiro para o teu password manager (1Password, Bitwarden, KeePass, etc.)</li>
+        <li>Move o ficheiro para o teu palavra-passe manager (1Password, Bitwarden, KeePass, etc.)</li>
         <li>Apaga o ficheiro local — <strong>nunca</strong> faças upload para Git, email ou Slack</li>
       </ol>
     </div>
@@ -37,18 +31,18 @@
 
   {# ─── Tabela de chaves ─── #}
   <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
-    <table class="w-full">
-      <thead class="bg-gray-50 dark:bg-gray-900/40">
+    <table class="lf-table">
+      <thead>
         <tr>
-          <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Chave</th>
-          <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Valor</th>
-          <th class="px-4 py-2 w-20"></th>
+          <th >Chave</th>
+          <th >Valor</th>
+          <th ></th>
         </tr>
       </thead>
-      <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+      <tbody>
         {% for k in keys %}
         <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 {% if k.critical %}bg-rose-50/30 dark:bg-rose-900/10{% endif %}">
-          <td class="px-4 py-3">
+          <td >
             <div class="flex items-start gap-2">
               {% if k.critical %}
                 <i data-lucide="alert-triangle" class="w-4 h-4 text-rose-500 flex-shrink-0 mt-0.5"></i>
@@ -62,7 +56,7 @@
               </div>
             </div>
           </td>
-          <td class="px-4 py-3">
+          <td >
             {% if k.has_value %}
               <div class="flex items-center gap-2">
                 <input type="password" readonly value="{{ k.value }}"
@@ -78,7 +72,7 @@
               <span class="text-xs italic text-gray-400">não definido</span>
             {% endif %}
           </td>
-          <td class="px-4 py-3 text-right">
+          <td class="text-right">
             {% if k.has_value %}
             <button type="button" @click="copy('{{ k.env_var }}', '{{ k.value|escapejs }}')"
                     class="p-1.5 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 text-emerald-600 rounded">

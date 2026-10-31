@@ -1,141 +1,56 @@
-{% load static %}<!DOCTYPE html>
-<html lang="pt-PT" class="h-full">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Login Motorista · Léguas Franzinas</title>
-  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
-  <script src="https://unpkg.com/lucide@1.65.0"></script>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <style>body { font-family: 'Inter', sans-serif; }</style>
-</head>
-<body class="h-full bg-brand-purple flex items-center justify-center p-4">
+{% extends "brand/auth.html" %}
 
-  <div class="w-full max-w-md">
-    {# Logo / título #}
-    <div class="text-center mb-8">
-      <div class="inline-flex items-center justify-center w-16 h-16 bg-white/20 backdrop-blur-md rounded-2xl mb-4 shadow-lg">
-        <i data-lucide="truck" class="w-8 h-8 text-white"></i>
-      </div>
-      <h1 class="text-3xl font-extrabold text-white">Portal do Motorista</h1>
-      <p class="text-white/80 text-sm mt-1">Léguas Franzinas</p>
-    </div>
+{% block title %}Portal do motorista{% endblock %}
 
-    {# Mensagens #}
-    {% if messages %}
-      {% for m in messages %}
-        <div class="mb-3 px-4 py-3 rounded-xl text-sm
-          {% if 'error' in m.tags %}bg-red-50 text-red-700 border border-red-200
-          {% else %}bg-emerald-50 text-emerald-700 border border-emerald-200{% endif %}">
-          {{ m }}
-        </div>
-      {% endfor %}
-    {% endif %}
+{% block auth_head %}
+<h1 class="lf-page-title">Portal do motorista</h1>
+<p class="lf-page-subtitle mb-5">Entra com o telemóvel ou a palavra-passe.</p>
+{% endblock %}
 
-    {# Card login #}
-    <div class="bg-white rounded-3xl shadow-2xl p-8">
-      {% csrf_token %}
+{% block auth_body %}
+{% csrf_token %}
 
-      {# Separadores #}
-      <div class="flex p-1 bg-gray-100 rounded-xl mb-6">
-        <button type="button" id="tab-phone" onclick="switchTab('phone')"
-                class="flex-1 py-2 rounded-lg text-sm font-semibold transition bg-white shadow text-indigo-600">
-          <i data-lucide="smartphone" class="w-4 h-4 inline -mt-0.5"></i> Telemóvel
-        </button>
-        <button type="button" id="tab-password" onclick="switchTab('password')"
-                class="flex-1 py-2 rounded-lg text-sm font-semibold transition text-gray-500">
-          <i data-lucide="lock" class="w-4 h-4 inline -mt-0.5"></i> Password
-        </button>
-      </div>
+<div class="lf-auth-tabs" role="tablist">
+  <button type="button" id="tab-phone" role="tab" aria-selected="true" onclick="switchTab('phone')" class="lf-auth-tab"><i data-lucide="smartphone" class="w-4 h-4" aria-hidden="true"></i>Telemóvel</button>
+  <button type="button" id="tab-password" role="tab" aria-selected="false" onclick="switchTab('password')" class="lf-auth-tab"><i data-lucide="lock" class="w-4 h-4" aria-hidden="true"></i>Palavra-passe</button>
+</div>
 
-      {# Erro AJAX (telemóvel) #}
-      <div id="otp-error" class="hidden mb-4 px-4 py-3 rounded-xl text-sm bg-red-50 text-red-700 border border-red-200"></div>
+<div id="otp-error" role="alert" class="hidden lf-alert lf-tone-danger mb-4"></div>
 
-      {# ─── Painel TELEMÓVEL (OTP) ─── #}
-      <div id="pane-phone" class="space-y-5">
-        {# Passo 1: pedir número #}
-        <div id="otp-step-phone" class="space-y-5">
-          <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-1.5">Número de telemóvel</label>
-            <div class="relative">
-              <i data-lucide="smartphone" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"></i>
-              <input type="tel" id="otp-phone" inputmode="tel" autocomplete="tel" autofocus
-                     placeholder="912 345 678"
-                     class="w-full pl-9 pr-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition">
-            </div>
-            <p class="text-xs text-gray-500 mt-1.5">Enviamos um código por WhatsApp para o teu número registado.</p>
-          </div>
-          <button type="button" id="btn-send-code" onclick="sendCode()"
-                  class="w-full py-3 bg-brand-purple text-white rounded-xl font-bold shadow-md transition inline-flex items-center justify-center gap-2">
-            <i data-lucide="message-circle" class="w-4 h-4"></i> Enviar código por WhatsApp
-          </button>
-        </div>
-
-        {# Passo 2: introduzir código #}
-        <div id="otp-step-code" class="hidden space-y-5">
-          <div class="px-4 py-3 rounded-xl text-sm bg-emerald-50 text-emerald-700 border border-emerald-200">
-            Código enviado por WhatsApp para <strong id="masked-phone"></strong>.
-          </div>
-          <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-1.5">Código (6 dígitos)</label>
-            <div class="relative">
-              <i data-lucide="key-round" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"></i>
-              <input type="text" id="otp-code" inputmode="numeric" maxlength="6" autocomplete="one-time-code"
-                     placeholder="••••••"
-                     class="w-full pl-9 pr-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-center tracking-[0.5em] text-lg font-bold text-gray-900 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition">
-            </div>
-          </div>
-          <button type="button" id="btn-verify-code" onclick="verifyCode()"
-                  class="w-full py-3 bg-brand-purple text-white rounded-xl font-bold shadow-md transition inline-flex items-center justify-center gap-2">
-            <i data-lucide="log-in" class="w-4 h-4"></i> Entrar no Portal
-          </button>
-          <div class="flex items-center justify-between text-xs">
-            <button type="button" onclick="resetOtp()" class="text-gray-500 hover:text-gray-700">← Mudar número</button>
-            <button type="button" id="btn-resend" onclick="sendCode(true)" class="text-indigo-600 hover:text-indigo-700 font-semibold">Reenviar código</button>
-          </div>
-        </div>
-      </div>
-
-      {# ─── Painel PASSWORD ─── #}
-      <form method="post" id="pane-password" class="hidden space-y-5">
-        {% csrf_token %}
-        <div>
-          <label class="block text-sm font-semibold text-gray-700 mb-1.5">Username ou Email</label>
-          <div class="relative">
-            <i data-lucide="user" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"></i>
-            <input type="text" name="username"
-                   class="w-full pl-9 pr-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition">
-          </div>
-        </div>
-        <div>
-          <label class="block text-sm font-semibold text-gray-700 mb-1.5">Password</label>
-          <div class="relative">
-            <i data-lucide="lock" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"></i>
-            <input type="password" name="password"
-                   class="w-full pl-9 pr-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition">
-          </div>
-        </div>
-        <button type="submit"
-                class="w-full py-3 bg-brand-purple text-white rounded-xl font-bold shadow-md transition">
-          Entrar no Portal
-        </button>
-      </form>
-
-      <p class="text-xs text-center text-gray-500 mt-6">
-        Sem acesso? Contacta o administrador.
-      </p>
-    </div>
-
-    <p class="text-center text-white/70 text-xs mt-6">
-      Léguas Franzinas © {% now "Y" %}
-    </p>
+<div id="pane-phone">
+  <div id="otp-step-phone" class="space-y-4">
+    <label class="lf-field"><span class="lf-label">Número de telemóvel</span>
+      <input type="tel" id="otp-phone" inputmode="tel" autocomplete="tel" autofocus placeholder="912 345 678" class="lf-control"></label>
+    <p class="text-xs text-gray-500 dark:text-gray-400">Enviamos um código por WhatsApp para o teu número registado.</p>
+    <button type="button" id="btn-send-code" onclick="sendCode()" class="lf-btn lf-btn-primary w-full"><i data-lucide="message-circle" class="w-4 h-4" aria-hidden="true"></i>Enviar código por WhatsApp</button>
   </div>
 
-  <script>
-    lucide.createIcons();
+  <div id="otp-step-code" class="hidden space-y-4">
+    <div class="lf-alert lf-tone-success"><p>Código enviado por WhatsApp para <strong id="masked-phone"></strong>.</p></div>
+    <label class="lf-field"><span class="lf-label">Código de 6 dígitos</span>
+      <input type="text" id="otp-code" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="••••••" class="lf-control text-center tracking-[0.5em] font-semibold"></label>
+    <button type="button" id="btn-verify-code" onclick="verifyCode()" class="lf-btn lf-btn-primary w-full"><i data-lucide="log-in" class="w-4 h-4" aria-hidden="true"></i>Entrar no portal</button>
+    <div class="flex items-center justify-between">
+      <button type="button" onclick="resetOtp()" class="lf-btn lf-btn-ghost">Mudar número</button>
+      <button type="button" id="btn-resend" onclick="sendCode(true)" class="lf-btn lf-btn-ghost">Reenviar código</button>
+    </div>
+  </div>
+</div>
 
+<form method="post" id="pane-password" class="hidden space-y-4">
+  {% csrf_token %}
+  <label class="lf-field"><span class="lf-label">Utilizador ou email</span>
+    <input type="text" name="username" autocomplete="username" class="lf-control"></label>
+  <label class="lf-field"><span class="lf-label">Palavra-passe</span>
+    <input type="password" name="password" autocomplete="current-password" class="lf-control"></label>
+  <button type="submit" class="lf-btn lf-btn-primary w-full">Entrar no portal</button>
+</form>
+
+<p class="mt-5 text-center text-xs text-gray-500 dark:text-gray-400">Sem acesso? Contacta o administrador.</p>
+{% endblock %}
+
+{% block scripts %}
+  <script>
     const SEND_URL = "{% url 'customauth:driver_login_send_code' %}";
     const VERIFY_URL = "{% url 'customauth:driver_login_verify_code' %}";
 
@@ -159,10 +74,8 @@
       clearError();
       const tp = document.getElementById('tab-phone');
       const tw = document.getElementById('tab-password');
-      tp.className = 'flex-1 py-2 rounded-lg text-sm font-semibold transition ' +
-        (isPhone ? 'bg-white shadow text-indigo-600' : 'text-gray-500');
-      tw.className = 'flex-1 py-2 rounded-lg text-sm font-semibold transition ' +
-        (isPhone ? 'text-gray-500' : 'bg-white shadow text-indigo-600');
+      tp.setAttribute('aria-selected', isPhone);
+      tw.setAttribute('aria-selected', !isPhone);
     }
 
     function resetOtp() {
@@ -242,5 +155,4 @@
       if (e.key === 'Enter') { e.preventDefault(); sendCode(); }
     });
   </script>
-</body>
-</html>
+{% endblock %}

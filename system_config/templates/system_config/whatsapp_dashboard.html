@@ -5,21 +5,19 @@
 
 {% block content %}
 <div class="max-w-5xl mx-auto space-y-6">
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6">
-        <div class="flex items-center justify-between flex-wrap gap-4">
-            <div class="flex items-center gap-4">
-                <div>
-                    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Conexão WhatsApp</h1>
-                    <p class="text-sm text-gray-500 dark:text-gray-400">Gerencie a sessão WPPConnect diretamente pelo sistema.</p>
-                </div>
+            <div class="lf-page-header">
+            <div class="min-w-0">
+                <h1 class="lf-page-title">Ligação WhatsApp</h1>
+                <p class="lf-page-subtitle">Sessão WPPConnect do sistema.</p>
             </div>
-            <div id="statusBadge" class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-600">
+            <div class="lf-page-actions">
+                <div id="statusBadge" class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-600">
                 <span class="w-2 h-2 rounded-full bg-gray-400"></span>
                 <span>Desconhecido</span>
             </div>
+            </div>
         </div>
-
-        <dl class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+        <dl class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
             <div class="p-4 rounded-lg bg-gray-50 dark:bg-gray-900/40">
                 <dt class="text-gray-500 dark:text-gray-400 uppercase tracking-wide">Instância</dt>
                 <dd id="sessionNameDisplay" class="mt-1 font-semibold text-gray-900 dark:text-white">{{ session_name|default:'(não configurado)' }}</dd>
@@ -33,7 +31,6 @@
                 <dd id="statusSummary" class="mt-1 font-semibold text-gray-900 dark:text-white">A aguardar leitura</dd>
             </div>
         </dl>
-    </div>
 
     {% if whatsapp_error %}
             <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 flex gap-3" id="configError">
@@ -51,7 +48,7 @@
                 <i data-lucide="settings" class="w-5 h-5 text-emerald-600"></i>
                 <div class="text-left">
                     <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Configurações do serviço</h2>
-                    <p class="text-sm text-gray-500 dark:text-gray-400">Gerencie URL, instância, token e estado do serviço</p>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Gira URL, instância, token e estado do serviço</p>
                 </div>
             </div>
             <i data-lucide="chevron-down" id="configChevron" class="w-5 h-5 text-gray-400 transition-transform"></i>
@@ -76,7 +73,7 @@
                     <input type="text" id="configApiKey" name="api_key" value="{{ config.whatsapp_evolution_api_key|default:'' }}"
                         placeholder="Cole o token gerado no WPPConnect" autocomplete="new-password"
                         class="w-full px-4 py-2 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-emerald-500 dark:text-white">
-                    <button type="button" id="generateTokenBtn" class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-emerald-600 text-white hover:bg-emerald-700">
+                    <button type="button" id="generateTokenBtn" class="lf-btn lf-btn-ghost">
                         <i data-lucide="key-round" class="w-4 h-4"></i>
                         Gerar novo token
                     </button>
@@ -91,7 +88,7 @@
                 <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">Deixe o campo vazio para manter o token atual. Gere um novo token para substituir o valor guardado e lembre-se de atualizar o serviço WPPConnect.</p>
             </div>
             <div class="md:col-span-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                <button type="submit" class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-primary-600 text-white hover:bg-primary-700" id="configSubmit">
+                <button type="submit" class="lf-btn lf-btn-ghost" id="configSubmit">
                     <i data-lucide="save" class="w-4 h-4"></i>
                     Guardar configurações
                 </button>
@@ -121,12 +118,12 @@
             <div id="qrCodeSection" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 {% if is_connected %}hidden{% endif %}">
                 <div class="flex items-center justify-between mb-4">
                     <h2 class="text-lg font-semibold text-gray-900 dark:text-white">QR Code / Código de pareamento</h2>
-                    <div class="flex gap-2">
-                        <button type="button" id="startButton" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed">
+                    <div class="flex flex-wrap gap-2">
+                        <button type="button" id="startButton" class="lf-btn lf-btn-ghost disabled:opacity-60 disabled:cursor-not-allowed">
                             <i data-lucide="refresh-cw" class="w-4 h-4"></i>
                             Iniciar sessão
                         </button>
-                        <button type="button" id="refreshQRCode" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-60">
+                        <button type="button" id="refreshQRCode" class="lf-btn lf-btn-ghost disabled:opacity-60">
                             <i data-lucide="qr-code" class="w-4 h-4"></i>
                             Atualizar QR
                         </button>
@@ -214,7 +211,7 @@
                         <textarea id="testMessage" name="message" rows="3" class="mt-1 w-full px-4 py-2 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-emerald-500 dark:text-white">Teste WhatsApp WPPConnect</textarea>
                     </div>
                     <div class="flex items-center gap-3">
-                        <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60" id="testSubmit">
+                        <button type="submit" class="lf-btn lf-btn-ghost disabled:opacity-60" id="testSubmit">
                             <i data-lucide="send" class="w-4 h-4"></i>
                             Enviar mensagem
                         </button>
@@ -228,11 +225,11 @@
         <aside class="space-y-4">
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 space-y-3">
                 <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Ações rápidas</h2>
-                <button type="button" id="statusButton" class="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-60">
+                <button type="button" id="statusButton" class="lf-btn lf-btn-ghost w-full disabled:opacity-60">
                     <i data-lucide="activity" class="w-4 h-4"></i>
                     Atualizar status
                 </button>
-                <button type="button" id="logoutButton" class="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-red-500 text-white hover:bg-red-600 disabled:opacity-60">
+                <button type="button" id="logoutButton" class="lf-btn lf-btn-danger w-full disabled:opacity-60">
                     <i data-lucide="log-out" class="w-4 h-4"></i>
                     Desconectar sessão
                 </button>

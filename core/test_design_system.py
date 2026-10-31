@@ -506,3 +506,57 @@ class FinancePagesTests(TestCase):
     def test_executive_month_in_portuguese(self):
         r = self.client.get("/accounting/exec/?month=2026-09")
         self.assertContains(r, "Setembro de 2026")
+
+
+class AuthAndErrorPagesTests(TestCase):
+    def test_login_pages_use_brand_layout(self):
+        for url in ("/auth/login/", "/auth/driver/login/", "/auth/empresa/login/"):
+            r = self.client.get(url)
+            self.assertEqual(r.status_code, 200, url)
+            self.assertContains(r, "lf-auth-card")
+            self.assertNotContains(r, "cdn.tailwindcss.com")
+
+    def test_login_error_stays_on_the_page(self):
+        r = self.client.post("/auth/login/", {"email_or_nif": "x", "password": "y"})
+        self.assertContains(r, 'class="lf-alert lf-tone-danger')
+        self.assertContains(r, "Credenciais inválidas.")
+
+    def test_driver_login_keeps_the_otp_flow(self):
+        r = self.client.get("/auth/driver/login/")
+        for element in ("otp-phone", "otp-code", "btn-send-code", "btn-verify-code", "pane-password", "csrfmiddlewaretoken"):
+            self.assertContains(r, element)
+
+    def test_not_found_page(self):
+        self.client.force_login(User.objects.create_superuser("g", password="x"))
+        r = self.client.get("/nao-existe/")
+        self.assertEqual(r.status_code, 404)
+        self.assertTemplateUsed(r, "404.html")
+
+    def test_operator_blocked_page_uses_brand_layout(self):
+        self.client.force_login(User.objects.create_user("op", password="x", is_staff=True))
+        r = self.client.get("/accounting/hub/")
+        self.assertEqual(r.status_code, 403)
+        self.assertContains(r, "lf-auth-card", status_code=403)
+
+    def test_server_error_page_has_no_template_tags(self):
+        from pathlib import Path
+
+        from django.conf import settings
+
+        html = (Path(settings.BASE_DIR) / "templates" / "500.html").read_text(encoding="utf-8")
+        self.assertNotIn("{%", html)
+        self.assertNotIn("{{", html)
+
+
+class CredentialMessagesTests(TestCase):
+    """A palavra-passe gerada fica na página: um toast desaparecia em 5 segundos."""
+
+    def test_new_password_block_stays_in_the_page(self):
+        from pathlib import Path
+
+        from django.conf import settings
+
+        for name in ("admin_driver_credentials.html", "admin_empresa_credentials.html"):
+            html = (Path(settings.BASE_DIR) / "customauth" / "templates" / "customauth" / name).read_text(encoding="utf-8")
+            self.assertTrue("{% if messages %}" in html or "new_password" in html, name)
+

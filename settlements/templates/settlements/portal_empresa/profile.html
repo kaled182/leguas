@@ -7,7 +7,7 @@
   {% if messages %}
     {% for message in messages %}
     <div class="mb-4 p-3 rounded-lg
-      {% if message.tags == 'success' %}bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800{% else %}bg-rose-50 text-rose-700{% endif %}
+      {% if message.level == 25 %}bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800{% else %}bg-rose-50 text-rose-700{% endif %}
       flex items-center gap-2 text-sm">
       <i data-lucide="check-circle" class="w-4 h-4"></i>
       {{ message }}

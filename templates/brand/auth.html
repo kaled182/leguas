@@ -1,0 +1,18 @@
+{% extends "brand/base.html" %}
+{% load static %}
+{# Ecrãs fora do shell: entrada e páginas de erro. #}
+{% block body %}
+<main class="lf-auth">
+  <div class="lf-auth-box">
+    <div class="lf-auth-brand">{% include "components/logo.html" with tone="negativo" %}</div>
+    <div class="lf-auth-card">
+      {% block auth_head %}{% endblock %}
+      {% for m in messages %}
+      <div class="lf-alert lf-tone-{% if m.level == 40 %}danger{% elif m.level == 30 %}warning{% else %}success{% endif %} mb-4" role="alert">{{ m }}</div>
+      {% endfor %}
+      {% block auth_body %}{% endblock %}
+    </div>
+    <p class="lf-auth-foot">Léguas Franzinas © {% now "Y" %}</p>
+  </div>
+</main>
+{% endblock %}

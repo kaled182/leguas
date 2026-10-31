@@ -1,6 +1,6 @@
 {# Região das mensagens: usa messages do Django e window.lfToast. #}
 <div id="lf-toasts" class="lf-toasts" aria-live="polite">
   {% for message in messages %}
-    <div class="lf-toast lf-tone-{% if 'error' in message.tags %}danger{% elif 'warning' in message.tags %}warning{% else %}success{% endif %}" role="status">{{ message }}</div>
+    <div class="lf-toast lf-tone-{% if message.level == 40 %}danger{% elif message.level == 30 %}warning{% else %}success{% endif %}" role="status">{{ message }}</div>
   {% endfor %}
 </div>

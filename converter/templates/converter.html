@@ -1,66 +1,26 @@
+{% extends 'layouts/admin_base.html' %}
+{% load ui %}
 {% load static %}
 {% load custom_filters %}
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Conversor de Lista para XLSX</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com/3.4.17"></script>
-    <script src="{% static 'js/geoapivalidator.js' %}"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: {
-                            50: '#f0f9ff',
-                            100: '#e0f2fe',
-                            200: '#bae6fd',
-                            300: '#7dd3fc',
-                            400: '#38bdf8',
-                            500: '#0ea5e9',
-                            600: '#0284c7',
-                            700: '#0369a1',
-                            800: '#075985',
-                            900: '#0c4a6e',
-                            950: '#082f49',
-                        },
-                        accent: {
-                            50: '#f0fdfa',
-                            100: '#ccfbf1',
-                            200: '#99f6e4',
-                            300: '#5eead4',
-                            400: '#2dd4bf',
-                            500: '#14b8a6',
-                            600: '#0d9488',
-                            700: '#0f766e',
-                            800: '#115e59',
-                            900: '#134e4a',
-                            950: '#022c22',
-                        }
-                    }
-                }
-            }
-        }
-    </script>
-    <script src="{% static 'js/geoapivalidator.js' %}"></script>
-</head>
-<body class="bg-gray-50 dark:bg-gray-800/40 min-h-screen">
-    <div class="container mx-auto px-4 py-8 max-w-4xl">
-        <div class="bg-white rounded-xl shadow-lg overflow-hidden">
-            <!-- Header -->
-            <div class="bg-brand-purple p-6 text-white">
-                <h1 class="text-3xl font-bold text-center">Conversor de Lista para XLSX</h1>
-                <p class="mt-2 text-center opacity-80">Processamento inteligente com IA</p>
-            </div>
 
-            <div class="p-6">
+{% block title %}Conversor de lista{% endblock %}
+
+{% block content %}
+<script src="{% static 'js/geoapivalidator.js' %}"></script>
+
+    <div class="max-w-4xl mx-auto">
+        <div class="lf-page-header">
+            <div class="min-w-0">
+                <h1 class="lf-page-title">Conversor de lista</h1>
+                <p class="lf-page-subtitle">Converte uma lista de texto num ficheiro XLSX.</p>
+            </div>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
+<div class="p-6">
                 <!-- Instruções -->
                 <div class="bg-blue-50 border-l-4 border-primary-500 p-5 rounded-lg mb-6">
                     <h3 class="text-xl font-semibold text-primary-700 mb-2">Como usar:</h3>
-                    <p class="text-gray-700 mb-4">Cole sua lista no formato texto abaixo. Cada bloco deve começar com "#" e conter os dados em linhas separadas.</p>
+                    <p class="text-gray-700 mb-4">Cole a lista em texto no campo abaixo. Cada bloco deve começar com "#" e conter os dados em linhas separadas.</p>
                     <div class="bg-white p-4 rounded-lg border border-blue-200 font-mono text-sm overflow-auto">
                         Exemplo:<br>
                         <span class="text-primary-600 font-semibold">#</span>Rua das Flores, 123<br>
@@ -145,7 +105,7 @@
                                                 stroke-dasharray="175.9" stroke-dashoffset="{% widthratio 100|add:"-"|add:ai_stats.accuracy 100 175.9 %}" stroke-linecap="round"/>
                                         </svg>
                                         <div class="absolute inset-0 flex items-center justify-center">
-                                            <span class="text-lg font-bold text-primary-700">{{ ai_stats.accuracy|floatformat:0 }}%</span>
+                                            <span class="text-lg font-bold text-primary-700">{{ ai_stats.accuracy|pct:0 }}</span>
                                         </div>
                                     </div>
                                     <span class="text-xs text-gray-500 mt-1">Precisão</span>
@@ -186,22 +146,22 @@
                                 </div>
                                 <div class="flex flex-col">
                                     <div class="flex items-center mb-2">
-                                        <span class="w-3 h-3 bg-accent-400 rounded-full mr-2"></span>
+                                        <span class="w-3 h-3 bg-primary-400 rounded-full mr-2"></span>
                                         <span class="text-sm flex-1">Horários:</span>
                                         <span class="font-semibold text-primary-700">{{ ai_stats.patterns.horario }}</span>
                                     </div>
                                     <div class="flex items-center mb-2">
-                                        <span class="w-3 h-3 bg-accent-500 rounded-full mr-2"></span>
+                                        <span class="w-3 h-3 bg-primary-500 rounded-full mr-2"></span>
                                         <span class="text-sm flex-1">Litros:</span>
                                         <span class="font-semibold text-primary-700">{{ ai_stats.patterns.litros }}</span>
                                     </div>
                                     <div class="flex items-center mb-2">
-                                        <span class="w-3 h-3 bg-accent-600 rounded-full mr-2"></span>
+                                        <span class="w-3 h-3 bg-primary-600 rounded-full mr-2"></span>
                                         <span class="text-sm flex-1">Quantidade:</span>
                                         <span class="font-semibold text-primary-700">{{ ai_stats.patterns.quantidade }}</span>
                                     </div>
                                     <div class="flex items-center">
-                                        <span class="w-3 h-3 bg-accent-700 rounded-full mr-2"></span>
+                                        <span class="w-3 h-3 bg-primary-700 rounded-full mr-2"></span>
                                         <span class="text-sm flex-1">Número:</span>
                                         <span class="font-semibold text-primary-700">{{ ai_stats.patterns.numero }}</span>
                                     </div>
@@ -226,5 +186,5 @@
         </div>
     </div>
 
-</body>
-</html>
+
+{% endblock %}

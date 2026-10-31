@@ -1,4 +1,5 @@
 {% extends 'layouts/admin_base.html' %}
+{% load ui %}
 
 {% block title %}Prazos SLA por CP4{% endblock %}
 
@@ -6,19 +7,12 @@
 <div class="max-w-6xl mx-auto" x-data="slaRules()">
 
   {# ─── Header ─── #}
-  <div class="bg-brand-purple rounded-2xl p-5 mb-5 shadow-lg">
-    <div class="flex flex-wrap items-center justify-between gap-4">
-      <div class="flex items-center gap-3">
-        <div class="bg-white/20 backdrop-blur-sm rounded-xl p-3"><i data-lucide="timer" class="w-7 h-7 text-white"></i></div>
-        <div>
-          <h1 class="text-2xl font-extrabold text-white">Prazos SLA por CP4</h1>
-          <p class="text-white/80 text-sm">Prazo = N.º dia útil depois da chegada ao hub · sem regra = T+1 · domingos e feriados não contam</p>
-        </div>
-      </div>
-      <a href="{% url 'dashboard_leguas:home' %}#sla" class="bg-white/20 hover:bg-white/30 text-white px-3 py-2 rounded-lg text-sm font-medium inline-flex items-center gap-1.5">
-        <i data-lucide="arrow-left" class="w-4 h-4"></i> Painel
-      </a>
+  <div class="lf-page-header">
+    <div class="min-w-0">
+      <h1 class="lf-page-title">Prazos SLA por CP4</h1>
+      <p class="lf-page-subtitle">Prazo = N.º dia útil depois da chegada ao hub · sem regra = T+1 · domingos e feriados não contam</p>
     </div>
+    <div class="lf-page-actions"><a href="{% url 'dashboard_leguas:home' %}#sla" class="lf-btn lf-btn-ghost"><i data-lucide="arrow-left" class="w-4 h-4" aria-hidden="true"></i>Painel</a></div>
   </div>
 
   {% if messages %}{% for m in messages %}
@@ -28,8 +22,8 @@
   {# ─── Resumo ─── #}
   <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
     <div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200/50 dark:border-gray-700/50">
-      <p class="text-[11px] uppercase font-bold text-gray-500">SLA actual ({{ preview_days }} dias)</p>
-      <p class="text-2xl font-extrabold {% if total.sla >= 95 %}text-emerald-600{% elif total.sla >= 85 %}text-amber-600{% else %}text-rose-600{% endif %}">{{ total.sla|floatformat:1 }}%</p>
+      <p class="text-[11px] uppercase font-bold text-gray-500">SLA atual ({{ preview_days }} dias)</p>
+      <p class="text-2xl font-extrabold {% if total.sla >= 95 %}text-emerald-600{% elif total.sla >= 85 %}text-amber-600{% else %}text-rose-600{% endif %}">{{ total.sla|pct }}</p>
       <p class="text-[11px] text-gray-500">{{ total.on_time }} de {{ total.n }} entregas · {{ start|date:"d/m" }}–{{ end|date:"d/m" }}</p>
     </div>
     <div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200/50 dark:border-gray-700/50">
@@ -60,7 +54,7 @@
              class="px-2 py-1.5 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white w-40">
       <button type="button" @click="applyBulk()" class="px-3 py-1.5 rounded-lg bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-semibold">Aplicar às selecionadas</button>
       <span class="ml-auto text-xs text-amber-600" x-show="dirty" x-cloak>Há alterações por guardar</span>
-      <button type="submit" class="px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold inline-flex items-center gap-1.5">
+      <button type="submit" class="lf-btn lf-btn-ghost">
         <i data-lucide="check" class="w-4 h-4"></i> Guardar
       </button>
     </div>
@@ -75,34 +69,34 @@
         <span class="text-xs text-gray-500">{{ rows|length }} CP4</span>
       </div>
       <div class="overflow-x-auto">
-        <table class="w-full text-sm">
-          <thead class="bg-gray-50 dark:bg-gray-900/40 text-[11px] uppercase text-gray-500">
+        <table class="lf-table">
+          <thead>
             <tr>
-              <th class="px-3 py-2 w-8"></th>
-              <th class="px-3 py-2 text-left">CP4</th>
-              <th class="px-3 py-2 text-left">Zona</th>
-              <th class="px-3 py-2 text-right">Entregas</th>
-              <th class="px-3 py-2 text-right">SLA actual</th>
-              <th class="px-3 py-2 text-right">Se T+1</th>
-              <th class="px-3 py-2 text-right">Se T+2</th>
-              <th class="px-3 py-2 text-right">Se T+3</th>
-              <th class="px-3 py-2 text-left">Prazo</th>
-              <th class="px-3 py-2 text-left">Etiqueta</th>
+              <th ></th>
+              <th >CP4</th>
+              <th >Zona</th>
+              <th class="text-right">Entregas</th>
+              <th class="text-right">SLA atual</th>
+              <th class="text-right">Se T+1</th>
+              <th class="text-right">Se T+2</th>
+              <th class="text-right">Se T+3</th>
+              <th >Prazo</th>
+              <th >Etiqueta</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+          <tbody>
             {% for r in rows %}
             <tr data-hub="{{ hub }}" data-text="{{ r.cp4 }} {{ hub|lower }} {{ r.zone|lower }}"
                 x-show="match($el)" class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
-              <td class="px-3 py-1.5"><input type="checkbox" class="rowck rounded" value="{{ r.cp4 }}" @change="count()"></td>
-              <td class="px-3 py-1.5 font-mono font-bold text-blue-600 dark:text-blue-400">{{ r.cp4 }}<input type="hidden" name="cp" value="{{ r.cp4 }}"></td>
-              <td class="px-3 py-1.5 text-gray-600 dark:text-gray-300">{{ r.zone|default:"—" }}</td>
-              <td class="px-3 py-1.5 text-right tabular-nums">{{ r.n|default:"—" }}</td>
-              <td class="px-3 py-1.5 text-right tabular-nums font-bold {% if r.sla is None %}text-gray-400{% elif r.sla >= 95 %}text-emerald-600{% elif r.sla >= 85 %}text-amber-600{% else %}text-rose-600{% endif %}">{% if r.sla is None %}—{% else %}{{ r.sla|floatformat:1 }}%{% endif %}</td>
+              <td ><input type="checkbox" class="rowck rounded" value="{{ r.cp4 }}" @change="count()"></td>
+              <td class="font-mono font-bold text-blue-600 dark:text-blue-400">{{ r.cp4 }}<input type="hidden" name="cp" value="{{ r.cp4 }}"></td>
+              <td class="text-gray-600 dark:text-gray-300">{{ r.zone|default:"—" }}</td>
+              <td class="text-right tabular-nums">{{ r.n|default:"—" }}</td>
+              <td class="px-3 py-1.5 text-right tabular-nums font-bold {% if r.sla is None %}text-gray-400{% elif r.sla >= 95 %}text-emerald-600{% elif r.sla >= 85 %}text-amber-600{% else %}text-rose-600{% endif %}">{% if r.sla is None %}—{% else %}{{ r.sla|pct }}{% endif %}</td>
               {% for v in r.sim %}
-              <td class="px-3 py-1.5 text-right tabular-nums {% if forloop.counter == r.days %}font-bold underline{% endif %} {% if v is None %}text-gray-400{% elif v >= 95 %}text-emerald-600{% elif v >= 85 %}text-amber-600{% else %}text-rose-600{% endif %}">{% if v is None %}—{% else %}{{ v|floatformat:1 }}%{% endif %}</td>
+              <td class="px-3 py-1.5 text-right tabular-nums {% if forloop.counter == r.days %}font-bold underline{% endif %} {% if v is None %}text-gray-400{% elif v >= 95 %}text-emerald-600{% elif v >= 85 %}text-amber-600{% else %}text-rose-600{% endif %}">{% if v is None %}—{% else %}{{ v|pct }}{% endif %}</td>
               {% endfor %}
-              <td class="px-3 py-1.5">
+              <td >
                 <select name="d_{{ r.cp4 }}" data-cp="{{ r.cp4 }}" @change="dirty = true"
                         class="sel px-2 py-1 rounded-md text-xs border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white">
                   <option value="1" {% if r.days == 1 %}selected{% endif %}>T+1</option>
@@ -110,7 +104,7 @@
                   <option value="3" {% if r.days == 3 %}selected{% endif %}>T+3</option>
                 </select>
               </td>
-              <td class="px-3 py-1.5">
+              <td >
                 <input type="text" name="l_{{ r.cp4 }}" data-cp="{{ r.cp4 }}" value="{{ r.label }}" maxlength="30" @input="dirty = true"
                        placeholder="—" class="lbl w-24 px-2 py-1 rounded-md text-xs border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white">
                 {% if r.rule and r.rule.updated_by %}<span class="block text-[10px] text-gray-400 mt-0.5">{{ r.rule.updated_by.username }} · {{ r.rule.updated_at|date:"d/m H:i" }}</span>{% endif %}

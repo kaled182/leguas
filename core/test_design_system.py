@@ -650,12 +650,13 @@ class WriteOffStatusTests(TestCase):
         from settlements.models import CainiaoOperationTask
 
         today = timezone.localdate()
-        for waybill, status in (("LF1", "Delivered"), ("LF2", "Baixa"), ("LF3", "Cancel")):
+        for waybill, status in (("LF1", "Delivered"), ("LF2", "Baixa"), ("LF3", "Cancel"), ("LF4", "Stale_Armazem")):
             CainiaoOperationTask.objects.create(waybill_number=waybill, task_date=today, task_status=status)
         self.client.force_login(User.objects.create_superuser("g", password="x"))
         r = self.client.get("/")
         self.assertEqual(r.status_code, 200)
         self.assertEqual(r.context["kpis"]["total"] if "kpis" in r.context else sum(r.context["status_counts"].values()), 2)
+        self.assertContains(r, "parados há mais de 7 dias")
 
     def test_status_labels(self):
         self.assertEqual(status_label("Cancel"), "Retirado da rota")

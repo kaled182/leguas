@@ -3,8 +3,8 @@ from datetime import timedelta
 from django.test import TestCase
 from django.utils import timezone
 
-from settlements.models import CainiaoOperationBatch, CainiaoOperationTask
-from settlements.tasks import mark_stale_armazem, roll_forward_active_packages
+from settlements.models import CainiaoOperationBatch, CainiaoOperationTask, WaybillResolution
+from settlements.tasks import baixa_assigned_outro_hub, mark_stale_armazem, roll_forward_active_packages
 
 
 class PackageAgingTests(TestCase):
@@ -72,4 +72,34 @@ class PackageAgingTests(TestCase):
         task = self._task("LF7", seen_days_ago=0, date_days_ago=60)
         roll_forward_active_packages()
         self.assertEqual(self._status(task), ("Driver_received", timezone.now().date()))
+
+    def _assigned(self, waybill, seen_days_ago, zip_code="4970-001", courier="Paulo_Marcelino"):
+        task = self._task(waybill, seen_days_ago)
+        CainiaoOperationTask.objects.filter(pk=task.pk).update(
+            task_status="Assigned", courier_name=courier, zip_code=zip_code,
+        )
+        return task
+
+    def test_assigned_in_other_hub_area_gets_write_off(self):
+        task = self._assigned("LF8", seen_days_ago=10)
+        self.assertEqual(baixa_assigned_outro_hub()["marked"], 1)
+        self.assertEqual(self._status(task)[0], "Baixa")
+        self.assertTrue(WaybillResolution.objects.filter(waybill_number="LF8").exists())
+
+    def test_recent_assigned_stays(self):
+        task = self._assigned("LF9", seen_days_ago=2)
+        baixa_assigned_outro_hub()
+        self.assertEqual(self._status(task)[0], "Assigned")
+
+    def test_other_area_or_login_stays(self):
+        fora = self._assigned("LF10", seen_days_ago=10, zip_code="4740-001")
+        outro = self._assigned("LF11", seen_days_ago=10, courier="Ana_LF")
+        baixa_assigned_outro_hub()
+        self.assertEqual(self._status(fora)[0], "Assigned")
+        self.assertEqual(self._status(outro)[0], "Assigned")
+
+    def test_write_off_dry_run_changes_nothing(self):
+        task = self._assigned("LF12", seen_days_ago=10)
+        self.assertEqual(baixa_assigned_outro_hub(dry_run=True)["would_mark"], 1)
+        self.assertEqual(self._status(task)[0], "Assigned")
 

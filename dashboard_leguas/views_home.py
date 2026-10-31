@@ -63,8 +63,8 @@ class DashboardView(TemplateView):
         )
 
         ctx = super().get_context_data(**kwargs)
-        # Uma baixa não é operação da Léguas: fica fora de todos os KPIs.
-        T = CainiaoOperationTask.objects.exclude(task_status="Baixa")
+        # Baixa e Parados não são operação do dia: ficam fora dos KPIs.
+        T = CainiaoOperationTask.objects.exclude(task_status__in=("Baixa", "Stale_Armazem"))
 
         today = timezone.localdate()
         try:
@@ -212,7 +212,7 @@ class DashboardView(TemplateView):
         per_driver = (delivered / len(with_delivery)) if with_delivery else 0
 
         # ─── Alertas ───
-        stale_total = T.filter(task_status="Stale_Armazem").count()
+        stale_total = CainiaoOperationTask.objects.filter(task_status="Stale_Armazem").count()
         backlog_total = T.filter(task_status="Driver_received", task_date__lt=target).count()
 
         # ─── Parceiros (só Cainiao tem dados hoje) ───

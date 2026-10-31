@@ -7,6 +7,7 @@ from datetime import datetime as _dt, date as _date
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, render
+from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
 from core.permissions import is_gestao
@@ -947,6 +948,16 @@ def _keeps_failure_row(old_status, old_date, new_date):
     return old_status == "Attempt Failure" and new_date > old_date
 
 
+def _event_date(status, delivery_at, failure_at, task_date):
+    """Dia do evento real: a tarefa fechada conta no dia em que fechou."""
+    moment = {"Delivered": delivery_at, "Attempt Failure": failure_at}.get(status)
+    if not moment:
+        return task_date
+    if timezone.is_aware(moment):
+        moment = timezone.localtime(moment)
+    return moment.date()
+
+
 def _pick_current_row(cur, new, priority):
     """Linha que representa o pacote quando há mais do que uma data."""
     if cur["task_status"] == "Attempt Failure" and new["task_status"] in _OPEN_STATUSES:
@@ -1059,13 +1070,22 @@ def import_operation_file(content, filename, user=None):
             return None
         return _to_date(row[ci_td])
 
-    def _smart_date(row):
-        """Task Date da linha = fonte de verdade.
+    def _row_time(row, col):
+        idx = ci[col]
+        if idx is None or idx >= len(row):
+            return None
+        return _parse_datetime(row[idx])
 
-        Regra do operador: se a planilha diz que o pacote é de Task Date X,
-        o pacote pertence ao dia X. Fallback para Receipt/Creation apenas
-        quando Task Date está vazia (raro)."""
-        d = _planned_date(row)
+    def _smart_date(row):
+        """Dia do evento real, como no ReliableMaps; senão, a Task Date.
+
+        Fallback para Receipt/Creation apenas quando Task Date está vazia
+        (raro)."""
+        d = _event_date(
+            _cell_str(row, ci["task_status"]),
+            _row_time(row, "del_time"), _row_time(row, "del_fail"),
+            _planned_date(row),
+        )
         if d:
             return d
         # Fallback: receipt → creation

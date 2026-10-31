@@ -1,9 +1,9 @@
-from datetime import date
+from datetime import date, datetime
 
 from django.test import SimpleTestCase
 
 from settlements.cainiao_views import (
-    _apply_status_aliases, _is_new_task, _keeps_failure_row, _pick_current_row,
+    _apply_status_aliases, _event_date, _is_new_task, _keeps_failure_row, _pick_current_row,
 )
 
 
@@ -73,3 +73,24 @@ class LatestTaskRuleTests(SimpleTestCase):
         done = {"task_status": "Delivered", "task_date": self.D1}
         fail = {"task_status": "Attempt Failure", "task_date": self.D2}
         self.assertIs(_pick_current_row(fail, done, {"Delivered": 4, "Attempt Failure": 3}), done)
+
+
+class EventDateTests(SimpleTestCase):
+    """A tarefa fechada conta no dia em que fechou."""
+
+    PLAN = date(2026, 10, 28)
+
+    def test_failure_counts_on_real_day(self):
+        self.assertEqual(_event_date("Attempt Failure", None, datetime(2026, 10, 31, 15, 0), self.PLAN), date(2026, 10, 31))
+
+    def test_delivery_counts_on_real_day(self):
+        self.assertEqual(_event_date("Delivered", datetime(2026, 10, 29, 9, 0), None, self.PLAN), date(2026, 10, 29))
+
+    def test_open_or_cancelled_task_uses_task_date(self):
+        moment = datetime(2026, 10, 31, 15, 0)
+        for status in ("Driver_received", "Cancel", "Assigned"):
+            self.assertEqual(_event_date(status, moment, moment, self.PLAN), self.PLAN)
+
+    def test_closed_without_time_uses_task_date(self):
+        self.assertEqual(_event_date("Delivered", None, None, self.PLAN), self.PLAN)
+

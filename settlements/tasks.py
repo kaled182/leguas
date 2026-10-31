@@ -349,6 +349,68 @@ def roll_forward_active_packages(threshold_days=None, dry_run=False):
     }
 
 
+# Atribuídos deste login nestes CP foram repassados a outro hub.
+OUTRO_HUB_COURIER = "Paulo_Marcelino"
+OUTRO_HUB_CP4 = ("4970", "4974", "4980", "4990")
+OUTRO_HUB_NOTA = (
+    "Repassado a outro armazém (CP fora do hub de Viana). "
+    "Sem faturação pela Léguas. Baixa automática após 7 dias sem novidade."
+)
+
+
+@shared_task(name="settlements.baixa_assigned_outro_hub")
+def baixa_assigned_outro_hub(threshold_days=7, dry_run=False):
+    """Dá baixa aos Atribuídos repassados a outro hub, sem novidade há N dias.
+
+    Uma tarefa nova no CES reabre o pacote na importação seguinte.
+    """
+    from datetime import timedelta
+    from django.db import transaction
+    from django.utils import timezone
+    from .models import (
+        CainiaoOperationTask, CainiaoOperationTaskHistory, WaybillResolution,
+    )
+
+    seen_cutoff = timezone.now() - timedelta(days=threshold_days)
+    rows = [
+        r for r in _with_last_seen(CainiaoOperationTask.objects.filter(
+            task_status="Assigned", courier_name=OUTRO_HUB_COURIER,
+        )).filter(last_seen__lte=seen_cutoff).values(
+            "id", "waybill_number", "task_date", "courier_name",
+            "courier_id_cainiao", "zip_code",
+        )
+        if (r["zip_code"] or "")[:4] in OUTRO_HUB_CP4
+    ]
+    if dry_run:
+        return {"marked": 0, "would_mark": len(rows), "dry_run": True}
+    now = timezone.now()
+    with transaction.atomic():
+        CainiaoOperationTaskHistory.objects.bulk_create([
+            CainiaoOperationTaskHistory(
+                waybill_number=r["waybill_number"], task_date=r["task_date"],
+                task_status="Baixa", courier_name=r["courier_name"],
+                courier_id_cainiao=r["courier_id_cainiao"],
+                previous_task_date=r["task_date"], previous_task_status="Assigned",
+                previous_courier_name=r["courier_name"], change_type="manual_edit",
+                event_timestamp=None, batch=None,
+            ) for r in rows
+        ], batch_size=500)
+        for r in rows:
+            WaybillResolution.objects.get_or_create(
+                waybill_number=r["waybill_number"],
+                defaults={
+                    "resolution_type": WaybillResolution.TYPE_OTHER,
+                    "resolved_at": now, "other_hub": "Outro armazém",
+                    "notes": OUTRO_HUB_NOTA,
+                },
+            )
+        updated = CainiaoOperationTask.objects.filter(
+            id__in=[r["id"] for r in rows],
+        ).update(task_status="Baixa")
+    logger.info("[BaixaOutroHub] %d pacotes com baixa.", updated)
+    return {"marked": updated, "dry_run": False}
+
+
 @shared_task(name="settlements.mark_stale_armazem")
 def mark_stale_armazem(threshold_days=None, dry_run=False):
     """Marca pacotes 'esquecidos' no armazém (placeholder courier) com

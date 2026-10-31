@@ -113,6 +113,13 @@ app.conf.beat_schedule = {
         'options': {'expires': 3600},
     },
 
+    # Baixa automática dos Atribuídos repassados a outro hub. Corre 03:10.
+    'cainiao-baixa-assigned-outro-hub': {
+        'task': 'settlements.baixa_assigned_outro_hub',
+        'schedule': crontab(hour=3, minute=10),
+        'options': {'expires': 3600},
+    },
+
     # Stale auto-cleanup — marca pacotes 'esquecidos' (qualquer courier)
     # com Driver_received há mais de N dias como Stale_Armazem. Corre 03:00.
     'cainiao-mark-stale-armazem': {
@@ -125,8 +132,8 @@ app.conf.beat_schedule = {
     # do CES a cada 30 min. Liga/desliga em SystemConfiguration.
     'cainiao-sync-epod-reliable': {
         'task': 'settlements.sync_epod_from_reliable',
-        'schedule': crontab(minute='5,35', hour='7-23'),
-        'options': {'expires': 1500},
+        'schedule': crontab(minute='*/10', hour='7-23'),
+        'options': {'expires': 540},
     },
 
     # Julgamentos da Cainiao das reclamações (geridas no ReliableMaps) →

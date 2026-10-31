@@ -12,31 +12,51 @@ from django.shortcuts import render
 from django.utils import timezone
 
 
+def _since_label(minutes):
+    """Tempo desde a última sincronização, em pt-PT."""
+    if minutes < 1:
+        return "há menos de 1 minuto"
+    if minutes < 60:
+        return f"há {minutes} minuto{'s' if minutes != 1 else ''}"
+    if minutes < 1440:  # 24 horas
+        hours = int(minutes / 60)
+        return f"há {hours} hora{'s' if hours != 1 else ''}"
+    days = int(minutes / 1440)
+    return f"há {days} dia{'s' if days != 1 else ''}"
+
+
 @login_required
 def api_status_dashboard(request):
     """Dashboard de status das integrações de API com parceiros"""
     from datetime import timedelta
 
-    from django.db.models import Count, Max, Q
+    from django.db.models import Count, Q
 
     from core.models import PartnerIntegration, SyncLog
+
+    now = timezone.now()
+    day_ago = now - timedelta(hours=24)
 
     # Buscar todas as integrações ativas
     integrations = (
         PartnerIntegration.objects.filter(is_active=True)
         .select_related("partner")
         .annotate(
-            total_syncs=Count("sync_logs"),
-            success_syncs=Count("sync_logs", filter=Q(sync_logs__status="SUCCESS")),
-            error_syncs=Count("sync_logs", filter=Q(sync_logs__status="ERROR")),
-            last_log_time=Max("sync_logs__started_at"),
+            recent_total=Count(
+                "sync_logs", filter=Q(sync_logs__started_at__gte=day_ago)
+            ),
+            recent_success=Count(
+                "sync_logs",
+                filter=Q(
+                    sync_logs__started_at__gte=day_ago, sync_logs__status="SUCCESS"
+                ),
+            ),
         )
         .order_by("partner__name")
     )
 
     # Estatísticas por integração
     integrations_stats = []
-    now = timezone.now()
 
     for integration in integrations:
         # Determinar status de saúde
@@ -57,13 +77,8 @@ def api_status_dashboard(request):
             health_message = "Sincronização parcial"
 
         # Taxa de sucesso (últimas 24h)
-        day_ago = now - timedelta(hours=24)
-        recent_logs = SyncLog.objects.filter(
-            integration=integration, started_at__gte=day_ago
-        )
-
-        recent_total = recent_logs.count()
-        recent_success = recent_logs.filter(status="SUCCESS").count()
+        recent_total = integration.recent_total
+        recent_success = integration.recent_success
         success_rate_24h = (
             round((recent_success / recent_total * 100), 1) if recent_total > 0 else 0
         )
@@ -73,12 +88,7 @@ def api_status_dashboard(request):
             time_since_sync = now - integration.last_sync_at
             minutes_ago = int(time_since_sync.total_seconds() / 60)
 
-            if minutes_ago < 60:
-                last_sync_display = f"{minutes_ago} minutos atrás"
-            elif minutes_ago < 1440:  # 24 horas
-                last_sync_display = f"{int(minutes_ago/60)} horas atrás"
-            else:
-                last_sync_display = f"{int(minutes_ago/1440)} dias atrás"
+            last_sync_display = _since_label(minutes_ago)
         else:
             last_sync_display = "Nunca"
 
@@ -108,6 +118,10 @@ def api_status_dashboard(request):
         1 for i in integrations_stats if i["health_status"] == "critical"
     )
 
+    unknown_count = sum(
+        1 for i in integrations_stats if i["health_status"] == "unknown"
+    )
+
     # Logs recentes (últimas 10 sincronizações)
     recent_logs = SyncLog.objects.select_related("integration__partner").order_by(
         "-started_at"
@@ -119,6 +133,7 @@ def api_status_dashboard(request):
         "healthy_count": healthy_count,
         "warning_count": warning_count,
         "critical_count": critical_count,
+        "unknown_count": unknown_count,
         "recent_logs": recent_logs,
     }
 

@@ -1,292 +1,116 @@
 {% extends 'layouts/admin_base.html' %}
+{% load ui %}
 
-{% block title %}Estado de Integrações - Analytics{% endblock %}
+{% block title %}Estado das APIs{% endblock %}
 
 {% block content %}
-<div class="space-y-6">
-    <!-- Header -->
-    <div class="flex items-center justify-between">
+<div class="max-w-6xl mx-auto">
+
+  <div class="lf-page-header">
+    <div class="min-w-0">
+      <h1 class="lf-page-title">Estado das APIs</h1>
+      <p class="lf-page-subtitle">Integrações ativas com clientes · atualiza a cada 30 segundos</p>
+    </div>
+    <div class="lf-page-actions">
+      <a class="lf-btn lf-btn-ghost" href="{% url 'analytics:sync_logs_list' %}"><i data-lucide="list-checks" class="w-4 h-4" aria-hidden="true"></i>Registos de sincronização</a>
+    </div>
+  </div>
+
+  <div class="lf-kpi-grid mb-4">
+    <div class="lf-kpi">
+      <span class="lf-kpi-label">Integrações ativas</span>
+      <span class="lf-kpi-value">{{ total_integrations|pt_int }}</span>
+      {% if unknown_count %}<span class="lf-kpi-note">{{ unknown_count|pt_int }} sem dados</span>{% endif %}
+    </div>
+    <div class="lf-kpi">
+      <span class="lf-kpi-label">Operacionais</span>
+      <span class="lf-kpi-value">{{ healthy_count|pt_int }}</span>
+    </div>
+    <div class="lf-kpi">
+      <span class="lf-kpi-label">Com alertas</span>
+      <span class="lf-kpi-value">{{ warning_count|pt_int }}</span>
+    </div>
+    <div class="lf-kpi">
+      <span class="lf-kpi-label">Com falhas</span>
+      <span class="lf-kpi-value">{{ critical_count|pt_int }}</span>
+    </div>
+  </div>
+
+  <h2 class="text-base font-semibold text-gray-900 dark:text-white mb-2">Integrações</h2>
+  <div class="space-y-3 mb-6">
+    {% for stat in integrations_stats %}
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-4">
+      <div class="flex flex-wrap items-start justify-between gap-3">
+        <div class="min-w-0">
+          <h3 class="font-semibold text-gray-900 dark:text-white">{{ stat.integration.partner.name }}</h3>
+          <p class="text-sm text-gray-600 dark:text-gray-400">{{ stat.integration.get_integration_type_display }} · {{ stat.health_message }} · Última sincronização: {{ stat.last_sync_display }}</p>
+        </div>
+        <span class="lf-badge lf-tone-{{ stat.health_status|health_tone }}">{{ stat.health_status|health_label }}</span>
+      </div>
+      <dl class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3 text-sm">
         <div>
-            <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
-                Painel de Integrações
-            </h1>
-            <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                Monitoramento em tempo real das APIs de parceiros
-            </p>
+          <dt class="text-xs text-gray-500 dark:text-gray-400">Frequência</dt>
+          <dd class="font-semibold text-gray-900 dark:text-white">Cada {{ stat.integration.sync_frequency_minutes }} min</dd>
         </div>
-        <a href="{% url 'analytics:sync_logs_list' %}" class="inline-flex items-center gap-2 px-4 py-2 bg-brand-purple text-white rounded-lg transition-all shadow-md">
-            <i data-lucide="list" class="w-4 h-4"></i>
-            <span>Ver Registos Detalhados</span>
-        </a>
+        <div>
+          <dt class="text-xs text-gray-500 dark:text-gray-400">Sincronizações (24 h)</dt>
+          <dd class="tabular-nums font-semibold text-gray-900 dark:text-white">{{ stat.recent_syncs_24h|pt_int }}</dd>
+        </div>
+        <div>
+          <dt class="text-xs text-gray-500 dark:text-gray-400">Sucesso (24 h)</dt>
+          <dd>
+            {% if stat.recent_syncs_24h %}
+            <span class="lf-badge lf-tone-{% if stat.success_rate_24h >= 90 %}success{% elif stat.success_rate_24h >= 70 %}warning{% else %}danger{% endif %}">{{ stat.success_rate_24h|pct }}</span>
+            {% else %}
+            <span class="text-gray-500 dark:text-gray-400">—</span>
+            {% endif %}
+          </dd>
+        </div>
+      </dl>
+      {% if stat.integration.last_sync_message and stat.health_status == 'critical' %}
+      <div class="lf-alert lf-tone-danger mt-3"><p class="min-w-0 break-words"><strong>Erro:</strong> {{ stat.integration.last_sync_message|truncatewords:20 }}</p></div>
+      {% endif %}
     </div>
+    {% empty %}
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-4"><div class="lf-empty"><i data-lucide="inbox" class="w-8 h-8" aria-hidden="true"></i><p class="lf-empty-title">Sem integrações ativas</p><p>Ative uma integração na ficha do cliente.</p></div></div>
+    {% endfor %}
+  </div>
 
-    <!-- Estatísticas Globais -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <!-- Total -->
-        <div class="bg-gray-50 dark:bg-gray-800/40 rounded-2xl p-6 border border-slate-200 dark:border-slate-700">
-            <div class="flex items-center justify-between mb-4">
-                <div class="p-3 bg-slate-500 rounded-xl">
-                    <i data-lucide="satellite" class="w-6 h-6 text-white"></i>
-                </div>
-                <span class="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Total</span>
-            </div>
-            <div class="text-3xl font-bold text-slate-900 dark:text-white mb-1">
-                {{ total_integrations }}
-            </div>
-            <p class="text-sm text-slate-600 dark:text-slate-400">Integrações Ativas</p>
-        </div>
-
-        <!-- Healthy -->
-        <div class="bg-gray-50 dark:bg-gray-800/40 rounded-2xl p-6 border border-green-200 dark:border-green-700">
-            <div class="flex items-center justify-between mb-4">
-                <div class="p-3 bg-green-500 rounded-xl">
-                    <i data-lucide="check-circle" class="w-6 h-6 text-white"></i>
-                </div>
-                <span class="text-xs font-semibold text-green-600 dark:text-green-400 uppercase tracking-wider">Healthy</span>
-            </div>
-            <div class="text-3xl font-bold text-green-900 dark:text-green-100 mb-1">
-                {{ healthy_count }}
-            </div>
-            <p class="text-sm text-green-600 dark:text-green-400">Operacionais</p>
-        </div>
-
-        <!-- Warning -->
-        <div class="bg-gray-50 dark:bg-gray-800/40 rounded-2xl p-6 border border-yellow-200 dark:border-yellow-700">
-            <div class="flex items-center justify-between mb-4">
-                <div class="p-3 bg-yellow-500 rounded-xl">
-                    <i data-lucide="alert-triangle" class="w-6 h-6 text-white"></i>
-                </div>
-                <span class="text-xs font-semibold text-yellow-600 dark:text-yellow-400 uppercase tracking-wider">Warning</span>
-            </div>
-            <div class="text-3xl font-bold text-yellow-900 dark:text-yellow-100 mb-1">
-                {{ warning_count }}
-            </div>
-            <p class="text-sm text-yellow-600 dark:text-yellow-400">Com Alertas</p>
-        </div>
-
-        <!-- Critical -->
-        <div class="bg-gray-50 dark:bg-gray-800/40 rounded-2xl p-6 border border-red-200 dark:border-red-700">
-            <div class="flex items-center justify-between mb-4">
-                <div class="p-3 bg-red-500 rounded-xl">
-                    <i data-lucide="x-circle" class="w-6 h-6 text-white"></i>
-                </div>
-                <span class="text-xs font-semibold text-red-600 dark:text-red-400 uppercase tracking-wider">Critical</span>
-            </div>
-            <div class="text-3xl font-bold text-red-900 dark:text-red-100 mb-1">
-                {{ critical_count }}
-            </div>
-            <p class="text-sm text-red-600 dark:text-red-400">Com Falhas</p>
-        </div>
-    </div>
-
-    <!-- Lista de Integrações -->
-    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-            <div class="flex items-center gap-2">
-                <i data-lucide="activity" class="w-5 h-5 text-gray-500 dark:text-gray-400"></i>
-                <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Estado das Integrações</h2>
-            </div>
-        </div>
-
-        <div class="p-6 space-y-4">
-            {% for stat in integrations_stats %}
-            <div class="border border-gray-200 dark:border-gray-700 rounded-xl p-5 hover:shadow-md transition-shadow">
-                <div class="flex items-start justify-between mb-4">
-                    <!-- Parceiro e Status -->
-                    <div class="flex items-start gap-4 flex-1">
-                        <!-- Ícone de Status -->
-                        <div class="mt-1">
-                            {% if stat.health_status == 'healthy' %}
-                            <div class="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                            {% elif stat.health_status == 'warning' %}
-                            <div class="w-3 h-3 bg-yellow-500 rounded-full animate-pulse"></div>
-                            {% elif stat.health_status == 'critical' %}
-                            <div class="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
-                            {% else %}
-                            <div class="w-3 h-3 bg-gray-400 rounded-full"></div>
-                            {% endif %}
-                        </div>
-
-                        <!-- Info do Parceiro -->
-                        <div class="flex-1">
-                            <div class="flex items-center gap-3 mb-2">
-                                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
-                                    {{ stat.integration.partner.name }}
-                                </h3>
-                                <span class="px-3 py-1 text-xs font-medium rounded-full 
-                                    {% if stat.integration.integration_type == 'API' %}bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400
-                                    {% elif stat.integration.integration_type == 'SFTP' %}bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400
-                                    {% else %}bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400{% endif %}">
-                                    {{ stat.integration.get_integration_type_display }}
-                                </span>
-                            </div>
-                            
-                            <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                                {{ stat.health_message }} • Última sincronização: <span class="font-medium">{{ stat.last_sync_display }}</span>
-                            </p>
-
-                            <!-- Métricas -->
-                            <div class="grid grid-cols-3 gap-4">
-                                <div>
-                                    <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Frequência</p>
-                                    <p class="text-sm font-semibold text-gray-900 dark:text-white">
-                                        Cada {{ stat.integration.sync_frequency_minutes }} min
-                                    </p>
-                                </div>
-                                <div>
-                                    <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Sincronizações (24h)</p>
-                                    <p class="text-sm font-semibold text-gray-900 dark:text-white">
-                                        {{ stat.recent_syncs_24h }}
-                                    </p>
-                                </div>
-                                <div>
-                                    <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Taxa de Sucesso (24h)</p>
-                                    <div class="flex items-center gap-2">
-                                        <div class="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                                            <div class="h-2 rounded-full transition-all
-                                                {% if stat.success_rate_24h >= 90 %}bg-green-500
-                                                {% elif stat.success_rate_24h >= 70 %}bg-yellow-500
-                                                {% else %}bg-red-500{% endif %}"
-                                                style="width: {{ stat.success_rate_24h }}%">
-                                            </div>
-                                        </div>
-                                        <span class="text-sm font-semibold
-                                            {% if stat.success_rate_24h >= 90 %}text-green-600 dark:text-green-400
-                                            {% elif stat.success_rate_24h >= 70 %}text-yellow-600 dark:text-yellow-400
-                                            {% else %}text-red-600 dark:text-red-400{% endif %}">
-                                            {{ stat.success_rate_24h }}%
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Badge de Status -->
-                    <div>
-                        {% if stat.health_status == 'healthy' %}
-                        <span class="px-4 py-2 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-lg text-sm font-semibold">
-                            ✓ Healthy
-                        </span>
-                        {% elif stat.health_status == 'warning' %}
-                        <span class="px-4 py-2 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 rounded-lg text-sm font-semibold">
-                            ⚠ Warning
-                        </span>
-                        {% elif stat.health_status == 'critical' %}
-                        <span class="px-4 py-2 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-lg text-sm font-semibold">
-                            ✗ Critical
-                        </span>
-                        {% else %}
-                        <span class="px-4 py-2 bg-gray-100 dark:bg-gray-900/30 text-gray-700 dark:text-gray-400 rounded-lg text-sm font-semibold">
-                            ? Unknown
-                        </span>
-                        {% endif %}
-                    </div>
-                </div>
-
-                <!-- Última mensagem se houver erro -->
-                {% if stat.integration.last_sync_message and stat.health_status == 'critical' %}
-                <div class="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                    <p class="text-xs text-red-700 dark:text-red-400">
-                        <strong>Erro:</strong> {{ stat.integration.last_sync_message|truncatewords:20 }}
-                    </p>
-                </div>
-                {% endif %}
-            </div>
-            {% empty %}
-            <div class="text-center py-12">
-                <i data-lucide="inbox" class="w-16 h-16 text-gray-400 mx-auto mb-4"></i>
-                <p class="text-gray-500 dark:text-gray-400">Nenhuma integração ativa encontrada</p>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-
-    <!-- Logs Recentes -->
-    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-            <div class="flex items-center gap-2">
-                <i data-lucide="clock" class="w-5 h-5 text-gray-500 dark:text-gray-400"></i>
-                <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Sincronizações Recentes</h2>
-            </div>
-            <span class="text-sm text-gray-500 dark:text-gray-400">Últimas 10</span>
-        </div>
-
-        <div class="overflow-x-auto">
-            <table class="w-full">
-                <thead class="bg-gray-50 dark:bg-gray-700/50">
-                    <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Timestamp</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Parceiro</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Operação</th>
-                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Estado</th>
-                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Registros</th>
-                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Duração</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-                    {% for log in recent_logs %}
-                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                            {{ log.started_at|date:"d/m/Y H:i" }}
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                            {{ log.integration.partner.name }}
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
-                            {{ log.get_operation_display }}
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-center">
-                            {% if log.status == 'SUCCESS' %}
-                            <span class="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full text-xs font-semibold">
-                                Sucesso
-                            </span>
-                            {% elif log.status == 'ERROR' %}
-                            <span class="px-3 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-full text-xs font-semibold">
-                                Erro
-                            </span>
-                            {% elif log.status == 'PARTIAL' %}
-                            <span class="px-3 py-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 rounded-full text-xs font-semibold">
-                                Parcial
-                            </span>
-                            {% else %}
-                            <span class="px-3 py-1 bg-gray-100 dark:bg-gray-900/30 text-gray-700 dark:text-gray-400 rounded-full text-xs font-semibold">
-                                {{ log.get_status_display }}
-                            </span>
-                            {% endif %}
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-900 dark:text-white">
-                            {{ log.records_processed }}
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-600 dark:text-gray-400">
-                            {% if log.duration_seconds %}
-                                {{ log.duration_seconds|floatformat:1 }}s
-                            {% else %}
-                                -
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="6" class="px-6 py-12 text-center">
-                            <p class="text-gray-500 dark:text-gray-400">Nenhum log recente</p>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
+  <h2 class="text-base font-semibold text-gray-900 dark:text-white mb-2">Últimas 10 sincronizações</h2>
+  <div class="lf-table-wrap">
+    <table class="lf-table">
+      <thead>
+        <tr>
+          <th scope="col">Início</th>
+          <th scope="col">Cliente</th>
+          <th scope="col">Operação</th>
+          <th scope="col">Estado</th>
+          <th scope="col" class="text-right">Registos</th>
+          <th scope="col" class="text-right">Duração</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in recent_logs %}
+        <tr>
+          <td class="whitespace-nowrap">{{ log.started_at|date:"d/m/Y H:i" }}</td>
+          <td class="font-semibold text-gray-900 dark:text-white">{{ log.integration.partner.name }}</td>
+          <td>{{ log|sync_operation }}</td>
+          <td><span class="lf-badge lf-tone-{{ log.status|sync_tone }}">{{ log.status|sync_label }}</span></td>
+          <td class="text-right lf-num">{{ log.records_processed|pt_int }}</td>
+          <td class="text-right lf-num">{% if log.duration_seconds %}{{ log.duration_seconds|floatformat:1 }} s{% else %}—{% endif %}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6"><div class="lf-empty"><i data-lucide="inbox" class="w-8 h-8" aria-hidden="true"></i><p class="lf-empty-title">Sem sincronizações</p></div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        lucide.createIcons();
-        
-        // Auto-refresh a cada 30 segundos
-        setTimeout(function() {
-            location.reload();
-        }, 30000);
-    });
+  // Auto-refresh a cada 30 segundos
+  setTimeout(function() {
+    location.reload();
+  }, 30000);
 </script>
 {% endblock %}

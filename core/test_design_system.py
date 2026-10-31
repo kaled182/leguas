@@ -387,3 +387,70 @@ class FinancialAlertResolveTests(TestCase):
         self.client.post(f"/core/financial-alerts/{alert.pk}/resolve/")
         alert.refresh_from_db()
         self.assertFalse(alert.resolved)
+
+
+class ReportPagesTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        from core.models import Partner, PartnerIntegration, SyncLog
+
+        partner = Partner.objects.create(name="Cliente", nif="500000000", contact_email="c@example.test")
+        cls.integration = PartnerIntegration.objects.create(
+            partner=partner, integration_type="API", is_active=True,
+            sync_frequency_minutes=15, last_sync_at=timezone.now(), last_sync_status="SUCCESS",
+        )
+        ok = SyncLog.objects.create(integration=cls.integration, operation="UPDATE_STATUS", status="SUCCESS")
+        SyncLog.objects.create(integration=cls.integration, operation="UPDATE_STATUS", status="TIMEOUT")
+        old = SyncLog.objects.create(integration=cls.integration, operation="UPDATE_STATUS", status="ERROR")
+        SyncLog.objects.filter(pk=old.pk).update(started_at=timezone.now() - timedelta(hours=30))
+        cls.ok = ok
+
+    def setUp(self):
+        self.client.force_login(User.objects.create_superuser("g", password="x"))
+
+    def test_rate_counts_only_last_24_hours(self):
+        r = self.client.get("/analytics/integrations/status/")
+        stat = r.context["integrations_stats"][0]
+        self.assertEqual(stat["recent_syncs_24h"], 2)
+        self.assertEqual(stat["success_rate_24h"], 50.0)
+        self.assertContains(r, f"50,0{NBSP}%")
+        self.assertContains(r, "Tempo esgotado")
+        self.assertContains(r, "Atualização de estado")
+
+    def test_status_page_query_count_ignores_integrations(self):
+        from core.models import Partner, PartnerIntegration
+
+        def count():
+            from django.db import connection
+            from django.test.utils import CaptureQueriesContext
+
+            with CaptureQueriesContext(connection) as queries:
+                self.client.get("/analytics/integrations/status/")
+            return len(queries)
+
+        count()  # A primeira visita cria a configuração do sistema.
+        before = count()
+        for n in range(3):
+            PartnerIntegration.objects.create(
+                partner=Partner.objects.create(name=f"C{n}", nif=f"50000000{n + 1}", contact_email=f"c{n}@example.test"),
+                integration_type="API", is_active=True,
+            )
+        self.assertEqual(count(), before)
+
+    def test_logs_page_keeps_filters_and_labels(self):
+        r = self.client.get("/analytics/integrations/logs/?status=TIMEOUT&days=30")
+        self.assertEqual(r.context["total_logs"], 1)
+        self.assertContains(r, '<option value="TIMEOUT" selected>Tempo esgotado</option>', html=True)
+        self.assertContains(r, "Repetir")
+
+    def test_since_label(self):
+        from analytics.views import _since_label
+
+        self.assertEqual(_since_label(0), "há menos de 1 minuto")
+        self.assertEqual(_since_label(1), "há 1 minuto")
+        self.assertEqual(_since_label(61), "há 1 hora")
+        self.assertEqual(_since_label(2880), "há 2 dias")

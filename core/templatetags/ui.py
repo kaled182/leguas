@@ -21,6 +21,29 @@ CAINIAO_STATUS = {
     "Exception": ("Exceção", "danger"),
 }
 
+# Estado de SyncLog: (texto, tom).
+SYNC_STATUS = {
+    "STARTED": ("Em curso", "neutral"),
+    "SUCCESS": ("Sucesso", "success"),
+    "ERROR": ("Erro", "danger"),
+    "PARTIAL": ("Parcial", "warning"),
+    "TIMEOUT": ("Tempo esgotado", "warning"),
+}
+
+# Saúde de uma integração: (texto, tom).
+SYNC_HEALTH = {
+    "healthy": ("Operacional", "success"),
+    "warning": ("Com alertas", "warning"),
+    "critical": ("Com falhas", "danger"),
+    "unknown": ("Sem dados", "neutral"),
+}
+
+# Os choices de SyncLog ficam no modelo: alterá-los exige migration.
+SYNC_OPERATION = {
+    "UPDATE_STATUS": "Atualização de estado",
+    "HEALTH_CHECK": "Verificação de estado",
+}
+
 
 def _decimal(value):
     try:
@@ -64,6 +87,36 @@ def status_label(value):
 @register.filter
 def status_tone(value):
     return CAINIAO_STATUS.get(value, (value, "neutral"))[1]
+
+
+@register.filter
+def sync_label(value):
+    return SYNC_STATUS.get(value, (value, "neutral"))[0]
+
+
+@register.filter
+def sync_tone(value):
+    return SYNC_STATUS.get(value, (value, "neutral"))[1]
+
+
+@register.filter
+def health_label(value):
+    return SYNC_HEALTH.get(value, (value, "neutral"))[0]
+
+
+@register.filter
+def health_tone(value):
+    return SYNC_HEALTH.get(value, (value, "neutral"))[1]
+
+
+@register.filter
+def sync_operation(log):
+    """Etiqueta da operação: aceita um SyncLog ou o par (valor, etiqueta)."""
+    value, label = (
+        (log.operation, log.get_operation_display())
+        if hasattr(log, "operation") else log
+    )
+    return SYNC_OPERATION.get(value, label)
 
 
 @register.simple_tag(takes_context=True)

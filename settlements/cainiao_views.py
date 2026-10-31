@@ -1540,7 +1540,7 @@ def import_operation_file(content, filename, user=None):
         existing_other_dates = list(
             CainiaoOperationTask.objects
             .filter(waybill_number__in=list(waybill_to_target_date.keys()))
-            .values("waybill_number", "task_date")
+            .values("waybill_number", "task_date", "task_status")
         )
         # Agrupar por task_date as rows que precisam de ser apagadas
         deletes_by_date = defaultdict(list)
@@ -1550,7 +1550,9 @@ def import_operation_file(content, filename, user=None):
             target_dt = waybill_to_target_date.get(wb)
             if target_dt is None:
                 continue
-            if r["task_date"] != target_dt:
+            if r["task_date"] != target_dt and not _keeps_failure_row(
+                r["task_status"], r["task_date"], target_dt,
+            ):
                 deletes_by_date[r["task_date"]].append(wb)
                 consolidated_count += 1
 

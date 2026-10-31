@@ -43,6 +43,11 @@ class LatestTaskRuleTests(SimpleTestCase):
         self.assertTrue(_is_new_task("Attempt Failure", self.D1, "Driver_received", self.D2))
         self.assertTrue(_keeps_failure_row("Attempt Failure", self.D1, self.D2))
 
+    def test_delivered_later_keeps_failure_day(self):
+        self.assertTrue(_keeps_failure_row("Attempt Failure", self.D1, self.D2))
+        self.assertFalse(_keeps_failure_row("Driver_received", self.D1, self.D2))
+        self.assertFalse(_keeps_failure_row("Attempt Failure", self.D2, self.D1))
+
     def test_same_day_pick_does_not_erase_failure(self):
         self.assertFalse(_is_new_task("Attempt Failure", self.D1, "Driver_received", self.D1))
 

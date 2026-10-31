@@ -1,5 +1,6 @@
 """Views para import de planilhas Cainiao."""
 import io
+import logging
 from collections import defaultdict
 from datetime import datetime as _dt, date as _date
 
@@ -11,6 +12,8 @@ from django.views.decorators.http import require_http_methods
 from core.permissions import is_gestao
 
 from .models import CainiaoDelivery, CainiaoImportBatch, DriverCourierMapping, DriverHelper
+
+logger = logging.getLogger(__name__)
 
 
 @login_required
@@ -919,6 +922,22 @@ def cainiao_operation_audit(request):
     })
 
 
+# O CES usa outro nome para o mesmo estado em alguns exports.
+_STATUS_ALIASES = {
+    "Driver pick up": "Driver_received",
+    "Driver_received_incidence": "Driver_received",
+}
+
+
+def _apply_status_aliases(rows, header_idx, status_idx):
+    """Troca os nomes alternativos de estado pelo nome usado na base."""
+    for i in range(header_idx + 1, len(rows)):
+        alias = _STATUS_ALIASES.get(_cell_str(rows[i], status_idx))
+        if alias:
+            rows[i] = list(rows[i])
+            rows[i][status_idx] = alias
+
+
 def import_operation_file(content, filename, user=None):
     """Importa uma planilha Operation Update (EPOD_TASK_LIST) a partir dos bytes.
 
@@ -984,6 +1003,8 @@ def import_operation_file(content, filename, user=None):
         "bigbag":        _col_idx(header, "Bigbag No.", "Bigbag No"),
         "task_plan":     _col_idx(header, "Task Plan Date"),
     }
+
+    _apply_status_aliases(all_rows, header_idx, ci["task_status"])
 
     def _yesno_to_bool(v):
         if v is None:
@@ -1084,6 +1105,12 @@ def import_operation_file(content, filename, user=None):
             audit["skipped_no_waybill"] += 1
             continue
         wb_rows[waybill].append(row)
+    unknown_statuses = set(audit["rows_by_status"]) - _VALID
+    if unknown_statuses:
+        logger.warning(
+            "import_operation_file: %s tem estados ignorados: %s",
+            filename, sorted(unknown_statuses),
+        )
     # Converter defaultdicts para dicts JSON-serializáveis
     audit["couriers_in_file"] = dict(audit["couriers_in_file"])
     audit["dsp_in_file"] = dict(audit["dsp_in_file"])

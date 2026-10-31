@@ -256,6 +256,7 @@ class PartnerPermissionTests(TestCase):
         self.assertEqual(r.status_code, 200)
         self.assertNotContains(r, "Valor por pacote")
         self.assertNotContains(r, f"/core/partners/{self.partner.pk}/edit/")
+        self.assertNotContains(r, "s.total_cost_eur")
 
     def test_manager_sees_price(self):
         self.client.force_login(self.manager)
@@ -292,3 +293,97 @@ class MissingContractsCoverageTests(TestCase):
         self.client.force_login(User.objects.create_superuser("g", password="x"))
         r = self.client.get("/contracts/admin/missing/")
         self.assertContains(r, ">0/1<")
+
+
+class CainiaoCostVisibilityTests(TestCase):
+    """Decisão P4: o custo de Não chegaram deriva do preço do cliente."""
+
+    @classmethod
+    def setUpTestData(cls):
+        from datetime import date
+        from decimal import Decimal
+
+        from settlements.models import NotArrivedSnapshot, NotArrivedSnapshotRow
+
+        cls.operator = User.objects.create_user("op", password="x", is_staff=True)
+        cls.manager = User.objects.create_superuser("g", password="x")
+        cls.snap = NotArrivedSnapshot.objects.create(
+            snapshot_date=date(2026, 10, 30), total_packages=1, total_cost_eur=Decimal("98.76"),
+        )
+        NotArrivedSnapshotRow.objects.create(
+            snapshot=cls.snap, waybill_number="LP1", estimated_cost_eur=Decimal("98.76"),
+        )
+
+    def _not_arrived(self, user):
+        from unittest.mock import patch
+
+        row = {
+            "waybill": "LP1", "courier_name": "Ana", "courier_id_cainiao": "1", "cp4": "1000",
+            "city": "Lisboa", "weight_g": 500, "business_days_stuck": 11, "sla_level": "red",
+            "should_escalate": True, "estimated_cost_eur": 98.76, "first_seen": "2026-10-01",
+        }
+        self.client.force_login(user)
+        with patch("settlements.cainiao_views._compute_not_arrived", return_value=[row]):
+            return self.client.get("/settlements/cainiao/not-arrived/")
+
+    def test_not_arrived_hides_cost_from_operator(self):
+        r = self._not_arrived(self.operator)
+        self.assertEqual(r.status_code, 200)
+        self.assertNotIn("98.76", r.content.decode())
+        self.assertEqual(r.json()["total"], 1)
+
+    def test_not_arrived_keeps_cost_for_gestao(self):
+        data = self._not_arrived(self.manager).json()
+        self.assertEqual(data["summary"]["total_cost_eur"], 98.76)
+        self.assertEqual(data["rows"][0]["estimated_cost_eur"], 98.76)
+
+    def test_snapshots_hide_cost_from_operator(self):
+        self.client.force_login(self.operator)
+        for url in ("/settlements/cainiao/snapshots/", f"/settlements/cainiao/snapshots/{self.snap.pk}/"):
+            r = self.client.get(url)
+            self.assertEqual(r.status_code, 200)
+            self.assertNotIn("98.76", r.content.decode())
+
+    def test_snapshots_keep_cost_for_gestao(self):
+        self.client.force_login(self.manager)
+        for url in ("/settlements/cainiao/snapshots/", f"/settlements/cainiao/snapshots/{self.snap.pk}/"):
+            self.assertIn("98.76", self.client.get(url).content.decode())
+
+    def test_snapshot_excel_hides_cost_from_operator(self):
+        import io
+
+        import openpyxl
+
+        def header(user):
+            self.client.force_login(user)
+            r = self.client.get(f"/settlements/cainiao/snapshots/{self.snap.pk}/xlsx/")
+            self.assertEqual(r.status_code, 200)
+            return openpyxl.load_workbook(io.BytesIO(r.content)).active["A2"].value
+
+        self.assertNotIn("98.76", header(self.operator))
+        self.assertIn("98.76", header(self.manager))
+
+
+class FinancialAlertResolveTests(TestCase):
+    def test_page_button_reaches_resolve_route(self):
+        from settlements.models import FinancialAlert
+
+        alert = FinancialAlert.objects.create(kind="OTHER", title="Teste")
+        user = User.objects.create_superuser("g", password="x")
+        self.client.force_login(user)
+        page = self.client.get("/core/financial-alerts/")
+        self.assertContains(page, "/core/financial-alerts/${id}/resolve/")
+        r = self.client.post(f"/core/financial-alerts/{alert.pk}/resolve/")
+        self.assertEqual(r.status_code, 200)
+        alert.refresh_from_db()
+        self.assertTrue(alert.resolved)
+        self.assertEqual(alert.resolved_by, user)
+
+    def test_operator_cannot_resolve(self):
+        from settlements.models import FinancialAlert
+
+        alert = FinancialAlert.objects.create(kind="OTHER", title="Teste")
+        self.client.force_login(User.objects.create_user("op", password="x", is_staff=True))
+        self.client.post(f"/core/financial-alerts/{alert.pk}/resolve/")
+        alert.refresh_from_db()
+        self.assertFalse(alert.resolved)

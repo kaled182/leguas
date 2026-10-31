@@ -8,6 +8,8 @@ from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.views.decorators.http import require_http_methods
 
+from core.permissions import is_gestao
+
 from .models import CainiaoDelivery, CainiaoImportBatch, DriverCourierMapping, DriverHelper
 
 
@@ -3905,6 +3907,23 @@ def cainiao_not_arrived(request):
     hot_drivers = [d for d in by_driver_list if d["n"] >= 5]
     hot_cp4s = [c for c in by_cp4_list if c["n"] >= 5]
 
+    summary = {
+        "total_packages": len(rows),
+        "total_cost_eur": round(total_cost, 2),
+        "n_to_escalate": n_to_escalate,
+        "n_drivers_affected": len(by_driver_list),
+        "n_cp4s_affected": len(by_cp4_list),
+        "last7_days": last7,
+        "prev7_days": prev7,
+    }
+    # O custo deriva do preço do cliente: só a Gestão o recebe.
+    if not is_gestao(request.user):
+        del summary["total_cost_eur"]
+        rows = [
+            {k: v for k, v in r.items() if k != "estimated_cost_eur"}
+            for r in rows
+        ]
+
     return JsonResponse({
         "success": True,
         "total": len(rows),
@@ -3913,15 +3932,7 @@ def cainiao_not_arrived(request):
         "rows": rows,
         "by_driver": by_driver_list,
         "by_cp4": by_cp4_list,
-        "summary": {
-            "total_packages": len(rows),
-            "total_cost_eur": round(total_cost, 2),
-            "n_to_escalate": n_to_escalate,
-            "n_drivers_affected": len(by_driver_list),
-            "n_cp4s_affected": len(by_cp4_list),
-            "last7_days": last7,
-            "prev7_days": prev7,
-        },
+        "summary": summary,
         "history_30d": history_30d,
         "heatmap_dow": heatmap_dow,
         "spike": spike,
@@ -5396,6 +5407,7 @@ def cainiao_snapshot_list(request):
     qs = NotArrivedSnapshot.objects.select_related(
         "hub", "created_by",
     ).order_by("-snapshot_date")[:60]
+    show_cost = is_gestao(request.user)
     return JsonResponse({
         "success": True,
         "snapshots": [{
@@ -5405,7 +5417,7 @@ def cainiao_snapshot_list(request):
             "is_automatic": s.is_automatic,
             "hub": s.hub.name if s.hub else "",
             "total_packages": s.total_packages,
-            "total_cost_eur": float(s.total_cost_eur),
+            **({"total_cost_eur": float(s.total_cost_eur)} if show_cost else {}),
             "n_to_escalate": s.n_to_escalate,
             "n_drivers_affected": s.n_drivers_affected,
             "n_cp4s_affected": s.n_cp4s_affected,
@@ -5426,6 +5438,7 @@ def cainiao_snapshot_detail(request, snapshot_id):
         "-business_days_stuck", "courier_name",
     ))
 
+    show_cost = is_gestao(request.user)
     # Para cada row, indicar se entretanto foi resolvido (status hoje)
     waybills = [r.waybill_number for r in rows]
     resolved = set(
@@ -5442,7 +5455,10 @@ def cainiao_snapshot_detail(request, snapshot_id):
             "created_at": snap.created_at.strftime("%Y-%m-%d %H:%M"),
             "is_automatic": snap.is_automatic,
             "total_packages": snap.total_packages,
-            "total_cost_eur": float(snap.total_cost_eur),
+            **(
+                {"total_cost_eur": float(snap.total_cost_eur)}
+                if show_cost else {}
+            ),
             "n_to_escalate": snap.n_to_escalate,
             "n_drivers_affected": snap.n_drivers_affected,
             "n_cp4s_affected": snap.n_cp4s_affected,
@@ -5463,7 +5479,10 @@ def cainiao_snapshot_detail(request, snapshot_id):
                 r.first_seen.strftime("%Y-%m-%d")
                 if r.first_seen else ""
             ),
-            "estimated_cost_eur": float(r.estimated_cost_eur),
+            **(
+                {"estimated_cost_eur": float(r.estimated_cost_eur)}
+                if show_cost else {}
+            ),
             "resolved_since": r.waybill_number in resolved,
         } for r in rows],
     })
@@ -5681,9 +5700,13 @@ def cainiao_snapshot_xlsx(request, snapshot_id):
     )
     ws["A1"].font = Font(bold=True, size=14, color="7C2D12")
     ws.merge_cells("A1:K1")
+    cost_part = (
+        f"€{snap.total_cost_eur:.2f} em risco · "
+        if is_gestao(request.user) else ""
+    )
     ws["A2"] = (
         f"Total: {snap.total_packages} pacotes · "
-        f"€{snap.total_cost_eur:.2f} em risco · "
+        f"{cost_part}"
         f"{snap.n_to_escalate} a escalar · "
         f"Gerado: {snap.created_at:%Y-%m-%d %H:%M}"
     )

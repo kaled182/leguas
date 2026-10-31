@@ -35,9 +35,13 @@
 <script>
 async function _resolveAlert(id) {
   const csrf = document.querySelector('input[name=csrfmiddlewaretoken]').value;
-  await fetch(`/financial-alerts/${id}/resolve/`, {
+  const r = await fetch(`/core/financial-alerts/${id}/resolve/`, {
     method: 'POST', headers: {'X-CSRFToken': csrf},
   });
+  if (!r.ok) {
+    lfToast('Não foi possível resolver o alerta.', 'danger');
+    return;
+  }
   location.reload();
 }
 </script>

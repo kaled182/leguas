@@ -33,3 +33,15 @@ Contratos e Clientes passam ao cabeçalho único, com tabelas e estados da marca
 
 ## Métricas
 229 testes: as mesmas 4 falhas antigas de `main`, 0 regressões. 42 capturas: 0 erros de consola e 0 scroll horizontal em telemóvel. Operador verificado no browser. Dados sintéticos.
+
+## Decisões do utilizador (2026-10-31)
+
+| Ponto | Decisão | Resultado |
+|---|---|---|
+| "Nova regra" e remover regra em Regras de bónus | Não corrigir | Os botões continuam sem guardar. Chamam `/partners/…` sem `/core`. |
+| "Resolver" em Alertas financeiros | Corrigir | O botão chama `/core/financial-alerts/<id>/resolve/`. Se falhar, mostra toast. |
+| Custo de Não chegaram para o Operador | Retirar no servidor | Sai da lista, dos snapshots e do Excel de snapshot. A Gestão mantém os valores. |
+
+O cálculo e a gravação dos snapshots não mudam. A remoção acontece só na resposta ao Operador.
+
+`return_cost_eur` em Devoluções não mudou. É um custo de devolução, não o preço do cliente.

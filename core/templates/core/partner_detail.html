@@ -1431,7 +1431,7 @@ window.appPrompt = function(msg, defaultValue, opts) {
                 <th class="px-2 py-2 text-left">Tipo</th>
                 <th class="px-2 py-2 text-right">Pacotes</th>
                 <th class="px-2 py-2 text-right">A escalar</th>
-                <th class="px-2 py-2 text-right">€ em risco</th>
+                {% if is_gestao %}<th class="px-2 py-2 text-right">Em risco</th>{% endif %}
                 <th class="px-2 py-2 text-right">Motoristas</th>
                 <th class="px-2 py-2 text-right">CP4s</th>
                 <th class="px-2 py-2 text-right">Ações</th>
@@ -1448,7 +1448,7 @@ window.appPrompt = function(msg, defaultValue, opts) {
                   </td>
                   <td class="px-2 py-1.5 text-right font-bold text-rose-700 dark:text-rose-300" x-text="s.total_packages"></td>
                   <td class="px-2 py-1.5 text-right" x-text="s.n_to_escalate"></td>
-                  <td class="px-2 py-1.5 text-right font-mono">€<span x-text="s.total_cost_eur.toFixed(2)"></span></td>
+                  {% if is_gestao %}<td class="px-2 py-1.5 text-right lf-num" x-text="lfEur(s.total_cost_eur)"></td>{% endif %}
                   <td class="px-2 py-1.5 text-right" x-text="s.n_drivers_affected"></td>
                   <td class="px-2 py-1.5 text-right" x-text="s.n_cp4s_affected"></td>
                   <td class="px-2 py-1.5 text-right">

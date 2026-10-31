@@ -17,7 +17,7 @@
     <span class="text-gray-400">→</span>
     <input type="date" name="date_to" value="{{ date_to|date:'Y-m-d' }}"
            class="px-3 py-1.5 text-xs bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
-    <button type="submit" class="px-3 py-1.5 text-xs bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold">Atualizar</button>
+    <button type="submit" class="lf-btn lf-btn-ghost">Atualizar</button>
   </form>
 
   {# ─── KPIs do período ─── #}
@@ -30,12 +30,12 @@
     <div class="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-4 border border-emerald-200/50 dark:border-emerald-700/30">
       <p class="text-xs uppercase font-bold text-emerald-700 dark:text-emerald-300">Entregas dos indicados</p>
       <p class="text-2xl font-extrabold text-emerald-700 dark:text-emerald-300 mt-1">{{ summary.total_delivered }}</p>
-      <p class="text-[11px] text-emerald-700 mt-0.5">no período</p>
+      <p class="text-[11px] text-emerald-700 dark:text-emerald-300 mt-0.5">no período</p>
     </div>
-    <div class="bg-brand-purple rounded-xl p-4 text-white shadow">
-      <p class="text-xs uppercase font-bold text-violet-100">Comissão estimada</p>
-      <p class="text-2xl font-extrabold mt-1">{{ summary.total_value|eur }}</p>
-      <p class="text-[11px] text-violet-100 mt-0.5">{{ date_from|date:"d/m" }} → {{ date_to|date:"d/m/Y" }}</p>
+    <div class="lf-kpi">
+      <p class="lf-kpi-label">Comissão estimada</p>
+      <p class="lf-kpi-value">{{ summary.total_value|eur }}</p>
+      <p class="lf-kpi-note">{{ date_from|date:"d/m" }} → {{ date_to|date:"d/m/Y" }}</p>
     </div>
   </div>
 
@@ -62,45 +62,45 @@
       </h3>
       {% if is_admin_view %}
       <button @click="openAdd()"
-              class="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold transition">
+              class="lf-btn lf-btn-ghost">
         <i data-lucide="plus" class="w-3.5 h-3.5"></i> Adicionar Indicado
       </button>
       {% endif %}
     </div>
     {% if summary.items %}
     <div class="overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead class="bg-gray-50 dark:bg-gray-900/50 text-xs uppercase text-gray-500">
-          <tr class="text-left">
-            <th class="px-4 py-2">Indicado</th>
-            <th class="px-4 py-2 text-right">€ / pacote</th>
-            <th class="px-4 py-2 text-right">Entregas no período</th>
-            <th class="px-4 py-2 text-right">Comissão estimada</th>
+      <table class="lf-table">
+        <thead>
+          <tr>
+            <th >Indicado</th>
+            <th class="text-right">€ / pacote</th>
+            <th class="text-right">Entregas no período</th>
+            <th class="text-right">Comissão estimada</th>
             {% if is_admin_view %}
-            <th class="px-4 py-2 text-right">Ações</th>
+            <th class="text-right">Ações</th>
             {% endif %}
           </tr>
         </thead>
-        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+        <tbody>
           {% for item in summary.items %}
           <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
-            <td class="px-4 py-2">
+            <td >
               <a href="{% url 'drivers_app:driver_portal' item.referred_id %}"
-                 class="font-semibold text-indigo-600 hover:underline">
+                 class="font-semibold text-indigo-600 dark:text-indigo-300 hover:underline">
                 {{ item.referred_nome }}
               </a>
             </td>
-            <td class="px-4 py-2 text-right font-mono text-gray-600">€{{ item.comissao_por_pacote|floatformat:4 }}</td>
-            <td class="px-4 py-2 text-right font-mono">{{ item.delivered }}</td>
-            <td class="px-4 py-2 text-right font-mono font-bold text-purple-600">{{ item.value|eur }}</td>
+            <td class="text-right font-mono text-gray-600">€{{ item.comissao_por_pacote|floatformat:4 }}</td>
+            <td class="text-right font-mono">{{ item.delivered }}</td>
+            <td class="text-right font-mono font-bold text-purple-600 dark:text-purple-300">{{ item.value|eur }}</td>
             {% if is_admin_view %}
-            <td class="px-4 py-2 text-right">
+            <td class="text-right">
               <button @click="openEdit({{ item.referral_id }}, {{ item.comissao_por_pacote }})"
-                      class="px-2 py-1 text-xs text-indigo-600 hover:bg-indigo-50 rounded">
+                      class="px-2 py-1 text-xs text-indigo-600 dark:text-indigo-300 hover:bg-indigo-50 rounded">
                 Editar
               </button>
               <button @click="del({{ item.referral_id }}, '{{ item.referred_nome|escapejs }}')"
-                      class="px-2 py-1 text-xs text-rose-600 hover:bg-rose-50 rounded">
+                      class="px-2 py-1 text-xs text-rose-600 dark:text-rose-300 hover:bg-rose-50 rounded">
                 Remover
               </button>
             </td>
@@ -110,10 +110,10 @@
         </tbody>
         <tfoot class="bg-gray-50 dark:bg-gray-900/50 font-bold">
           <tr>
-            <td class="px-4 py-2">Total</td>
-            <td class="px-4 py-2"></td>
-            <td class="px-4 py-2 text-right font-mono">{{ summary.total_delivered }}</td>
-            <td class="px-4 py-2 text-right font-mono text-purple-600">{{ summary.total_value|eur }}</td>
+            <td >Total</td>
+            <td ></td>
+            <td class="text-right font-mono">{{ summary.total_delivered }}</td>
+            <td class="text-right font-mono text-purple-600 dark:text-purple-300">{{ summary.total_value|eur }}</td>
             {% if is_admin_view %}<td></td>{% endif %}
           </tr>
         </tfoot>
@@ -137,7 +137,7 @@
     <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg p-6">
       <div class="flex items-center justify-between mb-4">
         <h3 class="text-lg font-bold flex items-center gap-2">
-          <i data-lucide="user-plus" class="w-5 h-5 text-emerald-600"></i>
+          <i data-lucide="user-plus" class="w-5 h-5 text-emerald-600 dark:text-emerald-300"></i>
           <span x-text="editing ? 'Editar indicação' : 'Adicionar indicado'"></span>
         </h3>
         <button @click="modalOpen = false" class="text-gray-400 hover:text-gray-600">
@@ -160,7 +160,7 @@
                   <div class="font-semibold" x-text="d.nome"></div>
                   <div class="text-xs text-gray-500">
                     <span x-show="d.nif" x-text="'NIF ' + d.nif"></span>
-                    <span x-show="d.ja_indicado" class="text-rose-600" x-text="' · já indicado por ' + d.indicado_por"></span>
+                    <span x-show="d.ja_indicado" class="text-rose-600 dark:text-rose-300" x-text="' · já indicado por ' + d.indicado_por"></span>
                   </div>
                 </button>
               </template>
@@ -184,7 +184,7 @@
           <button type="button" @click="modalOpen = false"
                   class="px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-sm">Cancelar</button>
           <button type="submit" :disabled="busy || (!editing && !form.referred_id)"
-                  class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold disabled:opacity-50">
+                  class="lf-btn lf-btn-ghost disabled:opacity-50">
             <span x-text="editing ? 'Guardar' : 'Adicionar'"></span>
           </button>
         </div>

@@ -560,3 +560,50 @@ class CredentialMessagesTests(TestCase):
             html = (Path(settings.BASE_DIR) / "customauth" / "templates" / "customauth" / name).read_text(encoding="utf-8")
             self.assertTrue("{% if messages %}" in html or "new_password" in html, name)
 
+
+class PortalPagesTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        from decimal import Decimal
+
+        from drivers_app.models import DriverProfile, EmpresaParceira
+
+        cls.empresa = EmpresaParceira.objects.create(
+            nome="Frota", nif="500000000", taxa_iva=Decimal("23.00"),
+            driver_default_price_per_package=Decimal("1.2500"),
+        )
+        cls.driver = DriverProfile.objects.create(
+            nif="500000001", nome_completo="Ana", apelido="ana", telefone="910000000",
+            email="ana@example.test", status="ATIVO",
+        )
+        cls.user = User.objects.create_superuser("g", password="x")
+
+    def setUp(self):
+        self.client.force_login(self.user)
+
+    def test_fleet_numbers_keep_decimal_point(self):
+        """Com vírgula, o campo number abre vazio e guardar gravava IVA 0."""
+        r = self.client.get(f"/settlements/empresas/{self.empresa.pk}/portal/perfil/")
+        self.assertContains(r, 'value="23.00"')
+        self.assertContains(r, 'value="1.2500"')
+
+    def test_fleet_profile_round_trip_keeps_iva(self):
+        url = f"/settlements/empresas/{self.empresa.pk}/portal/perfil/"
+        self.client.post(url, {"nome": "Frota", "taxa_iva": "23.00", "driver_default_price_per_package": "1.2500", "ativo": "on"})
+        self.empresa.refresh_from_db()
+        self.assertEqual(str(self.empresa.taxa_iva), "23.00")
+        self.assertEqual(str(self.empresa.driver_default_price_per_package), "1.2500")
+
+    def test_driver_session_uses_brand_portal(self):
+        client = self.client_class()
+        session = client.session
+        session["is_driver_authenticated"] = True
+        session["driver_profile_id"] = self.driver.pk
+        session["driver_name"] = "Ana"
+        session.save()
+        r = client.get(f"/driversapp/portal/{self.driver.pk}/")
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, "lf-portal-top")
+        self.assertContains(r, "lf-tabs")
+        self.assertNotContains(r, "cdn.tailwindcss.com")
+

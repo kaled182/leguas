@@ -15,7 +15,7 @@
           Faturas ({{ invoices|length }})
         </h3>
         <button @click="openGenerate()"
-                class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-semibold transition">
+                class="lf-btn lf-btn-ghost">
           <i data-lucide="plus" class="w-3.5 h-3.5"></i> Gerar
         </button>
       </div>
@@ -25,9 +25,9 @@
            class="block px-4 py-3 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition
              {% if detail and fi.id == detail.id %}bg-purple-100 dark:bg-purple-900/30 border-l-4 border-purple-500{% endif %}">
           <div class="flex items-center justify-between mb-1">
-            <span class="font-mono font-bold text-purple-600">{{ fi.numero }}</span>
+            <span class="font-mono font-bold text-purple-600 dark:text-purple-300">{{ fi.numero }}</span>
             <span class="px-1.5 py-0.5 text-[10px] rounded-full font-semibold
-              {% if fi.status == 'PAGO' %}bg-emerald-100 text-emerald-700{% elif fi.status == 'APROVADO' %}bg-blue-100 text-blue-700{% elif fi.status == 'CALCULADO' %}bg-amber-100 text-amber-700{% elif fi.status == 'CANCELADO' %}bg-gray-200 text-gray-500{% else %}bg-gray-100 text-gray-700{% endif %}">
+              {% if fi.status == 'PAGO' %}bg-emerald-100 text-emerald-700 dark:text-emerald-300{% elif fi.status == 'APROVADO' %}bg-blue-100 text-blue-700{% elif fi.status == 'CALCULADO' %}bg-amber-100 text-amber-700{% elif fi.status == 'CANCELADO' %}bg-gray-200 text-gray-500{% else %}bg-gray-100 text-gray-700{% endif %}">
               {{ fi.get_status_display }}
             </span>
           </div>
@@ -37,7 +37,7 @@
         {% empty %}
         <div class="px-4 py-8 text-center text-gray-400 text-sm">
           Sem pré-faturas emitidas.<br>
-          <button @click="openGenerate()" class="mt-2 text-purple-600 hover:underline font-semibold">
+          <button @click="openGenerate()" class="mt-2 text-purple-600 dark:text-purple-300 hover:underline font-semibold">
             Gerar a primeira
           </button>
         </div>
@@ -56,7 +56,7 @@
             <div class="text-xs uppercase font-semibold text-purple-600 dark:text-purple-400 flex items-center gap-2">
               Pré-fatura
               <span class="px-2 py-0.5 rounded-full text-[10px]
-                {% if detail.status == 'PAGO' %}bg-emerald-100 text-emerald-700{% elif detail.status == 'APROVADO' %}bg-blue-100 text-blue-700{% elif detail.status == 'CALCULADO' %}bg-amber-100 text-amber-700{% elif detail.status == 'CANCELADO' %}bg-gray-200 text-gray-500{% else %}bg-gray-100 text-gray-700{% endif %}">
+                {% if detail.status == 'PAGO' %}bg-emerald-100 text-emerald-700 dark:text-emerald-300{% elif detail.status == 'APROVADO' %}bg-blue-100 text-blue-700{% elif detail.status == 'CALCULADO' %}bg-amber-100 text-amber-700{% elif detail.status == 'CANCELADO' %}bg-gray-200 text-gray-500{% else %}bg-gray-100 text-gray-700{% endif %}">
                 {{ detail.get_status_display }}
               </span>
             </div>
@@ -67,22 +67,22 @@
           </div>
           <div class="flex flex-wrap items-center gap-2 justify-end">
             <a href="{% url 'fleet-invoice-pdf' detail.id %}" target="_blank"
-               class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-sm font-semibold transition">
+               class="lf-btn lf-btn-danger">
               <i data-lucide="file-down" class="w-4 h-4"></i> PDF
             </a>
             {% if detail.status != 'PAGO' and detail.status != 'CANCELADO' %}
             <button @click="recalculate()"
-                    class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold transition">
+                    class="lf-btn lf-btn-ghost">
               <i data-lucide="refresh-cw" class="w-4 h-4"></i> Recalcular
             </button>
             {% endif %}
             <button @click="openStatus()"
-                    class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-sm font-semibold transition">
+                    class="lf-btn lf-btn-ghost">
               <i data-lucide="git-branch" class="w-4 h-4"></i> Estado
             </button>
             {% if detail.status == 'RASCUNHO' or detail.status == 'CANCELADO' %}
             <button @click="deleteInvoice()"
-                    class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-200 dark:bg-gray-700 hover:bg-rose-100 dark:hover:bg-rose-900/30 text-rose-600 rounded-lg text-sm font-semibold transition">
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-200 dark:bg-gray-700 hover:bg-rose-100 dark:hover:bg-rose-900/30 text-rose-600 dark:text-rose-300 rounded-lg text-sm font-semibold transition">
               <i data-lucide="trash-2" class="w-4 h-4"></i> Eliminar
             </button>
             {% endif %}
@@ -100,14 +100,14 @@
           </div>
           <div class="bg-white/60 dark:bg-gray-800/60 rounded-lg p-3">
             <div class="text-xs text-gray-500">Bónus</div>
-            <div class="text-xl font-bold text-amber-600">{{ detail.total_bonus|eur }}</div>
+            <div class="text-xl font-bold text-amber-600 dark:text-amber-300">{{ detail.total_bonus|eur }}</div>
           </div>
           <div class="bg-white/60 dark:bg-gray-800/60 rounded-lg p-3">
             <div class="text-xs text-gray-500">Reclamações</div>
-            <div class="text-xl font-bold text-rose-600">-{{ detail.total_claims|eur }}</div>
+            <div class="text-xl font-bold text-rose-600 dark:text-rose-300">-{{ detail.total_claims|eur }}</div>
           </div>
           <div class="bg-white/60 dark:bg-gray-800/60 rounded-lg p-3">
-            <div class="text-xs text-gray-500">Total c/ IVA ({{ detail.vat_rate|floatformat:0 }}%)</div>
+            <div class="text-xs text-gray-500">Total c/ IVA ({{ detail.vat_rate|pct:0 }})</div>
             <div class="text-xl font-bold text-purple-700 dark:text-purple-300">{{ detail.total_com_iva|eur }}</div>
           </div>
         </div>
@@ -121,7 +121,7 @@
             Anexos ({{ detail.attachments.count }})
           </h3>
           <button @click="openUpload()"
-                  class="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold transition">
+                  class="lf-btn lf-btn-ghost">
             <i data-lucide="upload" class="w-3.5 h-3.5"></i> Novo Anexo
           </button>
         </div>
@@ -147,7 +147,7 @@
                 <i data-lucide="download" class="w-3.5 h-3.5"></i>
               </a>
               <button @click="deleteAttachment({{ att.id }}, '{{ att.filename|escapejs }}')"
-                      class="px-2 py-1 text-xs text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded">
+                      class="px-2 py-1 text-xs text-rose-600 dark:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded">
                 <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
               </button>
             </div>
@@ -169,39 +169,39 @@
           </h3>
         </div>
         <div class="overflow-x-auto">
-          <table class="w-full text-sm">
-            <thead class="bg-gray-50 dark:bg-gray-900/50 text-xs uppercase text-gray-500">
-              <tr class="text-left">
-                <th class="px-4 py-2">Motorista</th>
-                <th class="px-4 py-2 text-right">Entregas</th>
-                <th class="px-4 py-2 text-right">€/pacote</th>
-                <th class="px-4 py-2 text-right">Base</th>
-                <th class="px-4 py-2 text-right">Bónus</th>
-                <th class="px-4 py-2 text-right">Reclamações</th>
-                <th class="px-4 py-2 text-right">Subtotal</th>
+          <table class="lf-table">
+            <thead>
+              <tr>
+                <th >Motorista</th>
+                <th class="text-right">Entregas</th>
+                <th class="text-right">€/pacote</th>
+                <th class="text-right">Base</th>
+                <th class="text-right">Bónus</th>
+                <th class="text-right">Reclamações</th>
+                <th class="text-right">Subtotal</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+            <tbody>
               {% for ln in detail.lines.all %}
               <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
-                <td class="px-4 py-2">
+                <td >
                   <div class="font-semibold">{{ ln.driver_name_snapshot }}</div>
                   {% if ln.courier_name_snapshot %}
                     <div class="text-[10px] text-gray-400">{{ ln.courier_name_snapshot }}</div>
                   {% endif %}
                 </td>
-                <td class="px-4 py-2 text-right font-mono">{{ ln.deliveries }}</td>
-                <td class="px-4 py-2 text-right font-mono text-gray-500">€{{ ln.price_per_package|floatformat:4 }}</td>
-                <td class="px-4 py-2 text-right font-mono">{{ ln.base_amount|eur }}</td>
-                <td class="px-4 py-2 text-right font-mono text-amber-600">
+                <td class="text-right font-mono">{{ ln.deliveries }}</td>
+                <td class="text-right font-mono text-gray-500">€{{ ln.price_per_package|floatformat:4 }}</td>
+                <td class="text-right font-mono">{{ ln.base_amount|eur }}</td>
+                <td class="text-right font-mono text-amber-600 dark:text-amber-300">
                   {{ ln.bonus_amount|eur }}
                   <span class="text-[9px] text-gray-400">({{ ln.bonus_days_count }}d)</span>
                 </td>
-                <td class="px-4 py-2 text-right font-mono {% if ln.claims_amount %}text-rose-600{% else %}text-gray-400{% endif %}">
+                <td class="px-4 py-2 text-right font-mono {% if ln.claims_amount %}text-rose-600 dark:text-rose-300{% else %}text-gray-400{% endif %}">
                   -{{ ln.claims_amount|eur }}
                   {% if ln.claims_count %}<span class="text-[9px] text-gray-400">({{ ln.claims_count }})</span>{% endif %}
                 </td>
-                <td class="px-4 py-2 text-right font-mono font-bold text-purple-600">{{ ln.subtotal|eur }}</td>
+                <td class="text-right font-mono font-bold text-purple-600 dark:text-purple-300">{{ ln.subtotal|eur }}</td>
               </tr>
               {% endfor %}
             </tbody>
@@ -213,7 +213,7 @@
         <i data-lucide="receipt" class="w-12 h-12 text-gray-300 mx-auto mb-3"></i>
         <p class="text-gray-500 mb-3">Selecciona uma pré-fatura à esquerda, ou gera uma nova.</p>
         <button @click="openGenerate()"
-                class="inline-flex items-center gap-1.5 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-semibold transition">
+                class="lf-btn lf-btn-ghost">
           <i data-lucide="plus" class="w-4 h-4"></i> Gerar Pré-Fatura
         </button>
       </div>
@@ -227,7 +227,7 @@
     <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
       <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between sticky top-0 bg-white dark:bg-gray-800 z-10">
         <h3 class="text-lg font-bold flex items-center gap-2">
-          <i data-lucide="file-plus" class="w-5 h-5 text-purple-600"></i>
+          <i data-lucide="file-plus" class="w-5 h-5 text-purple-600 dark:text-purple-300"></i>
           Gerar Pré-Fatura — {{ empresa.nome }}
         </h3>
         <button @click="genOpen = false" class="text-gray-400 hover:text-gray-600">
@@ -251,7 +251,7 @@
         </div>
         <div class="flex items-center gap-2">
           <button @click="runPreview()" :disabled="gen.loading"
-                  class="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold disabled:opacity-50">
+                  class="lf-btn lf-btn-ghost disabled:opacity-50">
             <i data-lucide="search" class="w-4 h-4"></i>
             <span x-show="!gen.loading">Pré-visualizar</span>
             <span x-show="gen.loading">A calcular...</span>
@@ -264,7 +264,7 @@
 
         {# Erro #}
         <div x-show="gen.error" x-cloak
-             class="px-4 py-2 rounded-lg bg-rose-100 text-rose-700 text-sm" x-text="gen.error"></div>
+             class="px-4 py-2 rounded-lg bg-rose-100 text-rose-700 dark:text-rose-300 text-sm" x-text="gen.error"></div>
 
         {# Preview resultado #}
         <template x-if="gen.preview">
@@ -280,42 +280,42 @@
               </div>
               <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-2.5">
                 <div class="text-[10px] uppercase text-gray-500">Bónus</div>
-                <div class="font-bold text-amber-600" x-text="'€' + gen.preview.totals.bonus"></div>
+                <div class="font-bold text-amber-600 dark:text-amber-300" x-text="'€' + gen.preview.totals.bonus"></div>
               </div>
               <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-2.5">
                 <div class="text-[10px] uppercase text-gray-500">Total s/ IVA</div>
-                <div class="font-bold text-purple-700" x-text="'€' + gen.preview.totals.amount"></div>
+                <div class="font-bold text-purple-700 dark:text-purple-300" x-text="'€' + gen.preview.totals.amount"></div>
               </div>
             </div>
 
             <div x-show="gen.preview.has_any_overlap" x-cloak
-                 class="px-3 py-2 rounded-lg bg-amber-100 text-amber-800 text-xs flex items-center gap-2">
+                 class="px-3 py-2 rounded-lg bg-amber-100 text-amber-800 dark:text-amber-300 text-xs flex items-center gap-2">
               <i data-lucide="alert-triangle" class="w-4 h-4"></i>
-              Alguns motoristas já têm PF individual que sobrepõe este período.
+              Alguns motoristas já têm pré-fatura individual que sobrepõe este período.
             </div>
 
             <div class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden max-h-64 overflow-y-auto">
-              <table class="w-full text-xs">
-                <thead class="bg-gray-100 dark:bg-gray-900 text-gray-500 uppercase sticky top-0">
+              <table class="lf-table">
+                <thead>
                   <tr>
-                    <th class="px-3 py-1.5 text-left">Motorista</th>
-                    <th class="px-3 py-1.5 text-right">Entregas</th>
-                    <th class="px-3 py-1.5 text-right">Bónus</th>
-                    <th class="px-3 py-1.5 text-right">Reclamações</th>
-                    <th class="px-3 py-1.5 text-right">Subtotal</th>
+                    <th >Motorista</th>
+                    <th class="text-right">Entregas</th>
+                    <th class="text-right">Bónus</th>
+                    <th class="text-right">Reclamações</th>
+                    <th class="text-right">Subtotal</th>
                   </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                <tbody>
                   <template x-for="r in gen.preview.rows" :key="r.driver_id">
                     <tr :class="r.deliveries > 0 ? '' : 'opacity-40'">
-                      <td class="px-3 py-1.5">
+                      <td >
                         <span x-text="r.name"></span>
-                        <span x-show="r.has_overlap" class="text-amber-500 text-[9px]">⚠ sobreposto</span>
+                        <span x-show="r.has_overlap" class="text-amber-500 text-[9px]">sobreposto</span>
                       </td>
-                      <td class="px-3 py-1.5 text-right font-mono" x-text="r.deliveries"></td>
-                      <td class="px-3 py-1.5 text-right font-mono text-amber-600" x-text="'€' + r.bonus_amount"></td>
-                      <td class="px-3 py-1.5 text-right font-mono text-rose-600" x-text="'-€' + r.claims_amount"></td>
-                      <td class="px-3 py-1.5 text-right font-mono font-bold" x-text="'€' + r.subtotal"></td>
+                      <td class="text-right font-mono" x-text="r.deliveries"></td>
+                      <td class="text-right font-mono text-amber-600 dark:text-amber-300" x-text="'€' + r.bonus_amount"></td>
+                      <td class="text-right font-mono text-rose-600 dark:text-rose-300" x-text="'-€' + r.claims_amount"></td>
+                      <td class="text-right font-mono font-bold" x-text="'€' + r.subtotal"></td>
                     </tr>
                   </template>
                 </tbody>
@@ -329,7 +329,7 @@
         <button @click="genOpen = false"
                 class="px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-sm">Cancelar</button>
         <button @click="runEmit()" :disabled="!gen.preview || gen.emitting"
-                class="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold disabled:opacity-40">
+                class="lf-btn lf-btn-ghost disabled:opacity-40">
           <span x-show="!gen.emitting">Emitir Pré-Fatura</span>
           <span x-show="gen.emitting">A emitir...</span>
         </button>
@@ -345,15 +345,15 @@
     <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm p-6">
       <div class="flex items-center justify-between mb-4">
         <h3 class="text-lg font-bold flex items-center gap-2">
-          <i data-lucide="git-branch" class="w-5 h-5 text-amber-600"></i>
-          Mudar Estado
+          <i data-lucide="git-branch" class="w-5 h-5 text-amber-600 dark:text-amber-300"></i>
+          Mudar estado
         </h3>
         <button @click="statusOpen = false" class="text-gray-400 hover:text-gray-600">
           <i data-lucide="x" class="w-5 h-5"></i>
         </button>
       </div>
       <p class="text-sm text-gray-500 mb-3">
-        Estado actual: <span class="font-bold">{{ detail.get_status_display }}</span>
+        Estado atual: <span class="font-bold">{{ detail.get_status_display }}</span>
       </p>
       <div class="space-y-2">
         {% for t in status_transitions %}
@@ -411,7 +411,7 @@
           <button type="button" @click="uploadOpen = false"
                   class="px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-sm">Cancelar</button>
           <button type="submit" :disabled="uploading"
-                  class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold disabled:opacity-50">
+                  class="lf-btn lf-btn-ghost disabled:opacity-50">
             <span x-show="!uploading">Enviar</span>
             <span x-show="uploading">A enviar...</span>
           </button>

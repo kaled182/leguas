@@ -58,15 +58,15 @@
       </div>
       <div>
         <div class="text-xs text-gray-500">Bónus (∑)</div>
-        <div class="text-2xl font-bold text-amber-600">€{{ ytd.total_bonus|default:0|floatformat:2 }}</div>
+        <div class="text-2xl font-bold text-amber-600 dark:text-amber-300">{{ ytd.total_bonus|default:0|eur }}</div>
       </div>
       <div>
         <div class="text-xs text-gray-500">Reclamações (∑)</div>
-        <div class="text-2xl font-bold text-rose-600">-€{{ ytd.total_claims|default:0|floatformat:2 }}</div>
+        <div class="text-2xl font-bold text-rose-600 dark:text-rose-300">-{{ ytd.total_claims|default:0|eur }}</div>
       </div>
       <div>
         <div class="text-xs text-gray-500">Total a receber (s/ IVA)</div>
-        <div class="text-2xl font-bold text-purple-600 dark:text-purple-400">€{{ ytd.total_a_receber|default:0|floatformat:2 }}</div>
+        <div class="text-2xl font-bold text-purple-600 dark:text-purple-400">{{ ytd.total_a_receber|default:0|eur }}</div>
       </div>
     </div>
   </div>
@@ -108,37 +108,37 @@
         Pré-faturas recentes
       </h3>
       <a href="{% url 'empresa-portal-invoices' empresa.id %}"
-         class="text-xs font-semibold text-purple-600 hover:underline">Ver todas →</a>
+         class="text-xs font-semibold text-purple-600 dark:text-purple-300 hover:underline">Ver todas →</a>
     </div>
     {% if recent_invoices %}
     <div class="overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead class="bg-gray-50 dark:bg-gray-900/50 text-xs uppercase text-gray-500">
-          <tr class="text-left">
-            <th class="px-4 py-2">Número</th>
-            <th class="px-4 py-2">Período</th>
-            <th class="px-4 py-2 text-right">Entregas</th>
-            <th class="px-4 py-2 text-right">Total</th>
-            <th class="px-4 py-2">Estado</th>
-            <th class="px-4 py-2"></th>
+      <table class="lf-table">
+        <thead>
+          <tr>
+            <th >Número</th>
+            <th >Período</th>
+            <th class="text-right">Entregas</th>
+            <th class="text-right">Total</th>
+            <th >Estado</th>
+            <th ></th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+        <tbody>
           {% for fi in recent_invoices %}
           <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
-            <td class="px-4 py-2 font-mono font-bold text-purple-600">{{ fi.numero }}</td>
-            <td class="px-4 py-2 text-gray-600">{{ fi.periodo_inicio|date:"d/m" }}–{{ fi.periodo_fim|date:"d/m/Y" }}</td>
-            <td class="px-4 py-2 text-right font-mono">{{ fi.total_deliveries }}</td>
-            <td class="px-4 py-2 text-right font-mono font-bold">{{ fi.total_a_receber|eur }}</td>
-            <td class="px-4 py-2">
+            <td class="font-mono font-bold text-purple-600 dark:text-purple-300">{{ fi.numero }}</td>
+            <td class="text-gray-600">{{ fi.periodo_inicio|date:"d/m" }}–{{ fi.periodo_fim|date:"d/m/Y" }}</td>
+            <td class="text-right font-mono">{{ fi.total_deliveries }}</td>
+            <td class="text-right font-mono font-bold">{{ fi.total_a_receber|eur }}</td>
+            <td >
               <span class="px-2 py-0.5 text-xs rounded-full
-                {% if fi.status == 'PAGO' %}bg-emerald-100 text-emerald-700{% elif fi.status == 'EMITIDO' %}bg-blue-100 text-blue-700{% elif fi.status == 'CALCULADO' %}bg-amber-100 text-amber-700{% elif fi.status == 'CANCELADO' %}bg-gray-200 text-gray-500{% else %}bg-gray-100 text-gray-700{% endif %}">
+                {% if fi.status == 'PAGO' %}bg-emerald-100 text-emerald-700 dark:text-emerald-300{% elif fi.status == 'EMITIDO' %}bg-blue-100 text-blue-700{% elif fi.status == 'CALCULADO' %}bg-amber-100 text-amber-700{% elif fi.status == 'CANCELADO' %}bg-gray-200 text-gray-500{% else %}bg-gray-100 text-gray-700{% endif %}">
                 {{ fi.get_status_display }}
               </span>
             </td>
-            <td class="px-4 py-2 text-right">
+            <td class="text-right">
               <a href="{% url 'empresa-portal-invoices' empresa.id %}?id={{ fi.id }}"
-                 class="text-xs text-purple-600 hover:underline">Detalhes →</a>
+                 class="text-xs text-purple-600 dark:text-purple-300 hover:underline">Detalhes →</a>
             </td>
           </tr>
           {% endfor %}

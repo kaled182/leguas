@@ -13,23 +13,23 @@
     </div>
     {% if driver_stats %}
     <div class="overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead class="bg-gray-50 dark:bg-gray-900/50 text-xs uppercase text-gray-500">
-          <tr class="text-left">
-            <th class="px-4 py-2">Motorista</th>
-            <th class="px-4 py-2">Apelido / Courier</th>
-            <th class="px-4 py-2">Contacto</th>
-            <th class="px-4 py-2 text-right">Entregas 30d</th>
-            <th class="px-4 py-2 text-right">Reclamações abertos</th>
-            <th class="px-4 py-2 text-center">Estado</th>
-            <th class="px-4 py-2"></th>
+      <table class="lf-table">
+        <thead>
+          <tr>
+            <th >Motorista</th>
+            <th >Apelido / Courier</th>
+            <th >Contacto</th>
+            <th class="text-right">Entregas 30d</th>
+            <th class="text-right">Reclamações abertos</th>
+            <th class="text-center">Estado</th>
+            <th ></th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+        <tbody>
           {% for s in driver_stats %}
           {% with d=s.driver %}
           <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 {% if not d.is_active %}opacity-60{% endif %}">
-            <td class="px-4 py-2">
+            <td >
               <div class="flex items-center gap-2">
                 <div class="w-8 h-8 rounded-lg bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center text-purple-700 dark:text-purple-300 font-bold text-xs">
                   {{ d.nome_completo|default:d.apelido|first|upper }}
@@ -40,22 +40,22 @@
                 </div>
               </div>
             </td>
-            <td class="px-4 py-2">
+            <td >
               <div class="text-xs text-gray-600 dark:text-gray-400">{{ d.apelido|default:"—" }}</div>
               {% if d.courier_id_cainiao %}<div class="text-[10px] font-mono text-gray-400">{{ d.courier_id_cainiao }}</div>{% endif %}
             </td>
-            <td class="px-4 py-2 text-xs text-gray-500">
+            <td class="text-xs text-gray-500">
               {% if d.telefone %}<div>{{ d.telefone }}</div>{% endif %}
               {% if d.email %}<div class="truncate max-w-xs">{{ d.email }}</div>{% endif %}
             </td>
-            <td class="px-4 py-2 text-right font-mono">
-              <span class="{% if s.deliveries_30d >= 100 %}text-emerald-600 font-bold{% elif s.deliveries_30d == 0 %}text-gray-400{% endif %}">
+            <td class="text-right font-mono">
+              <span class="{% if s.deliveries_30d >= 100 %}text-emerald-600 dark:text-emerald-300 font-bold{% elif s.deliveries_30d == 0 %}text-gray-400{% endif %}">
                 {{ s.deliveries_30d }}
               </span>
             </td>
-            <td class="px-4 py-2 text-right">
+            <td class="text-right">
               {% if s.claims_total_open %}
-                <span class="px-2 py-0.5 text-[11px] rounded-full bg-rose-100 text-rose-700 font-semibold">
+                <span class="px-2 py-0.5 text-[11px] rounded-full bg-rose-100 text-rose-700 dark:text-rose-300 font-semibold">
                   {{ s.claims_total_open }}
                   {% if s.claims_pending %}<span class="text-[9px] text-rose-500"> ({{ s.claims_pending }} pend.)</span>{% endif %}
                 </span>
@@ -63,16 +63,16 @@
                 <span class="text-gray-400">—</span>
               {% endif %}
             </td>
-            <td class="px-4 py-2 text-center">
+            <td class="text-center">
               {% if d.is_active %}
-                <span class="px-2 py-0.5 text-[11px] rounded-full bg-emerald-100 text-emerald-700 font-semibold">Ativo</span>
+                <span class="px-2 py-0.5 text-[11px] rounded-full bg-emerald-100 text-emerald-700 dark:text-emerald-300 font-semibold">Ativo</span>
               {% else %}
                 <span class="px-2 py-0.5 text-[11px] rounded-full bg-gray-200 text-gray-500 font-semibold">Inativo</span>
               {% endif %}
             </td>
-            <td class="px-4 py-2 text-right">
+            <td class="text-right">
               <a href="{% url 'drivers_app:driver_portal' d.id %}"
-                 class="inline-flex items-center gap-1 px-2 py-1 text-xs text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded">
+                 class="inline-flex items-center gap-1 px-2 py-1 text-xs text-purple-600 dark:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded">
                 <i data-lucide="external-link" class="w-3 h-3"></i>
                 Portal
               </a>

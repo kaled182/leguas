@@ -6,19 +6,19 @@
 <div class="space-y-4">
 
   {# ─── Cabeçalho ─── #}
-  <div class="bg-brand-purple rounded-2xl p-5 text-white shadow-md flex items-center justify-between flex-wrap gap-3">
+  <div class="lf-kpi">
     <div>
       <h2 class="text-xl font-extrabold flex items-center gap-2">
         <i data-lucide="package" class="w-6 h-6"></i>
         Entregas em PUDO
       </h2>
-      <p class="text-xs text-violet-100 mt-1">
+      <p class="lf-kpi-note">
         Agrupado por dia × PUDO. Múltiplos pacotes no mesmo PUDO/dia
         contam como <em>1ª + (n-1) × adicional</em>.
       </p>
     </div>
     <a href="{% url 'drivers_app:driver_portal_invoices' driver.id %}"
-       class="px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-semibold inline-flex items-center gap-1">
+       class="lf-btn lf-btn-ghost">
       <i data-lucide="arrow-left" class="w-4 h-4"></i> Voltar a Faturas
     </a>
   </div>
@@ -40,7 +40,7 @@
       <input type="date" name="date_to" value="{{ date_to|date:'Y-m-d' }}"
              class="px-3 py-1.5 rounded bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-sm">
     </div>
-    <button class="px-4 py-1.5 bg-violet-600 hover:bg-violet-700 text-white rounded text-sm font-semibold">Filtrar</button>
+    <button class="lf-btn lf-btn-ghost">Filtrar</button>
   </form>
 
   {# ─── KPIs ─── #}
@@ -51,11 +51,11 @@
     </div>
     <div class="bg-white dark:bg-gray-800 rounded-2xl p-5 border border-gray-200/50 dark:border-gray-700/50 shadow-sm">
       <p class="text-xs uppercase font-bold text-gray-500 dark:text-gray-400">Combinações PUDO × dia</p>
-      <p class="text-3xl font-extrabold text-purple-600 mt-1">{{ totals.n_pudo_days }}</p>
+      <p class="text-3xl font-extrabold text-purple-600 dark:text-purple-300 mt-1">{{ totals.n_pudo_days }}</p>
     </div>
-    <div class="bg-brand-purple rounded-2xl p-5 text-white shadow-md">
-      <p class="text-xs uppercase font-bold tracking-wider text-emerald-100">Total a receber (PUDO)</p>
-      <p class="text-3xl font-extrabold mt-1">{{ totals.amount|eur }}</p>
+    <div class="lf-kpi">
+      <p class="lf-kpi-label">Total a receber (PUDO)</p>
+      <p class="lf-kpi-value">{{ totals.amount|eur }}</p>
     </div>
   </div>
 
@@ -68,33 +68,33 @@
       </h3>
     </div>
     <div class="overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead class="bg-gray-50 dark:bg-gray-900/40 text-xs uppercase text-gray-500">
-          <tr class="text-left">
-            <th class="px-4 py-2">Data</th>
-            <th class="px-4 py-2">PUDO (endereço)</th>
-            <th class="px-4 py-2 text-right">Pacotes</th>
-            <th class="px-4 py-2 text-right">Valor</th>
-            <th class="px-4 py-2 text-center">N.os de envio</th>
+      <table class="lf-table">
+        <thead>
+          <tr>
+            <th >Data</th>
+            <th >PUDO (endereço)</th>
+            <th class="text-right">Pacotes</th>
+            <th class="text-right">Valor</th>
+            <th class="text-center">N.os de envio</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-gray-100 dark:divide-gray-700" x-data="{open: null}">
+        <tbody  x-data="{open: null}">
           {% for r in rows %}
           <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 {% if r.is_grouped %}bg-amber-50/50 dark:bg-amber-900/10{% endif %}">
-            <td class="px-4 py-2 whitespace-nowrap text-xs text-gray-700 dark:text-gray-300">{{ r.date|date:"d/m/Y" }}</td>
-            <td class="px-4 py-2 text-xs">
+            <td class="whitespace-nowrap text-xs text-gray-700 dark:text-gray-300">{{ r.date|date:"d/m/Y" }}</td>
+            <td class="text-xs">
               <div class="font-medium">{{ r.address|default:"(endereço não disponível)"|truncatechars:60 }}</div>
               <div class="text-[10px] text-gray-400">
                 {% if r.zip_code %}{{ r.zip_code }} · {% endif %}{{ r.city|default:"—" }}
                 {% if r.lat %} · <span class="font-mono">{{ r.lat|truncatechars:8 }},{{ r.lng|truncatechars:8 }}</span>{% endif %}
               </div>
             </td>
-            <td class="px-4 py-2 text-right">
-              <span class="font-bold text-base {% if r.is_grouped %}text-amber-600{% endif %}">{{ r.n_packages }}</span>
-              {% if r.is_grouped %}<span class="text-[9px] text-amber-700 dark:text-amber-300 font-semibold">⚡ múltiplos</span>{% endif %}
+            <td class="text-right">
+              <span class="font-bold text-base {% if r.is_grouped %}text-amber-600 dark:text-amber-300{% endif %}">{{ r.n_packages }}</span>
+              {% if r.is_grouped %}<span class="text-[9px] text-amber-700 dark:text-amber-300 font-semibold">múltiplos</span>{% endif %}
             </td>
-            <td class="px-4 py-2 text-right font-mono font-bold text-emerald-600">{{ r.amount|eur }}</td>
-            <td class="px-4 py-2 text-center">
+            <td class="text-right font-mono font-bold text-emerald-600 dark:text-emerald-300">{{ r.amount|eur }}</td>
+            <td class="text-center">
               <button @click="open = open === {{ forloop.counter0 }} ? null : {{ forloop.counter0 }}"
                       class="text-[11px] px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300">
                 <span x-show="open !== {{ forloop.counter0 }}">▾ ver</span>
@@ -103,7 +103,7 @@
             </td>
           </tr>
           <tr x-show="open === {{ forloop.counter0 }}" x-cloak>
-            <td colspan="5" class="px-6 py-2 bg-gray-50 dark:bg-gray-900/30">
+            <td colspan="5" class="bg-gray-50 dark:bg-gray-900/30">
               <ul class="text-xs space-y-1">
                 {% for w in r.waybills %}
                 <li class="flex items-center gap-2 text-gray-700 dark:text-gray-300">
@@ -115,7 +115,7 @@
             </td>
           </tr>
           {% empty %}
-          <tr><td colspan="5" class="px-4 py-8 text-center text-sm text-gray-500 italic">Nenhuma entrega PUDO no período.</td></tr>
+          <tr><td colspan="5" class="text-center text-sm text-gray-500 italic">Nenhuma entrega PUDO no período.</td></tr>
           {% endfor %}
         </tbody>
       </table>

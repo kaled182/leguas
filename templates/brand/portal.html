@@ -1,0 +1,38 @@
+{% extends "brand/base.html" %}
+{# Layout dos portais do motorista e da frota. #}
+{% block extra_head %}
+<meta name="csrf-token" content="{{ csrf_token }}">
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.17.5/dist/cdn.min.js"></script>
+<style>[x-cloak] { display: none !important; }</style>
+{% block portal_head %}{% endblock %}
+{% endblock %}
+
+{% block body %}
+<header class="lf-portal-top">
+  <div class="lf-portal-bar">
+    <div class="flex items-center gap-3 min-w-0">
+      {% include "components/logo.html" with tone="negativo" %}
+      <span class="lf-portal-name hidden sm:inline">{% block portal_name %}{% endblock %}</span>
+    </div>
+    <div class="flex items-center gap-2">
+      <button type="button" data-theme-toggle aria-label="Alternar tema" class="lf-portal-icon">
+        <i data-lucide="sun" class="w-4 h-4 hidden dark:inline-block" aria-hidden="true"></i>
+        <i data-lucide="moon" class="w-4 h-4 dark:hidden" aria-hidden="true"></i>
+      </button>
+      {% block portal_actions %}{% endblock %}
+    </div>
+  </div>
+</header>
+
+<main class="max-w-7xl mx-auto p-4 lg:p-6">
+  {% for m in messages %}
+  <div class="lf-alert lf-tone-{% if m.level == 40 %}danger{% elif m.level == 30 %}warning{% else %}success{% endif %} mb-3" role="alert">{{ m }}</div>
+  {% endfor %}
+  {% block content %}{% endblock %}
+</main>
+
+<footer class="py-6 text-center text-xs text-gray-500 dark:text-gray-400">Léguas Franzinas © {% now "Y" %}</footer>
+{% block portal_ui %}{% endblock %}
+{% endblock %}
+
+{% block scripts %}{% block extra_js %}{% endblock %}{% endblock %}

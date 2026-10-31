@@ -9,7 +9,7 @@
       <div class="bg-white dark:bg-gray-800 rounded-2xl p-4 border border-gray-200/50 dark:border-gray-700/50">
         <div class="flex items-center justify-between">
           <p class="text-xs uppercase font-bold text-gray-500">Dados para o contrato</p>
-          <p class="text-sm font-extrabold {% if completeness_pct == 100 %}text-emerald-600{% elif completeness_pct >= 60 %}text-amber-600{% else %}text-rose-600{% endif %}">{{ completeness_pct }}%</p>
+          <p class="text-sm font-extrabold {% if completeness_pct == 100 %}text-emerald-600 dark:text-emerald-300{% elif completeness_pct >= 60 %}text-amber-600{% else %}text-rose-600{% endif %}">{{ completeness_pct }}%</p>
         </div>
         <div class="mt-2 h-2 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
           <div class="h-full {% if completeness_pct == 100 %}bg-emerald-500{% elif completeness_pct >= 60 %}bg-amber-500{% else %}bg-rose-500{% endif %}" style="width: {{ completeness_pct }}%"></div>
@@ -22,7 +22,7 @@
             {% endfor %}
           </ul>
         {% else %}
-          <p class="text-xs text-emerald-600 mt-2">Ficha pronta para gerar o contrato.</p>
+          <p class="text-xs text-emerald-600 dark:text-emerald-300 mt-2">Ficha pronta para gerar o contrato.</p>
         {% endif %}
       </div>
 
@@ -79,7 +79,7 @@
         <form x-show="edit" x-cloak method="post" class="p-5">
           {% csrf_token %}
           <input type="hidden" name="section" value="{{ s.key }}">
-          {% if s.form.non_field_errors %}<p class="text-xs text-rose-600 mb-3">{{ s.form.non_field_errors|join:" " }}</p>{% endif %}
+          {% if s.form.non_field_errors %}<p class="text-xs text-rose-600 dark:text-rose-300 mb-3">{{ s.form.non_field_errors|join:" " }}</p>{% endif %}
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             {% for r in s.rows %}
               <div class="{% if r.wide %}md:col-span-2{% endif %}">
@@ -90,7 +90,7 @@
                   {{ r.bound }}
                 {% endif %}
                 {% if r.bound.help_text %}<p class="text-[11px] text-gray-400 mt-0.5">{{ r.bound.help_text }}</p>{% endif %}
-                {% for e in r.bound.errors %}<p class="text-xs text-rose-600 mt-0.5">{{ e }}</p>{% endfor %}
+                {% for e in r.bound.errors %}<p class="text-xs text-rose-600 dark:text-rose-300 mt-0.5">{{ e }}</p>{% endfor %}
               </div>
             {% endfor %}
           </div>
@@ -98,7 +98,7 @@
             <p class="text-[11px] text-gray-500 mt-3">Ao mudar o regime, a data "Regime desde" passa para o início do ciclo seguinte (segunda-feira ou dia 1), se não a preencher.</p>
           {% endif %}
           <div class="flex items-center gap-2 mt-4">
-            <button type="submit" class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white">
+            <button type="submit" class="lf-btn lf-btn-ghost">
               <i data-lucide="check" class="w-4 h-4"></i> Guardar
             </button>
             <a href="{{ request.path }}#{{ s.key }}" @click.prevent="edit = false; $el.closest('form').reset()"
@@ -148,19 +148,19 @@
                       {{ opt.hub.name }}
                       {% if opt.primary %}<span class="ml-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300">principal</span>{% endif %}
                       {% if opt.terms %}<span class="ml-1 text-[11px] font-normal text-gray-500">aceita {% if opt.terms.allows_monthly %}mensal{% endif %}{% if opt.terms.allows_monthly and opt.terms.allows_weekly %} e {% endif %}{% if opt.terms.allows_weekly %}semanal{% endif %} · mensal pago {{ opt.terms.monthly_payment_text }}</span>
-                      {% else %}<span class="ml-1 text-[11px] font-normal text-rose-600">sem condições de contrato configuradas</span>{% endif %}
+                      {% else %}<span class="ml-1 text-[11px] font-normal text-rose-600 dark:text-rose-300">sem condições de contrato configuradas</span>{% endif %}
                     </p>
                     <div class="flex flex-wrap gap-1.5 mt-1.5">
                       {% for cp in opt.cps %}{% if cp.checked %}
                         <span class="px-2 py-1 rounded-lg text-xs bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200">
                           <b class="font-mono">{{ cp.cp4 }}</b> {{ cp.zone }}{% if cp.tier %} · {{ cp.tier }}{% endif %}
                           {% if cp.negotiated %}· <b class="text-emerald-700 dark:text-emerald-300">{{ cp.negotiated }} € negociado</b>
-                          {% elif cp.price_monthly is not None %}· {% if driver.payment_regime == 'SEMANAL' %}{{ cp.price_weekly|floatformat:2 }}{% else %}{{ cp.price_monthly|floatformat:2 }}{% endif %} € padrão{% else %}<span class="text-rose-600">· sem tarifa</span>{% endif %}
+                          {% elif cp.price_monthly is not None %}· {% if driver.payment_regime == 'SEMANAL' %}{{ cp.price_weekly|floatformat:2 }}{% else %}{{ cp.price_monthly|floatformat:2 }}{% endif %} € padrão{% else %}<span class="text-rose-600 dark:text-rose-300">· sem tarifa</span>{% endif %}
                         </span>
                       {% endif %}{% endfor %}
                     </div>
                     {% if driver.payment_regime and opt.terms and driver.payment_regime not in opt.terms.allowed_regimes %}
-                      <p class="text-xs text-rose-600 mt-1">Atenção: este hub não aceita o regime {{ driver.get_payment_regime_display|lower }}.</p>
+                      <p class="text-xs text-rose-600 dark:text-rose-300 mt-1">Atenção: este hub não aceita o regime {{ driver.get_payment_regime_display|lower }}.</p>
                     {% endif %}
                   </div>
                 {% endif %}{% endfor %}
@@ -172,7 +172,7 @@
 
           {# Edição #}
           <form x-show="edit" x-cloak method="post" id="hubForm">
-            <p class="text-[11px] text-gray-500 mb-2">Preço por pacote: valor negociado (se preenchido num CP selecionado) → tarifa padrão do CP → preço do motorista/frota/parceiro. CP onde o motorista entregue sem estar selecionado usam a tarifa padrão.</p>
+            <p class="text-[11px] text-gray-500 mb-2">Preço por pacote: valor negociado (se preenchido num CP selecionado) → tarifa padrão do CP → preço do motorista/frota/cliente. CP onde o motorista entregue sem estar selecionado usam a tarifa padrão.</p>
             {% csrf_token %}
             <input type="hidden" name="section" value="hubs">
             {% if suggestions %}
@@ -193,7 +193,7 @@
                       <input type="radio" name="primary_hub" value="{{ opt.hub.id }}" {% if opt.primary %}checked{% endif %}> principal
                     </label>
                   </div>
-                  {% if not opt.terms %}<p class="text-[11px] text-rose-600 mt-1">Sem condições de contrato (configure no admin).</p>{% endif %}
+                  {% if not opt.terms %}<p class="text-[11px] text-rose-600 dark:text-rose-300 mt-1">Sem condições de contrato (configure no admin).</p>{% endif %}
                   <div class="mt-2 grid grid-cols-1 gap-1">
                     {% for cp in opt.cps %}
                       <div class="flex items-center gap-2 text-xs text-gray-700 dark:text-gray-300">
@@ -212,7 +212,7 @@
               {% endfor %}
             </div>
             <div class="flex items-center gap-2 mt-4">
-              <button type="submit" class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white">
+              <button type="submit" class="lf-btn lf-btn-ghost">
                 <i data-lucide="check" class="w-4 h-4"></i> Guardar
               </button>
               <a href="{{ request.path }}#hubs" @click.prevent="edit = false; $el.closest('form').reset()"
@@ -232,7 +232,7 @@
         </h3>
         <div class="flex flex-wrap gap-2">
           <a href="{% url 'contracts:contract_generator' driver.id %}"
-             class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white">
+             class="lf-btn lf-btn-ghost">
             <i data-lucide="file-plus-2" class="w-3.5 h-3.5"></i> Gerar contrato
           </a>
           <a href="{% url 'contracts:contract_generator' driver.id %}?kind=ADITIVO"
@@ -264,12 +264,12 @@
                         <button class="px-2 py-0.5 rounded text-[11px] font-semibold border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">Marcar enviado</button></form>
                     {% endif %}
                     {% if c.status == 'GERADO' or c.status == 'ENVIADO' %}
-                      <button type="button" @click="up = !up" class="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-600 text-white hover:bg-emerald-700">Anexar assinado</button>
+                      <button type="button" @click="up = !up" class="lf-btn lf-btn-ghost text-[11px]">Anexar assinado</button>
                     {% endif %}
                     {% if c.signed_file %}<a href="{{ c.signed_file.url }}" target="_blank" class="px-2 py-0.5 rounded text-[11px] font-semibold border border-emerald-300 text-emerald-700 dark:text-emerald-300">Ver assinado</a>{% endif %}
                     {% if c.status != 'ANULADO' %}
                       <form method="post" action="{% url 'contracts:generated_contract_action' c.id %}" onsubmit="return confirm('Anular este documento?')">{% csrf_token %}<input type="hidden" name="action" value="cancel">
-                        <button class="px-2 py-0.5 rounded text-[11px] font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30">Anular</button></form>
+                        <button class="px-2 py-0.5 rounded text-[11px] font-semibold text-rose-600 dark:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-900/30">Anular</button></form>
                     {% endif %}
                   </div>
                 </div>
@@ -277,13 +277,13 @@
                       class="mt-2 flex flex-wrap items-center gap-2">
                   {% csrf_token %}<input type="hidden" name="action" value="signed">
                   <input type="file" name="signed_file" accept=".pdf,image/*" required class="text-xs">
-                  <button class="px-3 py-1 rounded-lg text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700">Guardar como assinado</button>
+                  <button class="lf-btn lf-btn-ghost">Guardar como assinado</button>
                 </form>
               </li>
             {% endfor %}
             {% for d in documents_contract %}
               <li class="py-2 flex flex-wrap items-center justify-between gap-2 text-sm">
-                <a href="{{ d.arquivo.url }}" target="_blank" class="text-indigo-600 hover:underline">Contrato em papel (anexo) · {{ d.uploaded_at|date:"d/m/Y" }}</a>
+                <a href="{{ d.arquivo.url }}" target="_blank" class="text-indigo-600 dark:text-indigo-300 hover:underline">Contrato em papel (anexo) · {{ d.uploaded_at|date:"d/m/Y" }}</a>
                 <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">Anexado</span>
               </li>
             {% endfor %}
@@ -314,15 +314,15 @@
         {% endif %}
         {% if edit_logs %}
           <div class="overflow-x-auto">
-            <table class="w-full text-xs">
-              <thead><tr class="text-left text-gray-400 uppercase"><th class="py-1 pr-3">Quando</th><th class="py-1 pr-3">Quem</th><th class="py-1 pr-3">Bloco</th><th class="py-1">Alterações</th></tr></thead>
-              <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+            <table class="lf-table">
+              <thead><tr><th >Quando</th><th >Quem</th><th >Bloco</th><th >Alterações</th></tr></thead>
+              <tbody>
                 {% for log in edit_logs %}
                   <tr class="align-top">
-                    <td class="py-1.5 pr-3 whitespace-nowrap">{{ log.created_at|date:"d/m/Y H:i" }}</td>
-                    <td class="py-1.5 pr-3">{{ log.user.username|default:"—" }}</td>
-                    <td class="py-1.5 pr-3">{{ log.section }}</td>
-                    <td class="py-1.5">
+                    <td class="pr-3 whitespace-nowrap">{{ log.created_at|date:"d/m/Y H:i" }}</td>
+                    <td class="pr-3">{{ log.user.username|default:"—" }}</td>
+                    <td class="pr-3">{{ log.section }}</td>
+                    <td >
                       {% for field, vals in log.changes.items %}
                         <div><span class="font-mono text-gray-500">{{ field }}</span>: {{ vals.0|default:"—" }} → <b>{{ vals.1|default:"—" }}</b></div>
                       {% endfor %}

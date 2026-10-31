@@ -2,10 +2,7 @@
 Sistema de toast + modal moderno (substitui alert/confirm/prompt nativos).
 Inclui em ambos layouts (admin sidebar + driver clean).
 {% endcomment %}
-{# Garante que Alpine está disponível (layouts/admin_base.html já carrega) #}
-<script src="https://cdn.jsdelivr.net/npm/alpinejs@3.17.5/dist/cdn.min.js" defer
-        onerror="this.removeAttribute('onerror');"></script>
-
+{# O Alpine vem do shell ou de brand/portal.html. #}
 <div x-data="appUi" @keydown.escape.window="modal.open = false">
   {# ─── Toasts (canto inferior direito) ─── #}
   <div class="fixed bottom-6 right-6 z-[400] space-y-2 pointer-events-none">

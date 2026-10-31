@@ -142,7 +142,7 @@
       </div>
       <div>
         <dt class="text-xs text-gray-500 dark:text-gray-400 uppercase">Bónus de performance</dt>
-        <dd class="font-semibold {% if driver.bonus_performance_enabled %}text-emerald-600{% else %}text-gray-500{% endif %}">
+        <dd class="font-semibold {% if driver.bonus_performance_enabled %}text-emerald-600 dark:text-emerald-300{% else %}text-gray-500{% endif %}">
           {% if driver.bonus_performance_enabled %}Activado{% else %}Desactivado{% endif %}
         </dd>
       </div>
@@ -156,7 +156,7 @@
       Cancelar
     </a>
     <button type="submit"
-            class="px-4 py-2 text-sm bg-brand-purple text-white rounded-lg font-medium shadow-sm inline-flex items-center gap-1.5">
+            class="lf-btn lf-btn-primary">
       <i data-lucide="send" class="w-4 h-4"></i>
       Enviar pedido de alteração
     </button>

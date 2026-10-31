@@ -31,7 +31,7 @@
     <span class="text-xs text-gray-500">→</span>
     <input type="date" name="date_to" value="{{ date_to|date:'Y-m-d' }}" max="{{ today|date:'Y-m-d' }}"
            class="px-3 py-1.5 text-xs bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
-    <button type="submit" class="px-3 py-1.5 text-xs bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold">Aplicar</button>
+    <button type="submit" class="lf-btn lf-btn-ghost">Aplicar</button>
     <span class="ml-auto text-xs text-gray-500">Período: <b class="text-gray-900 dark:text-white">{{ date_from|date:"d/m/Y" }} → {{ date_to|date:"d/m/Y" }}</b></span>
   </form>
 </div>
@@ -45,13 +45,13 @@
   </div>
   <a href="#a-descontar" class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200/50 dark:border-gray-700/50 hover:shadow-md transition">
     <p class="text-[11px] uppercase font-bold text-gray-500">A descontar</p>
-    <p class="text-2xl font-extrabold {% if ded.total %}text-rose-600{% else %}text-emerald-600{% endif %}">{{ ded.total|eur }}</p>
-    <p class="text-[11px] text-gray-500">entra na próxima PF: {{ ded.next_pf_total|eur }}</p>
+    <p class="text-2xl font-extrabold {% if ded.total %}text-rose-600 dark:text-rose-300{% else %}text-emerald-600{% endif %}">{{ ded.total|eur }}</p>
+    <p class="text-[11px] text-gray-500">entra na próxima pré-fatura: {{ ded.next_pf_total|eur }}</p>
   </a>
-  <div class="bg-brand-purple rounded-xl p-4 text-white shadow">
-    <p class="text-[11px] uppercase font-bold text-emerald-100">Líquido estimado</p>
-    <p class="text-2xl font-extrabold">{{ net_estimate|eur }}</p>
-    <p class="text-[11px] text-emerald-100">produção − o que entra na próxima PF</p>
+  <div class="lf-kpi">
+    <p class="lf-kpi-label">Líquido estimado</p>
+    <p class="lf-kpi-value">{{ net_estimate|eur }}</p>
+    <p class="lf-kpi-note">produção − o que entra na próxima pré-fatura</p>
   </div>
   <div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200/50 dark:border-gray-700/50">
     <p class="text-[11px] uppercase font-bold text-gray-500">Próximo pagamento</p>
@@ -60,14 +60,14 @@
       <p class="text-[11px] text-gray-500">{{ next_payment.numero }} · previsto {{ next_payment.data_prevista_pagamento|date:"d/m/Y" }} · {{ next_payment.get_status_display|lower }}</p>
     {% else %}
       <p class="text-2xl font-extrabold text-gray-400">—</p>
-      <p class="text-[11px] text-gray-500">sem PF em aberto a pagar</p>
+      <p class="text-[11px] text-gray-500">sem pré-faturas em aberto a pagar</p>
     {% endif %}
   </div>
 </div>
 
 {% if is_admin_view and negative_pfs %}
 <div class="mb-3 px-4 py-3 rounded-xl border border-rose-200 dark:border-rose-700/50 bg-rose-50 dark:bg-rose-900/20 flex flex-wrap items-center gap-3">
-  <i data-lucide="scale" class="w-5 h-5 text-rose-600"></i>
+  <i data-lucide="scale" class="w-5 h-5 text-rose-600 dark:text-rose-300"></i>
   <div class="flex-1 min-w-0 text-sm text-rose-800 dark:text-rose-300">
     <b>Saldo devedor:</b>
     {% for p in negative_pfs %}{{ p.numero }} ({{ p.total_a_receber|eur }}){% if not forloop.last %}, {% endif %}{% endfor %}.
@@ -78,16 +78,16 @@
     <input type="hidden" name="action" value="carry">
     <input type="hidden" name="next" value="{{ request.get_full_path }}">
     {% for p in negative_pfs %}<input type="hidden" name="ids" value="{{ p.id }}">{% endfor %}
-    <button class="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold">Transitar saldo para a próxima PF</button>
+    <button class="lf-btn lf-btn-danger">Transitar saldo para a próxima pré-fatura</button>
   </form>
 </div>
 {% endif %}
 
 {% if is_admin_view and stale_pfs %}
 <div class="mb-4 px-4 py-3 rounded-xl border border-amber-200 dark:border-amber-700/50 bg-amber-50 dark:bg-amber-900/20 flex flex-wrap items-center gap-3">
-  <i data-lucide="hourglass" class="w-5 h-5 text-amber-600"></i>
+  <i data-lucide="hourglass" class="w-5 h-5 text-amber-600 dark:text-amber-300"></i>
   <div class="flex-1 min-w-0 text-sm text-amber-800 dark:text-amber-300">
-    <b>{{ stale_pfs|length }} PF parada{{ stale_pfs|length|pluralize }} em CALCULADO</b> há mais de {{ stale_days }} dias:
+    <b>{{ stale_pfs|length }} pré-faturas parada{{ stale_pfs|length|pluralize }} em CALCULADO</b> há mais de {{ stale_days }} dias:
     {% for p in stale_pfs %}{{ p.numero }} ({{ p.periodo_inicio|date:"d/m" }}–{{ p.periodo_fim|date:"d/m" }}, {{ p.total_a_receber|eur }}){% if not forloop.last %}, {% endif %}{% endfor %}.
   </div>
   <form method="post" action="{% url 'drivers_app:payments_bulk' %}">
@@ -95,7 +95,7 @@
     <input type="hidden" name="action" value="approve">
     <input type="hidden" name="next" value="{{ request.get_full_path }}">
     {% for p in stale_pfs %}{% if p.total_a_receber >= 0 %}<input type="hidden" name="ids" value="{{ p.id }}">{% endif %}{% endfor %}
-    <button class="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold">Aprovar as não negativas</button>
+    <button class="lf-btn lf-btn-ghost">Aprovar as não negativas</button>
   </form>
 </div>
 {% endif %}
@@ -114,16 +114,16 @@
   <div class="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 border border-amber-200/50 dark:border-amber-700/30">
     <p class="text-xs uppercase font-bold text-amber-700 dark:text-amber-300">Custo motorista (estimado)</p>
     <p class="text-2xl font-extrabold text-amber-700 dark:text-amber-300 mt-1">{{ custo_motorista|eur }}</p>
-    <p class="text-[11px] text-amber-700 mt-0.5">
+    <p class="text-[11px] text-amber-700 dark:text-amber-300 mt-0.5">
       porta {{ bd.amounts.door_normal|eur }} · mesma porta {{ bd.amounts.same_door|eur }} · PUDO {{ bd.amounts.pudo|eur }}
       · média porta €{{ bd.door_avg_price|floatformat:3 }}/pct{% if bd.cp_pricing %} <span class="italic">(preço por CP)</span>{% elif not driver.price_per_package %} <span class="italic">(default)</span>{% endif %}
     </p>
   </div>
-  <div class="bg-brand-purple rounded-xl p-4 text-white shadow">
-    <p class="text-xs uppercase font-bold text-violet-100">Margem Léguas</p>
-    <p class="text-2xl font-extrabold mt-1">{{ margem|eur }}</p>
-    <p class="text-[11px] text-violet-100 mt-0.5">
-      Receita €{{ receita_estimada|floatformat:0 }} ({{ bd.totals.delivered }} × €{{ receita_per_pkg|floatformat:4 }}) − custo motorista
+  <div class="lf-kpi">
+    <p class="lf-kpi-label">Margem Léguas</p>
+    <p class="lf-kpi-value">{{ margem|eur }}</p>
+    <p class="lf-kpi-note">
+      Receita {{ receita_estimada|eur0 }} ({{ bd.totals.delivered }} × €{{ receita_per_pkg|floatformat:4 }}) − custo motorista
     </p>
   </div>
 </div>
@@ -132,12 +132,9 @@
 {# ─── KPI Indicações (só se houver indicados activos) ─── #}
 {% if referrals_summary.count > 0 %}
 <a href="{% url 'drivers_app:driver_portal_referrals' driver.id %}?period=custom&date_from={{ date_from|date:'Y-m-d' }}&date_to={{ date_to|date:'Y-m-d' }}"
-   class="block mb-4 bg-brand-purple rounded-xl p-4 text-white shadow-md transition group">
+   class="block mb-4 lf-kpi lf-kpi-action">
   <div class="flex items-center justify-between gap-4">
     <div class="flex items-center gap-3">
-      <div class="w-11 h-11 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
-        <i data-lucide="user-plus" class="w-5 h-5"></i>
-      </div>
       <div>
         <p class="text-xs uppercase font-bold text-white/80">Indicados ativos</p>
         <p class="text-lg font-bold leading-tight">
@@ -188,12 +185,12 @@
     </p>
     {% if ded.next_pf_total %}
     <p class="text-xs text-emerald-800 dark:text-emerald-300 mt-0.5">
-      Entram nesta PF: <b>− {{ ded.next_pf_total|eur }}</b> (conta-corrente pendente + descontos à espera) → líquido estimado <b>{{ net_estimate|eur }}</b>
+      Entram nesta pré-fatura: <b>− {{ ded.next_pf_total|eur }}</b> (conta-corrente pendente + descontos à espera) → líquido estimado <b>{{ net_estimate|eur }}</b>
     </p>
     {% endif %}
   </div>
   <button onclick="emitirPF()"
-          class="px-4 py-2 text-sm bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium shadow-sm inline-flex items-center gap-1.5 whitespace-nowrap">
+          class="lf-btn lf-btn-ghost">
     <i data-lucide="zap" class="w-4 h-4"></i>
     Emitir Pré-Fatura
   </button>
@@ -267,10 +264,10 @@ async function emitirPF() {
   <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2 flex-wrap">
     <i data-lucide="wallet" class="w-5 h-5 text-amber-500"></i>
     <h3 class="font-bold text-gray-900 dark:text-white">A descontar</h3>
-    <span class="text-xs text-gray-500">conta-corrente e descontos que ainda não saíram numa PF paga</span>
+    <span class="text-xs text-gray-500">conta-corrente e descontos que ainda não saíram numa pré-fatura paga</span>
     {% if is_admin_view %}
     <button type="button" @click="openAdd()"
-            class="ml-auto inline-flex items-center gap-1 px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-md text-xs font-semibold transition">
+            class="lf-btn lf-btn-ghost ml-auto">
       <i data-lucide="plus" class="w-3.5 h-3.5"></i> Adicionar Lançamento
     </button>
     {% endif %}
@@ -283,9 +280,9 @@ async function emitirPF() {
       <div class="flex-1 min-w-[120px] max-w-xs h-2 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
         <div class="h-full {% if adv_limit_pct >= 100 %}bg-rose-500{% elif adv_limit_pct >= 80 %}bg-amber-500{% else %}bg-emerald-500{% endif %}" style="width: {{ adv_limit_pct }}%"></div>
       </div>
-      <span class="{% if adv_limit_pct >= 100 %}text-rose-600 font-bold{% elif adv_limit_pct >= 80 %}text-amber-600{% else %}text-gray-500{% endif %}">{{ adv_limit_pct }}% do limite de {{ adv_limit|eur }}</span>
+      <span class="{% if adv_limit_pct >= 100 %}text-rose-600 dark:text-rose-300 font-bold{% elif adv_limit_pct >= 80 %}text-amber-600{% else %}text-gray-500{% endif %}">{{ adv_limit_pct }}% do limite de {{ adv_limit|eur }}</span>
     {% else %}
-      <span class="text-gray-400">sem limite definido{% if is_admin_view %} · <a href="{% url 'drivers_app:driver_admin_edit' driver.id %}#financeiro" class="text-indigo-600 hover:underline">definir na Ficha</a>{% endif %}</span>
+      <span class="text-gray-400">sem limite definido{% if is_admin_view %} · <a href="{% url 'drivers_app:driver_admin_edit' driver.id %}#financeiro" class="text-indigo-600 dark:text-indigo-300 hover:underline">definir na Ficha</a>{% endif %}</span>
     {% endif %}
   </div>
 
@@ -293,7 +290,7 @@ async function emitirPF() {
   <div class="grid grid-cols-2 md:grid-cols-4 gap-px bg-gray-100 dark:bg-gray-700">
     <div class="bg-white dark:bg-gray-800 p-4">
       <p class="text-[11px] uppercase font-bold text-gray-500">Total a descontar</p>
-      <p class="text-2xl font-extrabold {% if ded.total %}text-rose-600{% else %}text-emerald-600{% endif %}">{{ ded.total|eur }}</p>
+      <p class="text-2xl font-extrabold {% if ded.total %}text-rose-600 dark:text-rose-300{% else %}text-emerald-600{% endif %}">{{ ded.total|eur }}</p>
       <p class="text-[11px] text-gray-500">lançamentos + descontos aprovados</p>
     </div>
     <div class="bg-white dark:bg-gray-800 p-4">
@@ -302,7 +299,7 @@ async function emitirPF() {
       <p class="text-[11px] text-gray-500">{{ ded.advances|length }} lançamento{{ ded.advances|length|pluralize }}</p>
     </div>
     <div class="bg-white dark:bg-gray-800 p-4">
-      <p class="text-[11px] uppercase font-bold text-rose-700 dark:text-rose-300">Descontos (claims)</p>
+      <p class="text-[11px] uppercase font-bold text-rose-700 dark:text-rose-300">Descontos</p>
       <p class="text-2xl font-extrabold text-gray-900 dark:text-white">{{ ded.claims_confirmed_total|eur }}</p>
       <p class="text-[11px] text-gray-500">aprovados, ainda por descontar</p>
     </div>
@@ -326,93 +323,93 @@ async function emitirPF() {
   </div>
   {% if ded.advances or history_advances %}
   <div class="overflow-x-auto">
-    <table class="w-full">
-      <thead class="bg-gray-50 dark:bg-gray-900/40">
+    <table class="lf-table">
+      <thead>
         <tr>
-          <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Data</th>
-          <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Tipo</th>
-          <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Descrição</th>
-          <th class="px-4 py-2 text-right text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Valor</th>
-          <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Onde está</th>
+          <th >Data</th>
+          <th >Tipo</th>
+          <th >Descrição</th>
+          <th class="text-right">Valor</th>
+          <th >Onde está</th>
         </tr>
       </thead>
-      <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+      <tbody>
         {% for a in ded.advances %}
         <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
-          <td class="px-4 py-2 text-xs text-gray-700 dark:text-gray-300 whitespace-nowrap">{% if a.data %}{{ a.data|date:"d/m/Y" }}{% else %}—{% endif %}</td>
-          <td class="px-4 py-2 text-xs">
+          <td class="text-xs text-gray-700 dark:text-gray-300 whitespace-nowrap">{% if a.data %}{{ a.data|date:"d/m/Y" }}{% else %}—{% endif %}</td>
+          <td class="text-xs">
             <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold
               {% if a.tipo == 'COMBUSTIVEL' %}bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300
               {% elif a.tipo == 'ABASTECIMENTO' %}bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300
               {% else %}bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300{% endif %}">{{ a.get_tipo_display }}</span>
           </td>
-          <td class="px-4 py-2 text-xs text-gray-700 dark:text-gray-300">{{ a.descricao|default:"—"|truncatechars:60 }}</td>
-          <td class="px-4 py-2 text-right text-sm font-bold text-rose-600 whitespace-nowrap">- {{ a.valor|eur }}</td>
-          <td class="px-4 py-2 text-xs">
+          <td class="text-xs text-gray-700 dark:text-gray-300">{{ a.descricao|default:"—"|truncatechars:60 }}</td>
+          <td class="text-right text-sm font-bold text-rose-600 dark:text-rose-300 whitespace-nowrap">- {{ a.valor|eur }}</td>
+          <td class="text-xs">
             {% if a.status == 'PENDENTE' %}
-              <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300">Entra na próxima PF</span>
+              <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300">Entra na próxima pré-fatura</span>
             {% else %}
               <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">Na {{ a.pre_invoice.numero }} · {{ a.pre_invoice.get_status_display|lower }}</span>
             {% endif %}
           </td>
         </tr>
         {% empty %}
-        <tr><td colspan="5" class="px-4 py-4 text-center text-sm text-emerald-600">Nada por descontar na conta-corrente.</td></tr>
+        <tr><td colspan="5" class="text-center text-sm text-emerald-600 dark:text-emerald-300">Nada por descontar na conta-corrente.</td></tr>
         {% endfor %}
         {% for a in history_advances %}
         <tr x-show="showHistory" x-cloak class="opacity-60">
-          <td class="px-4 py-2 text-xs text-gray-500 whitespace-nowrap">{% if a.data %}{{ a.data|date:"d/m/Y" }}{% else %}—{% endif %}</td>
-          <td class="px-4 py-2 text-xs text-gray-500">{{ a.get_tipo_display }}</td>
+          <td class="text-xs text-gray-500 whitespace-nowrap">{% if a.data %}{{ a.data|date:"d/m/Y" }}{% else %}—{% endif %}</td>
+          <td class="text-xs text-gray-500">{{ a.get_tipo_display }}</td>
           <td class="px-4 py-2 text-xs text-gray-500 {% if a.status == 'CANCELADO' %}line-through{% endif %}">{{ a.descricao|default:"—"|truncatechars:60 }}</td>
           <td class="px-4 py-2 text-right text-xs text-gray-500 whitespace-nowrap {% if a.status == 'CANCELADO' %}line-through{% endif %}">- {{ a.valor|eur }}</td>
-          <td class="px-4 py-2 text-xs text-gray-500">{% if a.status == 'CANCELADO' %}Cancelado{% else %}Descontado{% if a.pre_invoice %} na {{ a.pre_invoice.numero }} (paga){% endif %}{% endif %}</td>
+          <td class="text-xs text-gray-500">{% if a.status == 'CANCELADO' %}Cancelado{% else %}Descontado{% if a.pre_invoice %} na {{ a.pre_invoice.numero }} (paga){% endif %}{% endif %}</td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
   {% else %}
-  <p class="px-5 py-4 text-sm text-emerald-600">Sem lançamentos.</p>
+  <p class="px-5 py-4 text-sm text-emerald-600 dark:text-emerald-300">Sem lançamentos.</p>
   {% endif %}
 
-  {# Descontos (claims) por descontar #}
+  {# Descontos por descontar #}
   <div class="px-5 pt-4 pb-1 flex items-center gap-2 border-t border-gray-100 dark:border-gray-700 mt-2">
-    <p class="text-xs uppercase font-bold text-gray-500">Descontos (claims) por descontar</p>
+    <p class="text-xs uppercase font-bold text-gray-500">Descontos por descontar</p>
     {% if is_admin_view %}
     <a href="{% url 'drivers_app:driver_claims' driver.id %}" class="ml-auto text-[11px] text-indigo-600 dark:text-indigo-400 hover:underline">Gerir descontos →</a>
     {% endif %}
   </div>
   {% if ded.claims %}
   <div class="overflow-x-auto">
-    <table class="w-full">
-      <thead class="bg-gray-50 dark:bg-gray-900/40">
+    <table class="lf-table">
+      <thead>
         <tr>
-          <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Data</th>
-          <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Tipo</th>
-          <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Pacote · detalhe</th>
-          <th class="px-4 py-2 text-right text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Valor</th>
-          <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Estado</th>
-          {% if is_admin_view %}<th class="px-4 py-2 text-right text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Ações</th>{% endif %}
+          <th >Data</th>
+          <th >Tipo</th>
+          <th >Pacote · detalhe</th>
+          <th class="text-right">Valor</th>
+          <th >Estado</th>
+          {% if is_admin_view %}<th class="text-right">Ações</th>{% endif %}
         </tr>
       </thead>
-      <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+      <tbody>
         {% for c in ded.claims %}
         <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 align-top">
-          <td class="px-4 py-2 text-xs text-gray-700 dark:text-gray-300 whitespace-nowrap">{{ c.occurred_at|date:"d/m/Y" }}</td>
-          <td class="px-4 py-2 text-xs"><span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-300">{{ c.get_claim_type_display }}</span></td>
-          <td class="px-4 py-2 text-xs text-gray-700 dark:text-gray-300">
+          <td class="text-xs text-gray-700 dark:text-gray-300 whitespace-nowrap">{{ c.occurred_at|date:"d/m/Y" }}</td>
+          <td class="text-xs"><span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-300">{{ c.get_claim_type_display }}</span></td>
+          <td class="text-xs text-gray-700 dark:text-gray-300">
             {% if c.waybill_number %}<span class="font-mono">{{ c.waybill_number }}</span>{% endif %}
             <p class="text-[11px] text-gray-500">{{ c.description|default:""|truncatechars:90 }}</p>
           </td>
-          <td class="px-4 py-2 text-right text-sm font-bold whitespace-nowrap {% if c.billing.code == 'pendente' or c.billing.code == 'recurso' %}text-gray-500{% else %}text-rose-600{% endif %}">- {{ c.amount|eur }}</td>
-          <td class="px-4 py-2 text-xs">
+          <td class="px-4 py-2 text-right text-sm font-bold whitespace-nowrap {% if c.billing.code == 'pendente' or c.billing.code == 'recurso' %}text-gray-500{% else %}text-rose-600 dark:text-rose-300{% endif %}">- {{ c.amount|eur }}</td>
+          <td class="text-xs">
             <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold
               {% if c.billing.code == 'em_fatura' %}bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300
               {% elif c.billing.code == 'a_espera' or c.billing.code == 'adiado' %}bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300
               {% else %}bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300{% endif %}">{{ c.billing.label }}{% if c.billing.pf %} · {{ c.billing.pf }}{% endif %}</span>
           </td>
           {% if is_admin_view %}
-          <td class="px-4 py-2 text-right whitespace-nowrap" x-data="{ open: '' }">
+          <td class="text-right whitespace-nowrap" x-data="{ open: '' }">
             <div x-show="!open" class="inline-flex gap-1">
               {% if c.status == 'PENDING' %}<button type="button" @click="open='approve'" class="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">Aprovar</button>{% endif %}
               {% if c.status == 'PENDING' or c.status == 'APPROVED' %}<button type="button" @click="open='change_amount'" class="px-2 py-0.5 rounded text-[11px] font-semibold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200">Valor</button>{% endif %}
@@ -426,8 +423,8 @@ async function emitirPF() {
               <input type="hidden" name="next" value="{{ request.get_full_path }}#a-descontar">
               <input x-show="open==='change_amount'" type="number" step="0.01" min="0" name="amount" value="{{ c.amount|stringformat:'s' }}" class="w-20 px-1.5 py-0.5 text-[11px] rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700">
               <input type="text" name="reason" required placeholder="Motivo (obrigatório)" class="w-40 px-1.5 py-0.5 text-[11px] rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700">
-              <button class="px-2 py-0.5 rounded text-[11px] font-semibold bg-indigo-600 text-white">OK</button>
-              <button type="button" @click="open=''" class="px-1 text-[11px] text-gray-500">✕</button>
+              <button class="lf-btn lf-btn-ghost text-[11px]">OK</button>
+              <button type="button" @click="open=''" class="px-1 text-[11px] text-gray-500"></button>
             </form>
           </td>
           {% endif %}
@@ -437,7 +434,7 @@ async function emitirPF() {
     </table>
   </div>
   {% else %}
-  <p class="px-5 py-4 text-sm text-emerald-600">Sem descontos por descontar.</p>
+  <p class="px-5 py-4 text-sm text-emerald-600 dark:text-emerald-300">Sem descontos por descontar.</p>
   {% endif %}
 
   {# ─── Modal: Adicionar Lançamento (admin) ─── #}
@@ -449,7 +446,7 @@ async function emitirPF() {
     <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md">
       <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
         <h3 class="text-lg font-bold flex items-center gap-2">
-          <i data-lucide="plus-circle" class="w-5 h-5 text-amber-600"></i>
+          <i data-lucide="plus-circle" class="w-5 h-5 text-amber-600 dark:text-amber-300"></i>
           Adicionar Lançamento — {{ driver.nome_completo }}
         </h3>
         <button @click="addOpen = false" class="text-gray-400 hover:text-gray-600">
@@ -496,13 +493,13 @@ async function emitirPF() {
           O lançamento será criado como <b>PENDENTE</b> e ficará disponível para
           incluir numa próxima pré-fatura.
         </div>
-        <p x-show="formError" x-cloak class="text-xs text-rose-600" x-text="formError"></p>
+        <p x-show="formError" x-cloak class="text-xs text-rose-600 dark:text-rose-300" x-text="formError"></p>
       </div>
       <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-2">
         <button @click="addOpen = false"
                 class="px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-sm">Cancelar</button>
         <button @click="submitAdd()" :disabled="submitting"
-                class="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold disabled:opacity-50">
+                class="lf-btn lf-btn-ghost disabled:opacity-50">
           <span x-show="!submitting">Criar lançamento</span>
           <span x-show="submitting">A criar...</span>
         </button>
@@ -587,16 +584,16 @@ function ccDriver() {
 </script>
 {% endif %}
 
-{# ─── Resumo Pré-faturas ─── #}
+{# ─── Resumo pré-faturas ─── #}
 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
   <div class="bg-white dark:bg-gray-800 rounded-2xl p-5 border border-gray-200/50 dark:border-gray-700/50 shadow-sm">
     <p class="text-xs uppercase font-bold text-gray-500 dark:text-gray-400">Total de Pré-Faturas</p>
     <p class="text-3xl font-extrabold text-gray-900 dark:text-white mt-1">{{ total_count }}</p>
   </div>
-  <div class="bg-brand-purple rounded-2xl p-5 text-white shadow-md md:col-span-2">
-    <p class="text-xs uppercase font-bold tracking-wider text-emerald-100">Valor Total Acumulado</p>
-    <p class="text-4xl font-extrabold mt-1">{{ total_value|eur }}</p>
-    <p class="text-xs text-emerald-100 mt-1">soma de todas as pré-faturas</p>
+  <div class="lf-kpi md:col-span-2">
+    <p class="lf-kpi-label">Valor Total Acumulado</p>
+    <p class="lf-kpi-value">{{ total_value|eur }}</p>
+    <p class="lf-kpi-note">soma de todas as pré-faturas</p>
   </div>
 </div>
 
@@ -619,30 +616,30 @@ function ccDriver() {
     </a>
   </div>
   <div class="overflow-x-auto">
-    <table class="w-full">
-      <thead class="bg-gray-50 dark:bg-gray-900/40">
+    <table class="lf-table">
+      <thead>
         <tr>
-          <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Nº PF</th>
-          <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Período</th>
-          <th class="px-4 py-2 text-right text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Base</th>
-          <th class="px-4 py-2 text-right text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Bónus</th>
-          <th class="px-4 py-2 text-right text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Líquido</th>
-          <th class="px-4 py-2 text-center text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Estado</th>
-          <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Pagamento</th>
-          <th class="px-4 py-2 text-center text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Recibo</th>
-          <th class="px-4 py-2 text-right text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Ações</th>
+          <th >Nº Pré-fatura</th>
+          <th >Período</th>
+          <th class="text-right">Base</th>
+          <th class="text-right">Bónus</th>
+          <th class="text-right">Líquido</th>
+          <th class="text-center">Estado</th>
+          <th >Pagamento</th>
+          <th class="text-center">Recibo</th>
+          <th class="text-right">Ações</th>
         </tr>
       </thead>
-      <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+      <tbody>
         {% for pf in pfs %}
         <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30" x-show="!st || st === '{{ pf.status }}'">
-          <td class="px-4 py-3"><span class="font-mono font-bold text-gray-900 dark:text-white">{{ pf.numero }}</span></td>
-          <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
+          <td ><span class="font-mono font-bold text-gray-900 dark:text-white">{{ pf.numero }}</span></td>
+          <td class="text-sm text-gray-700 dark:text-gray-300">
             {{ pf.periodo_inicio|date:"d/m/Y" }} → {{ pf.periodo_fim|date:"d/m/Y" }}
           </td>
-          <td class="px-4 py-3 text-right text-sm text-gray-700 dark:text-gray-300">{{ pf.base_entregas|eur }}</td>
-          <td class="px-4 py-3 text-right text-sm text-emerald-600 font-semibold">€ {{ pf.total_bonus|default:"0.00"|floatformat:2 }}</td>
-          <td class="px-4 py-3 text-right">
+          <td class="text-right text-sm text-gray-700 dark:text-gray-300">{{ pf.base_entregas|eur }}</td>
+          <td class="text-right text-sm text-emerald-600 dark:text-emerald-300 font-semibold">{{ pf.total_bonus|default:"0.00"|eur }}</td>
+          <td class="text-right">
             {% if pf.vat_amount and pf.vat_amount > 0 %}
               <span class="font-extrabold text-gray-900 dark:text-white">{{ pf.total_com_iva|eur }}</span>
               <div class="text-[10px] text-gray-500 mt-0.5">{{ pf.total_a_receber|eur }} + IVA {{ pf.vat_amount|eur }}</div>
@@ -650,7 +647,7 @@ function ccDriver() {
               <span class="font-extrabold text-gray-900 dark:text-white">{{ pf.total_a_receber|eur }}</span>
             {% endif %}
           </td>
-          <td class="px-4 py-3 text-center">
+          <td class="text-center">
             <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold
               {% if pf.status == 'PAGO' %}bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300
               {% elif pf.status == 'APROVADO' %}bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300
@@ -660,15 +657,15 @@ function ccDriver() {
               {{ pf.get_status_display }}
             </span>
           </td>
-          <td class="px-4 py-3 text-xs whitespace-nowrap">
+          <td class="text-xs whitespace-nowrap">
             {% if pf.status == 'PAGO' %}
-              <span class="text-emerald-600 font-semibold">pago {{ pf.data_pagamento|date:"d/m/Y" }}</span>
-              {% if pf.comprovante_pagamento %}<a href="{{ pf.comprovante_pagamento.url }}" target="_blank" class="block text-[11px] text-indigo-600 hover:underline">comprovativo</a>{% else %}<span class="block text-[11px] text-gray-400">sem comprovativo</span>{% endif %}
+              <span class="text-emerald-600 dark:text-emerald-300 font-semibold">pago {{ pf.data_pagamento|date:"d/m/Y" }}</span>
+              {% if pf.comprovante_pagamento %}<a href="{{ pf.comprovante_pagamento.url }}" target="_blank" class="block text-[11px] text-indigo-600 dark:text-indigo-300 hover:underline">comprovativo</a>{% else %}<span class="block text-[11px] text-gray-400">sem comprovativo</span>{% endif %}
             {% elif pf.data_prevista_pagamento %}
               <span class="{% if pf.data_prevista_pagamento < today %}text-rose-600 font-semibold{% else %}text-gray-700 dark:text-gray-300{% endif %}">previsto {{ pf.data_prevista_pagamento|date:"d/m/Y" }}</span>
             {% else %}<span class="text-gray-400">—</span>{% endif %}
           </td>
-          <td class="px-4 py-3 text-center">
+          <td class="text-center">
             {% if pf.fatura_ficheiro %}
               <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300">
                 <i data-lucide="check-circle-2" class="w-3 h-3"></i> Anexado
@@ -679,23 +676,23 @@ function ccDriver() {
               </span>
             {% endif %}
           </td>
-          <td class="px-4 py-3 text-right whitespace-nowrap">
+          <td class="text-right whitespace-nowrap">
             <a href="{% url 'drivers_app:driver_pre_invoice_pdf' driver.id pf.id %}" target="_blank" title="Download PDF da Pré-Fatura"
                class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md text-gray-600 dark:text-gray-400 hover:text-rose-600 inline-flex">
               <i data-lucide="file-down" class="w-4 h-4"></i>
             </a>
             {% if pf.fatura_ficheiro %}
               <a href="{{ pf.fatura_ficheiro.url }}" target="_blank" title="Ver fatura-recibo anexada"
-                 class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md text-emerald-600 hover:text-emerald-700 inline-flex">
+                 class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md text-emerald-600 dark:text-emerald-300 hover:text-emerald-700 inline-flex">
                 <i data-lucide="file-check-2" class="w-4 h-4"></i>
               </a>
               {% if is_admin_view %}
               <button type="button" onclick="anexarRecibo({{ pf.id }}, '{{ pf.numero }}', true)" title="Substituir recibo"
-                      class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md text-amber-600 hover:text-amber-700 inline-flex">
+                      class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md text-amber-600 dark:text-amber-300 hover:text-amber-700 inline-flex">
                 <i data-lucide="refresh-cw" class="w-4 h-4"></i>
               </button>
               <button type="button" onclick="limparRecibo({{ pf.id }}, '{{ pf.numero }}')" title="Limpar recibo anexado"
-                      class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md text-rose-600 hover:text-rose-700 inline-flex">
+                      class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md text-rose-600 dark:text-rose-300 hover:text-rose-700 inline-flex">
                 <i data-lucide="trash-2" class="w-4 h-4"></i>
               </button>
               {% endif %}
@@ -714,7 +711,7 @@ function ccDriver() {
           </td>
         </tr>
         {% empty %}
-        <tr><td colspan="9" class="px-4 py-8 text-center text-sm text-gray-500 italic">Nenhuma pré-fatura emitida ainda.</td></tr>
+        <tr><td colspan="9" class="text-center text-sm text-gray-500 italic">Nenhuma pré-fatura emitida ainda.</td></tr>
         {% endfor %}
       </tbody>
     </table>

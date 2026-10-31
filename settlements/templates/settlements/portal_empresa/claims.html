@@ -13,16 +13,16 @@
         <span class="w-2 h-2 rounded-full bg-amber-500"></span>
         Pendentes
       </div>
-      <div class="text-2xl font-bold text-amber-600">{{ by_status.PENDING.n|default:0 }}</div>
-      <div class="text-xs text-gray-400">€{{ by_status.PENDING.total|default:0|floatformat:2 }}</div>
+      <div class="text-2xl font-bold text-amber-600 dark:text-amber-300">{{ by_status.PENDING.n|default:0 }}</div>
+      <div class="text-xs text-gray-400">{{ by_status.PENDING.total|default:0|eur }}</div>
     </div>
     <div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
       <div class="text-xs uppercase text-gray-500 flex items-center gap-1">
         <span class="w-2 h-2 rounded-full bg-rose-500"></span>
         Aprovados
       </div>
-      <div class="text-2xl font-bold text-rose-600">{{ by_status.APPROVED.n|default:0 }}</div>
-      <div class="text-xs text-gray-400">€{{ by_status.APPROVED.total|default:0|floatformat:2 }}</div>
+      <div class="text-2xl font-bold text-rose-600 dark:text-rose-300">{{ by_status.APPROVED.n|default:0 }}</div>
+      <div class="text-xs text-gray-400">{{ by_status.APPROVED.total|default:0|eur }}</div>
     </div>
     <div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
       <div class="text-xs uppercase text-gray-500 flex items-center gap-1">
@@ -30,7 +30,7 @@
         Em recurso
       </div>
       <div class="text-2xl font-bold text-blue-600">{{ by_status.APPEALED.n|default:0 }}</div>
-      <div class="text-xs text-gray-400">€{{ by_status.APPEALED.total|default:0|floatformat:2 }}</div>
+      <div class="text-xs text-gray-400">{{ by_status.APPEALED.total|default:0|eur }}</div>
     </div>
     <div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm">
       <div class="text-xs uppercase text-gray-500 flex items-center gap-1">
@@ -38,7 +38,7 @@
         Rejeitados
       </div>
       <div class="text-2xl font-bold text-gray-500">{{ by_status.REJECTED.n|default:0 }}</div>
-      <div class="text-xs text-gray-400">€{{ by_status.REJECTED.total|default:0|floatformat:2 }}</div>
+      <div class="text-xs text-gray-400">{{ by_status.REJECTED.total|default:0|eur }}</div>
     </div>
   </div>
 
@@ -62,34 +62,34 @@
     </div>
     {% if claims %}
     <div class="overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead class="bg-gray-50 dark:bg-gray-900/50 text-xs uppercase text-gray-500">
-          <tr class="text-left">
-            <th class="px-4 py-2">Data</th>
-            <th class="px-4 py-2">Motorista</th>
-            <th class="px-4 py-2">Tipo</th>
-            <th class="px-4 py-2">N.º de envio</th>
-            <th class="px-4 py-2">Descrição</th>
-            <th class="px-4 py-2 text-right">Valor</th>
-            <th class="px-4 py-2 text-center">Estado</th>
+      <table class="lf-table">
+        <thead>
+          <tr>
+            <th >Data</th>
+            <th >Motorista</th>
+            <th >Tipo</th>
+            <th >N.º de envio</th>
+            <th >Descrição</th>
+            <th class="text-right">Valor</th>
+            <th class="text-center">Estado</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+        <tbody>
           {% for c in claims %}
           <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
-            <td class="px-4 py-2 text-xs text-gray-500 font-mono">{{ c.occurred_at|date:"d/m/Y" }}</td>
-            <td class="px-4 py-2">
-              <a href="{% url 'drivers_app:driver_claims' c.driver.id %}" class="text-purple-600 hover:underline font-semibold">
+            <td class="text-xs text-gray-500 font-mono">{{ c.occurred_at|date:"d/m/Y" }}</td>
+            <td >
+              <a href="{% url 'drivers_app:driver_claims' c.driver.id %}" class="text-purple-600 dark:text-purple-300 hover:underline font-semibold">
                 {{ c.driver.nome_completo|default:c.driver.apelido|truncatechars:25 }}
               </a>
             </td>
-            <td class="px-4 py-2 text-xs">{{ c.get_claim_type_display }}</td>
-            <td class="px-4 py-2 font-mono text-xs">{{ c.waybill_number|default:"—" }}</td>
-            <td class="px-4 py-2 text-xs text-gray-600 dark:text-gray-400 max-w-md truncate">{{ c.description|truncatechars:60 }}</td>
-            <td class="px-4 py-2 text-right font-mono font-bold {% if c.status == 'APPROVED' or c.status == 'PENDING' %}text-rose-600{% else %}text-gray-400{% endif %}">
+            <td class="text-xs">{{ c.get_claim_type_display }}</td>
+            <td class="font-mono text-xs">{{ c.waybill_number|default:"—" }}</td>
+            <td class="text-xs text-gray-600 dark:text-gray-400 max-w-md truncate">{{ c.description|truncatechars:60 }}</td>
+            <td class="px-4 py-2 text-right font-mono font-bold {% if c.status == 'APPROVED' or c.status == 'PENDING' %}text-rose-600 dark:text-rose-300{% else %}text-gray-400{% endif %}">
               -{{ c.amount|eur }}
             </td>
-            <td class="px-4 py-2 text-center">
+            <td class="text-center">
               <span class="px-2 py-0.5 text-[11px] rounded-full font-semibold {{ c.situacao.classes }}">
                 {{ c.situacao.label }}
               </span>

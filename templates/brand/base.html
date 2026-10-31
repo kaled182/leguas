@@ -10,11 +10,12 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,600;0,700;1,700&display=swap">
   <link rel="stylesheet" href="{% static 'brand/tokens.css' %}?v={{ asset_version }}">
   <link rel="stylesheet" href="{% static 'brand/app.css' %}?v={{ asset_version }}">
-  <script>try{if(localStorage.getItem('lf-theme')==='dark')document.documentElement.classList.add('dark')}catch(e){}</script>
+  <script>try{if((localStorage.getItem('lf-theme')||localStorage.getItem('management-theme'))==='dark')document.documentElement.classList.add('dark')}catch(e){}</script>
   <script src="https://unpkg.com/lucide@1.65.0/dist/umd/lucide.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.6.1/dist/chart.umd.min.js"></script>
   <script src="{% static 'brand/ui.js' %}?v={{ asset_version }}" defer></script>
   <script src="{% static 'brand/chart-theme.js' %}?v={{ asset_version }}"></script>
+  {% block extra_head %}{% endblock %}
 </head>
 <body class="bg-[var(--color-bg)]">
   {% block body %}{% endblock %}

@@ -130,6 +130,18 @@
   .lf-auth-tabs { display: flex; gap: var(--space-1); padding: var(--space-1); margin-bottom: var(--space-4); border-radius: var(--radius-md); background: var(--color-surface-alt); }
   .lf-auth-tab { display: inline-flex; flex: 1; align-items: center; justify-content: center; gap: var(--space-2); min-height: var(--touch-target); border-radius: var(--radius-sm); font-size: var(--text-sm); font-weight: var(--weight-subtitle); color: var(--color-text-muted); }
   .lf-auth-tab[aria-selected="true"] { background: var(--color-surface); color: var(--color-text); box-shadow: var(--shadow-sm); }
+  .lf-portal-top { position: sticky; top: 0; z-index: var(--z-sticky); background: var(--brand-purple-night); color: #fff; }
+  .lf-portal-bar { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); max-width: 80rem; margin: 0 auto; padding: var(--space-2) var(--space-4); }
+  .lf-portal-top .lf-logo { flex: none; }
+  .lf-portal-name { font-size: var(--text-sm); font-weight: var(--weight-subtitle); color: var(--brand-lilac); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lf-portal-user { font-size: var(--text-xs); color: var(--brand-lilac); }
+  .lf-portal-icon, .lf-portal-link { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); min-height: var(--touch-target); min-width: var(--touch-target); border-radius: var(--radius-md); font-size: var(--text-sm); color: #fff; }
+  .lf-portal-link { padding: 0 var(--space-2); }
+  .lf-portal-icon:hover, .lf-portal-link:hover { background: rgb(255 255 255 / 12%); }
+  .lf-tabs { display: flex; flex-wrap: wrap; gap: var(--space-1); margin-bottom: var(--space-4); border-bottom: 1px solid var(--color-border); }
+  .lf-tab { display: inline-flex; align-items: center; gap: var(--space-2); min-height: var(--touch-target); padding: 0 var(--space-3); border-bottom: 2px solid transparent; font-size: var(--text-sm); font-weight: var(--weight-subtitle); color: var(--color-text-muted); }
+  .lf-tab:hover { color: var(--color-text); }
+  .lf-tab-active { border-bottom-color: var(--brand-orange); color: var(--color-text); }
   .lf-logo { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
   .lf-logo-symbol { flex: none; width: 40px; height: 40px; }
   .lf-logo-word { width: 100px; height: 30px; object-fit: contain; object-position: left; }

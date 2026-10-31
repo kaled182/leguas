@@ -16,7 +16,7 @@
     {% if pf_check %}
     <div class="ml-auto text-xs px-3 py-2 rounded-lg {% if pf_check.ok %}bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300{% else %}bg-amber-50 text-amber-800 dark:bg-amber-900/20 dark:text-amber-300{% endif %}">
       <p class="font-bold">{% if pf_check.ok %}Pré-fatura confere{% else %}Pré-fatura não confere — recalcular{% endif %}</p>
-      <p>Na PF: {{ pf_check.lines }} porta + {{ pf_check.pudo }} PUDO = {{ pf_check.total }} · Sistema: {{ t.delivered }}</p>
+      <p>Na pré-fatura: {{ pf_check.lines }} porta + {{ pf_check.pudo }} PUDO = {{ pf_check.total }} · Sistema: {{ t.delivered }}</p>
     </div>
     {% endif %}
   </div>
@@ -52,40 +52,40 @@
       <span class="ml-auto text-xs text-gray-500">Valor estimado: <b class="text-gray-900 dark:text-white">{{ a.total|eur }}</b></span>
     </summary>
     <div class="overflow-x-auto border-t border-gray-100 dark:border-gray-700">
-      <table class="w-full text-sm">
-        <thead class="bg-gray-50 dark:bg-gray-900/40 text-xs uppercase text-gray-500 dark:text-gray-400">
+      <table class="lf-table">
+        <thead>
           <tr>
-            <th class="px-4 py-2 text-left">Dia</th>
-            <th class="px-4 py-2 text-right">Total entregue</th>
-            <th class="px-4 py-2 text-right">Porta</th>
-            <th class="px-4 py-2 text-right">Mesma porta</th>
-            <th class="px-4 py-2 text-right">PUDO</th>
-            <th class="px-4 py-2 text-right">Falhas</th>
+            <th >Dia</th>
+            <th class="text-right">Total entregue</th>
+            <th class="text-right">Porta</th>
+            <th class="text-right">Mesma porta</th>
+            <th class="text-right">PUDO</th>
+            <th class="text-right">Falhas</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-gray-100 dark:divide-gray-700 tabular-nums">
+        <tbody>
           {% for d in bd.days %}
           <tr class="text-gray-800 dark:text-gray-200">
-            <td class="px-4 py-1.5 font-mono">{{ d.date|date:"D d/m"|capfirst }}</td>
-            <td class="px-4 py-1.5 text-right font-bold">{{ d.delivered }}</td>
-            <td class="px-4 py-1.5 text-right">{{ d.door_normal }}</td>
+            <td class="font-mono">{{ d.date|date:"D d/m"|capfirst }}</td>
+            <td class="text-right font-bold">{{ d.delivered }}</td>
+            <td class="text-right">{{ d.door_normal }}</td>
             <td class="px-4 py-1.5 text-right {% if d.same_door %}text-teal-600 dark:text-teal-400 font-semibold{% else %}text-gray-400{% endif %}">{{ d.same_door }}</td>
             <td class="px-4 py-1.5 text-right {% if d.pudo %}text-violet-600 dark:text-violet-400 font-semibold{% else %}text-gray-400{% endif %}">{{ d.pudo }}</td>
             <td class="px-4 py-1.5 text-right {% if d.failures %}text-rose-600 dark:text-rose-400{% else %}text-gray-400{% endif %}">{{ d.failures }}</td>
           </tr>
           {% empty %}
-          <tr><td colspan="6" class="px-4 py-4 text-center text-gray-500 italic">Sem entregas no período.</td></tr>
+          <tr><td colspan="6" class="text-center text-gray-500 italic">Sem entregas no período.</td></tr>
           {% endfor %}
         </tbody>
         {% if bd.days %}
         <tfoot class="bg-gray-50 dark:bg-gray-900/40 font-bold text-gray-900 dark:text-white tabular-nums">
           <tr>
-            <td class="px-4 py-2">Total</td>
-            <td class="px-4 py-2 text-right">{{ t.delivered }}</td>
-            <td class="px-4 py-2 text-right">{{ t.door_normal }}</td>
-            <td class="px-4 py-2 text-right">{{ t.same_door }}</td>
-            <td class="px-4 py-2 text-right">{{ t.pudo }}</td>
-            <td class="px-4 py-2 text-right">{{ t.failures }}</td>
+            <td >Total</td>
+            <td class="text-right">{{ t.delivered }}</td>
+            <td class="text-right">{{ t.door_normal }}</td>
+            <td class="text-right">{{ t.same_door }}</td>
+            <td class="text-right">{{ t.pudo }}</td>
+            <td class="text-right">{{ t.failures }}</td>
           </tr>
         </tfoot>
         {% endif %}

@@ -6,18 +6,18 @@
 {# ─── KPIs principais (Hoje, Semana, Mês, Ano) ─── #}
 <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
 
-  <div class="bg-brand-purple rounded-2xl p-5 text-white shadow-md hover:shadow-lg transition">
+  <div class="lf-kpi">
     <div class="flex items-center justify-between mb-2">
-      <span class="text-xs font-bold uppercase tracking-wider text-emerald-100">Hoje</span>
-      <i data-lucide="sun" class="w-5 h-5 text-emerald-100"></i>
+      <span class="lf-kpi-label">Hoje</span>
+      <i data-lucide="sun" class="w-5 h-5 "></i>
     </div>
-    <p class="text-4xl font-extrabold">{{ kpis_today.delivered }}</p>
-    <p class="text-xs text-emerald-100 mt-1">entregues · {{ kpis_today.success_rate|floatformat:0 }}% sucesso</p>
-    <div class="mt-3 grid grid-cols-4 gap-1 text-[11px]">
-      <div><div class="font-bold text-base">{{ kpis_today.split.door_normal }}</div><div class="text-emerald-100">porta</div></div>
-      <div><div class="font-bold text-base">{{ kpis_today.split.same_door }}</div><div class="text-emerald-100">mesma porta</div></div>
-      <div><div class="font-bold text-base">{{ kpis_today.split.pudo }}</div><div class="text-emerald-100">PUDO</div></div>
-      <div><div class="font-bold text-base">{{ kpis_today.failures }}</div><div class="text-emerald-100">falhas</div></div>
+    <p class="lf-kpi-value">{{ kpis_today.delivered }}</p>
+    <p class="lf-kpi-note">entregues · {{ kpis_today.success_rate|pct:0 }} sucesso</p>
+    <div class="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-1 text-[11px]">
+      <div><div class="font-bold text-base">{{ kpis_today.split.door_normal }}</div><div class="lf-kpi-note">porta</div></div>
+      <div><div class="font-bold text-base">{{ kpis_today.split.same_door }}</div><div class="lf-kpi-note">mesma porta</div></div>
+      <div><div class="font-bold text-base">{{ kpis_today.split.pudo }}</div><div class="lf-kpi-note">PUDO</div></div>
+      <div><div class="font-bold text-base">{{ kpis_today.failures }}</div><div class="lf-kpi-note">falhas</div></div>
     </div>
   </div>
 
@@ -29,12 +29,12 @@
       </div>
     </div>
     <p class="text-4xl font-extrabold text-gray-900 dark:text-white">{{ kpis_week.delivered }}</p>
-    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">entregues · {{ kpis_week.success_rate|floatformat:0 }}% sucesso</p>
-    <div class="mt-3 grid grid-cols-4 gap-1 text-[11px]">
+    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">entregues · {{ kpis_week.success_rate|pct:0 }} sucesso</p>
+    <div class="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-1 text-[11px]">
       <div><div class="font-bold text-base">{{ kpis_week.split.door_normal }}</div><div class="text-gray-500">porta</div></div>
       <div><div class="font-bold text-base text-teal-600">{{ kpis_week.split.same_door }}</div><div class="text-gray-500">mesma porta</div></div>
-      <div><div class="font-bold text-base text-violet-600">{{ kpis_week.split.pudo }}</div><div class="text-gray-500">PUDO</div></div>
-      <div><div class="font-bold text-base text-rose-600">{{ kpis_week.failures }}</div><div class="text-gray-500">falhas</div></div>
+      <div><div class="font-bold text-base text-violet-600 dark:text-violet-300">{{ kpis_week.split.pudo }}</div><div class="text-gray-500">PUDO</div></div>
+      <div><div class="font-bold text-base text-rose-600 dark:text-rose-300">{{ kpis_week.failures }}</div><div class="text-gray-500">falhas</div></div>
     </div>
   </div>
 
@@ -46,12 +46,12 @@
       </div>
     </div>
     <p class="text-4xl font-extrabold text-gray-900 dark:text-white">{{ kpis_month.delivered }}</p>
-    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">entregues · {{ kpis_month.success_rate|floatformat:0 }}% sucesso</p>
-    <div class="mt-3 grid grid-cols-4 gap-1 text-[11px]">
+    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">entregues · {{ kpis_month.success_rate|pct:0 }} sucesso</p>
+    <div class="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-1 text-[11px]">
       <div><div class="font-bold text-base">{{ kpis_month.split.door_normal }}</div><div class="text-gray-500">porta</div></div>
       <div><div class="font-bold text-base text-teal-600">{{ kpis_month.split.same_door }}</div><div class="text-gray-500">mesma porta</div></div>
-      <div><div class="font-bold text-base text-violet-600">{{ kpis_month.split.pudo }}</div><div class="text-gray-500">PUDO</div></div>
-      <div><div class="font-bold text-base text-rose-600">{{ kpis_month.failures }}</div><div class="text-gray-500">falhas</div></div>
+      <div><div class="font-bold text-base text-violet-600 dark:text-violet-300">{{ kpis_month.split.pudo }}</div><div class="text-gray-500">PUDO</div></div>
+      <div><div class="font-bold text-base text-rose-600 dark:text-rose-300">{{ kpis_month.failures }}</div><div class="text-gray-500">falhas</div></div>
     </div>
   </div>
 
@@ -63,12 +63,12 @@
       </div>
     </div>
     <p class="text-4xl font-extrabold text-gray-900 dark:text-white">{{ kpis_year.delivered }}</p>
-    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">entregues · {{ kpis_year.success_rate|floatformat:0 }}% sucesso</p>
-    <div class="mt-3 grid grid-cols-4 gap-1 text-[11px]">
+    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">entregues · {{ kpis_year.success_rate|pct:0 }} sucesso</p>
+    <div class="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-1 text-[11px]">
       <div><div class="font-bold text-base">{{ kpis_year.split.door_normal }}</div><div class="text-gray-500">porta</div></div>
       <div><div class="font-bold text-base text-teal-600">{{ kpis_year.split.same_door }}</div><div class="text-gray-500">mesma porta</div></div>
-      <div><div class="font-bold text-base text-violet-600">{{ kpis_year.split.pudo }}</div><div class="text-gray-500">PUDO</div></div>
-      <div><div class="font-bold text-base text-rose-600">{{ kpis_year.failures }}</div><div class="text-gray-500">falhas</div></div>
+      <div><div class="font-bold text-base text-violet-600 dark:text-violet-300">{{ kpis_year.split.pudo }}</div><div class="text-gray-500">PUDO</div></div>
+      <div><div class="font-bold text-base text-rose-600 dark:text-rose-300">{{ kpis_year.failures }}</div><div class="text-gray-500">falhas</div></div>
     </div>
   </div>
 </div>
@@ -80,22 +80,19 @@
   <div class="bg-white dark:bg-gray-800 rounded-2xl p-5 border border-gray-200/50 dark:border-gray-700/50 shadow-sm">
     <div class="flex items-center gap-2 mb-3">
       <i data-lucide="trophy" class="w-5 h-5 text-amber-500"></i>
-      <h2 class="font-bold text-gray-900 dark:text-white">Ranking do Mês</h2>
+      <h2 class="font-bold text-gray-900 dark:text-white">Ranking do mês</h2>
     </div>
     {% if ranking.position %}
       <div class="text-center py-4">
         <div class="inline-flex items-center justify-center w-20 h-20 rounded-full
-          {% if ranking.position == 1 %}bg-brand-purple
-          {% elif ranking.position == 2 %}bg-brand-purple
-          {% elif ranking.position == 3 %}bg-brand-purple
-          {% else %}bg-brand-purple{% endif %} text-white shadow-lg">
+          bg-brand-purple text-white shadow-lg">
           <span class="text-2xl font-extrabold">#{{ ranking.position }}</span>
         </div>
         <p class="text-sm text-gray-700 dark:text-gray-300 mt-3">
           de <span class="font-bold">{{ ranking.total }}</span> motoristas ativos
         </p>
         <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-          Taxa de entrega: <span class="font-bold text-emerald-600">{{ ranking.success_rate|floatformat:1 }}%</span>
+          Taxa de entrega: <span class="font-bold text-emerald-600 dark:text-emerald-300">{{ ranking.success_rate|pct }}</span>
         </p>
       </div>
     {% else %}
@@ -146,7 +143,7 @@
         <p class="text-[11px] text-emerald-700 dark:text-emerald-400 mt-0.5">Assinados</p>
       </div>
     </div>
-    <p class="text-[11px] text-gray-400 dark:text-gray-500 italic mt-3 text-center">Disponível em breve (Fase 3)</p>
+    <p class="text-[11px] text-gray-400 dark:text-gray-500 italic mt-3 text-center">Disponível em breve</p>
   </div>
 </div>
 
@@ -256,12 +253,12 @@
           </span>
         </div>
         <button @click="openTransferModal()" :disabled="drawer.selected.length === 0"
-                class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded text-xs font-semibold flex items-center gap-1.5">
+                class="lf-btn lf-btn-ghost disabled:opacity-40 disabled:cursor-not-allowed">
           <i data-lucide="users" class="w-3.5 h-3.5"></i>
           Transferir <span x-text="drawer.selected.length || ''"></span>
         </button>
         <button @click="openPriceModal()" :disabled="drawer.selected.length === 0"
-                class="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded text-xs font-semibold flex items-center gap-1.5">
+                class="lf-btn lf-btn-ghost disabled:opacity-40 disabled:cursor-not-allowed">
           <i data-lucide="euro" class="w-3.5 h-3.5"></i>
           Editar preço <span x-text="drawer.selected.length || ''"></span>
         </button>
@@ -295,7 +292,7 @@
                 </td>
                 {% endif %}
                 <td class="px-3 py-2 font-mono text-xs">
-                  <a :href="'/settlements/cainiao/waybill/' + r.waybill + '/'" target="_blank" class="text-indigo-600 hover:underline" x-text="r.waybill"></a>
+                  <a :href="'/settlements/cainiao/waybill/' + r.waybill + '/'" target="_blank" class="text-indigo-600 dark:text-indigo-300 hover:underline" x-text="r.waybill"></a>
                   <template x-if="r.price_override">
                     <div class="mt-0.5 flex items-center gap-1">
                       <span class="px-1.5 py-0.5 bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 rounded font-bold text-[10px]" :title="'Razão: ' + (r.price_override.reason || '—')">
@@ -361,7 +358,7 @@
     <div class="absolute inset-0 bg-black/70" @click="transferModal.open = false"></div>
     <div class="relative bg-white dark:bg-gray-800 rounded-xl w-full max-w-md shadow-2xl">
       <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
-        <i data-lucide="users" class="w-5 h-5 text-emerald-600"></i>
+        <i data-lucide="users" class="w-5 h-5 text-emerald-600 dark:text-emerald-300"></i>
         <h3 class="font-bold">Transferir <span x-text="drawer.selected.length"></span> entrega(s)</h3>
       </div>
       <div class="p-5 space-y-3">
@@ -379,7 +376,7 @@
               </button>
             </template>
           </div>
-          <p x-show="transferModal.targetId" class="mt-1 text-xs text-emerald-600">Seleccionado: <strong x-text="transferModal.targetName"></strong></p>
+          <p x-show="transferModal.targetId" class="mt-1 text-xs text-emerald-600 dark:text-emerald-300">Seleccionado: <strong x-text="transferModal.targetName"></strong></p>
         </div>
         <div>
           <label class="block text-xs font-semibold mb-1">Razão</label>
@@ -390,7 +387,7 @@
       <div class="px-5 py-3 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-2">
         <button @click="transferModal.open = false" class="px-3 py-1.5 bg-gray-200 dark:bg-gray-700 rounded text-sm">Cancelar</button>
         <button @click="confirmTransfer()" :disabled="!transferModal.targetId || transferModal.submitting"
-                class="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white rounded text-sm font-semibold flex items-center gap-1.5">
+                class="lf-btn lf-btn-ghost disabled:opacity-40">
           <i data-lucide="check" class="w-4 h-4"></i> Confirmar
         </button>
       </div>
@@ -403,7 +400,7 @@
     <div class="absolute inset-0 bg-black/70" @click="priceModal.open = false"></div>
     <div class="relative bg-white dark:bg-gray-800 rounded-xl w-full max-w-md shadow-2xl">
       <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
-        <i data-lucide="euro" class="w-5 h-5 text-amber-600"></i>
+        <i data-lucide="euro" class="w-5 h-5 text-amber-600 dark:text-amber-300"></i>
         <h3 class="font-bold">Editar preço · <span x-text="drawer.selected.length"></span> pacote(s)</h3>
       </div>
       <div class="p-5 space-y-3">
@@ -425,7 +422,7 @@
       <div class="px-5 py-3 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-2">
         <button @click="priceModal.open = false" class="px-3 py-1.5 bg-gray-200 dark:bg-gray-700 rounded text-sm">Cancelar</button>
         <button @click="confirmPriceOverride()" :disabled="!priceModal.price || priceModal.submitting"
-                class="px-4 py-1.5 bg-amber-600 hover:bg-amber-700 disabled:opacity-40 text-white rounded text-sm font-semibold flex items-center gap-1.5">
+                class="lf-btn lf-btn-ghost disabled:opacity-40">
           <i data-lucide="check" class="w-4 h-4"></i> Aplicar
         </button>
       </div>
@@ -599,7 +596,7 @@ function portalDayDrawer(driverId) {
 <div class="bg-white dark:bg-gray-800 rounded-2xl p-5 border border-gray-200/50 dark:border-gray-700/50 shadow-sm mb-4">
   <div class="flex items-center gap-2 mb-3 flex-wrap">
     <i data-lucide="calendar-days" class="w-5 h-5 text-emerald-500"></i>
-    <h2 class="font-bold text-gray-900 dark:text-white">Heatmap anual {{ heatmap_year }}</h2>
+    <h2 class="font-bold text-gray-900 dark:text-white">Mapa de calor anual {{ heatmap_year }}</h2>
     <span class="text-xs text-gray-500">{{ heatmap_total }} entregas em {{ heatmap_active_days }} dia{{ heatmap_active_days|pluralize:"s" }} ativo{{ heatmap_active_days|pluralize:"s" }}</span>
   </div>
   <div class="overflow-x-auto pb-2">
@@ -651,11 +648,11 @@ function portalDayDrawer(driverId) {
           <div class="flex-1 min-w-0">
             <div class="flex items-center justify-between">
               <span class="text-xs text-gray-700 dark:text-gray-300 font-semibold">{{ c.total }} pacotes</span>
-              <span class="text-[11px] {% if c.success_rate >= 90 %}text-emerald-600{% elif c.success_rate >= 70 %}text-amber-600{% else %}text-rose-600{% endif %} font-semibold">{{ c.success_rate|floatformat:0 }}%</span>
+              <span class="text-[11px] {% if c.success_rate >= 90 %}text-emerald-600 dark:text-emerald-300{% elif c.success_rate >= 70 %}text-amber-600{% else %}text-rose-600{% endif %} font-semibold">{{ c.success_rate|pct:0 }}</span>
             </div>
             <div class="flex items-center gap-2 text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">
-              <span class="text-emerald-600">{{ c.delivered }} ok</span>
-              <span class="text-rose-600">{{ c.failures }} fail</span>
+              <span class="text-emerald-600 dark:text-emerald-300">{{ c.delivered }} ok</span>
+              <span class="text-rose-600 dark:text-rose-300">{{ c.failures }} fail</span>
             </div>
           </div>
         </div>
@@ -677,28 +674,28 @@ function portalDayDrawer(driverId) {
       {% endif %}
     </div>
     <div class="overflow-x-auto">
-      <table class="w-full">
-        <thead class="bg-gray-50 dark:bg-gray-900/40">
+      <table class="lf-table">
+        <thead>
           <tr>
-            <th class="px-3 py-2 text-left text-[11px] font-semibold text-gray-600 dark:text-gray-400 uppercase">N.º de envio</th>
-            <th class="px-3 py-2 text-left text-[11px] font-semibold text-gray-600 dark:text-gray-400 uppercase">Data</th>
-            <th class="px-3 py-2 text-left text-[11px] font-semibold text-gray-600 dark:text-gray-400 uppercase">CP4</th>
-            <th class="px-3 py-2 text-left text-[11px] font-semibold text-gray-600 dark:text-gray-400 uppercase">Estado</th>
+            <th >N.º de envio</th>
+            <th >Data</th>
+            <th >CP4</th>
+            <th >Estado</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+        <tbody>
           {% for w in waybills_page %}
           <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
-            <td class="px-3 py-1.5">
+            <td >
               <a href="/settlements/cainiao/waybill/{{ w.waybill_number }}/"
                  title="Ver vida do pacote"
                  class="font-mono text-xs text-blue-600 dark:text-blue-400 hover:underline">
                 {{ w.waybill_number }}
               </a>
             </td>
-            <td class="px-3 py-1.5 text-xs text-gray-700 dark:text-gray-300">{{ w.task_date|date:"d/m/Y" }}</td>
-            <td class="px-3 py-1.5 text-xs font-mono text-gray-600 dark:text-gray-400">{{ w.zip_code|slice:":4"|default:"—" }}</td>
-            <td class="px-3 py-1.5">
+            <td class="text-xs text-gray-700 dark:text-gray-300">{{ w.task_date|date:"d/m/Y" }}</td>
+            <td class="text-xs font-mono text-gray-600 dark:text-gray-400">{{ w.zip_code|slice:":4"|default:"—" }}</td>
+            <td >
               <span class="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase
                 {% if w.task_status == 'Delivered' %}bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300
                 {% elif w.task_status == 'Attempt Failure' %}bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-300
@@ -709,7 +706,7 @@ function portalDayDrawer(driverId) {
             </td>
           </tr>
           {% empty %}
-          <tr><td colspan="4" class="px-3 py-6 text-center text-xs text-gray-500 italic">Sem pacotes este mês.</td></tr>
+          <tr><td colspan="4" class="text-center text-xs text-gray-500 italic">Sem pacotes este mês.</td></tr>
           {% endfor %}
         </tbody>
       </table>

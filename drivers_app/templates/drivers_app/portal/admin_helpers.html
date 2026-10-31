@@ -17,14 +17,14 @@
   <input type="hidden" name="action" value="add">
   <h3 class="font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
     <i data-lucide="user-plus" class="w-5 h-5 text-emerald-500"></i>
-    Adicionar Helper
+    Adicionar helper
   </h3>
-  <div class="flex gap-3">
+  <div class="flex flex-wrap gap-3">
     <input type="text" name="helper_name" required maxlength="200"
            placeholder="Nome do helper (como aparece nas planilhas)"
            class="flex-1 px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
     <button type="submit"
-            class="px-4 py-2 text-sm bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium inline-flex items-center gap-1.5">
+            class="lf-btn lf-btn-ghost">
       <i data-lucide="plus" class="w-4 h-4"></i> Adicionar
     </button>
   </div>
@@ -33,7 +33,7 @@
 <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
   <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
     <i data-lucide="users" class="w-5 h-5 text-purple-500"></i>
-    <h3 class="font-bold text-gray-900 dark:text-white">Helpers Registados</h3>
+    <h3 class="font-bold text-gray-900 dark:text-white">Helpers registados</h3>
     <span class="ml-auto text-xs text-gray-500">{{ helpers.count }} registos</span>
   </div>
   <div class="divide-y divide-gray-100 dark:divide-gray-700">

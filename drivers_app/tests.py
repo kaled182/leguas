@@ -732,7 +732,7 @@ class PendingDeductionsTests(TestCase):
         r = self.client.get(reverse("drivers_app:driver_portal_invoices", args=[self.drv.id]))
         self.assertEqual(r.status_code, 200)
         self.assertContains(r, "A descontar")
-        self.assertContains(r, "Entra na próxima PF")
+        self.assertContains(r, "Entra na próxima pré-fatura")
         self.assertContains(r, "Ver histórico (2)")
 
 

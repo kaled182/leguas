@@ -1,47 +1,46 @@
 {% extends 'settlements/base.html' %}
 {% block title %}Regras de Bónus — {{ partner.name }}{% endblock %}
 {% block content %}
-<div class="max-w-5xl mx-auto p-6 space-y-4">
-  <nav class="text-xs text-gray-500">
-    <a href="{% url 'core:partner-financial' partner.pk %}" class="hover:text-indigo-600">← Financeiro</a>
-    · Regras de Bónus/Penalty
-  </nav>
-
-  <div class="bg-white dark:bg-gray-800 rounded-xl border p-6">
-    <div class="flex items-center justify-between mb-4">
-      <h1 class="text-xl font-bold text-gray-900 dark:text-white">Regras · {{ partner.name }}</h1>
-      <button onclick="_brNew()" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded-lg">
-        + Nova Regra
-      </button>
+<div class="max-w-5xl mx-auto space-y-4">
+  <div class="lf-page-header">
+    <div class="min-w-0">
+      <h1 class="lf-page-title">Regras de bónus de {{ partner.name }}</h1>
+      <p class="lf-page-subtitle">Bónus e penalizações por condição</p>
     </div>
+    <div class="lf-page-actions">
+      <a class="lf-btn lf-btn-ghost" href="{% url 'core:partner-financial' partner.pk %}"><i data-lucide="arrow-left" class="w-4 h-4" aria-hidden="true"></i>Financeiro</a>
+      <button type="button" onclick="_brNew()" class="lf-btn lf-btn-primary"><i data-lucide="plus" class="w-4 h-4" aria-hidden="true"></i>Nova regra</button>
+    </div>
+  </div>
 
-    <table class="w-full text-sm">
-      <thead class="text-xs uppercase text-gray-500 border-b">
+  <div class="lf-table-wrap">
+    <table class="lf-table">
+      <thead>
         <tr>
-          <th class="px-3 py-2 text-left">Nome</th>
-          <th class="px-3 py-2 text-left">Condição</th>
-          <th class="px-3 py-2 text-left">Efeito</th>
-          <th class="px-3 py-2 text-center">Período</th>
-          <th class="px-3 py-2 text-center">Ativa</th>
-          <th class="px-3 py-2 text-right">Ações</th>
+          <th scope="col">Nome</th>
+          <th scope="col">Condição</th>
+          <th scope="col">Efeito</th>
+          <th scope="col" class="text-center">Período</th>
+          <th scope="col" class="text-center">Ativa</th>
+          <th scope="col" class="text-right">Ações</th>
         </tr>
       </thead>
-      <tbody id="br-tbody" class="divide-y divide-gray-100 dark:divide-gray-700/50">
+      <tbody id="br-tbody">
         {% for r in rules %}
         <tr data-id="{{ r.id }}">
-          <td class="px-3 py-2">{{ r.name }}</td>
-          <td class="px-3 py-2 text-xs">{{ r.get_condition_display }} · {{ r.condition_value }}</td>
-          <td class="px-3 py-2 text-xs">{{ r.get_effect_display }} · {{ r.effect_value }}</td>
-          <td class="px-3 py-2 text-center text-xs">{{ r.get_scope_period_display }}</td>
-          <td class="px-3 py-2 text-center">
+          <td>{{ r.name }}</td>
+          <td class="text-xs">{{ r.get_condition_display }} · {{ r.condition_value }}</td>
+          <td class="text-xs">{{ r.get_effect_display }} · {{ r.effect_value }}</td>
+          <td class="text-center text-xs">{{ r.get_scope_period_display }}</td>
+          <td class="text-center">
             {% if r.enabled %}<span class="text-emerald-600">✓</span>{% else %}<span class="text-gray-400">—</span>{% endif %}
           </td>
-          <td class="px-3 py-2 text-right">
-            <button onclick="_brDelete({{ r.id }})" class="text-xs text-red-600 hover:underline">Remover</button>
+          <td class="text-right">
+            <button type="button" onclick="_brDelete({{ r.id }})" class="lf-btn lf-btn-ghost">Remover</button>
           </td>
         </tr>
         {% empty %}
-        <tr><td colspan="6" class="py-8 text-center text-gray-400 text-sm">Sem regras configuradas.</td></tr>
+        <tr><td colspan="6"><div class="lf-empty"><p class="lf-empty-title">Sem regras</p><p>Crie a primeira regra de bónus.</p></div></td></tr>
         {% endfor %}
       </tbody>
     </table>
@@ -50,25 +49,25 @@
 
 <div id="br-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
   <div class="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-lg space-y-3">
-    <h3 class="font-bold text-gray-900 dark:text-white">Nova Regra</h3>
-    <input id="br-name" placeholder="Nome" class="w-full px-3 py-2 border rounded-lg text-sm">
-    <select id="br-condition" class="w-full px-3 py-2 border rounded-lg text-sm">
+    <h3 class="font-semibold text-gray-900 dark:text-white">Nova regra</h3>
+    <input id="br-name" placeholder="Nome" aria-label="Nome" class="lf-control">
+    <select id="br-condition" aria-label="Condição" class="lf-control">
       {% for c in condition_choices %}<option value="{{ c.0 }}">{{ c.1 }}</option>{% endfor %}
     </select>
-    <input id="br-cvalue" type="number" step="0.01" placeholder="Valor da condição"
-      class="w-full px-3 py-2 border rounded-lg text-sm">
-    <select id="br-effect" class="w-full px-3 py-2 border rounded-lg text-sm">
+    <input id="br-cvalue" type="number" step="0.01" placeholder="Valor da condição" aria-label="Valor da condição"
+      class="lf-control">
+    <select id="br-effect" aria-label="Efeito" class="lf-control">
       {% for c in effect_choices %}<option value="{{ c.0 }}">{{ c.1 }}</option>{% endfor %}
     </select>
-    <input id="br-evalue" type="number" step="0.01" placeholder="Valor do efeito"
-      class="w-full px-3 py-2 border rounded-lg text-sm">
-    <select id="br-scope" class="w-full px-3 py-2 border rounded-lg text-sm">
+    <input id="br-evalue" type="number" step="0.01" placeholder="Valor do efeito" aria-label="Valor do efeito"
+      class="lf-control">
+    <select id="br-scope" aria-label="Período" class="lf-control">
       {% for c in scope_choices %}<option value="{{ c.0 }}">{{ c.1 }}</option>{% endfor %}
     </select>
     <div class="flex justify-end gap-2 pt-2">
       <button onclick="document.getElementById('br-modal').classList.add('hidden')"
-        class="px-3 py-1.5 text-gray-600 text-sm">Cancelar</button>
-      <button onclick="_brSave()" class="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-sm">Guardar</button>
+        class="lf-btn lf-btn-ghost">Cancelar</button>
+      <button type="button" onclick="_brSave()" class="lf-btn lf-btn-primary">Guardar</button>
     </div>
   </div>
 </div>

@@ -308,6 +308,7 @@ def admin_missing_contracts(request):
                 "missing": missing,
                 "applicable_count": len(applicable),
                 "missing_count": len(missing),
+                "signed_count": len(applicable) - len(missing),
             })
 
     rows.sort(key=lambda r: -r["missing_count"])

@@ -107,6 +107,13 @@
     if (!match) return value || '';
     return `${match[3]}/${match[2]}/${match[1]}${match[4] ? ` ${match[4]}` : ''}`;
   };
+  // Formato pt-PT: 1 234,56 €
+  window.lfEur = (value) => {
+    const number = Number(value);
+    if (!Number.isFinite(number)) return '';
+    const [whole, cents] = Math.abs(number).toFixed(2).split('.');
+    return `${number < 0 ? '−' : ''}${whole.replace(/\B(?=(\d{3})+(?!\d))/g, '\u00a0')},${cents}\u00a0€`;
+  };
   window.lfStatus = (value) => STATUS_LABELS[value] || value;
   window.lfToast = toast;
 })();

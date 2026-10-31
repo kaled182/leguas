@@ -4,27 +4,18 @@
 
 {% block content %}
 <div class="max-w-4xl mx-auto space-y-6">
-  <!-- Header -->
-  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 fade-in">
-    <div class="flex items-start gap-4">
-      <div class="flex-shrink-0">
-        <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center">
-          <i data-lucide="building-2" class="w-6 h-6 text-blue-600 dark:text-blue-400"></i>
-        </div>
-      </div>
-      <div>
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-1">{{ title }}</h1>
-        <p class="text-sm text-gray-500 dark:text-gray-400">
-          <a href="{% url 'core:partner-list' %}" class="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
-            ← Voltar para Parceiros
-          </a>
-        </p>
-      </div>
+  <div class="lf-page-header">
+    <div class="min-w-0">
+      <h1 class="lf-page-title">{{ title }}</h1>
+      <p class="lf-page-subtitle">Dados do cliente, faturação e integrações</p>
+    </div>
+    <div class="lf-page-actions">
+      <a class="lf-btn lf-btn-ghost" href="{% url 'core:partner-list' %}"><i data-lucide="arrow-left" class="w-4 h-4" aria-hidden="true"></i>Voltar</a>
     </div>
   </div>
 
   <!-- Formulário -->
-  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 slide-in">
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6">
     <form method="post" class="space-y-6">
       {% csrf_token %}
       
@@ -41,15 +32,14 @@
       
       <!-- Identificação -->
       <div class="space-y-4">
-        <h2 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2 pb-2 border-b border-gray-200 dark:border-gray-700">
-          <i data-lucide="info" class="w-5 h-5 text-blue-600 dark:text-blue-400"></i>
+        <h2 class="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2 pb-2 border-b border-gray-200 dark:border-gray-700">
           Identificação
         </h2>
         
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div class="md:col-span-2">
             <label for="{{ form.name.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Nome do Parceiro <span class="text-red-500">*</span>
+              Nome do cliente <span class="text-red-500">*</span>
             </label>
             {{ form.name }}
             {% if form.name.errors %}
@@ -71,7 +61,7 @@
           
           <div>
             <label for="{{ form.contact_email.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Email de Contacto <span class="text-red-500">*</span>
+              Email de contacto <span class="text-red-500">*</span>
             </label>
             {{ form.contact_email }}
             {% if form.contact_email.errors %}
@@ -82,7 +72,7 @@
           
           <div class="md:col-span-2">
             <label for="{{ form.contact_phone.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Telefone de Contacto
+              Telefone de contacto
             </label>
             {{ form.contact_phone }}
             {% if form.contact_phone.errors %}
@@ -95,15 +85,14 @@
       
       <!-- Configurações -->
       <div class="space-y-4">
-        <h2 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2 pb-2 border-b border-gray-200 dark:border-gray-700">
-          <i data-lucide="settings" class="w-5 h-5 text-blue-600 dark:text-blue-400"></i>
-          Configurações Operacionais
+        <h2 class="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2 pb-2 border-b border-gray-200 dark:border-gray-700">
+          Configurações operacionais
         </h2>
         
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label for="{{ form.default_delivery_time_days.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Prazo de Entrega Padrão (dias)
+              Prazo de entrega padrão (dias)
             </label>
             {{ form.default_delivery_time_days }}
             {% if form.default_delivery_time_days.errors %}
@@ -116,7 +105,7 @@
             <div class="flex items-center gap-2">
               {{ form.auto_assign_orders }}
               <label for="{{ form.auto_assign_orders.id_for_label }}" class="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Auto-Atribuir Pedidos
+                Atribuir pedidos automaticamente
               </label>
             </div>
             {% if form.auto_assign_orders.errors %}
@@ -128,15 +117,14 @@
       
       <!-- Financeiro -->
       <div class="space-y-4">
-        <h2 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2 pb-2 border-b border-gray-200 dark:border-gray-700">
-          <i data-lucide="euro" class="w-5 h-5 text-emerald-600 dark:text-emerald-400"></i>
+        <h2 class="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2 pb-2 border-b border-gray-200 dark:border-gray-700">
           Financeiro
         </h2>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label for="{{ form.price_per_package.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Valor por Pacote — Parceiro paga à Léguas (€) *
+              Valor por pacote: o cliente paga à Léguas (€) *
             </label>
             {{ form.price_per_package }}
             <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ form.price_per_package.help_text }}</p>
@@ -144,7 +132,7 @@
 
           <div>
             <label for="{{ form.driver_default_price_per_package.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Valor por Pacote — Léguas paga ao Motorista (default) (€)
+              Valor por pacote: a Léguas paga ao motorista (valor por omissão) (€)
             </label>
             {{ form.driver_default_price_per_package }}
             <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ form.driver_default_price_per_package.help_text }}</p>
@@ -159,7 +147,7 @@
 
           <div>
             <label for="{{ form.vat_rate_override.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Taxa IVA — override (%)
+              Taxa de IVA personalizada (%)
             </label>
             {{ form.vat_rate_override }}
             <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ form.vat_rate_override.help_text }}</p>
@@ -198,15 +186,15 @@
       <div class="space-y-4 bg-violet-50 dark:bg-violet-900/10 rounded-xl p-4 border border-violet-200 dark:border-violet-700/40">
         <h2 class="text-lg font-semibold text-violet-700 dark:text-violet-300 flex items-center gap-2 pb-2 border-b border-violet-200 dark:border-violet-700/40">
           <i data-lucide="package" class="w-5 h-5"></i>
-          PUDO — Pickup &amp; Drop-Off
+          PUDO: Pickup &amp; Drop-Off
         </h2>
         <p class="text-xs text-violet-700/80 dark:text-violet-300/70">
-          Pacotes com <code>Delivery Type = PUDO</code> no EPOD seguem regras de pagamento próprias: 1ª entrega num PUDO + valor menor para cada adicional no mesmo. Se desactivado, são pagos pelo preço padrão.
+          Pacotes com <code>Delivery Type = PUDO</code> no EPOD seguem regras de pagamento próprias: 1ª entrega num PUDO + valor menor para cada adicional no mesmo. Se desativado, são pagos pelo preço padrão.
         </p>
 
         <label class="flex items-center gap-2 cursor-pointer pt-1">
           {{ form.pudo_enabled }}
-          <span class="text-sm font-semibold text-gray-900 dark:text-white">Activar regras PUDO</span>
+          <span class="text-sm font-semibold text-gray-900 dark:text-white">Ativar regras PUDO</span>
         </label>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
@@ -226,7 +214,7 @@
           </div>
           <div>
             <label for="{{ form.pudo_fake_delivery_penalty.id_for_label }}" class="block text-sm font-medium text-rose-700 dark:text-rose-400 mb-2">
-              Penalização Entrega falsa (€)
+              Penalização por entrega falsa (€)
             </label>
             {{ form.pudo_fake_delivery_penalty }}
             <p class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">{{ form.pudo_fake_delivery_penalty.help_text }}</p>
@@ -260,13 +248,13 @@
 
         <label class="flex items-center gap-2 cursor-pointer pt-1">
           {{ form.same_door_enabled }}
-          <span class="text-sm font-semibold text-gray-900 dark:text-white">Activar regra da mesma porta</span>
+          <span class="text-sm font-semibold text-gray-900 dark:text-white">Ativar regra da mesma porta</span>
         </label>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
           <div>
             <label for="{{ form.same_door_additional_price.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Cada pacote adicional na mesma porta — ao driver (€)
+              Cada pacote adicional na mesma porta ao motorista (€)
             </label>
             {{ form.same_door_additional_price }}
             <p class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">Fórmula: 1º ao preço normal + (N-1) × adicional</p>
@@ -283,14 +271,13 @@
 
       <!-- Observações e Status -->
       <div class="space-y-4">
-        <h2 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2 pb-2 border-b border-gray-200 dark:border-gray-700">
-          <i data-lucide="file-text" class="w-5 h-5 text-blue-600 dark:text-blue-400"></i>
-          Observações e Estado
+        <h2 class="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2 pb-2 border-b border-gray-200 dark:border-gray-700">
+          Observações e estado
         </h2>
         
         <div>
           <label for="{{ form.notes.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Observações Internas
+            Observações internas
           </label>
           {{ form.notes }}
           {% if form.notes.errors %}
@@ -302,7 +289,7 @@
         <div class="flex items-center gap-2 p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
           {{ form.is_active }}
           <label for="{{ form.is_active.id_for_label }}" class="text-sm font-medium text-gray-700 dark:text-gray-300">
-            Parceiro Ativo
+            Cliente ativo
           </label>
           <p class="text-xs text-gray-500 dark:text-gray-400 ml-2">(Se desativado, não serão feitas novas importações de pedidos)</p>
         </div>
@@ -310,10 +297,10 @@
       
       <!-- Botões de Ação -->
       <div class="flex items-center justify-end gap-3 pt-6 border-t border-gray-200 dark:border-gray-700">
-        <a href="{% if partner %}{% url 'core:partner-detail' partner.pk %}{% else %}{% url 'core:partner-list' %}{% endif %}" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg font-medium transition-colors duration-200">
+        <a href="{% if partner %}{% url 'core:partner-detail' partner.pk %}{% else %}{% url 'core:partner-list' %}{% endif %}" class="lf-btn lf-btn-ghost">
           Cancelar
         </a>
-        <button type="submit" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200 flex items-center gap-2">
+        <button type="submit" class="lf-btn lf-btn-primary">
           <i data-lucide="save" class="w-4 h-4"></i>
           {{ button_text }}
         </button>
@@ -322,7 +309,4 @@
   </div>
 </div>
 
-<script>
-  lucide.createIcons();
-</script>
 {% endblock %}

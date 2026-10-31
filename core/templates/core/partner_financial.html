@@ -2,69 +2,32 @@
 {% load ui %}
 {% block title %}Financeiro — {{ partner.name }}{% endblock %}
 {% block content %}
-<div class="min-h-screen bg-gray-50 dark:bg-gray-900">
-<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-5">
+<div class="max-w-7xl mx-auto space-y-5">
 
-  {# Header + filtros #}
-  <div class="flex items-center justify-between gap-4 flex-wrap">
-    <div>
-      <nav class="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
-        <a href="{% url 'core:partner-detail' partner.pk %}" class="hover:text-indigo-600">← {{ partner.name }}</a>
-        <span>·</span>
-        <span>Financeiro</span>
-      </nav>
-      <h1 class="mt-1 text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-        <i data-lucide="wallet" class="w-6 h-6 text-emerald-500"></i>
-        Financeiro — {{ partner.name }}
-      </h1>
+  <div class="lf-page-header">
+    <div class="min-w-0">
+      <h1 class="lf-page-title">Financeiro de {{ partner.name }}</h1>
+      <p class="lf-page-subtitle"><a class="hover:underline" href="{% url 'core:partner-detail' partner.pk %}">Voltar a {{ partner.name }}</a></p>
     </div>
-
-    <form method="get" class="flex items-center gap-2">
-      <label class="text-xs text-gray-500 dark:text-gray-400">De:</label>
-      <input type="date" name="date_from" value="{{ date_from|date:'Y-m-d' }}"
-        class="text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg px-2 py-1">
-      <label class="text-xs text-gray-500 dark:text-gray-400">Até:</label>
-      <input type="date" name="date_to" value="{{ date_to|date:'Y-m-d' }}"
-        class="text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg px-2 py-1">
-      <button type="submit" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg">
-        Aplicar
-      </button>
-    </form>
+    <div class="lf-page-actions">
+      <a class="lf-btn lf-btn-ghost" href="{% url 'core:partner-bonus-rules' partner.pk %}"><i data-lucide="award" class="w-4 h-4" aria-hidden="true"></i>Regras de bónus</a>
+      <a class="lf-btn lf-btn-ghost" href="{% url 'core:financial-alerts' %}"><i data-lucide="bell" class="w-4 h-4" aria-hidden="true"></i>Alertas</a>
+      <button type="button" onclick="_fnOpenPreview()" class="lf-btn lf-btn-primary"><i data-lucide="zap" class="w-4 h-4" aria-hidden="true"></i>Gerar pré-faturas em lote</button>
+    </div>
   </div>
 
-  {# Toolbar de atalhos a páginas existentes #}
-  <div class="flex items-center gap-2 flex-wrap">
-    <a href="/settlements/pre-invoices/?status=NAO_PAGO"
-      class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-indigo-300 dark:border-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100">
-      <i data-lucide="receipt" class="w-3.5 h-3.5"></i>
-      Pré-faturas pendentes
-    </a>
-    <a href="{% url 'drivers_app:drivers_central' %}"
-      class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-emerald-300 dark:border-emerald-600 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100">
-      <i data-lucide="users" class="w-3.5 h-3.5"></i>
-      Motoristas ativos
-    </a>
-    <a href="{% url 'drivers_app:admin_approve_drivers' %}"
-      class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-amber-300 dark:border-amber-600 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 hover:bg-amber-100">
-      <i data-lucide="user-check" class="w-3.5 h-3.5"></i>
-      Aprovar motoristas
-    </a>
-    <a href="{% url 'drivers_app:admin_complaints_dashboard' %}"
-      class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-red-300 dark:border-red-600 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 hover:bg-red-100">
-      <i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i>
-      Reclamações
-    </a>
-    <a href="{% url 'core:partner-bonus-rules' partner.pk %}"
-      class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-purple-300 dark:border-purple-600 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 hover:bg-purple-100">
-      <i data-lucide="award" class="w-3.5 h-3.5"></i>
-      Regras Bónus
-    </a>
-    <a href="{% url 'core:financial-alerts' %}"
-      class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50">
-      <i data-lucide="bell" class="w-3.5 h-3.5"></i>
-      Alertas
-    </a>
-  </div>
+  <form method="get" class="lf-filters">
+    <label class="lf-field"><span class="lf-label">De</span><input type="date" name="date_from" value="{{ date_from|date:'Y-m-d' }}" class="lf-control"></label>
+    <label class="lf-field"><span class="lf-label">Até</span><input type="date" name="date_to" value="{{ date_to|date:'Y-m-d' }}" class="lf-control"></label>
+    <button type="submit" class="lf-btn lf-btn-ghost">Aplicar</button>
+  </form>
+
+  <nav aria-label="Atalhos" class="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+    <a class="hover:underline" href="/settlements/pre-invoices/?status=NAO_PAGO">Pré-faturas pendentes</a>
+    <a class="hover:underline" href="{% url 'drivers_app:drivers_central' %}">Central de motoristas</a>
+    <a class="hover:underline" href="{% url 'drivers_app:admin_approve_drivers' %}">Aprovar cadastros</a>
+    <a class="hover:underline" href="{% url 'drivers_app:admin_complaints_dashboard' %}">Reclamações de clientes</a>
+  </nav>
 
   {# Alerts #}
   {% if alerts %}
@@ -84,64 +47,42 @@
   </div>
   {% endif %}
 
-  {# KPIs #}
-  <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-4">
-      <p class="text-[10px] uppercase tracking-wider text-gray-500 font-semibold">Entregas</p>
-      <p class="mt-1 text-3xl font-bold text-emerald-600 dark:text-emerald-400">{{ kpis.delivered }}</p>
-      <p class="text-xs text-gray-400 mt-0.5">de {{ kpis.total_tasks }} tarefas · {{ kpis.success_rate }}% sucesso</p>
+  <div class="lf-kpi-grid">
+    <div class="lf-kpi">
+      <span class="lf-kpi-label">Entregas</span>
+      <span class="lf-kpi-value">{{ kpis.delivered|pt_int }}</span>
+      <span class="lf-kpi-note">de {{ kpis.total_tasks|pt_int }} tarefas · {{ kpis.success_rate|pct }} de sucesso</span>
     </div>
-    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-4">
-      <p class="text-[10px] uppercase tracking-wider text-gray-500 font-semibold">A Receber (bruto)</p>
-      <p class="mt-1 text-3xl font-bold text-gray-900 dark:text-white">{{ kpis.gross_receivable|eur }}</p>
-      <p class="text-xs text-gray-400 mt-0.5">{{ kpis.delivered }} × €{{ partner.price_per_package|floatformat:4 }}</p>
+    <div class="lf-kpi">
+      <span class="lf-kpi-label">A receber (bruto)</span>
+      <span class="lf-kpi-value">{{ kpis.gross_receivable|eur }}</span>
+      <span class="lf-kpi-note">{{ kpis.delivered|pt_int }} × {{ partner.price_per_package|floatformat:4 }} €</span>
     </div>
-    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-4">
-      <p class="text-[10px] uppercase tracking-wider text-gray-500 font-semibold">Custo Motoristas</p>
-      <p class="mt-1 text-3xl font-bold text-red-600 dark:text-red-400">{{ kpis.total_driver_cost|eur }}</p>
-      <p class="text-xs text-gray-400 mt-0.5">soma por motorista × preço individual</p>
+    <div class="lf-kpi">
+      <span class="lf-kpi-label">Custo com motoristas</span>
+      <span class="lf-kpi-value">{{ kpis.total_driver_cost|eur }}</span>
+      <span class="lf-kpi-note">soma por motorista × preço individual</span>
     </div>
-    <div class="bg-white dark:bg-gray-800 rounded-xl border border-l-4 border-emerald-400 border-gray-200/50 dark:border-gray-700/50 p-4">
-      <p class="text-[10px] uppercase tracking-wider text-emerald-600 font-semibold">Margem Bruta</p>
-      <p class="mt-1 text-3xl font-bold {% if kpis.margin_gross >= 0 %}text-emerald-600 dark:text-emerald-400{% else %}text-red-600{% endif %}">
-        {{ kpis.margin_gross|eur }}
-      </p>
-      <p class="text-xs text-gray-400 mt-0.5">receita − custo motoristas</p>
-    </div>
-
-    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-4">
-      <p class="text-[10px] uppercase tracking-wider text-gray-500 font-semibold">Reclamações</p>
-      <p class="mt-1 text-2xl font-bold text-red-600 dark:text-red-400">{{ kpis.claims_value|eur }}</p>
-      <p class="text-xs text-gray-400 mt-0.5">{{ kpis.claims_count }} reclamações</p>
-    </div>
-    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-4">
-      <p class="text-[10px] uppercase tracking-wider text-gray-500 font-semibold">Em rota</p>
-      <p class="mt-1 text-2xl font-bold text-amber-600 dark:text-amber-400">{{ kpis.in_route }}</p>
-    </div>
-    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-4">
-      <p class="text-[10px] uppercase tracking-wider text-gray-500 font-semibold">Atribuídos</p>
-      <p class="mt-1 text-2xl font-bold text-blue-600 dark:text-blue-400">{{ kpis.assigned }}</p>
-    </div>
-    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-4">
-      <p class="text-[10px] uppercase tracking-wider text-gray-500 font-semibold">Falhas</p>
-      <p class="mt-1 text-2xl font-bold text-red-600 dark:text-red-400">{{ kpis.failures }}</p>
+    <div class="lf-kpi">
+      <span class="lf-kpi-label">Margem bruta</span>
+      <span class="lf-kpi-value {% if kpis.margin_gross < 0 %}text-red-600 dark:text-red-400{% endif %}">{{ kpis.margin_gross|eur }}</span>
+      <span class="lf-kpi-note">receita − custo com motoristas</span>
     </div>
   </div>
-
-  {# Acção: gerar pré-faturas em lote #}
-  <div class="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-700/50 rounded-xl p-4 flex items-center justify-between gap-3 flex-wrap">
-    <div>
-      <p class="text-sm font-semibold text-indigo-900 dark:text-indigo-300">Geração automática de pré-faturas</p>
-      <p class="text-xs text-indigo-700 dark:text-indigo-400 mt-0.5">
-        Cria pré-faturas para os {{ drivers|length }} motoristas independentes e {{ fleets|length }} frotas, consumindo entregas reais.
-      </p>
+  <details class="lf-more"><summary>Mais indicadores</summary>
+  <div class="lf-kpi-grid">
+    <div class="lf-kpi">
+      <span class="lf-kpi-label">Reclamações</span>
+      <span class="lf-kpi-value">{{ kpis.claims_value|eur }}</span>
+      <span class="lf-kpi-note">{{ kpis.claims_count }} reclamaç{{ kpis.claims_count|pluralize:"ão,ões" }}</span>
     </div>
-    <button onclick="_fnOpenPreview()"
-      class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium flex items-center gap-2">
-      <i data-lucide="zap" class="w-4 h-4"></i>
-      Gerar em Lote
-    </button>
+    <div class="lf-kpi"><span class="lf-kpi-label">Em rota</span><span class="lf-kpi-value">{{ kpis.in_route|pt_int }}</span></div>
+    <div class="lf-kpi"><span class="lf-kpi-label">Atribuídos</span><span class="lf-kpi-value">{{ kpis.assigned|pt_int }}</span></div>
+    <div class="lf-kpi"><span class="lf-kpi-label">Falhas</span><span class="lf-kpi-value">{{ kpis.failures|pt_int }}</span></div>
   </div>
+  </details>
+
+  <p class="text-sm text-gray-600 dark:text-gray-400">O lote cria pré-faturas para os {{ drivers|length }} motoristas independentes e {{ fleets|length }} frotas, a partir das entregas reais.</p>
 
   {# Modal: vincular courier_name a driver existente #}
   <div id="link-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
@@ -149,7 +90,7 @@
       <div class="px-6 py-4 bg-brand-purple flex items-center justify-between">
         <h3 class="text-base font-bold text-white flex items-center gap-2">
           <i data-lucide="link" class="w-4 h-4"></i>
-          Vincular Motorista
+          Ligar motorista
         </h3>
         <button onclick="document.getElementById('link-modal').classList.add('hidden')"
           class="text-white/70 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
@@ -275,7 +216,7 @@
             <td class="px-4 py-2.5 text-right text-gray-500">{{ d.total }}</td>
             <td class="px-4 py-2.5 text-right">{{ d.success_rate }}%</td>
             <td class="px-4 py-2.5 text-right text-red-500">{{ d.failures }}</td>
-            <td class="px-4 py-2.5 text-right font-mono text-xs">€{{ d.price|floatformat:4 }}</td>
+            <td class="px-4 py-2.5 text-right font-mono text-xs">{{ d.price|floatformat:4 }} €</td>
             <td class="px-4 py-2.5 text-right font-bold">{{ d.value|eur }}</td>
           </tr>
           {% endfor %}
@@ -292,7 +233,6 @@
   </div>
   {% endif %}
 
-</div>
 </div>
 
 <script src="https://unpkg.com/lucide@1.65.0"></script>
@@ -333,8 +273,8 @@ async function _fnOpenPreview() {
       <tr>
         <td class="px-3 py-2">${d.driver_name}</td>
         <td class="px-3 py-2 text-right">${d.delivered}</td>
-        <td class="px-3 py-2 text-right font-mono text-xs">€${d.price}</td>
-        <td class="px-3 py-2 text-right font-bold">€${parseFloat(d.amount).toFixed(2)}</td>
+        <td class="px-3 py-2 text-right font-mono text-xs">${String(d.price).replace('.', ',')} €</td>
+        <td class="px-3 py-2 text-right font-bold">${lfEur(d.amount)}</td>
       </tr>
     `).join('');
     const fleetsHtml = (data.fleets || []).map(f => `
@@ -342,7 +282,7 @@ async function _fnOpenPreview() {
         <td class="px-3 py-2">${f.fleet_name}</td>
         <td class="px-3 py-2 text-right">${f.drivers.length}</td>
         <td class="px-3 py-2 text-right">${f.total_delivered}</td>
-        <td class="px-3 py-2 text-right font-bold">€${parseFloat(f.total_amount).toFixed(2)}</td>
+        <td class="px-3 py-2 text-right font-bold">${lfEur(f.total_amount)}</td>
       </tr>
     `).join('');
     const unmappedHtml = (data.unmapped || []).map(u => `
@@ -492,7 +432,7 @@ async function _fnConfirmGenerate() {
       btn.textContent = 'Confirmar & Criar';
       return;
     }
-    alert(`✓ ${data.drivers_created} pré-faturas de drivers + ${data.fleets_created} lançamentos de frota criados. ${data.unmapped} motoristas ignorados (sem perfil).`);
+    alert(`✓ ${data.drivers_created} pré-faturas de motoristas + ${data.fleets_created} lançamentos de frota criados. ${data.unmapped} motoristas ignorados (sem perfil).`);
     document.getElementById('fn-preview-modal').classList.add('hidden');
     window.location.reload();
   } catch (e) {

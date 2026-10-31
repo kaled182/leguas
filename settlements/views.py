@@ -879,7 +879,7 @@ def appeals_inbox(request):
                 reopen_appeal(c, request.user)
                 n += 1
             messages.success(
-                request, f"{n} recurso(s) reaberto(s) — voltaram a Aguardando envio."
+                request, f"{n} recurso(s) reaberto(s) — voltaram à lista A aguardar envio."
             )
             return redirect("appeals-inbox")
         messages.error(request, "Ação inválida.")

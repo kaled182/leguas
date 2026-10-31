@@ -27,8 +27,8 @@ admin_required = user_passes_test(_is_admin, login_url="/auth/login/")
 
 # Separadores: chave → (rótulo, filtro sobre DriverProfile)
 TABS = [
-    ("ativos", "Activos", Q(status="ATIVO", inactive_since__isnull=True)),
-    ("inativos", f"Inactivos +{INACTIVITY_DAYS}d", Q(status="ATIVO", inactive_since__isnull=False)),
+    ("ativos", "Ativos", Q(status="ATIVO", inactive_since__isnull=True)),
+    ("inativos", f"Inativos +{INACTIVITY_DAYS}d", Q(status="ATIVO", inactive_since__isnull=False)),
     ("pendentes", "Pendentes", Q(status__in=["PENDENTE", "EM_ANALISE"])),
     ("bloqueados", "Bloqueados", Q(status__in=["BLOQUEADO", "IRREGULAR"])),
     ("todos", "Todos", Q()),

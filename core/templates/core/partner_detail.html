@@ -9,85 +9,42 @@
 {# CAINIAO — layout dedicado                                          #}
 {# ================================================================== #}
 
-<!-- Header CAINIAO -->
-<div class="max-w-7xl mx-auto space-y-0">
-  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-5 fade-in">
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-      <!-- Left: identity -->
-      <div class="flex items-center gap-4">
-        <div class="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center shrink-0">
-          <i data-lucide="package" class="w-6 h-6 text-purple-600 dark:text-purple-400"></i>
-        </div>
-        <div>
-          <div class="flex items-center gap-2 flex-wrap">
-            <h1 class="text-xl font-bold text-gray-900 dark:text-white">{{ partner.name }}</h1>
-            {% if partner.is_active %}
-            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">Ativo</span>
-            {% else %}
-            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400">Inativo</span>
-            {% endif %}
-          </div>
-          <div class="flex items-center gap-3 mt-1 text-xs text-gray-500 dark:text-gray-400 flex-wrap">
-            {% if partner.nif %}<span>NIF {{ partner.nif }}</span>{% endif %}
-            {% if partner.contact_email %}<a href="mailto:{{ partner.contact_email }}" class="hover:text-purple-600 dark:hover:text-purple-400 transition-colors">{{ partner.contact_email }}</a>{% endif %}
-            {% if partner.contact_phone %}<span>{{ partner.contact_phone }}</span>{% endif %}
-          </div>
-        </div>
+<div class="max-w-7xl mx-auto">
+  <div class="lf-page-header">
+    <div class="min-w-0">
+      <div class="flex items-center gap-2 flex-wrap">
+        <h1 class="lf-page-title">{{ partner.name }}</h1>
+        <span class="lf-badge lf-tone-{% if partner.is_active %}success{% else %}neutral{% endif %}">{% if partner.is_active %}Ativo{% else %}Inativo{% endif %}</span>
       </div>
-      <!-- Right: actions -->
-      <div class="flex items-center gap-2 flex-wrap shrink-0">
-        {% if partner.name|upper == 'CAINIAO' %}
-        <!-- Busca directa por Waybill -->
-        <div class="relative" id="wb-search-wrap">
-          <i data-lucide="search" class="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"></i>
-          <input id="wb-search-input" type="text" placeholder="Buscar waybill..." autocomplete="off"
-            oninput="_wbSearch(this.value)" onkeydown="_wbSearchKey(event)"
-            class="pl-8 pr-3 py-2 w-56 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
-          <div id="wb-search-results"
-            class="hidden absolute right-0 top-full mt-1.5 w-96 max-h-80 overflow-y-auto bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 z-50"></div>
-        </div>
-        {% endif %}
-        {% if partner.name|upper == 'CAINIAO' %}
-        <a href="{% url 'cainiao-packages-page' %}"
-          class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium text-sm transition-colors"
-          title="Pesquisa global de pacotes com filtros avançados">
-          <i data-lucide="package-search" class="w-4 h-4"></i>
-          Pacotes
-        </a>
-        <a href="{% url 'cainiao-map' %}"
-          class="inline-flex items-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-medium text-sm transition-colors">
-          <i data-lucide="map" class="w-4 h-4"></i>
-          Mapa
-        </a>
-        <button onclick="openNotArrivedModal()"
-          class="inline-flex items-center gap-2 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-medium text-sm transition-colors relative"
-          title="Pacotes atribuídos mas nunca picados pelo driver">
-          <i data-lucide="package-x" class="w-4 h-4"></i>
-          Not Arrived
-          <span id="not-arrived-badge"
-            class="hidden absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1 bg-rose-900 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white dark:border-gray-900">0</span>
-        </button>
-        {% endif %}
-        <button onclick="document.getElementById('importModal').classList.remove('hidden')"
-          class="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium text-sm transition-colors">
-          <i data-lucide="refresh-cw" class="w-4 h-4"></i>
-          Sincronização
-        </button>
-        <button onclick="document.getElementById('cainiao-info-modal').classList.remove('hidden')"
-          class="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 rounded-lg font-medium text-sm transition-colors">
-          <i data-lucide="settings" class="w-4 h-4"></i>
-          Configurações
-        </button>
-        <a href="{% url 'core:partner-list' %}" class="inline-flex items-center gap-1 px-3 py-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-sm transition-colors">
-          ← Parceiros
-        </a>
+      <p class="lf-page-subtitle">{% if partner.nif %}NIF {{ partner.nif }}{% endif %}{% if partner.contact_email %} · <a class="hover:underline" href="mailto:{{ partner.contact_email }}">{{ partner.contact_email }}</a>{% endif %}{% if partner.contact_phone %} · {{ partner.contact_phone }}{% endif %}</p>
+    </div>
+    <div class="lf-page-actions">
+      {% if partner.name|upper == 'CAINIAO' %}
+      <div class="relative" id="wb-search-wrap">
+        <i data-lucide="search" class="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" aria-hidden="true"></i>
+        <input id="wb-search-input" type="search" placeholder="Procurar envio" aria-label="Procurar envio" autocomplete="off"
+          oninput="_wbSearch(this.value)" onkeydown="_wbSearchKey(event)" class="lf-control pl-8 w-full sm:w-56">
+        <div id="wb-search-results"
+          class="hidden absolute right-0 top-full mt-1.5 w-96 max-w-[calc(100vw-2rem)] max-h-80 overflow-y-auto bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 z-50"></div>
       </div>
+      <a class="lf-btn lf-btn-ghost" href="{% url 'cainiao-packages-page' %}" title="Pesquisa de pacotes com filtros"><i data-lucide="package-search" class="w-4 h-4" aria-hidden="true"></i>Pacotes</a>
+      <a class="lf-btn lf-btn-ghost" href="{% url 'cainiao-map' %}"><i data-lucide="map" class="w-4 h-4" aria-hidden="true"></i>Mapa</a>
+      <button type="button" onclick="openNotArrivedModal()" class="lf-btn lf-btn-primary relative" title="Pacotes atribuídos mas nunca lidos pelo motorista">
+        <i data-lucide="package-x" class="w-4 h-4" aria-hidden="true"></i>
+        Não chegaram
+        <span id="not-arrived-badge"
+          class="hidden absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1 bg-rose-900 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white dark:border-gray-900">0</span>
+      </button>
+      {% endif %}
+      <button type="button" onclick="document.getElementById('importModal').classList.remove('hidden')" class="lf-btn lf-btn-ghost"><i data-lucide="refresh-cw" class="w-4 h-4" aria-hidden="true"></i>Sincronização</button>
+      <button type="button" onclick="document.getElementById('cainiao-info-modal').classList.remove('hidden')" class="lf-btn lf-btn-ghost"><i data-lucide="settings" class="w-4 h-4" aria-hidden="true"></i>Configurações</button>
+      <a class="lf-btn lf-btn-ghost" href="{% url 'core:partner-list' %}"><i data-lucide="arrow-left" class="w-4 h-4" aria-hidden="true"></i>Clientes e plataformas</a>
     </div>
   </div>
 </div>
 
-<!-- Estatísticas da Operação -->
-<div class="max-w-7xl mx-auto mt-6 space-y-5 pb-12">
+<!-- Estatísticas da operação -->
+<div class="max-w-7xl mx-auto space-y-5 pb-12">
 
   {% if partner.name|upper == 'CAINIAO' %}
   {# ── Aviso de entregas sem Courier ID resolvido ───────────────────── #}
@@ -96,11 +53,11 @@
       <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5"></i>
       <div class="text-sm">
         <p class="font-semibold text-amber-800 dark:text-amber-300">
-          <span id="cid-alert-without">0</span> entregas sem Courier ID Cainiao resolvido
+          <span id="cid-alert-without">0</span> entregas sem Courier ID Cainiao
         </p>
         <p class="text-xs text-amber-700 dark:text-amber-400 mt-0.5">
-          Estas entregas perdem ligação ao motorista quando o nome é renomeado.
-          <span id="cid-alert-pct" class="font-semibold"></span>% das entregas estão actualmente vinculadas.
+          Estas entregas perdem a ligação ao motorista quando o nome muda.
+          <span id="cid-alert-pct" class="font-semibold"></span>% das entregas estão ligadas.
         </p>
       </div>
     </div>
@@ -108,7 +65,7 @@
       {# HUB filter — segue o mesmo padrão do filtro CP4 #}
       <select id="cid-hub-filter" onchange="_onCidHubChange(this.value)"
         class="text-xs border border-amber-300 dark:border-amber-700 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg px-2 py-1.5">
-        <option value="">— Todos os HUBs —</option>
+        <option value="">Todos os hubs</option>
         {% for h in cainiao_data.all_hubs %}
           <option value="{{ h.id }}">{{ h.name }}</option>
         {% endfor %}
@@ -116,23 +73,23 @@
       <button onclick="_runCourierBackfill()" id="cid-backfill-btn"
         class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-amber-600 hover:bg-amber-700 text-white">
         <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
-        <span id="cid-backfill-label">Executar Backfill</span>
+        <span id="cid-backfill-label">Ligar entregas</span>
       </button>
       <button onclick="_showUnmappedNames()"
         class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/30">
-        Ver names sem mapping
+        Ver nomes sem ligação
       </button>
       <button onclick="_runRollForward()" id="rollfwd-btn"
-        title="Move pacotes Driver_received de até 7 dias para hoje (pendentes ativo)"
+        title="Move pacotes em distribuição de até 7 dias para hoje"
         class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/30">
         <i data-lucide="calendar-arrow-up" class="w-3.5 h-3.5"></i>
-        <span id="rollfwd-label">Roll-forward Pendentes</span>
+        <span id="rollfwd-label">Passar pendentes para hoje</span>
       </button>
       <button onclick="_runStaleArmazem()" id="stale-armazem-btn"
-        title="Marca pacotes presos no armazém (Driver_received) há mais de N dias como Stale_Armazem"
+        title="Marca como parados no armazém os pacotes em distribuição há mais de N dias"
         class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-rose-300 dark:border-rose-700 text-rose-700 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/30">
         <i data-lucide="package-x" class="w-3.5 h-3.5"></i>
-        <span id="stale-armazem-label">Limpar Stale Armazém</span>
+        <span id="stale-armazem-label">Limpar parados no armazém</span>
       </button>
     </div>
   </div>
@@ -144,7 +101,7 @@
     <div class="flex items-center gap-2">
       <p class="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
         <i data-lucide="bar-chart-2" class="w-4 h-4 text-purple-500"></i>
-        Estatísticas da Operação
+        Estatísticas da operação
       </p>
       {% if cainiao_data.selected_hub %}
         <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">
@@ -156,17 +113,17 @@
       <!-- Botão de gerir HUBs -->
       <button onclick="openHubModal()"
         class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-        <i data-lucide="settings-2" class="w-3.5 h-3.5"></i> Gerir HUBs
+        <i data-lucide="settings-2" class="w-3.5 h-3.5" aria-hidden="true"></i> Gerir hubs
       </button>
       <form method="get" id="dashboard-filter-form" class="flex items-center gap-2 flex-wrap">
         <!-- Preservar hub_id quando muda a data -->
         {% if cainiao_data.selected_hub %}<input type="hidden" name="hub_id" value="{{ cainiao_data.selected_hub.id }}">{% endif %}
         <!-- Preservar CP4s seleccionados quando muda hub/data -->
         {% for cp4 in cainiao_data.selected_cp4s %}<input type="hidden" name="cp4" value="{{ cp4 }}" class="cp4-preserved">{% endfor %}
-        <label class="text-xs text-gray-500 dark:text-gray-400">HUB:</label>
+        <label class="text-xs text-gray-500 dark:text-gray-400">Hub:</label>
         <select name="hub_id" onchange="clearCP4Filter(); this.form.submit()"
           class="text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
-          <option value="">— Todos —</option>
+          <option value="">Todos</option>
           {% for hub in cainiao_data.all_hubs %}
             <option value="{{ hub.id }}" {% if hub.id == cainiao_data.selected_hub.id %}selected{% endif %}>{{ hub.name }}</option>
           {% endfor %}
@@ -238,7 +195,7 @@
   </div>
 
   {% if cainiao_data.total == 0 %}
-  <!-- Empty state -->
+  <!-- Estado vazio -->
   <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/50 dark:border-gray-700/50 px-6 py-16 text-center">
     <i data-lucide="inbox" class="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3"></i>
     <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Sem dados para
@@ -249,156 +206,85 @@
   </div>
   {% else %}
 
-  <!-- 5 KPI cards (+ PUDO / Devolvidos quando houver) -->
-  <div class="grid grid-cols-2 lg:grid-cols-5 {% if cainiao_data.pudo_total or cainiao_data.returned %}xl:grid-cols-6{% endif %} {% if cainiao_data.pudo_total and cainiao_data.returned %}2xl:grid-cols-7{% endif %} gap-4">
-    <!-- Total -->
-    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-5">
-      <div class="flex items-center gap-2 mb-3">
-        <div class="w-8 h-8 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center">
-          <i data-lucide="package" class="w-4 h-4 text-gray-500 dark:text-gray-400"></i>
-        </div>
-        <p class="text-xs text-gray-400 dark:text-gray-500 font-medium uppercase tracking-wide">Volume Total</p>
-      </div>
-      <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ cainiao_data.total }}</p>
-      <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">tarefas na operação</p>
+  <div class="lf-kpi-grid">
+    <div class="lf-kpi">
+      <span class="lf-kpi-label">Volume total</span>
+      <span class="lf-kpi-value">{{ cainiao_data.total|pt_int }}</span>
+      <span class="lf-kpi-note">tarefas na operação</span>
     </div>
-    <!-- Entregues -->
-    <div onclick="openDriversModal('Delivered', 'Delivered')"
-      class="bg-white dark:bg-gray-800 rounded-xl border border-l-4 border-emerald-400 border-gray-200/50 dark:border-gray-700/50 p-5 cursor-pointer hover:shadow-lg hover:border-emerald-500 dark:hover:border-emerald-400 transition-all group">
-      <div class="flex items-center gap-2 mb-3">
-        <div class="w-8 h-8 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg flex items-center justify-center">
-          <i data-lucide="check-circle" class="w-4 h-4 text-emerald-600 dark:text-emerald-400"></i>
-        </div>
-        <p class="text-xs text-emerald-600 dark:text-emerald-400 font-medium uppercase tracking-wide">Entregue</p>
-        <i data-lucide="chevron-right" class="w-4 h-4 text-emerald-400/0 group-hover:text-emerald-500 ml-auto transition-colors"></i>
-      </div>
-      <p class="text-3xl font-bold text-emerald-700 dark:text-emerald-300">{{ cainiao_data.delivered }}</p>
-      <p class="text-xs text-emerald-600/70 dark:text-emerald-500 mt-1">{{ cainiao_data.delivery_rate }}% taxa de sucesso</p>
+    <div class="lf-kpi lf-kpi-action" onclick="openDriversModal('Delivered', 'Entregues')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}">
+      <span class="lf-kpi-label">Entregues</span>
+      <span class="lf-kpi-value">{{ cainiao_data.delivered|pt_int }}</span>
+      <span class="lf-kpi-note">{{ cainiao_data.delivery_rate|pct }} de sucesso</span>
     </div>
-    <!-- Driver Received -->
-    <div onclick="openDriversModal('Driver_received', 'Driver Received')"
-      class="bg-white dark:bg-gray-800 rounded-xl border border-l-4 border-amber-400 border-gray-200/50 dark:border-gray-700/50 p-5 cursor-pointer hover:shadow-lg hover:border-amber-500 dark:hover:border-amber-400 transition-all group">
-      <div class="flex items-center gap-2 mb-3">
-        <div class="w-8 h-8 bg-amber-100 dark:bg-amber-900/30 rounded-lg flex items-center justify-center">
-          <i data-lucide="truck" class="w-4 h-4 text-amber-600 dark:text-amber-400"></i>
-        </div>
-        <p class="text-xs text-amber-600 dark:text-amber-400 font-medium uppercase tracking-wide">Motorista Received</p>
-        <i data-lucide="chevron-right" class="w-4 h-4 text-amber-400/0 group-hover:text-amber-500 ml-auto transition-colors"></i>
-      </div>
-      <p class="text-3xl font-bold text-amber-700 dark:text-amber-300">{{ cainiao_data.en_route }}</p>
-      <p class="text-xs text-amber-600/70 dark:text-amber-500 mt-1">driver fez a leitura</p>
+    <div class="lf-kpi lf-kpi-action" onclick="openDriversModal('Driver_received', 'Em distribuição')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}">
+      <span class="lf-kpi-label">Em distribuição</span>
+      <span class="lf-kpi-value">{{ cainiao_data.en_route|pt_int }}</span>
+      <span class="lf-kpi-note">o motorista fez a leitura</span>
     </div>
-    <!-- Assigned -->
-    <div onclick="openDriversModal('Assigned,Unassign', 'Assigned')"
-      class="bg-white dark:bg-gray-800 rounded-xl border border-l-4 border-blue-400 border-gray-200/50 dark:border-gray-700/50 p-5 cursor-pointer hover:shadow-lg hover:border-blue-500 dark:hover:border-blue-400 transition-all group relative">
-      <div class="flex items-center gap-2 mb-3">
-        <div class="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-          <i data-lucide="warehouse" class="w-4 h-4 text-blue-600 dark:text-blue-400"></i>
-        </div>
-        <p class="text-xs text-blue-600 dark:text-blue-400 font-medium uppercase tracking-wide">Assigned</p>
-        <i data-lucide="chevron-right" class="w-4 h-4 text-blue-400/0 group-hover:text-blue-500 ml-auto transition-colors"></i>
-      </div>
-      <p class="text-3xl font-bold text-blue-700 dark:text-blue-300">{{ cainiao_data.assigned }}</p>
-      <p class="text-xs text-blue-600/70 dark:text-blue-500 mt-1">atribuído, sem leitura</p>
-      <!-- Badge Not Arrived (clicável separadamente) -->
-      <div id="assigned-not-arrived-pill"
-           onclick="event.stopPropagation(); openNotArrivedModal()"
-           class="hidden absolute top-2 right-2 px-2 py-0.5 bg-rose-100 hover:bg-rose-200 dark:bg-rose-900/40 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 rounded-full text-[10px] font-bold cursor-pointer flex items-center gap-1 border border-rose-300 dark:border-rose-700"
-           title="Pacotes atribuídos mas nunca picados — clica para ver">
-        <i data-lucide="package-x" class="w-3 h-3"></i>
-        <span id="assigned-not-arrived-count">0</span> Not Arrived
+    <div class="lf-kpi lf-kpi-action" onclick="openDriversModal('Attempt Failure', 'Falhadas')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}">
+      <span class="lf-kpi-label">Falhadas</span>
+      <span class="lf-kpi-value">{{ cainiao_data.failures|pt_int }}</span>
+      <span class="lf-kpi-note">{{ cainiao_data.failure_rate|pct }} de falha</span>
+    </div>
+  </div>
+  <details class="lf-more"><summary>Mais indicadores</summary>
+  <div class="lf-kpi-grid">
+    <div class="lf-kpi lf-kpi-action relative" onclick="openDriversModal('Assigned,Unassign', 'Atribuídos')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}">
+      <span class="lf-kpi-label">Atribuídos</span>
+      <span class="lf-kpi-value">{{ cainiao_data.assigned|pt_int }}</span>
+      <span class="lf-kpi-note">atribuído, sem leitura</span>
+      <div id="assigned-not-arrived-pill" onclick="event.stopPropagation(); openNotArrivedModal()"
+           class="hidden absolute top-2 right-2 lf-badge lf-tone-danger cursor-pointer" title="Pacotes atribuídos mas nunca lidos. Clique para ver.">
+        <span id="assigned-not-arrived-count">0</span> não chegaram
       </div>
     </div>
-    <!-- Falhas -->
-    <div onclick="openDriversModal('Attempt Failure', 'Attempt Failure')"
-      class="bg-white dark:bg-gray-800 rounded-xl border border-l-4 border-red-400 border-gray-200/50 dark:border-gray-700/50 p-5 cursor-pointer hover:shadow-lg hover:border-red-500 dark:hover:border-red-400 transition-all group">
-      <div class="flex items-center gap-2 mb-3">
-        <div class="w-8 h-8 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center">
-          <i data-lucide="x-circle" class="w-4 h-4 text-red-600 dark:text-red-400"></i>
-        </div>
-        <p class="text-xs text-red-600 dark:text-red-400 font-medium uppercase tracking-wide">Attempt Failure</p>
-        <i data-lucide="chevron-right" class="w-4 h-4 text-red-400/0 group-hover:text-red-500 ml-auto transition-colors"></i>
-      </div>
-      <p class="text-3xl font-bold text-red-700 dark:text-red-300">{{ cainiao_data.failures }}</p>
-      <p class="text-xs text-red-600/70 dark:text-red-500 mt-1">{{ cainiao_data.failure_rate }}% de falha</p>
-    </div>
-
-    {# PUDO — KPI único; abre modal com breakdown por status #}
     {% if cainiao_data.pudo_total %}
-    <div onclick="openPudoBreakdownModal()"
+    <div class="lf-kpi lf-kpi-action" onclick="openPudoBreakdownModal()" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}"
       data-pudo-delivered="{{ cainiao_data.pudo_delivered }}"
       data-pudo-received="{{ cainiao_data.pudo_received }}"
       data-pudo-assigned="{{ cainiao_data.pudo_assigned }}"
       data-pudo-failure="{{ cainiao_data.pudo_failure }}"
-      data-pudo-fake="{{ cainiao_data.pudo_fake_count }}"
-      class="bg-white dark:bg-gray-800 rounded-xl border border-l-4 border-violet-400 border-gray-200/50 dark:border-gray-700/50 p-5 cursor-pointer hover:shadow-lg hover:border-violet-500 dark:hover:border-violet-400 transition-all group">
-      <div class="flex items-center gap-2 mb-3">
-        <div class="w-8 h-8 bg-violet-100 dark:bg-violet-900/30 rounded-lg flex items-center justify-center">
-          <i data-lucide="map-pinned" class="w-4 h-4 text-violet-600 dark:text-violet-400"></i>
-        </div>
-        <p class="text-xs text-violet-600 dark:text-violet-400 font-medium uppercase tracking-wide">PUDO</p>
-        <i data-lucide="chevron-right" class="w-4 h-4 text-violet-400/0 group-hover:text-violet-500 ml-auto transition-colors"></i>
-      </div>
-      <p class="text-3xl font-bold text-violet-700 dark:text-violet-300">{{ cainiao_data.pudo_total }}</p>
-      <p class="text-xs text-violet-600/70 dark:text-violet-500 mt-1">
-        {{ cainiao_data.pudo_delivered }} entregues
-        {% if cainiao_data.pudo_fake_count %}
-        · <span class="text-rose-500 dark:text-rose-400 font-semibold">{{ cainiao_data.pudo_fake_count }} fake</span>
-        {% endif %}
-      </p>
+      data-pudo-fake="{{ cainiao_data.pudo_fake_count }}">
+      <span class="lf-kpi-label">PUDO</span>
+      <span class="lf-kpi-value">{{ cainiao_data.pudo_total|pt_int }}</span>
+      <span class="lf-kpi-note">{{ cainiao_data.pudo_delivered }} entregues{% if cainiao_data.pudo_fake_count %} · <span class="lf-badge lf-tone-danger">{{ cainiao_data.pudo_fake_count }} suspeita{{ cainiao_data.pudo_fake_count|pluralize }}</span>{% endif %}</span>
     </div>
     {% endif %}
-
-    {# Mesma porta — pacotes adicionais pagos ao valor reduzido #}
     {% if cainiao_data.same_door_kpi.active and cainiao_data.same_door_kpi.n %}
-    <div class="bg-white dark:bg-gray-800 rounded-xl border border-l-4 border-teal-400 border-gray-200/50 dark:border-gray-700/50 p-5"
-{% if is_gestao %}
-         title="Pacotes adicionais na mesma porta (mesmo dia): pagos ao motorista a {{ cainiao_data.same_door_kpi.price|eur }}"{% endif %}>
-      <div class="flex items-center gap-2 mb-3">
-        <div class="w-8 h-8 bg-teal-100 dark:bg-teal-900/30 rounded-lg flex items-center justify-center">
-          <i data-lucide="home" class="w-4 h-4 text-teal-600 dark:text-teal-400"></i>
-        </div>
-        <p class="text-xs text-teal-600 dark:text-teal-400 font-medium uppercase tracking-wide">Mesma porta</p>
-      </div>
-      <p class="text-3xl font-bold text-teal-700 dark:text-teal-300">{{ cainiao_data.same_door_kpi.n }}</p>
-      <p class="text-xs text-teal-600/70 dark:text-teal-500 mt-1">adicionais{% if is_gestao %} · {{ cainiao_data.same_door_kpi.amount|eur }} a {{ cainiao_data.same_door_kpi.price|eur }}{% endif %}</p>
+    <div class="lf-kpi"{% if is_gestao %} title="Pacotes adicionais na mesma porta (mesmo dia): pagos ao motorista a {{ cainiao_data.same_door_kpi.price|eur }}"{% endif %}>
+      <span class="lf-kpi-label">Mesma porta</span>
+      <span class="lf-kpi-value">{{ cainiao_data.same_door_kpi.n|pt_int }}</span>
+      <span class="lf-kpi-note">adicionais{% if is_gestao %} · {{ cainiao_data.same_door_kpi.amount|eur }} a {{ cainiao_data.same_door_kpi.price|eur }}{% endif %}</span>
     </div>
     {% endif %}
-
-    {# Devolvidos — apenas mostrado quando há devoluções no período #}
     {% if cainiao_data.returned %}
-    <div onclick="openDriversModal('returned', 'Devolvidos')"
-      class="bg-white dark:bg-gray-800 rounded-xl border border-l-4 border-orange-400 border-gray-200/50 dark:border-gray-700/50 p-5 cursor-pointer hover:shadow-lg hover:border-orange-500 dark:hover:border-orange-400 transition-all group">
-      <div class="flex items-center gap-2 mb-3">
-        <div class="w-8 h-8 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center">
-          <i data-lucide="undo-2" class="w-4 h-4 text-orange-600 dark:text-orange-400"></i>
-        </div>
-        <p class="text-xs text-orange-600 dark:text-orange-400 font-medium uppercase tracking-wide">Devolvidos</p>
-        <i data-lucide="chevron-right" class="w-4 h-4 text-orange-400/0 group-hover:text-orange-500 ml-auto transition-colors"></i>
-      </div>
-      <p class="text-3xl font-bold text-orange-700 dark:text-orange-300">{{ cainiao_data.returned }}</p>
-      <p class="text-xs text-orange-600/70 dark:text-orange-500 mt-1">fechados / ao remetente</p>
+    <div class="lf-kpi lf-kpi-action" onclick="openDriversModal('returned', 'Devolvidos')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}">
+      <span class="lf-kpi-label">Devolvidos</span>
+      <span class="lf-kpi-value">{{ cainiao_data.returned|pt_int }}</span>
+      <span class="lf-kpi-note">fechados / ao remetente</span>
     </div>
     {% endif %}
   </div>
+  </details>
 
   <!-- Barra de progresso -->
   <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/50 dark:border-gray-700/50 px-6 py-4">
     <div class="flex items-center justify-between mb-2">
-      <span class="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide">Progresso da Operação</span>
-      <span class="text-sm font-bold text-gray-900 dark:text-white">{{ cainiao_data.delivery_rate }}% entregues</span>
+      <span class="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide">Progresso da operação</span>
+      <span class="text-sm font-bold text-gray-900 dark:text-white">{{ cainiao_data.delivery_rate|pct }} entregues</span>
     </div>
     <div class="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-3 overflow-hidden flex">
-      <div class="bg-emerald-500 h-3 transition-all" style="width:{{ cainiao_data.delivery_pct }}%" title="Entregue"></div>
-      <div class="bg-amber-400 h-3 transition-all" style="width:{{ cainiao_data.en_route_pct }}%" title="Motorista Received"></div>
-      <div class="bg-blue-400 h-3 transition-all" style="width:{{ cainiao_data.assigned_pct }}%" title="Assigned"></div>
-      <div class="bg-red-400 h-3 transition-all" style="width:{{ cainiao_data.failure_pct }}%" title="Attempt Failure"></div>
+      <div class="bg-emerald-500 h-3 transition-all" style="width:{{ cainiao_data.delivery_pct }}%" title="Entregues"></div>
+      <div class="bg-amber-400 h-3 transition-all" style="width:{{ cainiao_data.en_route_pct }}%" title="Em distribuição"></div>
+      <div class="bg-blue-400 h-3 transition-all" style="width:{{ cainiao_data.assigned_pct }}%" title="Atribuídos"></div>
+      <div class="bg-red-400 h-3 transition-all" style="width:{{ cainiao_data.failure_pct }}%" title="Falhadas"></div>
     </div>
     <div class="flex flex-wrap gap-4 mt-2 text-xs text-gray-400 dark:text-gray-500">
-      <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>Entregue ({{ cainiao_data.delivered }})</span>
-      <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-amber-400 inline-block"></span>Motorista Received ({{ cainiao_data.en_route }})</span>
-      <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-blue-400 inline-block"></span>Assigned ({{ cainiao_data.assigned }})</span>
-      <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-red-400 inline-block"></span>Attempt Failure ({{ cainiao_data.failures }})</span>
+      <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>Entregues ({{ cainiao_data.delivered }})</span>
+      <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-amber-400 inline-block"></span>Em distribuição ({{ cainiao_data.en_route }})</span>
+      <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-blue-400 inline-block"></span>Atribuídos ({{ cainiao_data.assigned }})</span>
+      <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-red-400 inline-block"></span>Falhadas ({{ cainiao_data.failures }})</span>
     </div>
   </div>
 
@@ -410,17 +296,16 @@
       <div class="px-5 py-3.5 border-b border-gray-100 dark:border-gray-700 flex items-center gap-2">
         <i data-lucide="map-pin" class="w-4 h-4 text-indigo-500"></i>
         <h3 class="text-sm font-semibold text-gray-800 dark:text-white">Por CP4</h3>
-        <span class="ml-auto text-xs text-gray-400 dark:text-gray-500">Total · Entregues · Em Rota · Falhas</span>
-      </div>
+              </div>
       <div class="overflow-x-auto max-h-96 overflow-y-auto">
         <table class="w-full text-sm">
           <thead class="bg-gray-50 dark:bg-gray-700/40 sticky top-0">
             <tr class="text-xs text-gray-400 dark:text-gray-500 font-medium">
               <th class="px-4 py-2.5 text-left">CP4</th>
               <th class="px-3 py-2.5 text-right">Total</th>
-              <th class="px-3 py-2.5 text-right text-emerald-600 dark:text-emerald-400">✓</th>
-              <th class="px-3 py-2.5 text-right text-amber-500 dark:text-amber-400">⟳</th>
-              <th class="px-3 py-2.5 text-right text-red-500 dark:text-red-400">✗</th>
+              <th scope="col" class="px-3 py-2.5 text-right text-emerald-600 dark:text-emerald-400">Entregues</th>
+              <th scope="col" class="px-3 py-2.5 text-right text-amber-600 dark:text-amber-400">Em rota</th>
+              <th scope="col" class="px-3 py-2.5 text-right text-red-600 dark:text-red-400">Falhadas</th>
               <th class="px-4 py-2.5 text-right">%</th>
             </tr>
           </thead>
@@ -533,9 +418,9 @@
                 <th class="px-4 py-2.5 text-left">Frota</th>
                 <th class="px-3 py-2.5 text-right">Motoristas</th>
                 <th class="px-3 py-2.5 text-right">Total</th>
-                <th class="px-3 py-2.5 text-right text-emerald-600 dark:text-emerald-400">✓</th>
-                <th class="px-3 py-2.5 text-right text-amber-500 dark:text-amber-400">⟳</th>
-                <th class="px-3 py-2.5 text-right text-red-500 dark:text-red-400">✗</th>
+                <th scope="col" class="px-3 py-2.5 text-right text-emerald-600 dark:text-emerald-400">Entregues</th>
+                <th scope="col" class="px-3 py-2.5 text-right text-amber-600 dark:text-amber-400">Em rota</th>
+                <th scope="col" class="px-3 py-2.5 text-right text-red-600 dark:text-red-400">Falhadas</th>
                 <th class="px-4 py-2.5 text-right">%✓</th>
               </tr>
             </thead>
@@ -578,9 +463,9 @@
               <tr class="text-xs text-gray-400 dark:text-gray-500 font-medium">
                 <th class="px-4 py-2.5 text-left">Motorista / Frota</th>
                 <th class="px-3 py-2.5 text-right">Total</th>
-                <th class="px-3 py-2.5 text-right text-emerald-600 dark:text-emerald-400">✓</th>
-                <th class="px-3 py-2.5 text-right text-amber-500 dark:text-amber-400">⟳</th>
-                <th class="px-3 py-2.5 text-right text-red-500 dark:text-red-400">✗</th>
+                <th scope="col" class="px-3 py-2.5 text-right text-emerald-600 dark:text-emerald-400">Entregues</th>
+                <th scope="col" class="px-3 py-2.5 text-right text-amber-600 dark:text-amber-400">Em rota</th>
+                <th scope="col" class="px-3 py-2.5 text-right text-red-600 dark:text-red-400">Falhadas</th>
                 <th class="px-3 py-2.5 text-right text-violet-500 dark:text-violet-400" title="Entregues em PUDO">PUDO</th>
                 <th class="px-3 py-2.5 text-right text-teal-600 dark:text-teal-400" title="Pacotes adicionais na mesma porta (mesmo dia)">Mesma porta</th>
                 <th class="px-4 py-2.5 text-right">%✓</th>
@@ -621,7 +506,7 @@
                 </td>
               </tr>
               {% empty %}
-              <tr><td colspan="8" class="px-5 py-8 text-sm text-gray-400 dark:text-gray-500 text-center">Sem dados de driver.</td></tr>
+              <tr><td colspan="8" class="px-5 py-8 text-sm text-gray-400 dark:text-gray-500 text-center">Sem dados de motorista.</td></tr>
               {% endfor %}
             </tbody>
           </table>
@@ -651,8 +536,8 @@
           </div>
         </div>
         <span class="text-sm font-semibold text-gray-700 dark:text-gray-200 w-10 text-right shrink-0 tabular-nums">{{ day.total }}</span>
-        <span class="text-xs text-emerald-600 dark:text-emerald-400 w-8 text-right shrink-0 tabular-nums">{{ day.delivered }}✓</span>
-        <span class="text-xs text-amber-500 dark:text-amber-400 w-8 text-right shrink-0 tabular-nums">{{ day.en_route }}⟳</span>
+        <span class="text-xs text-emerald-600 dark:text-emerald-400 w-8 text-right shrink-0 tabular-nums" title="Entregues">{{ day.delivered }}✓</span>
+        <span class="text-xs text-amber-500 dark:text-amber-400 w-8 text-right shrink-0 tabular-nums" title="Em distribuição">{{ day.en_route }}⟳</span>
         <span class="text-xs {% if day.failures %}text-red-500 dark:text-red-400{% else %}text-gray-300 dark:text-gray-600{% endif %} w-8 text-right shrink-0 tabular-nums">{{ day.failures }}✗</span>
       </div>
       {% empty %}
@@ -664,7 +549,7 @@
   <!-- Batches do dia -->
   {% if cainiao_data.batches %}
   <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/50 dark:border-gray-700/50 px-5 py-4">
-    <p class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-3">Importações Operation Update —
+    <p class="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-3">Sincronizações do período —
       {% if cainiao_data.date_from == cainiao_data.date_to %}{{ cainiao_data.date_to|date:"d/m/Y" }}
       {% else %}{{ cainiao_data.date_from|date:"d/m/Y" }} → {{ cainiao_data.date_to|date:"d/m/Y" }}{% endif %}
     </p>
@@ -720,8 +605,8 @@
           <p class="font-medium text-gray-900 dark:text-white">{{ partner.contact_phone|default:"—" }}</p>
         </div>
         <div>
-          <p class="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-0.5">Prazo Entrega</p>
-          <p class="font-medium text-gray-900 dark:text-white">{{ partner.default_delivery_time_days }} dia(s)</p>
+          <p class="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-0.5">Prazo de entrega</p>
+          <p class="font-medium text-gray-900 dark:text-white">{{ partner.default_delivery_time_days }} dia{{ partner.default_delivery_time_days|pluralize }}</p>
         </div>
         <div>
           <p class="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-0.5">Auto-atribuição</p>
@@ -730,6 +615,7 @@
           </p>
         </div>
       </div>
+      {% if is_gestao %}
       <!-- Secção Financeira -->
       <div class="pt-3 border-t border-gray-100 dark:border-gray-700">
         <p class="text-xs text-emerald-500 dark:text-emerald-400 uppercase tracking-wide mb-2 font-semibold flex items-center gap-1.5">
@@ -739,7 +625,7 @@
         <div class="grid grid-cols-2 gap-4 text-sm">
           <div>
             <p class="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-0.5">Valor por pacote</p>
-            <p class="font-semibold text-emerald-700 dark:text-emerald-400">€{{ partner.price_per_package|floatformat:4 }}</p>
+            <p class="font-semibold">{{ partner.price_per_package|floatformat:4 }} €</p>
           </div>
           <div>
             <p class="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-0.5">Regime IVA</p>
@@ -747,7 +633,7 @@
           </div>
           <div>
             <p class="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-0.5">Retenção IRS</p>
-            <p class="font-medium text-gray-900 dark:text-white">{{ partner.irs_retention_pct|floatformat:1 }}%</p>
+            <p class="font-medium text-gray-900 dark:text-white">{{ partner.irs_retention_pct|pct }}</p>
           </div>
           <div>
             <p class="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-0.5">Bónus</p>
@@ -760,6 +646,7 @@
           </div>
         </div>
       </div>
+      {% endif %}
 
       {% if partner.notes %}
       <div class="pt-3 border-t border-gray-100 dark:border-gray-700">
@@ -768,8 +655,9 @@
       </div>
       {% endif %}
     </div>
+    {% if is_gestao %}
     <div class="px-6 py-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 flex justify-between items-center flex-wrap gap-2">
-      <form method="post" action="{% url 'core:partner-toggle-status' partner.pk %}" onsubmit="return confirm('{% if partner.is_active %}Desativar{% else %}Ativar{% endif %} este parceiro?');">
+      <form method="post" action="{% url 'core:partner-toggle-status' partner.pk %}" onsubmit="return confirm('{% if partner.is_active %}Desativar{% else %}Ativar{% endif %} este cliente?');">
         {% csrf_token %}
         <input type="hidden" name="next" value="{{ request.path }}">
         <button type="submit" class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border transition-colors
@@ -791,6 +679,7 @@
         </a>
       </div>
     </div>
+    {% endif %}
   </div>
 </div>
 
@@ -800,41 +689,32 @@
 {# ================================================================== #}
 {% if is_gestao %}
 <div class="max-w-7xl mx-auto space-y-6">
-  <!-- Header -->
-  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 fade-in">
-    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-      <div class="flex items-start gap-4">
-        <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center">
-          <i data-lucide="building-2" class="w-6 h-6 text-blue-600 dark:text-blue-400"></i>
-        </div>
-        <div>
-          <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-1">{{ partner.name }}</h1>
-          <a href="{% url 'core:partner-list' %}" class="text-sm text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">← Voltar para Parceiros</a>
-        </div>
+  <div class="lf-page-header">
+    <div class="min-w-0">
+      <div class="flex items-center gap-2 flex-wrap">
+        <h1 class="lf-page-title">{{ partner.name }}</h1>
+        <span class="lf-badge lf-tone-{% if partner.is_active %}success{% else %}neutral{% endif %}">{% if partner.is_active %}Ativo{% else %}Inativo{% endif %}</span>
       </div>
-      <div class="flex flex-wrap gap-3">
-        <a href="{% url 'core:partner-edit' partner.pk %}" class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors gap-2 text-sm">
-          <i data-lucide="edit" class="w-4 h-4"></i>Editar
-        </a>
-        <form method="post" action="{% url 'core:partner-toggle-status' partner.pk %}" class="inline" onsubmit="return confirm('{% if partner.is_active %}Desativar{% else %}Ativar{% endif %} este parceiro?');">
-          {% csrf_token %}
-          <input type="hidden" name="next" value="{{ request.path }}">
-          <button type="submit" class="inline-flex items-center px-4 py-2 {% if partner.is_active %}bg-amber-100 hover:bg-amber-200 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400{% else %}bg-emerald-600 hover:bg-emerald-700 text-white{% endif %} rounded-lg font-medium transition-colors gap-2 text-sm">
-            <i data-lucide="{% if partner.is_active %}pause-circle{% else %}play-circle{% endif %}" class="w-4 h-4"></i>
-            {% if partner.is_active %}Desativar{% else %}Ativar{% endif %}
-          </button>
-        </form>
-      </div>
+      <p class="lf-page-subtitle">NIF {{ partner.nif }}</p>
+    </div>
+    <div class="lf-page-actions">
+      <a class="lf-btn lf-btn-ghost" href="{% url 'core:partner-list' %}"><i data-lucide="arrow-left" class="w-4 h-4" aria-hidden="true"></i>Clientes e plataformas</a>
+      <form method="post" action="{% url 'core:partner-toggle-status' partner.pk %}" onsubmit="return confirm('{% if partner.is_active %}Desativar{% else %}Ativar{% endif %} este cliente?');">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.path }}">
+        <button type="submit" class="lf-btn lf-btn-ghost"><i data-lucide="{% if partner.is_active %}pause-circle{% else %}play-circle{% endif %}" class="w-4 h-4" aria-hidden="true"></i>{% if partner.is_active %}Desativar{% else %}Ativar{% endif %}</button>
+      </form>
+      <a class="lf-btn lf-btn-primary" href="{% url 'core:partner-edit' partner.pk %}"><i data-lucide="pencil" class="w-4 h-4" aria-hidden="true"></i>Editar</a>
     </div>
   </div>
 
   <!-- Grid Principal -->
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <div class="lg:col-span-2 space-y-6">
-      <!-- Informações Gerais -->
+      <!-- Informações gerais -->
       <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6">
         <h2 class="text-base font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-          <i data-lucide="info" class="w-4 h-4 text-blue-600 dark:text-blue-400"></i>Informações Gerais
+          <i data-lucide="info" class="w-4 h-4 text-blue-600 dark:text-blue-400"></i>Informações gerais
         </h2>
         <div class="grid grid-cols-2 gap-4 text-sm">
           <div><p class="text-xs text-gray-400 uppercase tracking-wide mb-0.5">Estado</p>
@@ -842,7 +722,7 @@
           <div><p class="text-xs text-gray-400 uppercase tracking-wide mb-0.5">NIF</p><p class="font-semibold text-gray-900 dark:text-white">{{ partner.nif }}</p></div>
           <div><p class="text-xs text-gray-400 uppercase tracking-wide mb-0.5">Email</p><a href="mailto:{{ partner.contact_email }}" class="text-blue-600 dark:text-blue-400 hover:underline">{{ partner.contact_email }}</a></div>
           <div><p class="text-xs text-gray-400 uppercase tracking-wide mb-0.5">Telefone</p><p class="text-gray-900 dark:text-white">{{ partner.contact_phone|default:"—" }}</p></div>
-          <div><p class="text-xs text-gray-400 uppercase tracking-wide mb-0.5">Prazo Entrega</p><p class="text-gray-900 dark:text-white">{{ partner.default_delivery_time_days }} dia(s)</p></div>
+          <div><p class="text-xs text-gray-400 uppercase tracking-wide mb-0.5">Prazo de entrega</p><p class="text-gray-900 dark:text-white">{{ partner.default_delivery_time_days }} dia{{ partner.default_delivery_time_days|pluralize }}</p></div>
           <div><p class="text-xs text-gray-400 uppercase tracking-wide mb-0.5">Auto-atribuição</p>
             <p class="{% if partner.auto_assign_orders %}text-emerald-600 dark:text-emerald-400{% else %}text-gray-500{% endif %}">{% if partner.auto_assign_orders %}✓ Sim{% else %}✗ Não{% endif %}</p></div>
         </div>
@@ -898,7 +778,7 @@
           <i data-lucide="plug" class="w-10 h-10 mx-auto text-gray-300 dark:text-gray-600 mb-3"></i>
           <p class="text-sm text-gray-500 dark:text-gray-400">Nenhuma integração configurada</p>
           <a href="{% url 'core:integration-create' partner.pk %}" class="inline-flex items-center px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium mt-3 gap-1">
-            <i data-lucide="plus" class="w-4 h-4"></i>Criar Integração
+            <i data-lucide="plus" class="w-4 h-4"></i>Criar integração
           </a>
         </div>
         {% endif %}
@@ -913,13 +793,13 @@
         </h3>
         <div class="space-y-1.5">
           <a href="{% url 'core:integration-create' partner.pk %}" class="flex items-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-lg transition-colors text-sm">
-            <i data-lucide="plus-circle" class="w-4 h-4"></i>Nova Integração
+            <i data-lucide="plus-circle" class="w-4 h-4"></i>Nova integração
           </a>
           <a href="{% url 'core:integrations-dashboard' %}" class="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-gray-900/50 hover:bg-gray-100 dark:hover:bg-gray-900 text-gray-700 dark:text-gray-300 rounded-lg transition-colors text-sm">
-            <i data-lucide="activity" class="w-4 h-4"></i>Painel de Integrações
+            <i data-lucide="activity" class="w-4 h-4"></i>Integrações
           </a>
           <a href="{% url 'core:partner-edit' partner.pk %}" class="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-gray-900/50 hover:bg-gray-100 dark:hover:bg-gray-900 text-gray-700 dark:text-gray-300 rounded-lg transition-colors text-sm">
-            <i data-lucide="edit" class="w-4 h-4"></i>Editar Parceiro
+            <i data-lucide="edit" class="w-4 h-4"></i>Editar cliente
           </a>
         </div>
       </div>
@@ -1101,21 +981,21 @@ window.appPrompt = function(msg, defaultValue, opts) {
         <i data-lucide="package-x" class="w-5 h-5 text-white"></i>
       </div>
       <div class="flex-1">
-        <h3 class="text-lg font-bold">Pacotes Not Arrived</h3>
+        <h3 class="text-lg font-semibold">Pacotes que não chegaram</h3>
         <p class="text-xs text-rose-100">
-          Atribuídos ao driver no plano mas <strong>nunca picados</strong>
+          Atribuídos ao motorista no plano mas <strong>nunca lidos</strong>
           em nenhum dia · provavelmente perdidos no hub.
         </p>
       </div>
       <button @click="diagModal.open = true"
               class="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-semibold"
-              title="Verificar onde um waybill específico foi visto nos imports">
+              title="Verificar onde um envio específico foi visto nos imports">
         <i data-lucide="stethoscope" class="w-4 h-4"></i> Diagnóstico
       </button>
       <button @click="scanModal.open = true"
               class="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-semibold"
-              title="Procurar estes waybills numa planilha de outro HUB">
-        <i data-lucide="search" class="w-4 h-4"></i> Scan outro HUB
+              title="Procurar estes envios numa folha de cálculo de outro hub">
+        <i data-lucide="search" class="w-4 h-4" aria-hidden="true"></i> Procurar noutro hub
       </button>
       <button @click="exportXlsx()"
               :disabled="loading || rows.length === 0"
@@ -1151,7 +1031,7 @@ window.appPrompt = function(msg, defaultValue, opts) {
           </select>
         </label>
         <label class="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-1">
-          HUB:
+          hub:
           <select x-model="hubId" @change="reload()"
                   class="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 text-xs">
             <option value="">Todos</option>
@@ -1160,7 +1040,7 @@ window.appPrompt = function(msg, defaultValue, opts) {
             {% endfor %}
           </select>
         </label>
-        <input type="text" placeholder="Filtrar driver / CP4 / waybill / cliente…"
+        <input type="text" placeholder="Filtrar motorista / CP4 / envio / cliente…"
                x-model="search"
                class="flex-1 min-w-[260px] px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200">
         <button @click="reload()"
@@ -1173,17 +1053,17 @@ window.appPrompt = function(msg, defaultValue, opts) {
         <span class="px-2 py-1 bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300 rounded font-bold">
           <span x-text="filteredRows.length"></span> de <span x-text="rows.length"></span> pacotes
         </span>
-        <span x-show="summary?.total_cost_eur > 0"
-              class="px-2 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 rounded font-bold"
+        {% if is_gestao %}<span x-show="summary?.total_cost_eur > 0"
+              class="lf-badge lf-tone-warning"
               :title="'Estimativa: ' + (rows.length || 0) + ' pacotes × preço Cainiao'">
-          💰 €<span x-text="summary?.total_cost_eur?.toFixed(2)"></span> em risco
-        </span>
+          <span x-text="lfEur(summary?.total_cost_eur)"></span> em risco
+        </span>{% endif %}
         <span x-show="summary?.n_to_escalate > 0"
-              class="px-2 py-1 bg-red-200 dark:bg-red-900/40 text-red-800 dark:text-red-200 rounded font-bold animate-pulse">
-          🚨 <span x-text="summary?.n_to_escalate"></span> a ESCALAR (>10d)
+              class="lf-badge lf-tone-danger">
+          <span x-text="summary?.n_to_escalate"></span> a escalar (mais de 10 dias)
         </span>
         <span class="px-2 py-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded">
-          <span x-text="byDriver.length"></span> drivers
+          <span x-text="byDriver.length"></span> motoristas
         </span>
         <span x-show="rows.length > 0" class="px-2 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded">
           Mais antigo: <strong x-text="(rows[0]?.business_days_stuck || 0) + 'd'"></strong>
@@ -1195,7 +1075,7 @@ window.appPrompt = function(msg, defaultValue, opts) {
         <button @click="bulkModal.open = true; bulkModal.type = 'DELIVERED_OTHER_HUB'"
                 class="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded font-semibold flex items-center gap-1">
           <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
-          Marcar como entregue (outro HUB)
+          Marcar como entregue (outro hub)
         </button>
         <button @click="openBulkFlagModal()"
                 class="px-2 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded font-semibold flex items-center gap-1">
@@ -1220,14 +1100,14 @@ window.appPrompt = function(msg, defaultValue, opts) {
     <!-- Loading -->
     <div x-show="loading" class="p-12 text-center">
       <i data-lucide="loader-2" class="w-10 h-10 mx-auto animate-spin text-rose-500"></i>
-      <p class="text-sm text-gray-500 mt-3">A calcular pacotes Not Arrived…</p>
+      <p class="text-sm text-gray-500 mt-3">A calcular pacotes Não chegaram…</p>
     </div>
 
     <!-- Empty -->
     <div x-show="!loading && rows.length === 0" x-cloak class="p-12 text-center">
       <i data-lucide="check-circle-2" class="w-12 h-12 mx-auto text-emerald-500 mb-2"></i>
-      <p class="text-base font-bold text-gray-800 dark:text-gray-200">Nenhum pacote Not Arrived!</p>
-      <p class="text-sm text-gray-500">Todos os pacotes atribuídos foram picados pelos drivers.</p>
+      <p class="text-base font-bold text-gray-800 dark:text-gray-200">Nenhum pacote Não chegaram!</p>
+      <p class="text-sm text-gray-500">Todos os pacotes atribuídos foram lidos pelos motoristas.</p>
     </div>
 
     <!-- TAB: Lista -->
@@ -1267,7 +1147,7 @@ window.appPrompt = function(msg, defaultValue, opts) {
                         'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300': r.sla_level === 'green',
                       }"
                       x-text="r.business_days_stuck + 'd'"></span>
-                <span x-show="r.should_escalate" class="ml-1 text-[10px] text-red-600 font-bold">🚨</span>
+                <span x-show="r.should_escalate" class="ml-1 lf-badge lf-tone-danger">Escalar</span>
               </td>
               <td class="px-3 py-2">
                 <a :href="'/settlements/cainiao/waybill/' + r.waybill + '/'"
@@ -1300,7 +1180,7 @@ window.appPrompt = function(msg, defaultValue, opts) {
                 <div class="flex items-center justify-end gap-0.5">
                   <button @click="openFlagModal(r.waybill)"
                           class="p-1 hover:bg-rose-100 dark:hover:bg-rose-900/30 rounded text-rose-600"
-                          title="Sinalizar como Not Arrived (persistente)">
+                          title="Sinalizar como Não chegaram (persistente)">
                     <i data-lucide="flag" class="w-3.5 h-3.5"></i>
                   </button>
                   <button @click="openEditor(r)"
@@ -1326,10 +1206,10 @@ window.appPrompt = function(msg, defaultValue, opts) {
     <div x-show="!loading && rows.length > 0 && activeTab === 'hot'" x-cloak class="flex-1 overflow-y-auto p-6 space-y-4">
       <div>
         <h4 class="text-sm font-bold text-rose-700 dark:text-rose-300 mb-2 flex items-center gap-1">
-          🔥 Hot drivers
+          Motoristas com mais casos
           <span class="text-xs text-gray-500 font-normal">(≥5 pacotes presos)</span>
         </h4>
-        <div x-show="hotDrivers.length === 0" class="text-sm text-gray-500 italic">Nenhum driver com 5+ pacotes.</div>
+        <div x-show="hotDrivers.length === 0" class="text-sm text-gray-500 italic">Nenhum motorista com 5+ pacotes.</div>
         <div class="space-y-2">
           <template x-for="d in hotDrivers" :key="d.driver">
             <div class="flex items-center gap-3 bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 rounded-lg p-3">
@@ -1354,7 +1234,7 @@ window.appPrompt = function(msg, defaultValue, opts) {
       </div>
       <div>
         <h4 class="text-sm font-bold text-rose-700 dark:text-rose-300 mb-2 flex items-center gap-1">
-          🔥 Hot CP4s
+          CP4 com mais casos
           <span class="text-xs text-gray-500 font-normal">(≥5 pacotes presos)</span>
         </h4>
         <div x-show="hotCp4s.length === 0" class="text-sm text-gray-500 italic">Nenhum CP4 com 5+ pacotes.</div>
@@ -1366,7 +1246,7 @@ window.appPrompt = function(msg, defaultValue, opts) {
                 <span class="text-xl font-bold text-orange-700 dark:text-orange-300" x-text="c.n"></span>
               </div>
               <div class="text-[10px] text-gray-500 mt-1">
-                <span x-text="c.drivers.length"></span> driver(s)
+                <span x-text="c.drivers.length + (c.drivers.length === 1 ? ' motorista' : ' motoristas')"></span>
               </div>
             </div>
           </template>
@@ -1377,7 +1257,7 @@ window.appPrompt = function(msg, defaultValue, opts) {
     <!-- TAB: História -->
     <div x-show="!loading && activeTab === 'history'" x-cloak class="flex-1 overflow-y-auto p-6 space-y-4">
       <div>
-        <h4 class="text-sm font-bold text-gray-800 dark:text-gray-200 mb-2">Pacotes que entraram em Not Arrived (últimos 30d)</h4>
+        <h4 class="text-sm font-bold text-gray-800 dark:text-gray-200 mb-2">Pacotes que entraram em Não chegaram (últimos 30d)</h4>
         <div class="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-3">
           <!-- Bar chart simples em divs -->
           <div class="flex items-end gap-0.5 h-32">
@@ -1416,7 +1296,7 @@ window.appPrompt = function(msg, defaultValue, opts) {
     <div x-show="!loading && activeTab === 'flagged'" x-cloak class="flex-1 overflow-y-auto p-6">
       <div class="mb-3 flex items-center justify-between">
         <div>
-          <h4 class="text-sm font-bold text-rose-700 dark:text-rose-300">🚨 Pacotes sinalizados ativos</h4>
+          <h4 class="text-sm font-bold text-rose-700 dark:text-rose-300">Pacotes sinalizados ativos</h4>
           <p class="text-xs text-gray-500">
             Sinalizações persistentes. Auto-limpam se o pacote reaparecer com status entregue.
           </p>
@@ -1483,14 +1363,14 @@ window.appPrompt = function(msg, defaultValue, opts) {
     <div x-show="!loading && activeTab === 'snapshots'" x-cloak class="flex-1 overflow-y-auto p-6">
       <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h4 class="text-sm font-bold text-purple-700 dark:text-purple-300">📅 Histórico diário (auditoria)</h4>
+          <h4 class="text-sm font-bold text-purple-700 dark:text-purple-300">Histórico diário (auditoria)</h4>
           <p class="text-xs text-gray-500">
-            Snapshots automáticos da lista Not Arrived diariamente às 18h. Útil para confrontar com o armazém principal.
+            Registos automáticos da lista Não chegaram diariamente às 18h. Útil para confrontar com o armazém principal.
           </p>
         </div>
         <div class="flex gap-2">
           <button @click="takeSnapshotNow()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-semibold flex items-center gap-1">
-            <i data-lucide="camera" class="w-3.5 h-3.5"></i> Snapshot agora
+            <i data-lucide="camera" class="w-3.5 h-3.5"></i> Registo agora
           </button>
           <button @click="loadSnapshots()" class="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded text-xs font-semibold flex items-center gap-1">
             <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Recarregar
@@ -1501,13 +1381,13 @@ window.appPrompt = function(msg, defaultValue, opts) {
         <i data-lucide="loader-2" class="w-8 h-8 mx-auto animate-spin text-purple-500"></i>
       </div>
       <div x-show="!snapshots.loading && snapshots.list.length === 0 && snapshots.loaded" x-cloak class="p-8 text-center text-gray-500">
-        <p>Ainda sem snapshots.</p>
-        <p class="text-xs">O primeiro snapshot é criado automaticamente às 18h, ou clica em "Snapshot agora" para gerar manualmente.</p>
+        <p>Ainda sem registos.</p>
+        <p class="text-xs">O primeiro registo é criado automaticamente às 18h, ou clica em "Registo agora" para gerar manualmente.</p>
       </div>
       <div x-show="!snapshots.loading && snapshots.list.length > 0" x-cloak>
         <!-- Diff tool -->
         <div class="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-3 mb-3 border border-purple-200 dark:border-purple-800">
-          <div class="text-xs font-bold text-purple-700 dark:text-purple-300 mb-2">🔀 Comparar dois snapshots</div>
+          <div class="text-xs font-bold text-purple-700 dark:text-purple-300 mb-2">Comparar dois registos</div>
           <div class="flex flex-wrap gap-2 items-center">
             <select x-model.number="snapshots.diffFromId" class="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-700">
               <option :value="null">— De —</option>
@@ -1564,7 +1444,7 @@ window.appPrompt = function(msg, defaultValue, opts) {
                   <td class="px-2 py-1.5">
                     <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold"
                           :class="s.is_automatic ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300' : 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300'"
-                          x-text="s.is_automatic ? '🤖 Auto' : '✋ Manual'"></span>
+                          x-text="s.is_automatic ? 'Automático' : 'Manual'"></span>
                   </td>
                   <td class="px-2 py-1.5 text-right font-bold text-rose-700 dark:text-rose-300" x-text="s.total_packages"></td>
                   <td class="px-2 py-1.5 text-right" x-text="s.n_to_escalate"></td>
@@ -1591,7 +1471,7 @@ window.appPrompt = function(msg, defaultValue, opts) {
         <div x-show="snapshots.detail" x-cloak class="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
           <div class="flex items-center justify-between mb-2">
             <h5 class="text-sm font-bold text-blue-800 dark:text-blue-200">
-              Detalhes do snapshot <span x-text="snapshots.detail?.snapshot?.snapshot_date"></span>
+              Detalhes do registo <span x-text="snapshots.detail?.snapshot?.snapshot_date"></span>
             </h5>
             <button @click="snapshots.detail = null" class="text-xs text-gray-500">✕ fechar</button>
           </div>
@@ -1637,7 +1517,7 @@ window.appPrompt = function(msg, defaultValue, opts) {
         <select x-model="resolvedFilterType" @change="loadResolved()"
                 class="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-xs">
           <option value="ALL">Todos os tipos</option>
-          <option value="DELIVERED_OTHER_HUB">Entregue por outro HUB</option>
+          <option value="DELIVERED_OTHER_HUB">Entregue por outro hub</option>
           <option value="DELIVERED_LATE">Entregue tarde</option>
           <option value="RETURNED">Devolvido</option>
           <option value="LOST">Perdido</option>
@@ -1651,7 +1531,7 @@ window.appPrompt = function(msg, defaultValue, opts) {
           <option value="180">Últimos 180d</option>
           <option value="365">Último ano</option>
         </select>
-        <input type="text" placeholder="Filtrar waybill / driver / CP4 / cidade…"
+        <input type="text" placeholder="Filtrar envio / motorista / CP4 / cidade…"
                x-model="resolvedSearch"
                class="flex-1 min-w-[220px] px-3 py-1 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-700">
         <button @click="loadResolved()"
@@ -1693,7 +1573,7 @@ window.appPrompt = function(msg, defaultValue, opts) {
               <th class="px-2 py-2 text-left text-[10px] uppercase font-semibold text-gray-700 dark:text-gray-300">Motorista original</th>
               <th class="px-2 py-2 text-left text-[10px] uppercase font-semibold text-gray-700 dark:text-gray-300">CP4</th>
               <th class="px-2 py-2 text-left text-[10px] uppercase font-semibold text-gray-700 dark:text-gray-300">Cidade</th>
-              <th class="px-2 py-2 text-left text-[10px] uppercase font-semibold text-gray-700 dark:text-gray-300">HUB / Courier real</th>
+              <th class="px-2 py-2 text-left text-[10px] uppercase font-semibold text-gray-700 dark:text-gray-300">hub / Courier real</th>
               <th class="px-2 py-2 text-left text-[10px] uppercase font-semibold text-gray-700 dark:text-gray-300">Resolvido em</th>
               <th class="px-2 py-2 text-left text-[10px] uppercase font-semibold text-gray-700 dark:text-gray-300">Por</th>
               <th class="px-2 py-2 text-right text-[10px] uppercase font-semibold text-gray-700 dark:text-gray-300">Ações</th>
@@ -1747,7 +1627,7 @@ window.appPrompt = function(msg, defaultValue, opts) {
                     </button>
                     <button @click="unresolveOne(r.waybill)"
                             class="p-1 hover:bg-rose-100 dark:hover:bg-rose-900/30 rounded text-rose-600"
-                            title="Apagar resolução (volta para Not Arrived)">
+                            title="Apagar resolução (volta para Não chegaram)">
                       <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
                     </button>
                   </div>
@@ -1767,7 +1647,7 @@ window.appPrompt = function(msg, defaultValue, opts) {
     <div x-show="!loading && byDriver.length > 0 && activeTab === 'list'" x-cloak
          class="border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 px-6 py-2 shrink-0">
       <div class="text-[10px] uppercase font-bold text-gray-600 dark:text-gray-400 mb-1">
-        Agregado por driver:
+        Agregado por motorista:
       </div>
       <div class="flex flex-wrap gap-1.5 max-h-20 overflow-y-auto">
         <template x-for="d in byDriver" :key="d.driver">
@@ -1795,7 +1675,7 @@ window.appPrompt = function(msg, defaultValue, opts) {
           <label class="block text-xs font-semibold mb-1">Tipo de resolução</label>
           <select x-model="editor.resolution_type"
                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-sm">
-            <option value="DELIVERED_OTHER_HUB">Entregue por outro HUB</option>
+            <option value="DELIVERED_OTHER_HUB">Entregue por outro hub</option>
             <option value="DELIVERED_LATE">Entregue tarde (sem reimport)</option>
             <option value="RETURNED">Devolvido ao remetente</option>
             <option value="LOST">Pacote perdido</option>
@@ -1804,12 +1684,12 @@ window.appPrompt = function(msg, defaultValue, opts) {
         </div>
         <div class="grid grid-cols-2 gap-2">
           <div>
-            <label class="block text-xs font-semibold mb-1">HUB que entregou</label>
+            <label class="block text-xs font-semibold mb-1">hub que entregou</label>
             <input type="text" x-model="editor.other_hub" placeholder="ex: Porto"
                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-sm">
           </div>
           <div>
-            <label class="block text-xs font-semibold mb-1">Courier (outro HUB)</label>
+            <label class="block text-xs font-semibold mb-1">Courier (outro hub)</label>
             <input type="text" x-model="editor.other_courier" placeholder="ex: João Silva"
                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-sm">
           </div>
@@ -1859,9 +1739,9 @@ window.appPrompt = function(msg, defaultValue, opts) {
           <label class="block text-xs font-semibold mb-1">Tipo de sinalização</label>
           <select x-model="flagModal.flag_type"
                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-sm">
-            <option value="NOT_ARRIVED">🚨 Not Arrived</option>
-            <option value="SUSPECTED_LOST">❓ Suspeita de perdido</option>
-            <option value="NEEDS_INVESTIGATION">🔍 Necessita investigação</option>
+            <option value="NOT_ARRIVED">Não chegaram</option>
+            <option value="SUSPECTED_LOST">Suspeita de perdido</option>
+            <option value="NEEDS_INVESTIGATION">Necessita investigação</option>
           </select>
         </div>
         <div>
@@ -1871,7 +1751,7 @@ window.appPrompt = function(msg, defaultValue, opts) {
             <option value="customer_reported">Cliente reportou que não recebeu</option>
             <option value="driver_lost">Motorista disse que perdeu</option>
             <option value="suspected_return">Suspeita de devolução não registada</option>
-            <option value="transferred_other_hub">Transferido para outro HUB</option>
+            <option value="transferred_other_hub">Transferido para outro hub</option>
             <option value="under_investigation">Investigação em curso</option>
             <option value="other">Outro</option>
           </select>
@@ -1945,13 +1825,13 @@ window.appPrompt = function(msg, defaultValue, opts) {
       <div class="space-y-3">
         <select x-model="bulkModal.type"
                 class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-sm">
-          <option value="DELIVERED_OTHER_HUB">Entregue por outro HUB</option>
+          <option value="DELIVERED_OTHER_HUB">Entregue por outro hub</option>
           <option value="DELIVERED_LATE">Entregue tarde</option>
           <option value="RETURNED">Devolvido ao remetente</option>
           <option value="LOST">Pacote perdido</option>
           <option value="OTHER">Outro</option>
         </select>
-        <input type="text" x-model="bulkModal.other_hub" placeholder="HUB que entregou (opcional)"
+        <input type="text" x-model="bulkModal.other_hub" placeholder="hub que entregou (opcional)"
                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-sm">
         <textarea x-model="bulkModal.notes" rows="2" placeholder="Notas (opcional)"
                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-sm"></textarea>
@@ -1973,8 +1853,8 @@ window.appPrompt = function(msg, defaultValue, opts) {
       <div class="px-5 py-3 border-b flex items-center gap-2 shrink-0">
         <i data-lucide="search" class="w-5 h-5 text-violet-600"></i>
         <div class="flex-1">
-          <h3 class="text-base font-bold">Procurar em planilha de outro HUB</h3>
-          <p class="text-xs text-gray-500">Sobe o Excel — só os waybills da lista actual são analisados em memória.</p>
+          <h3 class="text-base font-bold">Procurar em folha de cálculo de outro hub</h3>
+          <p class="text-xs text-gray-500">Sobe o Excel — só os envios da lista actual são analisados em memória.</p>
         </div>
         <button @click="scanModal.open = false" class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
           <i data-lucide="x" class="w-4 h-4"></i>
@@ -1990,18 +1870,18 @@ window.appPrompt = function(msg, defaultValue, opts) {
         <div x-show="scanModal.error" x-cloak class="px-3 py-2 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 rounded text-sm" x-text="scanModal.error"></div>
         <div x-show="scanModal.matches.length > 0 && !scanModal.loading" x-cloak>
           <div class="text-sm font-semibold mb-2 text-emerald-700 dark:text-emerald-300">
-            ✅ <span x-text="scanModal.matches.length"></span> match(es) de <span x-text="scanModal.totalScanned"></span> linhas
+            <span x-text="scanModal.matches.length"></span> correspondências em <span x-text="scanModal.totalScanned"></span> linhas
           </div>
           <!-- Sumário de classificação -->
           <div class="flex flex-wrap gap-2 mb-2 text-xs">
             <span x-show="scanModal.nOtherHub > 0"
                   class="px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded font-bold">
-              🏢 <span x-text="scanModal.nOtherHub"></span> entregue(s) por outro HUB
+              <span x-text="scanModal.nOtherHub"></span> entregues por outro hub
             </span>
             <span x-show="scanModal.nOurDriver > 0"
                   class="px-2 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded font-bold"
                   title="Motorista nosso entregou — atualização do EPOD foi perdida">
-              ⚠ <span x-text="scanModal.nOurDriver"></span> driver nosso (atualização perdida)
+              ⚠ <span x-text="scanModal.nOurDriver"></span> motoristas nossos (atualização perdida)
             </span>
           </div>
           <div class="overflow-y-auto max-h-80 border rounded">
@@ -2021,7 +1901,7 @@ window.appPrompt = function(msg, defaultValue, opts) {
                     <td class="px-2 py-1">
                       <span class="px-1.5 py-0.5 rounded text-[10px] font-bold"
                             :class="m.is_our_driver ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300' : 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300'"
-                            x-text="m.is_our_driver ? '⚠ NOSSO' : '🏢 OUTRO HUB'"></span>
+                            x-text="m.is_our_driver ? 'Nosso' : 'Outro hub'"></span>
                     </td>
                     <td class="px-2 py-1 font-mono" x-text="m.waybill"></td>
                     <td class="px-2 py-1" x-text="m.task_status || '—'"></td>
@@ -2034,8 +1914,8 @@ window.appPrompt = function(msg, defaultValue, opts) {
           </div>
           <p class="text-[11px] text-gray-500 mt-2">
             ⓘ Cada linha será resolvida com o tipo apropriado:
-            <strong>"Entregue por outro HUB"</strong> para couriers
-            externos, <strong>"Entregue tarde"</strong> para drivers
+            <strong>"Entregue por outro hub"</strong> para couriers
+            externos, <strong>"Entregue tarde"</strong> para motoristas
             nossos.
           </p>
           <button @click="applyScanResolutions()"
@@ -2056,9 +1936,9 @@ window.appPrompt = function(msg, defaultValue, opts) {
       <div class="px-5 py-3 border-b flex items-center gap-2 shrink-0">
         <i data-lucide="stethoscope" class="w-5 h-5 text-blue-600"></i>
         <div class="flex-1">
-          <h3 class="text-base font-bold">Diagnóstico de waybill</h3>
+          <h3 class="text-base font-bold">Diagnóstico de envio</h3>
           <p class="text-xs text-gray-500">
-            Verifica em que imports o waybill foi visto, qual o estado actual na DB e se há resolução manual.
+            Verifica em que imports o envio foi visto, qual o estado actual na DB e se há resolução manual.
           </p>
         </div>
         <button @click="diagModal.open = false" class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
@@ -2105,10 +1985,10 @@ window.appPrompt = function(msg, defaultValue, opts) {
           <!-- Snapshots na DB -->
           <div>
             <h4 class="text-xs font-bold uppercase text-gray-700 dark:text-gray-300 mb-2">
-              Estado na DB (<span x-text="diagModal.data?.db_rows?.length || 0"></span> snapshot(s))
+              Estado na DB (<span x-text="diagModal.data?.db_rows?.length || 0"></span> registo(s))
             </h4>
             <div x-show="diagModal.data?.db_rows?.length === 0" class="text-sm text-gray-500 italic">
-              Nenhum snapshot na DB. Este waybill nunca foi importado.
+              Nenhum registo na DB. Este envio nunca foi importado.
             </div>
             <div class="overflow-x-auto" x-show="diagModal.data?.db_rows?.length > 0">
               <table class="w-full text-xs">
@@ -2144,7 +2024,7 @@ window.appPrompt = function(msg, defaultValue, opts) {
           <!-- Batches recentes -->
           <div>
             <h4 class="text-xs font-bold uppercase text-gray-700 dark:text-gray-300 mb-2">
-              Últimos 20 imports (✅ = waybill foi visto neste import)
+              Últimos 20 imports (= envio foi visto neste import)
             </h4>
             <div class="overflow-y-auto max-h-60 border rounded">
               <table class="w-full text-xs">
@@ -2161,7 +2041,7 @@ window.appPrompt = function(msg, defaultValue, opts) {
                   <template x-for="b in (diagModal.data?.recent_batches || [])" :key="b.id">
                     <tr :class="b.seen_in_batch ? 'bg-emerald-50 dark:bg-emerald-900/20' : ''">
                       <td class="px-2 py-1 text-center">
-                        <span x-show="b.seen_in_batch" class="text-emerald-600 font-bold">✅</span>
+                        <span x-show="b.seen_in_batch" class="text-emerald-600 font-bold"></span>
                         <span x-show="!b.seen_in_batch" class="text-gray-400">—</span>
                       </td>
                       <td class="px-2 py-1 font-mono text-[10px]" x-text="b.filename"></td>
@@ -2174,7 +2054,7 @@ window.appPrompt = function(msg, defaultValue, opts) {
               </table>
             </div>
             <p class="text-[11px] text-gray-500 mt-1">
-              ⓘ Se o waybill <strong>não aparece</strong> em nenhum dos imports recentes, significa que o EPOD do nosso HUB já não inclui esse pacote (foi transferido ou fechado). É preciso resolver manualmente ou via Scan.
+              Se o envio <strong>não aparece</strong> em nenhum dos imports recentes, significa que o EPOD do nosso hub já não inclui esse pacote (foi transferido ou fechado). É preciso resolver manualmente ou via Scan.
             </p>
           </div>
 
@@ -2195,10 +2075,10 @@ window.appPrompt = function(msg, defaultValue, opts) {
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md p-5">
       <h3 class="text-base font-bold mb-2 flex items-center gap-2">
         <i data-lucide="message-circle" class="w-5 h-5 text-green-600"></i>
-        Notificar driver
+        Notificar motorista
       </h3>
       <p class="text-sm text-gray-600 mb-3">
-        Vai enviar uma mensagem WhatsApp a <strong x-text="whatsappModal.driverName"></strong> com a lista dos seus pacotes Not Arrived.
+        Vai enviar uma mensagem WhatsApp a <strong x-text="whatsappModal.driverName"></strong> com a lista dos seus pacotes Não chegaram.
       </p>
       <div x-show="whatsappModal.preview" x-cloak class="bg-gray-50 dark:bg-gray-900/50 rounded p-3 text-xs whitespace-pre-wrap font-mono mb-3" x-text="whatsappModal.preview"></div>
       <div class="flex justify-end gap-2">
@@ -2237,7 +2117,7 @@ window.appPrompt = function(msg, defaultValue, opts) {
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
 
         <button type="button" id="pudo-card-delivered"
-          onclick="document.getElementById('pudoBreakdownModal').classList.add('hidden'); openDriversModal('pudo_delivered', 'PUDO Delivered');"
+          onclick="document.getElementById('pudoBreakdownModal').classList.add('hidden'); openDriversModal('pudo_delivered', 'PUDO entregues');"
           class="text-left bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700/50 rounded-xl p-4 hover:shadow-md hover:border-emerald-400 dark:hover:border-emerald-500 transition-all group">
           <div class="flex items-center gap-2 mb-2">
             <i data-lucide="check-circle" class="w-4 h-4 text-emerald-600 dark:text-emerald-400"></i>
@@ -2248,33 +2128,33 @@ window.appPrompt = function(msg, defaultValue, opts) {
         </button>
 
         <button type="button" id="pudo-card-received"
-          onclick="document.getElementById('pudoBreakdownModal').classList.add('hidden'); openDriversModal('pudo_received', 'PUDO Driver Received');"
+          onclick="document.getElementById('pudoBreakdownModal').classList.add('hidden'); openDriversModal('pudo_received', 'PUDO em distribuição');"
           class="text-left bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50 rounded-xl p-4 hover:shadow-md hover:border-amber-400 dark:hover:border-amber-500 transition-all group">
           <div class="flex items-center gap-2 mb-2">
             <i data-lucide="truck" class="w-4 h-4 text-amber-600 dark:text-amber-400"></i>
             <span class="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">PUDO Received</span>
           </div>
           <p class="text-2xl font-bold text-amber-700 dark:text-amber-300" id="pudo-count-received">0</p>
-          <p class="text-[11px] text-amber-600/70 dark:text-amber-500 mt-0.5">com driver, por entregar</p>
+          <p class="text-[11px] text-amber-600/70 dark:text-amber-500 mt-0.5">com motorista, por entregar</p>
         </button>
 
         <button type="button" id="pudo-card-assigned"
-          onclick="document.getElementById('pudoBreakdownModal').classList.add('hidden'); openDriversModal('pudo_assigned', 'PUDO Assigned');"
+          onclick="document.getElementById('pudoBreakdownModal').classList.add('hidden'); openDriversModal('pudo_assigned', 'PUDO atribuídos');"
           class="text-left bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700/50 rounded-xl p-4 hover:shadow-md hover:border-blue-400 dark:hover:border-blue-500 transition-all group">
           <div class="flex items-center gap-2 mb-2">
             <i data-lucide="warehouse" class="w-4 h-4 text-blue-600 dark:text-blue-400"></i>
-            <span class="text-xs font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-300">PUDO Assigned</span>
+            <span class="text-xs font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-300">PUDO atribuídos</span>
           </div>
           <p class="text-2xl font-bold text-blue-700 dark:text-blue-300" id="pudo-count-assigned">0</p>
           <p class="text-[11px] text-blue-600/70 dark:text-blue-500 mt-0.5">atribuído, sem leitura</p>
         </button>
 
         <button type="button" id="pudo-card-failure"
-          onclick="document.getElementById('pudoBreakdownModal').classList.add('hidden'); openDriversModal('pudo_failure', 'PUDO Attempt Failure');"
+          onclick="document.getElementById('pudoBreakdownModal').classList.add('hidden'); openDriversModal('pudo_failure', 'PUDO falhadas');"
           class="text-left bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700/50 rounded-xl p-4 hover:shadow-md hover:border-red-400 dark:hover:border-red-500 transition-all group">
           <div class="flex items-center gap-2 mb-2">
             <i data-lucide="x-circle" class="w-4 h-4 text-red-600 dark:text-red-400"></i>
-            <span class="text-xs font-semibold uppercase tracking-wide text-red-700 dark:text-red-300">PUDO Attempt Failure</span>
+            <span class="text-xs font-semibold uppercase tracking-wide text-red-700 dark:text-red-300">PUDO falhadas</span>
           </div>
           <p class="text-2xl font-bold text-red-700 dark:text-red-300" id="pudo-count-failure">0</p>
           <p class="text-[11px] text-red-600/70 dark:text-red-500 mt-0.5">falhas de tentativa</p>
@@ -2344,12 +2224,12 @@ window.appPrompt = function(msg, defaultValue, opts) {
       <div id="dm-loading" class="absolute inset-0 flex items-center justify-center bg-white/80 dark:bg-gray-800/80 z-10">
         <div class="flex items-center gap-2 text-gray-500">
           <i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i>
-          A carregar drivers...
+          A carregar motoristas...
         </div>
       </div>
       <div id="dm-empty" class="hidden p-12 text-center text-gray-500 dark:text-gray-400">
         <i data-lucide="users-round" class="w-10 h-10 mx-auto opacity-40"></i>
-        <p class="mt-3 text-sm font-medium">Nenhum driver encontrado.</p>
+        <p class="mt-3 text-sm font-medium">Nenhum motorista encontrado.</p>
       </div>
       <table id="dm-table" class="hidden w-full text-sm">
         <thead class="bg-gray-50 dark:bg-gray-900/50 text-xs uppercase text-gray-500 dark:text-gray-400 sticky top-0">
@@ -2370,7 +2250,7 @@ window.appPrompt = function(msg, defaultValue, opts) {
 
     <!-- Footer -->
     <div class="px-6 py-3 bg-gray-50 dark:bg-gray-900/50 border-t border-gray-100 dark:border-gray-700/50 flex justify-between items-center shrink-0">
-      <p class="text-xs text-gray-500 dark:text-gray-400">Clique num driver para ver os pacotes</p>
+      <p class="text-xs text-gray-500 dark:text-gray-400">Clique num motorista para ver os pacotes</p>
       <button onclick="document.getElementById('driversModal').classList.add('hidden')"
         class="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 text-sm font-medium transition-colors">
         Fechar
@@ -2388,7 +2268,7 @@ window.appPrompt = function(msg, defaultValue, opts) {
         <div class="w-8 h-8 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg flex items-center justify-center">
           <i data-lucide="map-pin" class="w-4 h-4 text-indigo-600 dark:text-indigo-400"></i>
         </div>
-        <h2 class="text-base font-semibold text-gray-900 dark:text-white">Gestão de HUBs</h2>
+        <h2 class="text-base font-semibold text-gray-900 dark:text-white">Gestão de hubs</h2>
       </div>
       <button onclick="document.getElementById('hubModal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
         <i data-lucide="x" class="w-5 h-5"></i>
@@ -2397,12 +2277,12 @@ window.appPrompt = function(msg, defaultValue, opts) {
 
     <!-- Body -->
     <div class="flex-1 overflow-y-auto px-6 py-5 space-y-4" id="hubModalBody">
-      <p class="text-xs text-gray-400 dark:text-gray-500">A carregar HUBs...</p>
+      <p class="text-xs text-gray-400 dark:text-gray-500">A carregar hubs...</p>
     </div>
 
     <!-- Footer: criar novo HUB -->
     <div class="flex-shrink-0 border-t border-gray-200 dark:border-gray-700 px-6 py-4">
-      <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide">Criar novo HUB</p>
+      <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-wide">Criar novo hub</p>
       <div class="flex gap-2">
         <input id="newHubName" type="text" placeholder="Nome (ex: Porto)"
           class="flex-1 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
@@ -2784,7 +2664,7 @@ async function openDriversModal(statusKey, statusLabel) {
   const theme = _DM_THEMES[statusKey] || { grad: 'from-indigo-600 to-blue-600', icon: 'users' };
   header.className = `px-6 py-5 flex items-center justify-between shrink-0 bg-gradient-to-r ${theme.grad}`;
   iconEl.setAttribute('data-lucide', theme.icon);
-  title.textContent = `Drivers — ${statusLabel}`;
+  title.textContent = `Motoristas — ${statusLabel}`;
   sub.textContent = 'A carregar...';
   document.getElementById('dm-packages-label').textContent = statusLabel;
   document.getElementById('dm-drivers-total').textContent = '—';
@@ -2935,12 +2815,12 @@ function notArrivedApp() {
     selected: [],
     activeTab: 'list',
     tabs: [
-      { id: 'list', label: '📋 Lista' },
-      { id: 'flagged', label: '🚨 Sinalizados' },
-      { id: 'snapshots', label: '📅 Histórico diário' },
-      { id: 'hot', label: '🔥 Hot list' },
-      { id: 'history', label: '📈 Tendência' },
-      { id: 'resolved', label: '✅ Resolvidos' },
+      { id: 'list', label: 'Lista' },
+      { id: 'flagged', label: 'Sinalizados' },
+      { id: 'snapshots', label: 'Histórico diário' },
+      { id: 'hot', label: 'Mais casos' },
+      { id: 'history', label: 'Tendência' },
+      { id: 'resolved', label: 'Resolvidos' },
     ],
     // Sub-modais
     editor: {
@@ -3172,7 +3052,7 @@ function notArrivedApp() {
 
     async unresolve() {
       const ok = await appConfirm(
-        'Apagar resolução? O pacote volta para a lista de Not Arrived.',
+        'Apagar resolução? O pacote volta para a lista dos que não chegaram.',
         {
           title: 'Apagar resolução',
           okLabel: 'Apagar',
@@ -3447,7 +3327,7 @@ function notArrivedApp() {
     async clearFlag(waybill) {
       const ok = await appConfirm(
         'Limpar sinalização deste pacote?',
-        { title: 'Limpar flag', okLabel: 'Limpar', danger: true },
+        { title: 'Limpar sinalização', okLabel: 'Limpar', danger: true },
       );
       if (!ok) return;
       const j = await this._api(
@@ -3481,8 +3361,8 @@ function notArrivedApp() {
 
     async takeSnapshotNow() {
       const ok = await appConfirm(
-        'Criar snapshot da lista Not Arrived agora?',
-        { title: 'Snapshot manual', okLabel: 'Criar' },
+        'Criar um registo da lista dos que não chegaram agora?',
+        { title: 'Registo manual', okLabel: 'Criar' },
       );
       if (!ok) return;
       const j = await this._api(
@@ -3733,20 +3613,20 @@ async function _runRollForward() {
     dry = await r.json();
   } catch (e) {
     alert('Erro: ' + e.message);
-    btn.disabled = false; lbl.textContent = 'Roll-forward Backlog';
+    btn.disabled = false; lbl.textContent = 'Passar pendentes para hoje';
     return;
   }
 
   if (!dry.success) {
     alert('Erro: ' + (dry.error || 'desconhecido'));
-    btn.disabled = false; lbl.textContent = 'Roll-forward Backlog';
+    btn.disabled = false; lbl.textContent = 'Passar pendentes para hoje';
     return;
   }
 
   const n = dry.would_roll || 0;
   if (n === 0) {
     alert(`Nenhum pacote para roll-forward (today=${dry.today}, threshold=${dry.threshold_days} dias).`);
-    btn.disabled = false; lbl.textContent = 'Roll-forward Backlog';
+    btn.disabled = false; lbl.textContent = 'Passar pendentes para hoje';
     return;
   }
 
@@ -3762,7 +3642,7 @@ async function _runRollForward() {
     `Operação reversível pelo histórico (CainiaoOperationTaskHistory).`
   );
   if (!ok) {
-    btn.disabled = false; lbl.textContent = 'Roll-forward Backlog';
+    btn.disabled = false; lbl.textContent = 'Passar pendentes para hoje';
     return;
   }
 
@@ -3785,7 +3665,7 @@ async function _runRollForward() {
     alert('Erro: ' + e.message);
   } finally {
     btn.disabled = false;
-    lbl.textContent = 'Roll-forward Backlog';
+    lbl.textContent = 'Passar pendentes para hoje';
   }
 }
 
@@ -3807,20 +3687,20 @@ async function _runStaleArmazem() {
     dry = await r.json();
   } catch (e) {
     alert('Erro ao analisar: ' + e.message);
-    btn.disabled = false; lbl.textContent = 'Limpar Stale Armazém';
+    btn.disabled = false; lbl.textContent = 'Limpar parados no armazém';
     return;
   }
 
   if (!dry.success) {
     alert('Erro: ' + (dry.error || 'desconhecido'));
-    btn.disabled = false; lbl.textContent = 'Limpar Stale Armazém';
+    btn.disabled = false; lbl.textContent = 'Limpar parados no armazém';
     return;
   }
 
   const n = dry.would_mark || 0;
   if (n === 0) {
     alert(`Nenhum pacote stale a marcar (cutoff=${dry.cutoff}, threshold=${dry.threshold_days} dias).`);
-    btn.disabled = false; lbl.textContent = 'Limpar Stale Armazém';
+    btn.disabled = false; lbl.textContent = 'Limpar parados no armazém';
     return;
   }
 
@@ -3836,7 +3716,7 @@ async function _runStaleArmazem() {
     `Pacotes afectados ficam no histórico (timeline). Esta acção é reversível por importação de planilha que traga o waybill com novo status.`
   );
   if (!ok) {
-    btn.disabled = false; lbl.textContent = 'Limpar Stale Armazém';
+    btn.disabled = false; lbl.textContent = 'Limpar parados no armazém';
     return;
   }
 
@@ -3859,7 +3739,7 @@ async function _runStaleArmazem() {
     alert('Erro: ' + e.message);
   } finally {
     btn.disabled = false;
-    lbl.textContent = 'Limpar Stale Armazém';
+    lbl.textContent = 'Limpar parados no armazém';
   }
 }
 
@@ -3906,7 +3786,7 @@ function _showUnmappedNames() {
   panel.innerHTML = `
     <div class="mb-2 p-2 rounded bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700/50">
       <p class="text-xs font-semibold text-blue-800 dark:text-blue-300">
-        💡 Como funciona
+        Como funciona
       </p>
       <p class="text-[11px] text-blue-700 dark:text-blue-400 mt-1">
         Quando o courier_name é renomeado na Cainiao mas o <strong>Courier ID</strong> permanece,
@@ -3979,7 +3859,7 @@ function _showUnmappedNames() {
       </tbody>
     </table>
     <p class="text-xs text-gray-500 mt-3">
-      💡 Procura pelo Courier ID actual (ex: <code>1576539082608</code>) ou pelo
+      Procure pelo Courier ID actual (ex: <code>1576539082608</code>) ou pelo
       novo courier_name (ex: <code>Maria_Freitas_LF</code>).
     </p>
   `;
@@ -4044,7 +3924,7 @@ async function _unmToggleNewDriver(idx) {
     document.getElementById(`unm-new-nome-${idx}`).value = d.suggested_name || '';
     const f = d.found;
     if (!f) {
-      info.textContent = '⚠ Nenhum Courier ID encontrado para este login exacto (Driver Statistic / User List do CES). Consulta-o no CES e escreve-o à mão.';
+      info.textContent = 'Nenhum Courier ID encontrado para este login exacto (Driver Statistic / User List do CES). Consulta-o no CES e escreve-o à mão.';
       return;
     }
     document.getElementById(`unm-new-cid-${idx}`).value = f.courier_id;

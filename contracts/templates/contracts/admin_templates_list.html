@@ -1,113 +1,85 @@
 {% extends 'layouts/admin_base.html' %}
 
-{% block title %}Modelos de Contrato{% endblock %}
+{% block title %}Modelos de contrato{% endblock %}
 
 {% block content %}
 <div class="max-w-6xl mx-auto">
 
-  <div class="flex items-center justify-between mb-6">
-    <div class="flex items-center gap-3">
-      <div>
-        <h1 class="text-xl font-bold text-gray-900 dark:text-white">Modelos de Contrato</h1>
-        <p class="text-xs text-gray-500 dark:text-gray-400">Templates que serão apresentados aos motoristas para assinar</p>
-      </div>
+  <div class="lf-page-header">
+    <div class="min-w-0">
+      <h1 class="lf-page-title">Modelos de contrato</h1>
+      <p class="lf-page-subtitle">Modelos apresentados aos motoristas para assinar</p>
     </div>
-    <div class="flex items-center gap-2">
-      <a href="{% url 'contracts:admin_signed_contracts' %}"
-         class="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 inline-flex items-center gap-1.5">
-        <i data-lucide="check-square" class="w-4 h-4"></i>
-        Assinados
-      </a>
-      <a href="{% url 'contracts:admin_missing_contracts' %}"
-         class="px-3 py-2 text-sm border border-amber-300 dark:border-amber-700 rounded-lg text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 inline-flex items-center gap-1.5">
-        <i data-lucide="alert-triangle" class="w-4 h-4"></i>
-        Por Assinar
-      </a>
-      <a href="{% url 'contracts:admin_template_create' %}"
-         class="px-4 py-2 text-sm bg-brand-purple text-white rounded-lg shadow-sm font-medium inline-flex items-center gap-1.5">
-        <i data-lucide="plus" class="w-4 h-4"></i>
-        Novo Template
-      </a>
+    <div class="lf-page-actions">
+      <a class="lf-btn lf-btn-ghost" href="{% url 'contracts:admin_signed_contracts' %}"><i data-lucide="check-square" class="w-4 h-4" aria-hidden="true"></i>Assinados</a>
+      <a class="lf-btn lf-btn-ghost" href="{% url 'contracts:admin_missing_contracts' %}"><i data-lucide="alert-triangle" class="w-4 h-4" aria-hidden="true"></i>Por assinar</a>
+      <a class="lf-btn lf-btn-primary" href="{% url 'contracts:admin_template_create' %}"><i data-lucide="plus" class="w-4 h-4" aria-hidden="true"></i>Novo modelo</a>
     </div>
   </div>
 
-  {% if messages %}
-    {% for m in messages %}
-      <div class="mb-3 px-4 py-3 rounded-lg text-sm
-        {% if 'error' in m.tags %}bg-rose-50 dark:bg-rose-900/20 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-700/50
-        {% else %}bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-700/50{% endif %}">{{ m }}</div>
-    {% endfor %}
-  {% endif %}
-
-  <div class="grid grid-cols-3 gap-3 mb-4">
-    <div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200/50 dark:border-gray-700/50">
-      <p class="text-xs uppercase font-bold text-gray-500 dark:text-gray-400">Total</p>
-      <p class="text-2xl font-extrabold text-gray-900 dark:text-white mt-1">{{ counts.total }}</p>
+  <div class="lf-kpi-grid mb-4">
+    <div class="lf-kpi">
+      <span class="lf-kpi-label">Total</span>
+      <span class="lf-kpi-value">{{ counts.total }}</span>
     </div>
-    <div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-emerald-200/50 dark:border-emerald-700/30">
-      <p class="text-xs uppercase font-bold text-emerald-600 dark:text-emerald-400">Ativos</p>
-      <p class="text-2xl font-extrabold text-emerald-700 dark:text-emerald-300 mt-1">{{ counts.active }}</p>
+    <div class="lf-kpi">
+      <span class="lf-kpi-label">Ativos</span>
+      <span class="lf-kpi-value">{{ counts.active }}</span>
     </div>
-    <div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200/50 dark:border-gray-700/50">
-      <p class="text-xs uppercase font-bold text-gray-600 dark:text-gray-400">Inativos</p>
-      <p class="text-2xl font-extrabold text-gray-900 dark:text-white mt-1">{{ counts.inactive }}</p>
+    <div class="lf-kpi">
+      <span class="lf-kpi-label">Inativos</span>
+      <span class="lf-kpi-value">{{ counts.inactive }}</span>
     </div>
   </div>
 
-  <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
-    <table class="w-full">
-      <thead class="bg-gray-50 dark:bg-gray-900/40">
+  <div class="lf-table-wrap">
+    <table class="lf-table">
+      <thead>
         <tr>
-          <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Template</th>
-          <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Aplicabilidade</th>
-          <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Vigência</th>
-          <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Assinaturas</th>
-          <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Estado</th>
-          <th class="px-4 py-3 w-20"></th>
+          <th scope="col">Modelo</th>
+          <th scope="col">Aplicabilidade</th>
+          <th scope="col">Vigência</th>
+          <th scope="col" class="text-right">Assinaturas</th>
+          <th scope="col" class="text-center">Estado</th>
+          <th scope="col"><span class="sr-only">Ações</span></th>
         </tr>
       </thead>
-      <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+      <tbody>
         {% for r in rows %}
-        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
-          <td class="px-4 py-3">
+        <tr>
+          <td>
             <p class="font-semibold text-gray-900 dark:text-white">{{ r.t.name }}</p>
             <p class="text-xs text-gray-500 dark:text-gray-400">v{{ r.t.version }}</p>
           </td>
-          <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{{ r.t.get_scope_display }}</td>
-          <td class="px-4 py-3 text-xs text-gray-700 dark:text-gray-300">
+          <td>{{ r.t.get_scope_display }}</td>
+          <td>
             <p>De: <strong>{{ r.t.effective_from|date:"d/m/Y" }}</strong></p>
             {% if r.t.expires_at %}<p>Até: <strong>{{ r.t.expires_at|date:"d/m/Y" }}</strong></p>{% endif %}
           </td>
-          <td class="px-4 py-3 text-right">
+          <td class="text-right">
             <span class="font-bold text-gray-900 dark:text-white">{{ r.signed_count }}</span>
           </td>
-          <td class="px-4 py-3 text-center">
+          <td class="text-center">
             {% if r.t.is_active %}
               {% if r.t.is_expired %}
-                <span class="px-2 py-0.5 rounded text-xs font-bold bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300">Expirado</span>
+                <span class="lf-badge lf-tone-warning">Expirado</span>
               {% else %}
-                <span class="px-2 py-0.5 rounded text-xs font-bold bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300">Ativo</span>
+                <span class="lf-badge lf-tone-success">Ativo</span>
               {% endif %}
             {% else %}
-              <span class="px-2 py-0.5 rounded text-xs font-bold bg-gray-100 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300">Inativo</span>
+              <span class="lf-badge lf-tone-neutral">Inativo</span>
             {% endif %}
           </td>
-          <td class="px-4 py-3 text-right">
-            <a href="{% url 'contracts:admin_template_edit' r.t.id %}"
-               class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md text-gray-600 dark:text-gray-400 hover:text-blue-600 inline-flex">
-              <i data-lucide="pencil" class="w-4 h-4"></i>
+          <td class="text-right">
+            <a href="{% url 'contracts:admin_template_edit' r.t.id %}" title="Editar modelo" aria-label="Editar modelo"
+               class="p-2.5 inline-flex rounded-md text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">
+              <i data-lucide="pencil" class="w-4 h-4" aria-hidden="true"></i>
             </a>
           </td>
         </tr>
         {% empty %}
         <tr>
-          <td colspan="6" class="px-4 py-12 text-center">
-            <i data-lucide="file-plus" class="w-10 h-10 text-gray-300 mx-auto mb-2"></i>
-            <p class="text-sm text-gray-500 italic">Nenhum template criado.</p>
-            <a href="{% url 'contracts:admin_template_create' %}"
-               class="inline-block mt-2 text-sm text-violet-600 dark:text-violet-400 hover:underline">
-              Criar primeiro template →
-            </a>
+          <td colspan="6"><div class="lf-empty"><i data-lucide="file-plus" class="w-8 h-8" aria-hidden="true"></i><p class="lf-empty-title">Sem modelos</p><p>Crie o primeiro modelo de contrato.</p><a class="lf-btn lf-btn-primary" href="{% url 'contracts:admin_template_create' %}">Novo modelo</a></div>
           </td>
         </tr>
         {% endfor %}

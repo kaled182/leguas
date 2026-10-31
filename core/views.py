@@ -809,7 +809,7 @@ def partner_create(request):
         if form.is_valid():
             partner = form.save()
             messages.success(
-                request, f'Parceiro "{partner.name}" criado com sucesso!'
+                request, f'Cliente "{partner.name}" criado.'
             )
             return redirect("core:partner-detail", pk=partner.pk)
     else:
@@ -817,8 +817,8 @@ def partner_create(request):
 
     context = {
         "form": form,
-        "title": "Novo Parceiro",
-        "button_text": "Criar Parceiro",
+        "title": "Novo cliente",
+        "button_text": "Criar cliente",
     }
 
     return render(request, "core/partner_form.html", context)
@@ -834,7 +834,7 @@ def partner_edit(request, pk):
         if form.is_valid():
             partner = form.save()
             messages.success(
-                request, f'Parceiro "{partner.name}" atualizado com sucesso!'
+                request, f'Cliente "{partner.name}" atualizado.'
             )
             return redirect("core:partner-detail", pk=partner.pk)
     else:
@@ -859,7 +859,7 @@ def partner_toggle_status(request, pk):
     partner.save()
 
     status = "ativado" if partner.is_active else "desativado"
-    messages.success(request, f'Parceiro "{partner.name}" {status}!')
+    messages.success(request, f'Cliente "{partner.name}" {status}.')
 
     next_url = request.POST.get("next") or request.META.get("HTTP_REFERER")
     if next_url and url_has_allowed_host_and_scheme(
@@ -884,7 +884,7 @@ def partner_delete(request, pk):
         try:
             partner.delete()
             messages.success(
-                request, f'Parceiro "{name}" apagado com sucesso.'
+                request, f'Cliente "{name}" apagado.'
             )
         except ProtectedError as e:
             types = ", ".join(
@@ -893,7 +893,7 @@ def partner_delete(request, pk):
             messages.error(
                 request,
                 f'Não é possível apagar "{name}": existem registos '
-                f'associados ({types}). Desative o parceiro em vez de apagar.',
+                f'associados ({types}). Desative o cliente em vez de apagar.',
             )
         return redirect("core:partner-list")
 
@@ -1376,7 +1376,7 @@ def partner_financial_preview(request, pk):
     if partner.price_per_package is None or partner.price_per_package == 0:
         return JsonResponse({
             "success": False,
-            "error": "Configure o 'Valor por Pacote' do parceiro antes de gerar.",
+            "error": "Configure o 'Valor por pacote' do cliente antes de gerar.",
         }, status=400)
     data = _collect_pre_invoice_data(partner, date_from, date_to)
     return JsonResponse({"success": True, **data})

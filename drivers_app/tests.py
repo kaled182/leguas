@@ -239,7 +239,7 @@ class DriversCentralLoginSearchTests(TestCase):
         )
         r = self.client.get(self.url, {"tab": "ativos", "q": "Milhazes"})
         self.assertEqual(r.context["tab"], "inativos")
-        self.assertEqual(r.context["moved_from_tab"], "Activos")
+        self.assertEqual(r.context["moved_from_tab"], "Ativos")
         self.assertEqual({d.id for d in r.context["drivers"]}, {self.owner.id})
 
     def test_keeps_tab_without_results(self):

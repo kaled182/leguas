@@ -3,70 +3,36 @@
 {% block title %}Painel de Integrações{% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto space-y-8">
-  <!-- Header -->
-  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 fade-in">
-    <div class="flex items-center justify-between">
-      <div class="flex items-center gap-4">
-        <div class="p-3 bg-brand-purple rounded-xl shadow-lg">
-          <i data-lucide="activity" class="w-6 h-6 text-white"></i>
-        </div>
-        <div>
-          <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Painel de Integrações</h1>
-          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Estado e monitoramento de integrações com parceiros</p>
-        </div>
-      </div>
-      <a href="{% url 'core:partner-list' %}" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg font-medium transition-colors duration-200 flex items-center gap-2">
-        <i data-lucide="arrow-left" class="w-4 h-4"></i>
-        Parceiros
-      </a>
+<div class="max-w-7xl mx-auto space-y-6">
+  <div class="lf-page-header">
+    <div class="min-w-0">
+      <h1 class="lf-page-title">Integrações</h1>
+      <p class="lf-page-subtitle">Estado das ligações ativas com os clientes</p>
+    </div>
+    <div class="lf-page-actions">
+      <a class="lf-btn lf-btn-ghost" href="{% url 'core:partner-list' %}"><i data-lucide="arrow-left" class="w-4 h-4" aria-hidden="true"></i>Clientes e plataformas</a>
     </div>
   </div>
-  
-  <!-- Estatísticas Rápidas -->
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6">
-      <div class="flex items-center gap-4">
-        <div class="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-          <i data-lucide="plug" class="w-6 h-6 text-blue-600 dark:text-blue-400"></i>
-        </div>
-        <div>
-          <p class="text-sm text-gray-500 dark:text-gray-400">Total de Integrações</p>
-          <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ total_integrations }}</p>
-        </div>
-      </div>
+
+  <div class="lf-kpi-grid">
+    <div class="lf-kpi">
+      <span class="lf-kpi-label">Integrações ativas</span>
+      <span class="lf-kpi-value">{{ total_integrations }}</span>
     </div>
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6">
-      <div class="flex items-center gap-4">
-        <div class="p-3 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
-          <i data-lucide="check-circle" class="w-6 h-6 text-emerald-600 dark:text-emerald-400"></i>
-        </div>
-        <div>
-          <p class="text-sm text-gray-500 dark:text-gray-400">Ativas</p>
-          <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ total_integrations }}</p>
-        </div>
-      </div>
-    </div>
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6">
-      <div class="flex items-center gap-4">
-        <div class="p-3 {% if overdue_count > 0 %}bg-red-100 dark:bg-red-900/30{% else %}bg-gray-100 dark:bg-gray-700{% endif %} rounded-lg">
-          <i data-lucide="alert-triangle" class="w-6 h-6 {% if overdue_count > 0 %}text-red-600 dark:text-red-400{% else %}text-gray-600 dark:text-gray-400{% endif %}"></i>
-        </div>
-        <div>
-          <p class="text-sm text-gray-500 dark:text-gray-400">Sincronização Atrasada</p>
-          <p class="text-2xl font-bold {% if overdue_count > 0 %}text-red-600 dark:text-red-400{% else %}text-gray-900 dark:text-white{% endif %}">{{ overdue_count }}</p>
-        </div>
-      </div>
+    <div class="lf-kpi">
+      <span class="lf-kpi-label">Sincronização atrasada</span>
+      <span class="lf-kpi-value">{{ overdue_count }}</span>
+      {% if overdue_count %}<span><span class="lf-badge lf-tone-danger">Ação necessária</span></span>{% endif %}
     </div>
   </div>
-  
+
   <!-- Alertas de Sincronização Atrasada -->
   {% if overdue_integrations %}
   <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-6">
     <div class="flex items-start gap-3 mb-4">
       <i data-lucide="alert-triangle" class="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5"></i>
       <div>
-        <h2 class="text-lg font-semibold text-red-900 dark:text-red-200">Integrações com Sincronização Atrasada</h2>
+        <h2 class="text-lg font-semibold text-red-900 dark:text-red-200">Integrações com sincronização atrasada</h2>
         <p class="text-sm text-red-700 dark:text-red-300 mt-1">As seguintes integrações não sincronizaram dentro do prazo esperado:</p>
       </div>
     </div>
@@ -93,12 +59,12 @@
   </div>
   {% endif %}
   
-  <!-- Últimos Erros de Sincronização -->
+  <!-- Últimos erros de sincronização -->
   {% if error_integrations %}
   <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6">
     <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
       <i data-lucide="x-circle" class="w-5 h-5 text-red-600 dark:text-red-400"></i>
-      Últimos Erros de Sincronização
+      Últimos erros de sincronização
     </h2>
     <div class="space-y-3">
       {% for integration in error_integrations %}
@@ -146,7 +112,7 @@
         <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
           <thead class="bg-gray-50 dark:bg-gray-900">
             <tr>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Parceiro</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Cliente</th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tipo</th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Frequência</th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Última Sync</th>
@@ -194,7 +160,7 @@
                   </span>
                 {% else %}
                   <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
-                    Aguardando
+                    A aguardar
                   </span>
                 {% endif %}
               </td>
@@ -212,10 +178,10 @@
       <div class="p-12 text-center">
         <i data-lucide="inbox" class="w-16 h-16 mx-auto text-gray-400 dark:text-gray-600 mb-4"></i>
         <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">Nenhuma integração ativa</h3>
-        <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">Configure integrações para seus parceiros.</p>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">Configure as integrações na ficha de cada cliente.</p>
         <a href="{% url 'core:partner-list' %}" class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200 gap-2">
           <i data-lucide="arrow-left" class="w-4 h-4"></i>
-          Ver Parceiros
+          Ver clientes
         </a>
       </div>
     {% endif %}
@@ -223,6 +189,5 @@
 </div>
 
 <script>
-  lucide.createIcons();
 </script>
 {% endblock %}

@@ -38,34 +38,22 @@
   {# ─── KPIs ─── #}
   <div class="lf-kpi-grid">
 <a href="?tab=ativos" class="lf-kpi">
-      <div class="lf-kpi-note">
-        <p class="lf-kpi-label">Ativos</p>
-        <i data-lucide="user-check" class="w-4 h-4 text-emerald-600 dark:text-emerald-400"></i>
-      </div>
+      <p class="lf-kpi-label">Ativos</p>
       <p class="lf-kpi-value">{{ kpis.ativos }}</p>
       <p class="lf-kpi-note">atividade nos últimos {{ inactivity_days }} dias</p>
     </a>
 <a href="?tab=inativos&sort=idle" class="lf-kpi">
-      <div class="lf-kpi-note">
-        <p class="lf-kpi-label">Inativos +{{ inactivity_days }}d</p>
-        <i data-lucide="user-x" class="w-4 h-4 text-rose-600 dark:text-rose-400"></i>
-      </div>
+      <p class="lf-kpi-label">Inativos +{{ inactivity_days }}d</p>
       <p class="lf-kpi-value">{{ kpis.inativos }}</p>
       <p class="lf-kpi-note">{{ kpis.newly_inactive_7d }} novos nos últimos 7 dias</p>
     </a>
 <a href="?tab=todos&flag=worked_today" class="lf-kpi">
-      <div class="lf-kpi-note">
-        <p class="lf-kpi-label">Trabalharam hoje</p>
-        <i data-lucide="truck" class="w-4 h-4 text-sky-600 dark:text-sky-400"></i>
-      </div>
+      <p class="lf-kpi-label">Trabalharam hoje</p>
       <p class="lf-kpi-value">{{ kpis.worked_today }}</p>
       <p class="lf-kpi-note">média {{ kpis.avg_drivers_day }}/dia (30 dias)</p>
     </a>
 <div class="lf-kpi">
-      <div class="lf-kpi-note">
-        <p class="lf-kpi-label">Entregas 30 dias</p>
-        <i data-lucide="package-check" class="w-4 h-4 text-indigo-600 dark:text-indigo-400"></i>
-      </div>
+      <p class="lf-kpi-label">Entregas 30 dias</p>
       <p class="lf-kpi-value">{{ kpis.deliveries_30d }}</p>
       <p class="lf-kpi-note">{{ kpis.avg_per_driver_day }} por motorista/dia</p>
     </div>
@@ -73,10 +61,7 @@
 <details class="lf-more"><summary>Mais indicadores</summary>
 <div class="lf-kpi-grid">
 <a href="?tab=ativos&flag=no_contract" class="lf-kpi">
-      <div class="lf-kpi-note">
-        <p class="lf-kpi-label">Ativos sem contrato</p>
-        <i data-lucide="file-warning" class="w-4 h-4 text-orange-600 dark:text-orange-400"></i>
-      </div>
+      <p class="lf-kpi-label">Ativos sem contrato</p>
       <p class="lf-kpi-value">{{ kpis.active_no_contract }}</p>
       <div class="lf-kpi-note">
         <div class="lf-kpi-note" style="width: {{ kpis.contract_pct }}%"></div>
@@ -84,26 +69,17 @@
       <p class="lf-kpi-note">{{ kpis.contract_pct }}% dos ativos com contrato · {{ kpis.no_contract }} no total</p>
     </a>
 <a href="?tab=todos&flag=no_access" class="lf-kpi">
-      <div class="lf-kpi-note">
-        <p class="lf-kpi-label">Sem acesso ao portal</p>
-        <i data-lucide="key-round" class="w-4 h-4 text-slate-500"></i>
-      </div>
+      <p class="lf-kpi-label">Sem acesso ao portal</p>
       <p class="lf-kpi-value">{{ kpis.no_access }}</p>
       <p class="lf-kpi-note">sem credenciais ativas</p>
     </a>
 <a href="?tab=todos&flag=pending_changes" class="lf-kpi">
-      <div class="lf-kpi-note">
-        <p class="lf-kpi-label">Pedidos de alteração</p>
-        <i data-lucide="inbox" class="w-4 h-4 text-violet-600 dark:text-violet-400"></i>
-      </div>
+      <p class="lf-kpi-label">Pedidos de alteração</p>
       <p class="lf-kpi-value">{{ kpis.pending_changes }}</p>
       <p class="lf-kpi-note">motoristas a aguardar</p>
     </a>
 <a href="?tab=todos&sort=recent" class="lf-kpi">
-      <div class="lf-kpi-note">
-        <p class="lf-kpi-label">Novos (30 dias)</p>
-        <i data-lucide="sparkles" class="w-4 h-4 text-gray-400"></i>
-      </div>
+      <p class="lf-kpi-label">Novos (30 dias)</p>
       <p class="lf-kpi-value">{{ kpis.new_30d }}</p>
       <p class="lf-kpi-note">{{ kpis.pendentes }} pendentes de aprovação</p>
     </a>
@@ -126,7 +102,7 @@
       </div>
       <div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200/50 dark:border-gray-700/50">
         <p class="text-sm font-semibold text-gray-900 dark:text-white">Dias desde a última atividade</p>
-        <p class="text-xs text-gray-500 mb-2">Motoristas com cadastro ACTIVO · clique numa fatia para filtrar</p>
+        <p class="text-xs text-gray-500 mb-2">Motoristas com cadastro ativo · clique numa fatia para filtrar</p>
         <div class="h-64"><canvas id="chartIdle"></canvas></div>
       </div>
       <div class="lg:col-span-3 bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200/50 dark:border-gray-700/50">
@@ -249,7 +225,7 @@
   <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
     <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
       <p class="text-xs text-gray-500 dark:text-gray-400">
-        Mostrando <span class="font-bold text-gray-900 dark:text-white" id="shownCount">{{ shown_count }}</span>
+        A mostrar <span class="font-bold text-gray-900 dark:text-white" id="shownCount">{{ shown_count }}</span>
         de <span class="font-bold">{{ filtered_count }}</span> motoristas neste separador
         <span id="searchAllHint" class="hidden ml-2">
           · Nada neste separador.

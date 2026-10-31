@@ -233,3 +233,62 @@ class PackagesCsvTests(TestCase):
         self.assertIn("LF1", body)
         self.assertNotIn("ZZ2", body)
         self.assertIn("'=HYPERLINK()", body)
+
+
+class PartnerPermissionTests(TestCase):
+    """Decisão P4: o Operador não vê preços nem ações de gestão do cliente."""
+
+    def setUp(self):
+        from core.models import Partner
+
+        self.partner = Partner.objects.create(
+            name="CAINIAO",
+            nif="500000000",
+            contact_email="ops@example.test",
+            price_per_package="1.2345",
+        )
+        self.operator = User.objects.create_user("op", password="x", is_staff=True)
+        self.manager = User.objects.create_superuser("gestor", password="x")
+
+    def test_operator_does_not_see_price(self):
+        self.client.force_login(self.operator)
+        r = self.client.get(f"/core/partners/{self.partner.pk}/")
+        self.assertEqual(r.status_code, 200)
+        self.assertNotContains(r, "Valor por pacote")
+        self.assertNotContains(r, f"/core/partners/{self.partner.pk}/edit/")
+
+    def test_manager_sees_price(self):
+        self.client.force_login(self.manager)
+        r = self.client.get(f"/core/partners/{self.partner.pk}/")
+        self.assertContains(r, "Valor por pacote")
+
+    def test_list_hides_delete_from_operator(self):
+        self.client.force_login(self.operator)
+        r = self.client.get("/core/partners/")
+        self.assertEqual(r.status_code, 200)
+        self.assertNotContains(r, "lf-menu-danger")
+        self.client.force_login(self.manager)
+        self.assertContains(self.client.get("/core/partners/"), "lf-menu-danger")
+
+
+class MissingContractsCoverageTests(TestCase):
+    def test_coverage_shows_signed_count(self):
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        from contracts.models import ContractTemplate
+        from drivers_app.models import DriverProfile
+
+        ContractTemplate.objects.create(
+            name="Termo",
+            version="1.0",
+            content="x",
+            scope="all",
+            is_active=True,
+            effective_from=timezone.now().date() - timedelta(days=1),
+        )
+        DriverProfile.objects.create(nif="500000001", nome_completo="Ana", apelido="ana", telefone="910000000", email="ana@example.test", status="ATIVO")
+        self.client.force_login(User.objects.create_superuser("g", password="x"))
+        r = self.client.get("/contracts/admin/missing/")
+        self.assertContains(r, ">0/1<")

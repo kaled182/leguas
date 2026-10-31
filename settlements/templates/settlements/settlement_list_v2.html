@@ -78,7 +78,7 @@
         </a>
         <span class="text-xs text-gray-500 dark:text-gray-400 italic ml-2">
           <i data-lucide="info" class="w-3 h-3 inline"></i>
-          Mostrando PFs emitidas em <strong class="text-gray-700 dark:text-gray-300">{{ month_label }}</strong> por defeito. Edite as datas para ver outros períodos.
+          A mostrar PFs emitidas em <strong class="text-gray-700 dark:text-gray-300">{{ month_label }}</strong> por defeito. Edite as datas para ver outros períodos.
         </span>
         <a href="{% url 'pre-invoice-admin-list' %}" class="ml-auto px-4 py-2 border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg font-medium transition-colors duration-200 flex items-center gap-2" title="Ir para o backoffice de PFs (estado, bulk actions)">
           <i data-lucide="settings-2" class="w-4 h-4"></i>
@@ -160,7 +160,7 @@
   <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-4">
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
       <div class="text-sm text-gray-600 dark:text-gray-400">
-        Mostrando <span class="font-semibold text-gray-900 dark:text-white">{{ pre_invoices.start_index }}</span>-<span class="font-semibold text-gray-900 dark:text-white">{{ pre_invoices.end_index }}</span> de <span class="font-semibold text-gray-900 dark:text-white">{{ pre_invoices.paginator.count }}</span> resultados
+        A mostrar <span class="font-semibold text-gray-900 dark:text-white">{{ pre_invoices.start_index }}</span>-<span class="font-semibold text-gray-900 dark:text-white">{{ pre_invoices.end_index }}</span> de <span class="font-semibold text-gray-900 dark:text-white">{{ pre_invoices.paginator.count }}</span> resultados
       </div>
       <div class="flex items-center gap-2">
         {% if pre_invoices.has_previous %}

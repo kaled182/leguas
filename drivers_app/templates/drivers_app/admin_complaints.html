@@ -161,7 +161,7 @@
              @dragleave="dragOverCol === col.key && (dragOverCol = '')"
              @drop="dragOverCol = ''; onDrop(col.key)">
           <!-- Column header -->
-          <div class="px-3 py-2.5 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between sticky top-0">
+          <div class="px-3 py-2.5 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between sticky top-0 z-10 bg-white dark:bg-gray-800">
             <div class="flex items-center gap-2">
               <span class="w-2.5 h-2.5 rounded-full" :class="col.dot"></span>
               <h2 class="font-semibold text-sm text-gray-700 dark:text-gray-200" x-text="col.label"></h2>

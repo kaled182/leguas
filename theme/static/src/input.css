@@ -73,6 +73,9 @@
   .lf-table-wrap { overflow-x: auto; max-height: 70vh; border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); }
   .lf-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: var(--text-sm); }
   .lf-table th { position: sticky; top: 0; z-index: var(--z-sticky); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--color-border); background: var(--color-surface-alt); color: var(--color-text-muted); font-size: var(--text-xs); font-weight: var(--weight-subtitle); text-align: left; white-space: nowrap; }
+  /* Cabeçalho fixo sempre sólido: as linhas não podem aparecer por trás. */
+  thead[class*="sticky"] { z-index: var(--z-sticky); background: var(--color-surface-alt) !important; }
+  thead[class*="sticky"] > tr > th { background: var(--color-surface-alt); }
   .lf-table th.text-right { text-align: right; }
   .lf-table th.text-center { text-align: center; }
   .lf-table td { padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--color-border); color: var(--color-text); }

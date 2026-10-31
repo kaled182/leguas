@@ -390,67 +390,89 @@ class FinancialAlertResolveTests(TestCase):
 
 
 class ReportPagesTests(TestCase):
+    """Decisão 1A: as páginas leem a sincronização real do ReliableMaps."""
+
     @classmethod
     def setUpTestData(cls):
-        from datetime import timedelta
-
         from django.utils import timezone
 
-        from core.models import Partner, PartnerIntegration, SyncLog
+        from settlements.models import ReliableEpodSync
 
-        partner = Partner.objects.create(name="Cliente", nif="500000000", contact_email="c@example.test")
-        cls.integration = PartnerIntegration.objects.create(
-            partner=partner, integration_type="API", is_active=True,
-            sync_frequency_minutes=15, last_sync_at=timezone.now(), last_sync_status="SUCCESS",
-        )
-        ok = SyncLog.objects.create(integration=cls.integration, operation="UPDATE_STATUS", status="SUCCESS")
-        SyncLog.objects.create(integration=cls.integration, operation="UPDATE_STATUS", status="TIMEOUT")
-        old = SyncLog.objects.create(integration=cls.integration, operation="UPDATE_STATUS", status="ERROR")
-        SyncLog.objects.filter(pk=old.pk).update(started_at=timezone.now() - timedelta(hours=30))
-        cls.ok = ok
+        now = timezone.now()
+
+        def add(n, status, hub="LIS", **extra):
+            return ReliableEpodSync.objects.create(
+                remote_id=n, sha256=f"{n:064d}", filename=f"epod_{n}.xlsx", hub=hub,
+                remote_loaded_at=now, status=status, **extra,
+            )
+
+        add(1, "failed", hub="PRT", message="SHA-256 não confere com o anunciado.")
+        add(2, "superseded")
+        add(3, "imported", summary={"total_novos": 12, "total_atualizados": 34})
+        cls.user = User.objects.create_superuser("g", password="x")
 
     def setUp(self):
-        self.client.force_login(User.objects.create_superuser("g", password="x"))
+        self.client.force_login(self.user)
 
-    def test_rate_counts_only_last_24_hours(self):
+    def test_status_page_shows_real_files(self):
         r = self.client.get("/analytics/integrations/status/")
-        stat = r.context["integrations_stats"][0]
-        self.assertEqual(stat["recent_syncs_24h"], 2)
-        self.assertEqual(stat["success_rate_24h"], 50.0)
-        self.assertContains(r, f"50,0{NBSP}%")
-        self.assertContains(r, "Tempo esgotado")
-        self.assertContains(r, "Atualização de estado")
+        self.assertEqual(r.context["imported_24h"], 1)
+        self.assertEqual(r.context["failed_24h"], 1)
+        self.assertEqual([f.hub for f in r.context["hubs"]], ["LIS", "PRT"])
+        self.assertContains(r, "epod_3.xlsx")
+        self.assertNotContains(r, "epod_2.xlsx")
 
-    def test_status_page_query_count_ignores_integrations(self):
-        from core.models import Partner, PartnerIntegration
+    def test_status_page_does_not_write(self):
+        from settlements.models import ReliableEpodSync
 
-        def count():
-            from django.db import connection
-            from django.test.utils import CaptureQueriesContext
+        before = ReliableEpodSync.objects.count()
+        self.client.get("/analytics/integrations/status/")
+        self.client.get("/analytics/integrations/logs/")
+        self.assertEqual(ReliableEpodSync.objects.count(), before)
 
-            with CaptureQueriesContext(connection) as queries:
-                self.client.get("/analytics/integrations/status/")
-            return len(queries)
+    def test_disabled_sync_shows_no_data(self):
+        r = self.client.get("/analytics/integrations/status/")
+        self.assertEqual(r.context["health_status"], "unknown")
+        self.assertContains(r, "Sincronização desligada")
 
-        count()  # A primeira visita cria a configuração do sistema.
-        before = count()
-        for n in range(3):
-            PartnerIntegration.objects.create(
-                partner=Partner.objects.create(name=f"C{n}", nif=f"50000000{n + 1}", contact_email=f"c{n}@example.test"),
-                integration_type="API", is_active=True,
-            )
-        self.assertEqual(count(), before)
+    def test_health_rules(self):
+        from datetime import datetime, timedelta, timezone as tz
+        from types import SimpleNamespace
 
-    def test_logs_page_keeps_filters_and_labels(self):
-        r = self.client.get("/analytics/integrations/logs/?status=TIMEOUT&days=30")
+        from analytics.views import _epod_health
+
+        cfg = SimpleNamespace(reliable_epod_sync_enabled=True, reliable_api_url="u", reliable_api_key="k")
+        noon = datetime(2026, 10, 30, 12, 0, tzinfo=tz.utc)
+        night = datetime(2026, 10, 30, 3, 0, tzinfo=tz.utc)
+        ok = SimpleNamespace(status="imported", hub="LIS")
+        bad = SimpleNamespace(status="failed", hub="PRT")
+        self.assertEqual(_epod_health(cfg, [ok, bad], noon, noon), ("critical", "Último ficheiro falhou: PRT"))
+        self.assertEqual(_epod_health(cfg, [ok], noon - timedelta(hours=1), noon)[0], "healthy")
+        self.assertEqual(_epod_health(cfg, [ok], noon - timedelta(hours=3), noon)[0], "warning")
+        self.assertEqual(_epod_health(cfg, [ok], night - timedelta(hours=4), night)[0], "healthy")
+
+    def test_logs_page_filters(self):
+        r = self.client.get("/analytics/integrations/logs/?status=failed&hub=PRT&days=30")
         self.assertEqual(r.context["total_logs"], 1)
-        self.assertContains(r, '<option value="TIMEOUT" selected>Tempo esgotado</option>', html=True)
-        self.assertContains(r, "Repetir")
+        self.assertContains(r, '<option value="failed" selected>Falhou</option>', html=True)
+        self.assertContains(r, "SHA-256")
 
-    def test_since_label(self):
-        from analytics.views import _since_label
+    def test_invalid_filters_use_default_period(self):
+        for query in ("days=abc", "days=0", "days=99999999999999", "integration=abc"):
+            r = self.client.get(f"/analytics/integrations/logs/?{query}")
+            self.assertEqual(r.status_code, 200, query)
+            self.assertEqual(r.context["filters"]["days"], 7, query)
 
-        self.assertEqual(_since_label(0), "há menos de 1 minuto")
-        self.assertEqual(_since_label(1), "há 1 minuto")
-        self.assertEqual(_since_label(61), "há 1 hora")
-        self.assertEqual(_since_label(2880), "há 2 dias")
+    def test_retry_route_redirects_and_does_not_write(self):
+        from core.models import Partner, PartnerIntegration, SyncLog
+
+        integration = PartnerIntegration.objects.create(
+            partner=Partner.objects.create(name="C", nif="500000000", contact_email="c@example.test"),
+            integration_type="API", last_sync_status="ERROR",
+        )
+        log = SyncLog.objects.create(integration=integration, operation="UPDATE_STATUS", status="ERROR")
+        r = self.client.post(f"/analytics/integrations/logs/{log.pk}/retry/")
+        self.assertRedirects(r, "/analytics/integrations/logs/")
+        integration.refresh_from_db()
+        self.assertEqual(integration.last_sync_status, "ERROR")
+        self.assertEqual(SyncLog.objects.count(), 1)

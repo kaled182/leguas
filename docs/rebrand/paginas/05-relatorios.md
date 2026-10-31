@@ -25,9 +25,31 @@ As 2 páginas passam ao cabeçalho único, com 4 KPI, `lf-table` e `lf-badge`. O
 | 6 | Filtros ficam no URL e há "Limpar". Acima de 100 registos, a página indica o total |
 
 ## Pendente
-- A mensagem do "Repetir" ainda diz "Retry executado com sucesso". Fica até à decisão do erro 2.
+
 - `/core/integrations/dashboard/` e Estado das APIs usam os mesmos dados.
 - Em telemóvel, os KPI ocupam 1 coluna. Fica para a passagem de responsivo.
 
 ## Métricas
 240 testes: as mesmas 4 falhas antigas de `main`, 0 regressões. 9 capturas (3 páginas × 3 modos), todas 200, 0 erros de consola e 0 scroll horizontal. Dados sintéticos.
+
+## Decisões do utilizador (2026-10-31)
+
+| Ponto | Decisão | Resultado |
+|---|---|---|
+| Origem dos dados | 1A | As 2 páginas leem `ReliableEpodSync`, só em leitura e sem migration |
+| Botão Repetir | Retirar | O botão e a view saíram. A rota mantém-se e redireciona para a lista, sem escrever |
+| Filtros inválidos | Valor por omissão | `days` aceita 1, 7, 30 ou 90. Outro valor usa 7 |
+
+Regra nova do estado:
+- **Com falhas:** o último ficheiro de um hub falhou.
+- **Com alertas:** sem importação há mais de 2 horas, a partir das 9h.
+- **Sem dados:** a sincronização está desligada ou falta a URL ou a chave.
+
+Estas decisões substituem os erros 1, 2 e 3 acima. Os filtros `sync_*` e o texto "Retry" já não existem.
+
+Limites conhecidos:
+- Um erro de rede não cria registo. A página só o mostra pelo alerta de 2 horas.
+- `ReliableEpodSync` guarda o controlo de cada ficheiro. O xlsx original fica no ReliableMaps.
+- `SyncLog` e `PartnerIntegration` ficam na base de dados, sem uso nestas páginas.
+
+243 testes: as mesmas 4 falhas antigas, 0 regressões. 12 capturas, todas 200, 0 erros de consola e 0 scroll horizontal. Dados sintéticos.

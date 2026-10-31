@@ -9,7 +9,7 @@
   <div class="lf-page-header">
     <div class="min-w-0">
       <h1 class="lf-page-title">Estado das APIs</h1>
-      <p class="lf-page-subtitle">Integrações ativas com clientes · atualiza a cada 30 segundos</p>
+      <p class="lf-page-subtitle">Importação do ReliableMaps · atualiza a cada 30 segundos</p>
     </div>
     <div class="lf-page-actions">
       <a class="lf-btn lf-btn-ghost" href="{% url 'analytics:sync_logs_list' %}"><i data-lucide="list-checks" class="w-4 h-4" aria-hidden="true"></i>Registos de sincronização</a>
@@ -18,93 +18,80 @@
 
   <div class="lf-kpi-grid mb-4">
     <div class="lf-kpi">
-      <span class="lf-kpi-label">Integrações ativas</span>
-      <span class="lf-kpi-value">{{ total_integrations|pt_int }}</span>
-      {% if unknown_count %}<span class="lf-kpi-note">{{ unknown_count|pt_int }} sem dados</span>{% endif %}
+      <span class="lf-kpi-label">Estado</span>
+      <span class="mt-1"><span class="lf-badge lf-tone-{{ health_status|health_tone }}">{{ health_status|health_label }}</span></span>
+      {% if health_message %}<span class="lf-kpi-note">{{ health_message }}</span>{% endif %}
     </div>
     <div class="lf-kpi">
-      <span class="lf-kpi-label">Operacionais</span>
-      <span class="lf-kpi-value">{{ healthy_count|pt_int }}</span>
+      <span class="lf-kpi-label">Última importação</span>
+      <span class="lf-kpi-value">{% if last_import %}{{ last_import|date:"H:i" }}{% else %}—{% endif %}</span>
+      {% if last_import %}<span class="lf-kpi-note">{{ last_import|date:"d/m/Y" }}</span>{% endif %}
     </div>
     <div class="lf-kpi">
-      <span class="lf-kpi-label">Com alertas</span>
-      <span class="lf-kpi-value">{{ warning_count|pt_int }}</span>
+      <span class="lf-kpi-label">Importados (24 h)</span>
+      <span class="lf-kpi-value">{{ imported_24h|pt_int }}</span>
     </div>
     <div class="lf-kpi">
-      <span class="lf-kpi-label">Com falhas</span>
-      <span class="lf-kpi-value">{{ critical_count|pt_int }}</span>
+      <span class="lf-kpi-label">Falhados (24 h)</span>
+      <span class="lf-kpi-value">{{ failed_24h|pt_int }}</span>
     </div>
   </div>
 
-  <h2 class="text-base font-semibold text-gray-900 dark:text-white mb-2">Integrações</h2>
-  <div class="space-y-3 mb-6">
-    {% for stat in integrations_stats %}
-    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-4">
-      <div class="flex flex-wrap items-start justify-between gap-3">
-        <div class="min-w-0">
-          <h3 class="font-semibold text-gray-900 dark:text-white">{{ stat.integration.partner.name }}</h3>
-          <p class="text-sm text-gray-600 dark:text-gray-400">{{ stat.integration.get_integration_type_display }} · {{ stat.health_message }} · Última sincronização: {{ stat.last_sync_display }}</p>
-        </div>
-        <span class="lf-badge lf-tone-{{ stat.health_status|health_tone }}">{{ stat.health_status|health_label }}</span>
-      </div>
-      <dl class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3 text-sm">
-        <div>
-          <dt class="text-xs text-gray-500 dark:text-gray-400">Frequência</dt>
-          <dd class="font-semibold text-gray-900 dark:text-white">Cada {{ stat.integration.sync_frequency_minutes }} min</dd>
-        </div>
-        <div>
-          <dt class="text-xs text-gray-500 dark:text-gray-400">Sincronizações (24 h)</dt>
-          <dd class="tabular-nums font-semibold text-gray-900 dark:text-white">{{ stat.recent_syncs_24h|pt_int }}</dd>
-        </div>
-        <div>
-          <dt class="text-xs text-gray-500 dark:text-gray-400">Sucesso (24 h)</dt>
-          <dd>
-            {% if stat.recent_syncs_24h %}
-            <span class="lf-badge lf-tone-{% if stat.success_rate_24h >= 90 %}success{% elif stat.success_rate_24h >= 70 %}warning{% else %}danger{% endif %}">{{ stat.success_rate_24h|pct }}</span>
-            {% else %}
-            <span class="text-gray-500 dark:text-gray-400">—</span>
-            {% endif %}
-          </dd>
-        </div>
-      </dl>
-      {% if stat.integration.last_sync_message and stat.health_status == 'critical' %}
-      <div class="lf-alert lf-tone-danger mt-3"><p class="min-w-0 break-words"><strong>Erro:</strong> {{ stat.integration.last_sync_message|truncatewords:20 }}</p></div>
-      {% endif %}
-    </div>
-    {% empty %}
-    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-4"><div class="lf-empty"><i data-lucide="inbox" class="w-8 h-8" aria-hidden="true"></i><p class="lf-empty-title">Sem integrações ativas</p><p>Ative uma integração na ficha do cliente.</p></div></div>
-    {% endfor %}
-  </div>
-
-  <h2 class="text-base font-semibold text-gray-900 dark:text-white mb-2">Últimas 10 sincronizações</h2>
-  <div class="lf-table-wrap">
+  <h2 class="text-base font-semibold text-gray-900 dark:text-white mb-2">Último ficheiro por hub</h2>
+  <div class="lf-table-wrap mb-6">
     <table class="lf-table">
       <thead>
         <tr>
-          <th scope="col">Início</th>
-          <th scope="col">Cliente</th>
-          <th scope="col">Operação</th>
+          <th scope="col">Hub</th>
+          <th scope="col">Sincronizado em</th>
           <th scope="col">Estado</th>
-          <th scope="col" class="text-right">Registos</th>
-          <th scope="col" class="text-right">Duração</th>
+          <th scope="col" class="text-right">Novos</th>
+          <th scope="col" class="text-right">Atualizados</th>
         </tr>
       </thead>
       <tbody>
-        {% for log in recent_logs %}
+        {% for item in hubs %}
         <tr>
-          <td class="whitespace-nowrap">{{ log.started_at|date:"d/m/Y H:i" }}</td>
-          <td class="font-semibold text-gray-900 dark:text-white">{{ log.integration.partner.name }}</td>
-          <td>{{ log|sync_operation }}</td>
-          <td><span class="lf-badge lf-tone-{{ log.status|sync_tone }}">{{ log.status|sync_label }}</span></td>
-          <td class="text-right lf-num">{{ log.records_processed|pt_int }}</td>
-          <td class="text-right lf-num">{% if log.duration_seconds %}{{ log.duration_seconds|floatformat:1 }} s{% else %}—{% endif %}</td>
+          <td class="font-semibold text-gray-900 dark:text-white">{{ item.hub|default:"Sem hub" }}</td>
+          <td class="whitespace-nowrap">{{ item.created_at|date:"d/m/Y H:i" }}</td>
+          <td><span class="lf-badge lf-tone-{{ item.status|epod_tone }}">{{ item.status|epod_label }}</span></td>
+          <td class="text-right lf-num">{{ item.summary.total_novos|pt_int }}</td>
+          <td class="text-right lf-num">{{ item.summary.total_atualizados|pt_int }}</td>
         </tr>
         {% empty %}
-        <tr><td colspan="6"><div class="lf-empty"><i data-lucide="inbox" class="w-8 h-8" aria-hidden="true"></i><p class="lf-empty-title">Sem sincronizações</p></div></td></tr>
+        <tr><td colspan="5"><div class="lf-empty"><i data-lucide="inbox" class="w-8 h-8" aria-hidden="true"></i><p class="lf-empty-title">Sem ficheiros nos últimos 7 dias</p></div></td></tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
+
+  <h2 class="text-base font-semibold text-gray-900 dark:text-white mb-2">Últimos 10 ficheiros</h2>
+  <div class="lf-table-wrap mb-6">
+    <table class="lf-table">
+      <thead>
+        <tr>
+          <th scope="col">Sincronizado em</th>
+          <th scope="col">Hub</th>
+          <th scope="col">Ficheiro</th>
+          <th scope="col">Estado</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in recent_files %}
+        <tr>
+          <td class="whitespace-nowrap">{{ item.created_at|date:"d/m/Y H:i" }}</td>
+          <td>{{ item.hub|default:"—" }}</td>
+          <td class="break-all">{{ item.filename }}</td>
+          <td><span class="lf-badge lf-tone-{{ item.status|epod_tone }}">{{ item.status|epod_label }}</span></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="4"><div class="lf-empty"><i data-lucide="inbox" class="w-8 h-8" aria-hidden="true"></i><p class="lf-empty-title">Sem ficheiros</p></div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <p class="text-sm text-gray-600 dark:text-gray-400">Julgamentos de reclamações: {% if claims_enabled %}ligado{% else %}desligado{% endif %}{% if last_verdict %} · último julgamento: {{ last_verdict|date:"d/m/Y H:i" }}{% endif %}</p>
 </div>
 
 <script>

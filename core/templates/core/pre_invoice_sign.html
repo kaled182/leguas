@@ -1,4 +1,5 @@
 {% extends 'settlements/base.html' %}
+{% load ui %}
 {% block title %}Aceitar Pré-Fatura{% endblock %}
 {% block content %}
 <div class="max-w-2xl mx-auto p-6">
@@ -8,7 +9,7 @@
       Motorista: <strong>{{ pre.driver.nome_completo }}</strong><br>
       Período: {{ pre.periodo_inicio|date:"d/m/Y" }} → {{ pre.periodo_fim|date:"d/m/Y" }}
     </p>
-    <div class="text-3xl font-bold text-emerald-600">€{{ pre.total_a_receber|floatformat:2 }}</div>
+    <div class="text-3xl font-bold text-emerald-600">{{ pre.total_a_receber|eur }}</div>
 
     {% if pre.signed_at %}
     <div class="p-4 rounded bg-emerald-50 text-emerald-800 text-sm">

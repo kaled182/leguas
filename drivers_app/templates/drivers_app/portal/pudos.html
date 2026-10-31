@@ -1,4 +1,5 @@
 {% extends 'drivers_app/portal/_base.html' %}
+{% load ui %}
 
 {% block portal_content %}
 
@@ -54,7 +55,7 @@
     </div>
     <div class="bg-gradient-to-br from-emerald-500 to-green-600 rounded-2xl p-5 text-white shadow-md">
       <p class="text-xs uppercase font-bold tracking-wider text-emerald-100">Total a receber (PUDO)</p>
-      <p class="text-3xl font-extrabold mt-1">€ {{ totals.amount|floatformat:2 }}</p>
+      <p class="text-3xl font-extrabold mt-1">{{ totals.amount|eur }}</p>
     </div>
   </div>
 
@@ -74,7 +75,7 @@
             <th class="px-4 py-2">PUDO (endereço)</th>
             <th class="px-4 py-2 text-right">Pacotes</th>
             <th class="px-4 py-2 text-right">Valor</th>
-            <th class="px-4 py-2 text-center">Waybills</th>
+            <th class="px-4 py-2 text-center">N.os de envio</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-100 dark:divide-gray-700" x-data="{open: null}">
@@ -92,7 +93,7 @@
               <span class="font-bold text-base {% if r.is_grouped %}text-amber-600{% endif %}">{{ r.n_packages }}</span>
               {% if r.is_grouped %}<span class="text-[9px] text-amber-700 dark:text-amber-300 font-semibold">⚡ múltiplos</span>{% endif %}
             </td>
-            <td class="px-4 py-2 text-right font-mono font-bold text-emerald-600">€ {{ r.amount|floatformat:2 }}</td>
+            <td class="px-4 py-2 text-right font-mono font-bold text-emerald-600">{{ r.amount|eur }}</td>
             <td class="px-4 py-2 text-center">
               <button @click="open = open === {{ forloop.counter0 }} ? null : {{ forloop.counter0 }}"
                       class="text-[11px] px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300">

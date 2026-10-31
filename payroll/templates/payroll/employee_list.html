@@ -1,4 +1,5 @@
 {% extends 'settlements/base.html' %}
+{% load ui %}
 {% block title %}Funcionários — Folha de Pagamento{% endblock %}
 {% block content %}
 <div class="max-w-screen-2xl mx-auto px-4 py-6 space-y-4">
@@ -28,17 +29,17 @@
   <!-- KPIs -->
   <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
     <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
-      <div class="text-xs text-gray-500">Funcionários activos</div>
+      <div class="text-xs text-gray-500">Funcionários ativos</div>
       <div class="text-2xl font-bold text-indigo-600">{{ total }}</div>
     </div>
     <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
       <div class="text-xs text-gray-500">Folha bruta mensal (vencimento base)</div>
-      <div class="text-2xl font-bold text-amber-600">€ {{ folha_mensal_bruto|floatformat:2 }}</div>
+      <div class="text-2xl font-bold text-amber-600">{{ folha_mensal_bruto|eur }}</div>
     </div>
     <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm flex items-center justify-end">
       <a href="?ativo={% if apenas_activos %}0{% else %}1{% endif %}"
         class="text-sm text-indigo-600 hover:underline">
-        {% if apenas_activos %}Mostrar inactivos{% else %}Só activos{% endif %}
+        {% if apenas_activos %}Mostrar inativos{% else %}Só ativos{% endif %}
       </a>
     </div>
   </div>
@@ -54,7 +55,7 @@
           <th class="text-center p-3">Subs.</th>
           <th class="text-center p-3">Tab. IRS</th>
           <th class="text-center p-3">Estado</th>
-          <th class="text-right p-3">Acções</th>
+          <th class="text-right p-3">Ações</th>
         </tr>
       </thead>
       <tbody>
@@ -68,7 +69,7 @@
             {{ e.get_contrato_tipo_display }}
             {% if e.contrato_tipo == 'PART_TIME' %}<span class="text-xs text-gray-500">({{ e.part_time_pct }}%)</span>{% endif %}
           </td>
-          <td class="p-3 text-right font-semibold">€ {{ e.vencimento_efectivo|floatformat:2 }}</td>
+          <td class="p-3 text-right font-semibold">{{ e.vencimento_efectivo|eur }}</td>
           <td class="p-3 text-center text-xs">
             {% if e.subsidios_mode == 'DUODECIMOS' %}
               <span class="px-2 py-0.5 bg-blue-100 text-blue-800 rounded">Duodécimos</span>
@@ -79,9 +80,9 @@
           <td class="p-3 text-center">{{ e.irs_tabela }}{% if e.dependentes_irs %} · {{ e.dependentes_irs }}d{% endif %}</td>
           <td class="p-3 text-center">
             {% if e.ativo %}
-              <span class="px-2 py-0.5 bg-green-100 text-green-800 rounded text-xs">Activo</span>
+              <span class="px-2 py-0.5 bg-green-100 text-green-800 rounded text-xs">Ativo</span>
             {% else %}
-              <span class="px-2 py-0.5 bg-gray-200 text-gray-600 rounded text-xs">Inactivo</span>
+              <span class="px-2 py-0.5 bg-gray-200 text-gray-600 rounded text-xs">Inativo</span>
             {% endif %}
           </td>
           <td class="p-3 text-right">

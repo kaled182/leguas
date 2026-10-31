@@ -1,6 +1,6 @@
 {% extends 'layouts/admin_base.html' %}
 
-{% block title %}Drivers sem Contrato{% endblock %}
+{% block title %}Motoristas sem Contrato{% endblock %}
 
 {% block content %}
 <div class="max-w-6xl mx-auto">
@@ -11,7 +11,7 @@
         <i data-lucide="alert-triangle" class="w-5 h-5 text-white"></i>
       </div>
       <div>
-        <h1 class="text-xl font-bold text-gray-900 dark:text-white">Drivers sem Contrato</h1>
+        <h1 class="text-xl font-bold text-gray-900 dark:text-white">Motoristas sem Contrato</h1>
         <p class="text-xs text-gray-500 dark:text-gray-400">Motoristas que ainda não assinaram todos os contratos aplicáveis</p>
       </div>
     </div>
@@ -40,7 +40,7 @@
       <p class="text-[11px] text-amber-700 dark:text-amber-400 mt-0.5">{% widthratio drivers_missing total_drivers 100 %}% do total</p>
     </div>
     <div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-violet-200/50 dark:border-violet-700/30">
-      <p class="text-xs uppercase font-bold text-violet-600 dark:text-violet-400">Templates Activos</p>
+      <p class="text-xs uppercase font-bold text-violet-600 dark:text-violet-400">Templates Ativos</p>
       <p class="text-2xl font-extrabold text-violet-700 dark:text-violet-300 mt-1">{{ active_templates_count }}</p>
     </div>
   </div>

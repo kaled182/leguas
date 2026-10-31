@@ -1,4 +1,5 @@
 {% extends 'settlements/base.html' %}
+{% load ui %}
 {% load static %}
 {% block title %}Motoristas sem Pré-Fatura{% endblock %}
 {% block content %}
@@ -13,7 +14,7 @@
         Motoristas sem Pré-Fatura
       </h1>
       <p class="text-sm text-gray-500 dark:text-gray-400">
-        Motoristas que entregaram pacotes no período mas <strong>não têm PF</strong> a cobrir todos os dias activos. Ninguém deve ficar sem ser pago.
+        Motoristas que entregaram pacotes no período mas <strong>não têm PF</strong> a cobrir todos os dias ativos. Ninguém deve ficar sem ser pago.
       </p>
     </div>
     <div class="flex items-center gap-2">
@@ -76,10 +77,10 @@
     </div>
     <div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
       <div class="text-[10px] uppercase tracking-wider text-gray-500">Total estimado</div>
-      <div class="text-3xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-1">€ {{ kpi_total_estimated_com_iva|floatformat:2 }}</div>
+      <div class="text-3xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-1">{{ kpi_total_estimated_com_iva|eur }}</div>
       {% if kpi_total_vat %}
         <div class="text-[10px] text-violet-600 dark:text-violet-400 mt-1">
-          inclui IVA €{{ kpi_total_vat|floatformat:2 }} (base €{{ kpi_total_estimated|floatformat:2 }})
+          inclui IVA {{ kpi_total_vat|eur }} (base {{ kpi_total_estimated|eur }})
         </div>
       {% endif %}
     </div>
@@ -97,12 +98,12 @@
           <tr>
             <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Motorista</th>
             <th class="px-3 py-2 text-center text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Entregas</th>
-            <th class="px-3 py-2 text-center text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Dias activos</th>
+            <th class="px-3 py-2 text-center text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Dias ativos</th>
             <th class="px-3 py-2 text-center text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Sem PF</th>
             <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Gap</th>
             <th class="px-3 py-2 text-right text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">€ Estimado</th>
             <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Última PF</th>
-            <th class="px-3 py-2 text-right text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Acções</th>
+            <th class="px-3 py-2 text-right text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Ações</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
@@ -127,7 +128,7 @@
             </td>
             <td class="px-3 py-3 text-right">
               {% if d.estimated_vat %}
-                <span class="font-extrabold text-emerald-600 dark:text-emerald-400">€ {{ d.estimated_total_com_iva|floatformat:2 }}</span>
+                <span class="font-extrabold text-emerald-600 dark:text-emerald-400">{{ d.estimated_total_com_iva|eur }}</span>
                 <div class="text-[10px] text-violet-600 dark:text-violet-400 font-semibold">c/ IVA 23%</div>
                 <div class="text-[10px] text-gray-500 mt-0.5">
                   Base €{{ d.estimated_amount|floatformat:0 }} + IVA €{{ d.estimated_vat|floatformat:0 }}
@@ -136,7 +137,7 @@
                   {% endif %}
                 </div>
               {% else %}
-                <span class="font-extrabold text-emerald-600 dark:text-emerald-400">€ {{ d.estimated_amount|floatformat:2 }}</span>
+                <span class="font-extrabold text-emerald-600 dark:text-emerald-400">{{ d.estimated_amount|eur }}</span>
                 {% if d.estimated_bonus %}
                   <div class="text-[10px] text-gray-500 mt-0.5">
                     Base €{{ d.estimated_base|floatformat:0 }}

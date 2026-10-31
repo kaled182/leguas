@@ -20,8 +20,8 @@
             <th class="px-4 py-2">Apelido / Courier</th>
             <th class="px-4 py-2">Contacto</th>
             <th class="px-4 py-2 text-right">Entregas 30d</th>
-            <th class="px-4 py-2 text-right">Claims abertos</th>
-            <th class="px-4 py-2 text-center">Status</th>
+            <th class="px-4 py-2 text-right">Reclamações abertos</th>
+            <th class="px-4 py-2 text-center">Estado</th>
             <th class="px-4 py-2"></th>
           </tr>
         </thead>
@@ -65,9 +65,9 @@
             </td>
             <td class="px-4 py-2 text-center">
               {% if d.is_active %}
-                <span class="px-2 py-0.5 text-[11px] rounded-full bg-emerald-100 text-emerald-700 font-semibold">Activo</span>
+                <span class="px-2 py-0.5 text-[11px] rounded-full bg-emerald-100 text-emerald-700 font-semibold">Ativo</span>
               {% else %}
-                <span class="px-2 py-0.5 text-[11px] rounded-full bg-gray-200 text-gray-500 font-semibold">Inactivo</span>
+                <span class="px-2 py-0.5 text-[11px] rounded-full bg-gray-200 text-gray-500 font-semibold">Inativo</span>
               {% endif %}
             </td>
             <td class="px-4 py-2 text-right">

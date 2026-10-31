@@ -1,4 +1,5 @@
 {% extends 'settlements/base.html' %}
+{% load ui %}
 {% load static %}
 {% block title %}Projecção de Fluxo de Caixa{% endblock %}
 {% block content %}
@@ -60,22 +61,22 @@
   <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
     <div class="bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-700 p-3">
       <div class="text-[10px] uppercase text-emerald-700 dark:text-emerald-300">Entradas previstas</div>
-      <div class="text-2xl font-bold text-emerald-700 pos">€{{ total_in|floatformat:2 }}</div>
-      <div class="text-[10px] text-emerald-600 dark:text-emerald-400">Entregas realizadas + forecast @€{{ partner_price|floatformat:2 }}/pacote</div>
+      <div class="text-2xl font-bold text-emerald-700 pos">{{ total_in|eur }}</div>
+      <div class="text-[10px] text-emerald-600 dark:text-emerald-400">Entregas realizadas + forecast @{{ partner_price|eur }}/pacote</div>
     </div>
     <div class="bg-rose-50 dark:bg-rose-900/20 rounded-lg border border-rose-200 dark:border-rose-700 p-3">
       <div class="text-[10px] uppercase text-rose-700 dark:text-rose-300">Saídas previstas</div>
-      <div class="text-2xl font-bold text-rose-700 neg">€{{ total_out|floatformat:2 }}</div>
+      <div class="text-2xl font-bold text-rose-700 neg">{{ total_out|eur }}</div>
       <div class="text-[10px] text-rose-600 dark:text-rose-400">Bills pagas (passado) + pendentes (futuro)</div>
     </div>
     <div class="bg-{% if net_change < 0 %}rose{% else %}emerald{% endif %}-50 dark:bg-{% if net_change < 0 %}rose{% else %}emerald{% endif %}-900/20 rounded-lg border border-{% if net_change < 0 %}rose{% else %}emerald{% endif %}-300 p-3">
       <div class="text-[10px] uppercase">Variação líquida</div>
-      <div class="text-2xl font-bold {% if net_change < 0 %}neg{% else %}pos{% endif %}">€{{ net_change|floatformat:2 }}</div>
+      <div class="text-2xl font-bold {% if net_change < 0 %}neg{% else %}pos{% endif %}">{{ net_change|eur }}</div>
     </div>
     <div class="bg-{% if final_balance < 0 %}rose{% else %}gray{% endif %}-50 dark:bg-{% if final_balance < 0 %}rose{% else %}gray{% endif %}-900/20 rounded-lg border border-gray-300 p-3">
-      <div class="text-[10px] uppercase text-gray-700">Saldo final projectado</div>
-      <div class="text-2xl font-bold {% if final_balance < 0 %}neg{% else %}text-gray-900 dark:text-white{% endif %}">€{{ final_balance|floatformat:2 }}</div>
-      <div class="text-[10px] text-gray-500">Inicial: €{{ opening_balance|floatformat:2 }}</div>
+      <div class="text-[10px] uppercase text-gray-700">Saldo final projetado</div>
+      <div class="text-2xl font-bold {% if final_balance < 0 %}neg{% else %}text-gray-900 dark:text-white{% endif %}">{{ final_balance|eur }}</div>
+      <div class="text-[10px] text-gray-500">Inicial: {{ opening_balance|eur }}</div>
     </div>
   </div>
 
@@ -86,7 +87,7 @@
       ⚠ {{ n_critical }} dia{{ n_critical|pluralize:"s" }} com saldo negativo no horizonte
     </div>
     <p class="text-xs text-rose-600 dark:text-rose-400 mt-1">
-      Considera adiar pagamentos ou antecipar entradas. Primeiro dia crítico: <strong>{{ critical_days.0.date|date:"d/m/Y" }}</strong> (€{{ critical_days.0.balance|floatformat:2 }})
+      Considera adiar pagamentos ou antecipar entradas. Primeiro dia crítico: <strong>{{ critical_days.0.date|date:"d/m/Y" }}</strong> ({{ critical_days.0.balance|eur }})
     </p>
   </div>
   {% endif %}
@@ -121,12 +122,12 @@
               {% else %}<span class="ml-1 px-1.5 py-0.5 text-[9px] rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">Prev.</span>{% endif %}
             </td>
             <td class="px-3 py-1.5 text-xs {% if d.weekday == 'Sáb' or d.weekday == 'Dom' %}weekend{% endif %}">{{ d.weekday }}</td>
-            <td class="px-3 py-1.5 num text-right pos">{% if d.inflow %}€{{ d.inflow|floatformat:2 }}{% else %}—{% endif %}</td>
-            <td class="px-3 py-1.5 num text-right neg">{% if d.outflow %}€{{ d.outflow|floatformat:2 }}{% else %}—{% endif %}</td>
+            <td class="px-3 py-1.5 num text-right pos">{% if d.inflow %}{{ d.inflow|eur }}{% else %}—{% endif %}</td>
+            <td class="px-3 py-1.5 num text-right neg">{% if d.outflow %}{{ d.outflow|eur }}{% else %}—{% endif %}</td>
             <td class="px-3 py-1.5 num text-right {% if d.net < 0 %}neg{% elif d.net > 0 %}pos{% endif %}">
-              {% if d.net != 0 %}€{{ d.net|floatformat:2 }}{% else %}—{% endif %}
+              {% if d.net != 0 %}{{ d.net|eur }}{% else %}—{% endif %}
             </td>
-            <td class="px-3 py-1.5 num text-right font-bold {% if d.balance < 0 %}neg{% endif %}">€{{ d.balance|floatformat:2 }}</td>
+            <td class="px-3 py-1.5 num text-right font-bold {% if d.balance < 0 %}neg{% endif %}">{{ d.balance|eur }}</td>
           </tr>
           {% endfor %}
         </tbody>
@@ -161,7 +162,7 @@
             <div class="text-[10px] text-gray-500">{{ b.supplier }} · {{ b.category.name }}</div>
           </td>
           <td class="px-3 py-1.5 text-xs">{{ b.cost_center.name }}</td>
-          <td class="px-3 py-1.5 num text-right neg">€{{ b.amount_total|floatformat:2 }}</td>
+          <td class="px-3 py-1.5 num text-right neg">{{ b.amount_total|eur }}</td>
           <td class="px-3 py-1.5 text-center text-xs">{{ b.get_status_display }}</td>
         </tr>
         {% empty %}

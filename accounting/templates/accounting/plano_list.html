@@ -1,4 +1,5 @@
 {% extends 'settlements/base.html' %}
+{% load ui %}
 {% load static %}
 {% block title %}Planos Prestacionais{% endblock %}
 {% block content %}
@@ -52,25 +53,25 @@
   <!-- KPIs -->
   <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
     <div class="bg-white dark:bg-gray-800 rounded-xl border-l-4 border-indigo-400 border border-gray-200/50 dark:border-gray-700/50 p-4">
-      <p class="text-xs uppercase tracking-wide text-indigo-600 dark:text-indigo-400">Planos activos</p>
+      <p class="text-xs uppercase tracking-wide text-indigo-600 dark:text-indigo-400">Planos ativos</p>
       <p class="text-2xl font-bold text-indigo-700 dark:text-indigo-300">{{ kpis.n_activos }}</p>
       <p class="text-[11px] text-indigo-600/70">com prestações pendentes</p>
     </div>
     <div class="bg-white dark:bg-gray-800 rounded-xl border-l-4 border-amber-400 border border-gray-200/50 dark:border-gray-700/50 p-4">
       <p class="text-xs uppercase tracking-wide text-amber-600 dark:text-amber-400">Dívida em aberto</p>
-      <p class="text-2xl font-bold text-amber-700 dark:text-amber-300">€{{ kpis.total_aberto|floatformat:2 }}</p>
+      <p class="text-2xl font-bold text-amber-700 dark:text-amber-300">{{ kpis.total_aberto|eur }}</p>
       <p class="text-[11px] text-amber-600/70">Σ prestações por liquidar</p>
     </div>
     <div class="bg-white dark:bg-gray-800 rounded-xl border-l-4 border-red-400 border border-gray-200/50 dark:border-gray-700/50 p-4">
       <p class="text-xs uppercase tracking-wide text-red-600 dark:text-red-400">Em atraso</p>
-      <p class="text-2xl font-bold text-red-700 dark:text-red-300">€{{ kpis.total_atraso|floatformat:2 }}</p>
+      <p class="text-2xl font-bold text-red-700 dark:text-red-300">{{ kpis.total_atraso|eur }}</p>
       <p class="text-[11px] text-red-600/70">{{ kpis.n_atraso }} prestação(ões)</p>
     </div>
     <div class="bg-white dark:bg-gray-800 rounded-xl border-l-4 border-emerald-400 border border-gray-200/50 dark:border-gray-700/50 p-4">
       <p class="text-xs uppercase tracking-wide text-emerald-600 dark:text-emerald-400">Próxima prestação</p>
       {% if kpis.proxima %}
       <p class="text-lg font-bold text-emerald-700 dark:text-emerald-300">
-        {{ kpis.proxima.data|date:"d/m/Y" }} · €{{ kpis.proxima.valor|floatformat:2 }}
+        {{ kpis.proxima.data|date:"d/m/Y" }} · {{ kpis.proxima.valor|eur }}
       </p>
       <a href="{% url 'accounting:plano_detail' kpis.proxima.plano_id %}"
          class="text-[11px] text-emerald-600/70 hover:underline truncate inline-block max-w-full">
@@ -133,7 +134,7 @@
             <th class="px-4 py-3">Progresso</th>
             <th class="px-4 py-3">Próx. vencim.</th>
             <th class="px-4 py-3">Estado</th>
-            <th class="px-4 py-3 text-right">Acções</th>
+            <th class="px-4 py-3 text-right">Ações</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-200 dark:divide-gray-700 text-sm">
@@ -146,9 +147,9 @@
             <td class="px-4 py-3 text-gray-700 dark:text-gray-300">
               {% if p.obj.fornecedor %}{{ p.obj.fornecedor.name }}{% else %}<span class="text-gray-400 italic">—</span>{% endif %}
             </td>
-            <td class="px-4 py-3 text-right font-semibold">€{{ p.obj.valor|floatformat:2 }}</td>
-            <td class="px-4 py-3 text-right text-emerald-600 dark:text-emerald-400">€{{ p.pago|floatformat:2 }}</td>
-            <td class="px-4 py-3 text-right text-amber-600 dark:text-amber-400">€{{ p.em_aberto|floatformat:2 }}</td>
+            <td class="px-4 py-3 text-right font-semibold">{{ p.obj.valor|eur }}</td>
+            <td class="px-4 py-3 text-right text-emerald-600 dark:text-emerald-400">{{ p.pago|eur }}</td>
+            <td class="px-4 py-3 text-right text-amber-600 dark:text-amber-400">{{ p.em_aberto|eur }}</td>
             <td class="px-4 py-3 min-w-[140px]">
               <div class="flex items-center gap-2">
                 <div class="progress flex-1"><div style="width:{{ p.progresso }}%"></div></div>
@@ -158,7 +159,7 @@
             <td class="px-4 py-3 text-xs">
               {% if p.proxima %}
                 <div>{{ p.proxima.data_vencimento|date:"d/m/Y" }}</div>
-                <div class="text-gray-500">€{{ p.proxima.valor|floatformat:2 }}</div>
+                <div class="text-gray-500">{{ p.proxima.valor|eur }}</div>
               {% else %}
                 <span class="text-gray-400 italic">—</span>
               {% endif %}

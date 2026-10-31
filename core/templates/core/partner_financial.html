@@ -1,4 +1,5 @@
 {% extends 'settlements/base.html' %}
+{% load ui %}
 {% block title %}Financeiro — {{ partner.name }}{% endblock %}
 {% block content %}
 <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -41,7 +42,7 @@
     <a href="{% url 'drivers_app:drivers_central' %}"
       class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-emerald-300 dark:border-emerald-600 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100">
       <i data-lucide="users" class="w-3.5 h-3.5"></i>
-      Motoristas activos
+      Motoristas ativos
     </a>
     <a href="{% url 'drivers_app:admin_approve_drivers' %}"
       class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-amber-300 dark:border-amber-600 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 hover:bg-amber-100">
@@ -92,25 +93,25 @@
     </div>
     <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-4">
       <p class="text-[10px] uppercase tracking-wider text-gray-500 font-semibold">A Receber (bruto)</p>
-      <p class="mt-1 text-3xl font-bold text-gray-900 dark:text-white">€{{ kpis.gross_receivable|floatformat:2 }}</p>
+      <p class="mt-1 text-3xl font-bold text-gray-900 dark:text-white">{{ kpis.gross_receivable|eur }}</p>
       <p class="text-xs text-gray-400 mt-0.5">{{ kpis.delivered }} × €{{ partner.price_per_package|floatformat:4 }}</p>
     </div>
     <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-4">
       <p class="text-[10px] uppercase tracking-wider text-gray-500 font-semibold">Custo Motoristas</p>
-      <p class="mt-1 text-3xl font-bold text-red-600 dark:text-red-400">€{{ kpis.total_driver_cost|floatformat:2 }}</p>
+      <p class="mt-1 text-3xl font-bold text-red-600 dark:text-red-400">{{ kpis.total_driver_cost|eur }}</p>
       <p class="text-xs text-gray-400 mt-0.5">soma por motorista × preço individual</p>
     </div>
     <div class="bg-white dark:bg-gray-800 rounded-xl border border-l-4 border-emerald-400 border-gray-200/50 dark:border-gray-700/50 p-4">
       <p class="text-[10px] uppercase tracking-wider text-emerald-600 font-semibold">Margem Bruta</p>
       <p class="mt-1 text-3xl font-bold {% if kpis.margin_gross >= 0 %}text-emerald-600 dark:text-emerald-400{% else %}text-red-600{% endif %}">
-        €{{ kpis.margin_gross|floatformat:2 }}
+        {{ kpis.margin_gross|eur }}
       </p>
       <p class="text-xs text-gray-400 mt-0.5">receita − custo motoristas</p>
     </div>
 
     <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-4">
-      <p class="text-[10px] uppercase tracking-wider text-gray-500 font-semibold">Claims</p>
-      <p class="mt-1 text-2xl font-bold text-red-600 dark:text-red-400">€{{ kpis.claims_value|floatformat:2 }}</p>
+      <p class="text-[10px] uppercase tracking-wider text-gray-500 font-semibold">Reclamações</p>
+      <p class="mt-1 text-2xl font-bold text-red-600 dark:text-red-400">{{ kpis.claims_value|eur }}</p>
       <p class="text-xs text-gray-400 mt-0.5">{{ kpis.claims_count }} reclamações</p>
     </div>
     <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-4">
@@ -228,7 +229,7 @@
           <td class="px-4 py-2.5 text-right">{{ f.drivers|length }}</td>
           <td class="px-4 py-2.5 text-right font-semibold text-emerald-600 dark:text-emerald-400">{{ f.delivered }}</td>
           <td class="px-4 py-2.5 text-right">{{ f.success_rate }}%</td>
-          <td class="px-4 py-2.5 text-right font-bold">€{{ f.value|floatformat:2 }}</td>
+          <td class="px-4 py-2.5 text-right font-bold">{{ f.value|eur }}</td>
         </tr>
         {% endfor %}
       </tbody>
@@ -275,7 +276,7 @@
             <td class="px-4 py-2.5 text-right">{{ d.success_rate }}%</td>
             <td class="px-4 py-2.5 text-right text-red-500">{{ d.failures }}</td>
             <td class="px-4 py-2.5 text-right font-mono text-xs">€{{ d.price|floatformat:4 }}</td>
-            <td class="px-4 py-2.5 text-right font-bold">€{{ d.value|floatformat:2 }}</td>
+            <td class="px-4 py-2.5 text-right font-bold">{{ d.value|eur }}</td>
           </tr>
           {% endfor %}
         </tbody>

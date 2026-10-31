@@ -1,4 +1,4 @@
-{# Tab Preços Especiais — entregas com tarifa ≠ €1.60 + criação de PackagePriceOverride #}
+{% load ui %}{# Tab Preços Especiais — entregas com tarifa ≠ €1.60 + criação de PackagePriceOverride #}
 
 <div class="space-y-4" x-data="specialPrices()">
 
@@ -46,7 +46,7 @@
           <span class="font-bold text-amber-700 dark:text-amber-300">€ {{ d.amount }}</span>
           <span class="text-gray-500">×</span>
           <span class="font-bold">{{ d.n }}</span>
-          <span class="text-gray-500"> = € {{ d.total|floatformat:2 }}</span>
+          <span class="text-gray-500"> = {{ d.total|eur }}</span>
         </div>
       {% endfor %}
     </div>
@@ -76,7 +76,7 @@
           <tr>
             <th class="px-2 py-2 w-8"></th>
             <th class="px-2 py-2 text-left font-semibold uppercase">Data</th>
-            <th class="px-2 py-2 text-left font-semibold uppercase">Waybill</th>
+            <th class="px-2 py-2 text-left font-semibold uppercase">N.º de envio</th>
             <th class="px-2 py-2 text-left font-semibold uppercase">Motorista</th>
             <th class="px-2 py-2 text-left font-semibold uppercase">CP4</th>
             <th class="px-2 py-2 text-right font-semibold uppercase">€ Pago</th>
@@ -106,7 +106,7 @@
             <td class="px-2 py-1.5 font-mono text-[10px] text-gray-500">
               {% if line.task.zip_code %}{{ line.task.zip_code|slice:":4" }}{% else %}—{% endif %}
             </td>
-            <td class="px-2 py-1.5 text-right font-bold text-amber-700 dark:text-amber-300">€ {{ line.amount|floatformat:2 }}</td>
+            <td class="px-2 py-1.5 text-right font-bold text-amber-700 dark:text-amber-300">{{ line.amount|eur }}</td>
             <td class="px-2 py-1.5 text-center">
               {% if line.price_override %}
                 <span class="inline-flex items-center gap-1 px-1.5 py-0.5 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 rounded text-[10px] font-semibold">

@@ -103,5 +103,5 @@ class PartnerPagePriceTests(TestCase):
         path = Path(settings.BASE_DIR) / "core/templates/core/partner_detail.html"
         text = path.read_text(encoding="utf-8")
         line = next(row for row in text.splitlines() if "adicionais{% if" in row)
-        self.assertLess(line.index("{% if is_gestao %}"), line.index("€"))
+        self.assertLess(line.index("{% if is_gestao %}"), line.index("same_door_kpi.amount"))
         self.assertGreater(line.index("{% endif %}"), line.rindex("}}"))

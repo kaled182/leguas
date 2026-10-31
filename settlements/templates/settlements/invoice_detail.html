@@ -1,4 +1,5 @@
 {% extends 'settlements/base.html' %}
+{% load ui %}
 
 {% block title %}Fatura {{ invoice.invoice_number }}{% endblock %}
 
@@ -75,7 +76,7 @@
         </h2>
         <div class="grid grid-cols-2 gap-4">
           <div>
-            <label class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</label>
+            <label class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Estado</label>
             <div class="mt-1">
               {% if invoice.status == 'PAID' %}
                 <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400">
@@ -159,26 +160,26 @@
           <div class="flex justify-between items-center py-2">
             <span class="text-sm text-gray-600 dark:text-gray-400">Valor Bruto</span>
             <span class="text-lg font-semibold text-gray-900 dark:text-white">
-              €{{ invoice.gross_amount|floatformat:2 }}
+              {{ invoice.gross_amount|eur }}
             </span>
           </div>
           <div class="flex justify-between items-center py-2 border-t border-gray-200 dark:border-gray-700">
             <span class="text-sm text-gray-600 dark:text-gray-400">IVA (23%)</span>
             <span class="text-lg font-semibold text-gray-900 dark:text-white">
-              €{{ invoice.tax_amount|floatformat:2 }}
+              {{ invoice.tax_amount|eur }}
             </span>
           </div>
           <div class="flex justify-between items-center py-3 border-t-2 border-gray-300 dark:border-gray-600 bg-blue-50 dark:bg-blue-900/20 -mx-6 px-6 rounded-lg">
             <span class="text-base font-semibold text-gray-900 dark:text-white">Valor Líquido (Total)</span>
             <span class="text-2xl font-bold text-blue-600 dark:text-blue-400">
-              €{{ invoice.net_amount|floatformat:2 }}
+              {{ invoice.net_amount|eur }}
             </span>
           </div>
           {% if invoice.paid_amount %}
           <div class="flex justify-between items-center py-2 border-t border-gray-200 dark:border-gray-700">
             <span class="text-sm text-gray-600 dark:text-gray-400">Valor Pago</span>
             <span class="text-lg font-semibold text-emerald-600 dark:text-emerald-400">
-              €{{ invoice.paid_amount|floatformat:2 }}
+              {{ invoice.paid_amount|eur }}
             </span>
           </div>
           {% endif %}

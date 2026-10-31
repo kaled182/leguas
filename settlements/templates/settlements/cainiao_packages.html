@@ -93,7 +93,7 @@
       <div class="md:col-span-2">
         <label class="block text-[10px] uppercase font-semibold text-gray-500 mb-1">Pesquisa livre</label>
         <input type="text" x-model="filters.q" @keydown.enter="search()"
-               placeholder="Waybill, LP, courier, cliente, cidade, morada…"
+               placeholder="N.º de envio, LP, courier, cliente, cidade, morada…"
                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700">
       </div>
       <div>
@@ -112,11 +112,11 @@
         </select>
       </div>
       <div>
-        <label class="block text-[10px] uppercase font-semibold text-gray-500 mb-1">Status</label>
+        <label class="block text-[10px] uppercase font-semibold text-gray-500 mb-1">Estado</label>
         <select x-model="filters.status" @change="search()" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700">
           <option value="">Todos</option>
-          <option value="Delivered">Delivered</option>
-          <option value="Driver_received">Driver Received</option>
+          <option value="Delivered">Entregue</option>
+          <option value="Driver_received">Motorista Received</option>
           <option value="Assigned">Assigned</option>
           <option value="Attempt Failure">Attempt Failure</option>
           <option value="Unassign">Unassign</option>
@@ -155,12 +155,12 @@
         </div>
       </div>
       <div>
-        <label class="block text-[10px] uppercase font-semibold text-gray-500 mb-1">Driver</label>
+        <label class="block text-[10px] uppercase font-semibold text-gray-500 mb-1">Motorista</label>
         <input type="text" x-model="filters.driver" @change="search()" @keydown.enter="search()"
                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700">
       </div>
       <div>
-        <label class="block text-[10px] uppercase font-semibold text-gray-500 mb-1">Seller</label>
+        <label class="block text-[10px] uppercase font-semibold text-gray-500 mb-1">Vendedor</label>
         <input type="text" x-model="filters.seller" @change="search()" @keydown.enter="search()"
                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700">
       </div>
@@ -199,7 +199,7 @@
       </button>
       <label class="flex items-center gap-1.5 text-xs ml-auto cursor-pointer select-none px-2 py-1 rounded border border-gray-300 dark:border-gray-600"
              :class="filters.include_unregistered ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-700' : ''"
-             title="Por defeito só vê pacotes em CP4s cadastrados nos HUBs. Activa esta opção para ver TODOS.">
+             title="Por defeito só vê pacotes em CP4s cadastrados nos HUBs. Ativa esta opção para ver TODOS.">
         <input type="checkbox" x-model="filters.include_unregistered" @change="search()">
         <span x-show="!filters.include_unregistered">🏢 Só CP4s dos HUBs</span>
         <span x-show="filters.include_unregistered" class="text-amber-700 dark:text-amber-300 font-semibold">⚠ TODOS os CP4s (sem filtro HUB)</span>
@@ -224,17 +224,17 @@
       <table class="w-full text-sm">
         <thead class="bg-gray-50 dark:bg-gray-700 sticky top-0">
           <tr>
-            <th class="px-2 py-2 text-left text-[10px] uppercase">Status</th>
-            <th class="px-2 py-2 text-left text-[10px] uppercase">Waybill</th>
-            <th class="px-2 py-2 text-left text-[10px] uppercase">Driver</th>
+            <th class="px-2 py-2 text-left text-[10px] uppercase">Estado</th>
+            <th class="px-2 py-2 text-left text-[10px] uppercase">N.º de envio</th>
+            <th class="px-2 py-2 text-left text-[10px] uppercase">Motorista</th>
             <th class="px-2 py-2 text-left text-[10px] uppercase">CP4</th>
             <th class="px-2 py-2 text-left text-[10px] uppercase">Cidade</th>
-            <th class="px-2 py-2 text-left text-[10px] uppercase">Seller</th>
+            <th class="px-2 py-2 text-left text-[10px] uppercase">Vendedor</th>
             <th class="px-2 py-2 text-right text-[10px] uppercase" title="Dias no HUB">HUB</th>
             <th class="px-2 py-2 text-right text-[10px] uppercase" title="Tentativas">Tent.</th>
             <th class="px-2 py-2 text-left text-[10px] uppercase">Hub Inbound</th>
             <th class="px-2 py-2 text-left text-[10px] uppercase">Entregue</th>
-            <th class="px-2 py-2 text-right text-[10px] uppercase">Acções</th>
+            <th class="px-2 py-2 text-right text-[10px] uppercase">Ações</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
@@ -387,7 +387,7 @@
       <p class="text-xs font-mono text-gray-500 mb-3" x-text="returnModal.waybill"></p>
       <div class="space-y-3">
         <div>
-          <label class="block text-xs font-semibold mb-1">Status</label>
+          <label class="block text-xs font-semibold mb-1">Estado</label>
           <select x-model="returnModal.return_status"
                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700">
             <option value="PREPARING">A preparar</option>

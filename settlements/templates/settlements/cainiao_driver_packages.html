@@ -11,7 +11,7 @@
       Voltar
     </a>
     <span class="text-gray-300 dark:text-gray-600">/</span>
-    <span class="text-gray-700 dark:text-gray-300">Pacotes do Driver</span>
+    <span class="text-gray-700 dark:text-gray-300">Pacotes do Motorista</span>
   </nav>
 
   {# Header Card #}
@@ -110,12 +110,12 @@
         <thead class="bg-gray-50 dark:bg-gray-900/50 text-xs uppercase text-gray-500 dark:text-gray-400">
           <tr>
             <th class="px-4 py-2.5 text-left">Data</th>
-            <th class="px-4 py-2.5 text-left">Waybill</th>
+            <th class="px-4 py-2.5 text-left">N.º de envio</th>
             <th class="px-4 py-2.5 text-left">CP4</th>
             <th class="px-4 py-2.5 text-left">Cidade</th>
             <th class="px-4 py-2.5 text-left">Zip</th>
             <th class="px-4 py-2.5 text-left">Endereço</th>
-            <th class="px-4 py-2.5 text-left">Status</th>
+            <th class="px-4 py-2.5 text-left">Estado</th>
             <th class="px-4 py-2.5 text-left">Início entrega</th>
             <th class="px-4 py-2.5 text-left">Entrega/Falha</th>
             <th class="px-4 py-2.5 text-right">Duração</th>
@@ -151,11 +151,11 @@
                 </span>
               {% elif p.task_status == 'Delivered' %}
                 <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400">
-                  <i data-lucide="check-circle" class="w-3 h-3"></i>Delivered
+                  <i data-lucide="check-circle" class="w-3 h-3"></i>Entregue
                 </span>
               {% elif p.task_status == 'Driver_received' %}
                 <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400">
-                  <i data-lucide="truck" class="w-3 h-3"></i>Driver Received
+                  <i data-lucide="truck" class="w-3 h-3"></i>Motorista Received
                 </span>
               {% elif p.task_status == 'Attempt Failure' %}
                 <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400">

@@ -1,4 +1,5 @@
 {% extends 'settlements/base.html' %}
+{% load ui %}
 {% load static %}
 {% block title %}Contas a Pagar{% endblock %}
 {% block content %}
@@ -48,20 +49,20 @@
     <div class="bg-white dark:bg-gray-800 rounded-lg border border-violet-300 dark:border-violet-700 p-3 cursor-pointer hover:shadow-md"
          onclick="location.href='?status=AWAITING'">
       <div class="text-[10px] uppercase text-violet-700">Aguarda Aprovação ({{ n_awaiting }})</div>
-      <div class="text-2xl font-bold text-violet-700">€{{ total_awaiting|floatformat:2 }}</div>
+      <div class="text-2xl font-bold text-violet-700">{{ total_awaiting|eur }}</div>
     </div>
     {% endif %}
     <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3">
       <div class="text-[10px] uppercase text-gray-500">Pendente</div>
-      <div class="text-2xl font-bold text-amber-600">€{{ total_pending|floatformat:2 }}</div>
+      <div class="text-2xl font-bold text-amber-600">{{ total_pending|eur }}</div>
     </div>
     <div class="bg-white dark:bg-gray-800 rounded-lg border border-rose-300 dark:border-rose-700 p-3">
       <div class="text-[10px] uppercase text-rose-700">Vencido ({{ n_overdue }})</div>
-      <div class="text-2xl font-bold text-rose-700">€{{ total_overdue|floatformat:2 }}</div>
+      <div class="text-2xl font-bold text-rose-700">{{ total_overdue|eur }}</div>
     </div>
     <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3">
       <div class="text-[10px] uppercase text-emerald-700">Pago no período</div>
-      <div class="text-2xl font-bold text-emerald-600">€{{ total_paid|floatformat:2 }}</div>
+      <div class="text-2xl font-bold text-emerald-600">{{ total_paid|eur }}</div>
     </div>
     <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3">
       <div class="text-[10px] uppercase text-gray-500">Total</div>
@@ -129,7 +130,7 @@
           <th class="px-3 py-2 text-right">Valor</th>
           <th class="px-3 py-2 text-center">Estado</th>
           <th class="px-3 py-2 text-center">Anexos</th>
-          <th class="px-3 py-2 text-right">Acções</th>
+          <th class="px-3 py-2 text-right">Ações</th>
         </tr>
       </thead>
       <tbody class="divide-y divide-gray-100 dark:divide-gray-700/50">
@@ -155,8 +156,8 @@
             <div class="text-[10px] text-gray-400">{{ b.category.get_nature_display }}</div>
           </td>
           <td class="px-3 py-2 text-right font-mono">
-            <div class="font-bold">€{{ b.amount_total|floatformat:2 }}</div>
-            <div class="text-[10px] text-gray-400">net €{{ b.amount_net|floatformat:2 }}</div>
+            <div class="font-bold">{{ b.amount_total|eur }}</div>
+            <div class="text-[10px] text-gray-400">net {{ b.amount_net|eur }}</div>
           </td>
           <td class="px-3 py-2 text-center">
             <span class="pill pill-{{ b.status|lower }}">{{ b.get_status_display }}</span>

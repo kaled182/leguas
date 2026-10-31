@@ -1,6 +1,7 @@
 {% extends 'settlements/base.html' %}
+{% load ui %}
 {% load static %}
-{% block title %}Hub Financeiro{% endblock %}
+{% block title %}Visão financeira{% endblock %}
 {% block content %}
 <style>
   .pill { padding:0.125rem 0.5rem; border-radius:9999px; font-size:0.7rem; font-weight:600; }
@@ -27,7 +28,7 @@
     <div>
       <h1 class="text-2xl font-bold flex items-center gap-2">
         <i data-lucide="layout-dashboard" class="w-6 h-6 text-indigo-500"></i>
-        Hub Financeiro
+        Visão financeira
       </h1>
       <p class="text-sm text-gray-500 dark:text-gray-400">
         Visão unificada · {{ today|date:"d/m/Y" }} → {{ horizon|date:"d/m/Y" }} ({{ n_movs }} movimentações esperadas)
@@ -36,13 +37,13 @@
     <div class="flex flex-wrap gap-2 items-center text-xs">
       <span class="text-gray-500">Saldo bancário:</span>
       <span class="font-bold text-lg {% if snap.saldo_bancario < 0 %}text-red-600{% else %}text-emerald-600{% endif %}">
-        €{{ snap.saldo_bancario|floatformat:2 }}
+        {{ snap.saldo_bancario|eur }}
       </span>
       {% if snap.saldo_data %}<span class="text-gray-400">@ {{ snap.saldo_data|date:"d/m/Y" }}</span>{% endif %}
       <span class="text-gray-300">·</span>
-      <span class="text-gray-500">Projectado 30d:</span>
+      <span class="text-gray-500">Projetado 30d:</span>
       <span class="font-bold {% if snap.saldo_projectado_30d < 0 %}text-red-600{% else %}text-emerald-600{% endif %}">
-        €{{ snap.saldo_projectado_30d|floatformat:2 }}
+        {{ snap.saldo_projectado_30d|eur }}
       </span>
       <span class="text-gray-300">·</span>
       <a href="{% url 'accounting:audit_timeline' %}" class="text-indigo-500 hover:underline inline-flex items-center gap-1">
@@ -67,10 +68,10 @@
         <p class="text-xs uppercase tracking-wide text-emerald-600 font-semibold">A Receber</p>
         <i data-lucide="trending-up" class="w-4 h-4 text-emerald-500"></i>
       </div>
-      <p class="text-xl font-bold text-emerald-700 dark:text-emerald-300 mt-1">€{{ snap.a_receber_breakdown.partner_invoices|floatformat:2 }}</p>
+      <p class="text-xl font-bold text-emerald-700 dark:text-emerald-300 mt-1">{{ snap.a_receber_breakdown.partner_invoices|eur }}</p>
       <p class="text-[11px] text-gray-500">{{ snap.a_receber_breakdown.partner_count }} fatura(s) parceiro</p>
-      {% if snap.a_receber_breakdown.fleet_invoices %}<p class="text-[11px] text-gray-500">+ €{{ snap.a_receber_breakdown.fleet_invoices|floatformat:2 }} fleet ({{ snap.a_receber_breakdown.fleet_count }})</p>{% endif %}
-      {% if snap.a_receber_breakdown.driver_debt %}<p class="text-[11px] text-gray-500">+ €{{ snap.a_receber_breakdown.driver_debt|floatformat:2 }} dívida motoristas</p>{% endif %}
+      {% if snap.a_receber_breakdown.fleet_invoices %}<p class="text-[11px] text-gray-500">+ {{ snap.a_receber_breakdown.fleet_invoices|eur }} fleet ({{ snap.a_receber_breakdown.fleet_count }})</p>{% endif %}
+      {% if snap.a_receber_breakdown.driver_debt %}<p class="text-[11px] text-gray-500">+ {{ snap.a_receber_breakdown.driver_debt|eur }} dívida motoristas</p>{% endif %}
     </a>
 
     <a href="{% url 'accounting:payables_inbox' %}" class="hub-card bg-white dark:bg-gray-800 rounded-xl border-l-4 border-amber-500 border border-gray-200/50 dark:border-gray-700/50 p-4 block">
@@ -78,9 +79,9 @@
         <p class="text-xs uppercase tracking-wide text-amber-600 font-semibold">A Pagar</p>
         <i data-lucide="trending-down" class="w-4 h-4 text-amber-500"></i>
       </div>
-      <p class="text-xl font-bold text-amber-700 dark:text-amber-300 mt-1">€{{ snap.a_pagar_breakdown.bills|floatformat:2 }}</p>
+      <p class="text-xl font-bold text-amber-700 dark:text-amber-300 mt-1">{{ snap.a_pagar_breakdown.bills|eur }}</p>
       <p class="text-[11px] text-gray-500">{{ snap.a_pagar_breakdown.bills_count }} bills</p>
-      {% if snap.a_pagar_breakdown.bills_passthrough %}<p class="text-[11px] text-gray-500">+ €{{ snap.a_pagar_breakdown.bills_passthrough|floatformat:2 }} passthrough</p>{% endif %}
+      {% if snap.a_pagar_breakdown.bills_passthrough %}<p class="text-[11px] text-gray-500">+ {{ snap.a_pagar_breakdown.bills_passthrough|eur }} passthrough</p>{% endif %}
     </a>
 
     <a href="{% url 'accounting:imposto_list' %}" class="hub-card bg-white dark:bg-gray-800 rounded-xl border-l-4 border-indigo-500 border border-gray-200/50 dark:border-gray-700/50 p-4 block">
@@ -88,7 +89,7 @@
         <p class="text-xs uppercase tracking-wide text-indigo-600 font-semibold">Impostos</p>
         <i data-lucide="landmark" class="w-4 h-4 text-indigo-500"></i>
       </div>
-      <p class="text-xl font-bold text-indigo-700 dark:text-indigo-300 mt-1">€{{ snap.a_pagar_breakdown.impostos|floatformat:2 }}</p>
+      <p class="text-xl font-bold text-indigo-700 dark:text-indigo-300 mt-1">{{ snap.a_pagar_breakdown.impostos|eur }}</p>
       <p class="text-[11px] text-gray-500">{{ snap.a_pagar_breakdown.impostos_count }} guia(s)</p>
     </a>
 
@@ -98,7 +99,7 @@
         <i data-lucide="calendar-clock" class="w-4 h-4 text-purple-500"></i>
       </div>
       <p class="text-xl font-bold text-purple-700 dark:text-purple-300 mt-1">{{ n_planos_activos }} <span class="text-xs font-normal text-gray-500">plano(s)</span></p>
-      <p class="text-[11px] text-gray-500">€{{ planos_total_mes|floatformat:2 }} a pagar este mês</p>
+      <p class="text-[11px] text-gray-500">{{ planos_total_mes|eur }} a pagar este mês</p>
       <p class="text-[11px] text-gray-500">{{ planos_n_parcelas_mes }} prestação(ões) c/ vencim. no mês</p>
     </a>
 
@@ -107,8 +108,8 @@
         <p class="text-xs uppercase tracking-wide text-sky-600 font-semibold">Tesouraria</p>
         <i data-lucide="banknote" class="w-4 h-4 text-sky-500"></i>
       </div>
-      <p class="text-xl font-bold text-sky-700 dark:text-sky-300 mt-1">€{{ snap.saldo_bancario|floatformat:2 }}</p>
-      <p class="text-[11px] text-gray-500">IVA dedut: €{{ snap.iva_dedutivel|floatformat:2 }}</p>
+      <p class="text-xl font-bold text-sky-700 dark:text-sky-300 mt-1">{{ snap.saldo_bancario|eur }}</p>
+      <p class="text-[11px] text-gray-500">IVA dedut: {{ snap.iva_dedutivel|eur }}</p>
       <a href="{% url 'accounting:bank_reconciliation' %}" class="text-[11px] text-sky-500 hover:underline">Reconciliar →</a>
     </a>
 
@@ -117,7 +118,7 @@
         <p class="text-xs uppercase tracking-wide text-violet-600 font-semibold">DRE · Mês</p>
         <i data-lucide="bar-chart-3" class="w-4 h-4 text-violet-500"></i>
       </div>
-      <p class="text-xl font-bold text-violet-700 dark:text-violet-300 mt-1">€{{ margem_mes|floatformat:2 }}</p>
+      <p class="text-xl font-bold text-violet-700 dark:text-violet-300 mt-1">{{ margem_mes|eur }}</p>
       <p class="text-[11px] text-gray-500">{{ margem_pct|floatformat:1 }}% margem</p>
       <p class="text-[11px] text-gray-500">€{{ receita_mes|floatformat:0 }} rec · €{{ custos_mes|floatformat:0 }} cust</p>
     </a>
@@ -127,7 +128,7 @@
         <p class="text-xs uppercase tracking-wide text-pink-600 font-semibold">Motoristas</p>
         <i data-lucide="users" class="w-4 h-4 text-pink-500"></i>
       </div>
-      <p class="text-xl font-bold text-pink-700 dark:text-pink-300 mt-1">€{{ snap.a_pagar_breakdown.drivers|floatformat:2 }}</p>
+      <p class="text-xl font-bold text-pink-700 dark:text-pink-300 mt-1">{{ snap.a_pagar_breakdown.drivers|eur }}</p>
       <p class="text-[11px] text-gray-500">{{ snap.a_pagar_breakdown.drivers_count }} PF(s) pendentes</p>
       {% if snap.a_receber_breakdown.driver_debt_count %}<p class="text-[11px] text-gray-500">{{ snap.a_receber_breakdown.driver_debt_count }} adiantamento(s)</p>{% endif %}
     </a>
@@ -141,7 +142,7 @@
     <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-xl p-4 flex items-center gap-3">
       <i data-lucide="alert-triangle" class="w-6 h-6 text-red-500"></i>
       <div>
-        <p class="font-semibold text-red-800 dark:text-red-300">Saídas vencidas: €{{ vencidos_out|floatformat:2 }}</p>
+        <p class="font-semibold text-red-800 dark:text-red-300">Saídas vencidas: {{ vencidos_out|eur }}</p>
         <p class="text-xs text-red-600 dark:text-red-400">Bills, impostos ou PFs com vencimento já ultrapassado</p>
       </div>
     </div>
@@ -150,7 +151,7 @@
     <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-xl p-4 flex items-center gap-3">
       <i data-lucide="clock" class="w-6 h-6 text-amber-500"></i>
       <div>
-        <p class="font-semibold text-amber-800 dark:text-amber-300">Entradas em atraso: €{{ vencidos_in|floatformat:2 }}</p>
+        <p class="font-semibold text-amber-800 dark:text-amber-300">Entradas em atraso: {{ vencidos_in|eur }}</p>
         <p class="text-xs text-amber-600 dark:text-amber-400">Faturas de parceiros não recebidas após o vencimento</p>
       </div>
     </div>
@@ -227,7 +228,7 @@
             </td>
             <td class="px-4 py-2 text-gray-700 dark:text-gray-300">{{ m.label }}</td>
             <td class="px-4 py-2 text-right font-mono {% if m.type == 'IN' %}text-emerald-600{% else %}text-red-600{% endif %}">
-              {% if m.type == 'IN' %}+{% else %}−{% endif %}€{{ m.amount|floatformat:2 }}
+              {% if m.type == 'IN' %}+{% else %}−{% endif %}{{ m.amount|eur }}
             </td>
             <td class="px-4 py-2 text-xs text-gray-500">{{ m.status }}</td>
             <td class="px-4 py-2 text-right">

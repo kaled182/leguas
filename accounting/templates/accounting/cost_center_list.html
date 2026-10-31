@@ -72,7 +72,7 @@
   <!-- KPIs -->
   <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
     <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-      <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Activos</p>
+      <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Ativos</p>
       <p class="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{{ kpis.total }}</p>
     </div>
     <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
@@ -104,8 +104,8 @@
       <div>
         <label class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Estado</label>
         <select name="show" class="fld">
-          <option value="active" {% if filters.show == 'active' %}selected{% endif %}>Activos</option>
-          <option value="inactive" {% if filters.show == 'inactive' %}selected{% endif %}>Inactivos</option>
+          <option value="active" {% if filters.show == 'active' %}selected{% endif %}>Ativos</option>
+          <option value="inactive" {% if filters.show == 'inactive' %}selected{% endif %}>Inativos</option>
           <option value="all" {% if filters.show == 'all' %}selected{% endif %}>Todos</option>
         </select>
       </div>
@@ -128,7 +128,7 @@
             <th class="px-3 py-2.5 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">HUB Vinculado</th>
             <th class="px-3 py-2.5 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Bills</th>
             <th class="px-3 py-2.5 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Despesas {{ year }}</th>
-            <th class="px-3 py-2.5 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Acções</th>
+            <th class="px-3 py-2.5 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Ações</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-200 dark:divide-gray-700">

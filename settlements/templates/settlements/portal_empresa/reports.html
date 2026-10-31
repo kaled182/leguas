@@ -1,4 +1,5 @@
 {% extends "settlements/portal_empresa/_base.html" %}
+{% load ui %}
 {% load static %}
 
 {% block portal_content %}
@@ -99,7 +100,7 @@
             <td class="px-4 py-2 font-semibold">{{ m.month_name }}</td>
             <td class="px-4 py-2 text-right font-mono">{{ m.deliveries }}</td>
             <td class="px-4 py-2 text-right font-mono text-gray-500">{{ m.invoice_count }}</td>
-            <td class="px-4 py-2 text-right font-mono font-bold text-purple-600">€{{ m.invoice_total|floatformat:2 }}</td>
+            <td class="px-4 py-2 text-right font-mono font-bold text-purple-600">{{ m.invoice_total|eur }}</td>
             <td class="px-4 py-2">
               <div class="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
                 <div class="bg-blue-500 h-2 rounded-full"

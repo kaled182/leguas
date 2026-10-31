@@ -1,4 +1,5 @@
 {% extends "settlements/portal_empresa/_base.html" %}
+{% load ui %}
 {% load static %}
 
 {% block portal_content %}
@@ -56,7 +57,7 @@
     <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-700">
       <h3 class="text-sm font-bold text-gray-700 dark:text-gray-300 uppercase flex items-center gap-2">
         <i data-lucide="alert-octagon" class="w-4 h-4 text-rose-500"></i>
-        Claims ({{ claims|length }}{% if claims|length == 200 %} — primeiros 200{% endif %})
+        Reclamações ({{ claims|length }}{% if claims|length == 200 %} — primeiros 200{% endif %})
       </h3>
     </div>
     {% if claims %}
@@ -67,10 +68,10 @@
             <th class="px-4 py-2">Data</th>
             <th class="px-4 py-2">Motorista</th>
             <th class="px-4 py-2">Tipo</th>
-            <th class="px-4 py-2">Waybill</th>
+            <th class="px-4 py-2">N.º de envio</th>
             <th class="px-4 py-2">Descrição</th>
             <th class="px-4 py-2 text-right">Valor</th>
-            <th class="px-4 py-2 text-center">Status</th>
+            <th class="px-4 py-2 text-center">Estado</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
@@ -86,7 +87,7 @@
             <td class="px-4 py-2 font-mono text-xs">{{ c.waybill_number|default:"—" }}</td>
             <td class="px-4 py-2 text-xs text-gray-600 dark:text-gray-400 max-w-md truncate">{{ c.description|truncatechars:60 }}</td>
             <td class="px-4 py-2 text-right font-mono font-bold {% if c.status == 'APPROVED' or c.status == 'PENDING' %}text-rose-600{% else %}text-gray-400{% endif %}">
-              -€{{ c.amount|floatformat:2 }}
+              -{{ c.amount|eur }}
             </td>
             <td class="px-4 py-2 text-center">
               <span class="px-2 py-0.5 text-[11px] rounded-full font-semibold {{ c.situacao.classes }}">

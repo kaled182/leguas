@@ -1,4 +1,4 @@
-{# Tab Reconciliação — cruzamento Cainiao XLSX × CainiaoOperationTask local #}
+{% load ui %}{# Tab Reconciliação — cruzamento Cainiao XLSX × CainiaoOperationTask local #}
 
 <div class="space-y-6">
 
@@ -17,7 +17,7 @@
     <div class="bg-rose-50 dark:bg-rose-900/20 rounded-xl p-4 border border-rose-300 dark:border-rose-700/40">
       <div class="text-[10px] uppercase tracking-wider text-rose-700 dark:text-rose-300">✗ Entregues s/ Pagamento</div>
       <div class="text-2xl font-extrabold text-rose-700 dark:text-rose-300 mt-1">{{ recon.delivered_no_billing_count }}</div>
-      <div class="text-[10px] text-rose-700/70 mt-1">1ª entrega Delivered s/ linha de envio na fatura</div>
+      <div class="text-[10px] text-rose-700/70 mt-1">1ª entrega Entregue s/ linha de envio na fatura</div>
     </div>
     <div class="bg-orange-50 dark:bg-orange-900/20 rounded-xl p-4 border border-orange-300 dark:border-orange-700/40">
       <div class="text-[10px] uppercase tracking-wider text-orange-700 dark:text-orange-300">↻ Re-entregas Excluídas</div>
@@ -31,9 +31,9 @@
   <div class="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-700/30 rounded-lg px-4 py-3 flex items-start gap-3 text-sm">
     <i data-lucide="info" class="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5"></i>
     <div>
-      <div class="font-semibold text-blue-700 dark:text-blue-300">Regra aplicada: fonte da verdade = 1ª entrega Delivered</div>
+      <div class="font-semibold text-blue-700 dark:text-blue-300">Regra aplicada: fonte da verdade = 1ª entrega Entregue</div>
       <p class="text-[12px] text-blue-700/80 dark:text-blue-300/70 mt-1">
-        Quando um pacote é re-entregue por engano (driver A entrega; mais tarde driver B entrega o mesmo waybill), apenas a <strong>1ª task Delivered</strong> conta como fonte da verdade. A Cainiao só paga essa primeira entrega — re-entregas posteriores são <strong>excluídas</strong> da reconciliação.
+        Quando um pacote é re-entregue por engano (driver A entrega; mais tarde driver B entrega o mesmo waybill), apenas a <strong>1ª task Entregue</strong> conta como fonte da verdade. A Cainiao só paga essa primeira entrega — re-entregas posteriores são <strong>excluídas</strong> da reconciliação.
       </p>
       <p class="text-[12px] text-blue-700/80 dark:text-blue-300/70 mt-1">
         <strong>{{ recon.n_re_deliveries }} task{{ recon.n_re_deliveries|pluralize:"s" }}</strong> foi excluída da contagem de "Entregues s/ Pagamento" — todas eram re-entregas do mesmo waybill já entregue antes.
@@ -56,15 +56,15 @@
       <div class="bg-violet-50 dark:bg-violet-900/10 rounded-lg p-3 border border-violet-200 dark:border-violet-700/30">
         <div class="text-[10px] uppercase tracking-wider text-violet-700 dark:text-violet-300">Total PUDO Entregue</div>
         <div class="text-2xl font-extrabold text-violet-700 dark:text-violet-300 mt-1">{{ pudo.total_packages }}</div>
-        <div class="text-[10px] text-violet-600/70 mt-0.5">≈ € {{ pudo.total_amount|floatformat:2 }} · {{ pudo.n_drivers }} motorista{{ pudo.n_drivers|pluralize }}</div>
+        <div class="text-[10px] text-violet-600/70 mt-0.5">≈ {{ pudo.total_amount|eur }} · {{ pudo.n_drivers }} motorista{{ pudo.n_drivers|pluralize }}</div>
       </div>
       <div class="bg-rose-50 dark:bg-rose-900/10 rounded-lg p-3 border border-rose-200 dark:border-rose-700/30">
         <div class="text-[10px] uppercase tracking-wider text-rose-700 dark:text-rose-300">PUDO Entregues s/ Pagamento</div>
         <div class="text-2xl font-extrabold text-rose-700 dark:text-rose-300 mt-1">{{ pudo.unpaid.n }}</div>
-        <div class="text-[10px] text-rose-600/70 mt-0.5">valor estimado ≈ € {{ pudo.unpaid.amount|floatformat:2 }}</div>
+        <div class="text-[10px] text-rose-600/70 mt-0.5">valor estimado ≈ {{ pudo.unpaid.amount|eur }}</div>
       </div>
       <div class="bg-amber-50 dark:bg-amber-900/10 rounded-lg p-3 border border-amber-200 dark:border-amber-700/30">
-        <div class="text-[10px] uppercase tracking-wider text-amber-700 dark:text-amber-300">Suspeitas Fake Delivery</div>
+        <div class="text-[10px] uppercase tracking-wider text-amber-700 dark:text-amber-300">Suspeitas Entrega falsa</div>
         {% if pudo.suspects %}
           <div class="text-2xl font-extrabold text-amber-700 dark:text-amber-300 mt-1">{{ pudo.suspects.stats.n_final }}</div>
           <div class="text-[10px] text-amber-600/70 mt-0.5">
@@ -132,7 +132,7 @@
           <span class="font-mono font-bold">{{ recon_math.n_billing_lines_envio }}</span>
         </div>
         <div class="flex items-center justify-between text-sm pl-4">
-          <span class="text-gray-500">↳ Waybills <em>únicos</em></span>
+          <span class="text-gray-500">↳ N.os de envio <em>únicos</em></span>
           <span class="font-mono font-bold text-emerald-600">{{ recon_math.n_distinct_billed }}</span>
         </div>
         {% if recon_math.n_duplicate_billing_rows %}
@@ -147,16 +147,16 @@
       <div class="p-4 space-y-2">
         <div class="text-[10px] uppercase font-bold text-gray-500">Lado Tasks (CainiaoOperationTask)</div>
         <div class="flex items-center justify-between text-sm">
-          <span class="text-gray-700 dark:text-gray-300">Tasks Delivered no período</span>
+          <span class="text-gray-700 dark:text-gray-300">Tasks Entregue no período</span>
           <span class="font-mono font-bold">{{ recon_math.n_delivered_rows }}</span>
         </div>
         <div class="flex items-center justify-between text-sm pl-4">
-          <span class="text-gray-500">↳ Waybills <em>únicos</em></span>
+          <span class="text-gray-500">↳ N.os de envio <em>únicos</em></span>
           <span class="font-mono font-bold text-emerald-600">{{ recon_math.n_distinct_delivered }}</span>
         </div>
         {% if recon_math.n_duplicate_delivery_dates %}
           <div class="flex items-center justify-between text-sm pl-4">
-            <span class="text-orange-600">↳ Mesmo waybill Delivered em datas diferentes (re-tentativas)</span>
+            <span class="text-orange-600">↳ Mesmo waybill Entregue em datas diferentes (re-tentativas)</span>
             <span class="font-mono font-bold text-orange-600">{{ recon_math.n_duplicate_delivery_dates }}</span>
           </div>
         {% endif %}
@@ -211,7 +211,7 @@
       <table class="w-full text-xs">
         <thead class="bg-gray-50 dark:bg-gray-900/40">
           <tr>
-            <th class="px-3 py-2 text-left font-semibold uppercase">Driver</th>
+            <th class="px-3 py-2 text-left font-semibold uppercase">Motorista</th>
             <th class="px-3 py-2 text-left font-semibold uppercase">Courier ID</th>
             <th class="px-3 py-2 text-right font-semibold uppercase">Pacotes</th>
             <th class="px-3 py-2 text-right font-semibold uppercase">Perda Est.</th>
@@ -232,7 +232,7 @@
                   <span class="text-[10px] text-gray-400 ml-1">({{ g.apelido }})</span>
                 {% endif %}
               {% else %}
-                <span class="text-rose-500 italic">Driver não resolvido</span>
+                <span class="text-rose-500 italic">Motorista não resolvido</span>
                 {% if g.courier_name %}
                   <span class="text-[10px] text-gray-500 ml-1">— XLSX courier: {{ g.courier_name }}</span>
                 {% endif %}
@@ -243,7 +243,7 @@
               {{ g.n_packages }}
             </td>
             <td class="px-3 py-2 text-right font-bold text-emerald-600 dark:text-emerald-400">
-              € {{ g.estimated_loss|floatformat:2 }}
+              {{ g.estimated_loss|eur }}
             </td>
             <td class="px-3 py-2 text-[10px] text-gray-500">
               {{ g.first_date|date:"d/m" }}{% if g.first_date != g.last_date %} → {{ g.last_date|date:"d/m" }}{% endif %}
@@ -296,7 +296,7 @@
           Análise diagnóstica das {{ diagnosis.total }} divergências
         </h3>
         <p class="text-[11px] text-violet-700/70 dark:text-violet-300/70 mt-0.5">
-          Para cada task Delivered sem facturação, classificamos a causa provável cruzando com outros imports e compensaciones.
+          Para cada task Entregue sem facturação, classificamos a causa provável cruzando com outros imports e compensaciones.
         </p>
       </div>
       <a href="{% url 'cainiao-billing-export' session.id 'diagnosis' %}"
@@ -323,7 +323,7 @@
         <i data-lucide="alert-octagon" class="w-5 h-5 text-rose-500 flex-shrink-0"></i>
         <div class="flex-1">
           <div class="font-semibold text-rose-700 dark:text-rose-300">{{ diagnosis.counts.compensation_this_import }} pacote{{ diagnosis.counts.compensation_this_import|pluralize:"s" }} {{ diagnosis.counts.compensation_this_import|pluralize:"é,são" }} <em>compensación</em> neste import</div>
-          <div class="text-[11px] text-gray-500 mt-0.5">A Cainiao deduziu — não pagou. Devem virar DriverClaim na tab Claims.</div>
+          <div class="text-[11px] text-gray-500 mt-0.5">A Cainiao deduziu — não pagou. Devem virar DriverClaim na tab Reclamações.</div>
         </div>
         <span class="text-2xl font-extrabold text-rose-600">{{ diagnosis.counts.compensation_this_import }}</span>
       </div>
@@ -345,7 +345,7 @@
         <i data-lucide="copy" class="w-5 h-5 text-orange-500 flex-shrink-0"></i>
         <div class="flex-1">
           <div class="font-semibold text-orange-700 dark:text-orange-300">{{ diagnosis.counts.duplicate_locally }} duplicado{{ diagnosis.counts.duplicate_locally|pluralize:"s" }} localmente</div>
-          <div class="text-[11px] text-gray-500 mt-0.5">Mesmo waybill com Delivered em datas diferentes — re-tentativa contabilizada 2× ou import duplicado do EPOD.</div>
+          <div class="text-[11px] text-gray-500 mt-0.5">Mesmo waybill com Entregue em datas diferentes — re-tentativa contabilizada 2× ou import duplicado do EPOD.</div>
         </div>
         <span class="text-2xl font-extrabold text-orange-600">{{ diagnosis.counts.duplicate_locally }}</span>
       </div>
@@ -392,7 +392,7 @@
           <thead class="bg-gray-50 dark:bg-gray-900/40">
             <tr>
               <th class="px-2 py-2 text-left font-semibold uppercase">Data</th>
-              <th class="px-2 py-2 text-left font-semibold uppercase">Waybill</th>
+              <th class="px-2 py-2 text-left font-semibold uppercase">N.º de envio</th>
               <th class="px-2 py-2 text-left font-semibold uppercase">Staff ID</th>
               <th class="px-2 py-2 text-left font-semibold uppercase">Cidade</th>
               <th class="px-2 py-2 text-right font-semibold uppercase">€</th>
@@ -405,7 +405,7 @@
               <td class="px-2 py-1.5 font-mono text-[10px]">{{ line.waybill_number }}</td>
               <td class="px-2 py-1.5 font-mono text-[10px] text-gray-500">{{ line.staff_id|default:"—" }}</td>
               <td class="px-2 py-1.5 text-gray-500">{{ line.ciudad|default:"—" }}</td>
-              <td class="px-2 py-1.5 text-right font-bold text-emerald-700">€ {{ line.amount|floatformat:2 }}</td>
+              <td class="px-2 py-1.5 text-right font-bold text-emerald-700">{{ line.amount|eur }}</td>
             </tr>
             {% empty %}
             <tr><td colspan="5" class="px-3 py-6 text-center text-gray-500 italic">Nenhuma — todas as linhas pagas têm task correspondente. ✓</td></tr>
@@ -443,7 +443,7 @@
     </summary>
     <div class="border-t border-rose-200 dark:border-rose-700/40">
       <p class="text-xs text-gray-600 dark:text-gray-400 px-4 py-2 bg-rose-50 dark:bg-rose-900/10">
-        Tasks com status <code>Delivered</code> dentro do período <strong>{{ session.period_from|date:"d/m" }} → {{ session.period_to|date:"d/m" }}</strong>
+        Tasks com status <code>Entregue</code> dentro do período <strong>{{ session.period_from|date:"d/m" }} → {{ session.period_to|date:"d/m" }}</strong>
         cujo waybill não aparece na pré-fatura Cainiao. <strong>Potencial perda</strong> — confirmar com a Cainiao.
       </p>
       <div class="overflow-x-auto">
@@ -451,10 +451,10 @@
           <thead class="bg-gray-50 dark:bg-gray-900/40">
             <tr>
               <th class="px-2 py-2 text-left font-semibold uppercase">Task Date</th>
-              <th class="px-2 py-2 text-left font-semibold uppercase">Waybill</th>
+              <th class="px-2 py-2 text-left font-semibold uppercase">N.º de envio</th>
               <th class="px-2 py-2 text-left font-semibold uppercase">Courier</th>
               <th class="px-2 py-2 text-left font-semibold uppercase">Cidade</th>
-              <th class="px-2 py-2 text-left font-semibold uppercase">Status</th>
+              <th class="px-2 py-2 text-left font-semibold uppercase">Estado</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100 dark:divide-gray-700">

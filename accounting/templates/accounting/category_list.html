@@ -40,8 +40,8 @@
       <div>
         <label class="text-xs uppercase tracking-wide text-gray-500 mb-1 block">Estado</label>
         <select name="show" class="fld">
-          <option value="active" {% if filters.show == 'active' %}selected{% endif %}>Activas</option>
-          <option value="inactive" {% if filters.show == 'inactive' %}selected{% endif %}>Inactivas</option>
+          <option value="active" {% if filters.show == 'active' %}selected{% endif %}>Ativas</option>
+          <option value="inactive" {% if filters.show == 'inactive' %}selected{% endif %}>Inativas</option>
           <option value="all" {% if filters.show == 'all' %}selected{% endif %}>Todas</option>
         </select>
       </div>
@@ -59,7 +59,7 @@
           <th class="px-3 py-2.5 text-left text-xs font-medium uppercase">Ícone</th>
           <th class="px-3 py-2.5 text-center text-xs font-medium uppercase">Bills</th>
           <th class="px-3 py-2.5 text-right text-xs font-medium uppercase">Despesas {{ year }}</th>
-          <th class="px-3 py-2.5 text-right text-xs font-medium uppercase">Acções</th>
+          <th class="px-3 py-2.5 text-right text-xs font-medium uppercase">Ações</th>
         </tr>
       </thead>
       <tbody class="divide-y divide-gray-200 dark:divide-gray-700">

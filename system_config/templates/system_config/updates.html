@@ -54,7 +54,7 @@
        class="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700/50 rounded-xl p-4 flex items-center gap-3">
     <i data-lucide="check-circle-2" class="w-6 h-6 text-emerald-600"></i>
     <div>
-      <div class="font-semibold text-emerald-800 dark:text-emerald-200">Sistema actualizado</div>
+      <div class="font-semibold text-emerald-800 dark:text-emerald-200">Sistema atualizado</div>
       <div class="text-xs text-emerald-700 dark:text-emerald-300">
         Está na última versão (<span x-text="checkResult.remote_hash"></span>).
       </div>
@@ -110,9 +110,9 @@
          :class="updateJob.phase === 'running' ? 'animate-spin' : ''"></i>
       <div class="flex-1">
         <div class="font-semibold text-indigo-800 dark:text-indigo-200">
-          <span x-show="updateJob.phase === 'running'">A actualizar — <span x-text="updateJob.step"></span></span>
-          <span x-show="updateJob.phase === 'success'">✓ Actualização concluída</span>
-          <span x-show="updateJob.phase === 'failed'">✗ Actualização falhou</span>
+          <span x-show="updateJob.phase === 'running'">A atualizar — <span x-text="updateJob.step"></span></span>
+          <span x-show="updateJob.phase === 'success'">✓ Atualização concluída</span>
+          <span x-show="updateJob.phase === 'failed'">✗ Atualização falhou</span>
         </div>
         <div class="text-[11px] text-indigo-600 dark:text-indigo-400 font-mono">job <span x-text="updateJob.id"></span></div>
       </div>
@@ -125,7 +125,7 @@
           <div class="flex-1 min-w-0">
             <div class="font-semibold text-gray-700 dark:text-gray-300" x-text="s.label"></div>
             <details x-show="s.stderr || s.stdout" class="mt-1">
-              <summary class="cursor-pointer text-[11px] text-gray-500">Logs (<span x-text="s.duration + 's'"></span>)</summary>
+              <summary class="cursor-pointer text-[11px] text-gray-500">Registos (<span x-text="s.duration + 's'"></span>)</summary>
               <pre x-show="s.stdout" class="mt-1 p-2 bg-gray-900 text-gray-200 text-[10px] rounded overflow-x-auto" x-text="s.stdout"></pre>
               <pre x-show="s.stderr" class="mt-1 p-2 bg-rose-900 text-rose-100 text-[10px] rounded overflow-x-auto" x-text="s.stderr"></pre>
             </details>

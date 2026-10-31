@@ -1,4 +1,5 @@
 {% extends 'settlements/base.html' %}
+{% load ui %}
 {% load static %}
 {% block title %}Auditoria{% endblock %}
 {% block content %}
@@ -45,7 +46,7 @@
     </div>
     <a href="{% url 'accounting:hub_financeiro' %}"
        class="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold flex items-center gap-1.5">
-      <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Hub Financeiro
+      <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Visão financeira
     </a>
   </div>
 
@@ -105,7 +106,7 @@
           </div>
           <div class="flex items-center gap-2 flex-shrink-0">
             <span class="font-mono font-bold {% if e.sign == 'in' %}text-emerald-600{% else %}text-red-600{% endif %}">
-              {% if e.sign == 'in' %}+{% else %}−{% endif %}€{{ e.amount|floatformat:2 }}
+              {% if e.sign == 'in' %}+{% else %}−{% endif %}{{ e.amount|eur }}
             </span>
             <a href="{{ e.url }}" class="text-indigo-500 hover:text-indigo-700">
               <i data-lucide="external-link" class="w-4 h-4"></i>

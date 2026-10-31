@@ -1,4 +1,5 @@
 {% extends 'settlements/base.html' %}
+{% load ui %}
 {% load static %}
 {% block title %}Calendário de Pagamentos{% endblock %}
 {% block content %}
@@ -11,7 +12,7 @@
         Calendário de Pagamentos
       </h1>
       <p class="text-sm text-gray-500 dark:text-gray-400">
-        Vencimentos por dia · {{ month_count }} item{{ month_count|pluralize:"s" }} · <strong>€ {{ month_total|floatformat:2 }}</strong> este mês
+        Vencimentos por dia · {{ month_count }} item{{ month_count|pluralize:"s" }} · <strong>{{ month_total|eur }}</strong> este mês
       </p>
     </div>
     <a href="{% url 'accounting:payables_inbox' %}"
@@ -60,7 +61,7 @@
             {% endif %}
           </div>
           {% for it in cell.items|slice:":3" %}
-          <div class="text-[10px] mb-0.5 px-1.5 py-0.5 rounded bg-{{ it.color }}-100 dark:bg-{{ it.color }}-900/40 text-{{ it.color }}-700 dark:text-{{ it.color }}-300 truncate" title="{{ it.label }} — €{{ it.amount|floatformat:2 }}">
+          <div class="text-[10px] mb-0.5 px-1.5 py-0.5 rounded bg-{{ it.color }}-100 dark:bg-{{ it.color }}-900/40 text-{{ it.color }}-700 dark:text-{{ it.color }}-300 truncate" title="{{ it.label }} — {{ it.amount|eur }}">
             <span class="font-semibold">€{{ it.amount|floatformat:0 }}</span> · {{ it.label|truncatechars:18 }}
           </div>
           {% endfor %}

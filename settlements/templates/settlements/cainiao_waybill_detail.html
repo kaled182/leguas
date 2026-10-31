@@ -11,7 +11,7 @@
       Voltar
     </a>
     <span class="text-gray-300 dark:text-gray-600">/</span>
-    <span class="text-gray-700 dark:text-gray-300">Waybill</span>
+    <span class="text-gray-700 dark:text-gray-300">N.º de envio</span>
   </nav>
 
   {# Banner: DEVOLVIDO ao remetente #}
@@ -139,7 +139,7 @@
   <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-6">
     <div class="flex items-start justify-between gap-4 flex-wrap">
       <div class="min-w-0">
-        <p class="text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500 font-medium">Waybill Number</p>
+        <p class="text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500 font-medium">N.º de envio Number</p>
         <h1 class="mt-1 text-2xl font-mono font-bold text-gray-900 dark:text-white select-all">{{ waybill }}</h1>
         {% if latest.lp_number %}
           <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">LP: <span class="font-mono font-semibold text-gray-700 dark:text-gray-300">{{ latest.lp_number }}</span></p>
@@ -149,11 +149,11 @@
       <div class="text-right">
         {% if latest.task_status == 'Delivered' %}
           <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400">
-            <i data-lucide="check-circle" class="w-4 h-4"></i>Delivered
+            <i data-lucide="check-circle" class="w-4 h-4"></i>Entregue
           </span>
         {% elif latest.task_status == 'Driver_received' %}
           <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400">
-            <i data-lucide="truck" class="w-4 h-4"></i>Driver Received
+            <i data-lucide="truck" class="w-4 h-4"></i>Motorista Received
           </span>
         {% elif latest.task_status == 'Attempt Failure' %}
           <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400">
@@ -192,11 +192,11 @@
     {# Quick stats grid #}
     <div class="mt-5 grid grid-cols-2 md:grid-cols-4 gap-3">
       <div class="bg-gray-50 dark:bg-gray-900/50 rounded-lg px-4 py-3 border border-gray-100 dark:border-gray-700/50">
-        <p class="text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400 font-medium">Tentativas / Drivers</p>
+        <p class="text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400 font-medium">Tentativas / Motoristas</p>
         <div class="mt-1 flex items-baseline gap-2">
           <p class="text-xl font-bold text-gray-900 dark:text-white">{{ total_attempts }}</p>
           <span class="text-xs text-gray-400">·</span>
-          <p class="text-sm font-semibold text-violet-600 dark:text-violet-400" title="Drivers únicos que passaram pelo pacote">{{ unique_drivers_count }} driver{{ unique_drivers_count|pluralize:"s" }}</p>
+          <p class="text-sm font-semibold text-violet-600 dark:text-violet-400" title="Motoristas únicos que passaram pelo pacote">{{ unique_drivers_count }} driver{{ unique_drivers_count|pluralize:"s" }}</p>
         </div>
         {% if n_attempts %}
           <p class="text-[10px] text-rose-600 dark:text-rose-400 mt-0.5">{{ n_attempts }} falha{{ n_attempts|pluralize:"s" }}</p>
@@ -208,7 +208,7 @@
         <p class="text-xs text-gray-500 dark:text-gray-400">{{ latest.destination_city|default:"—" }}</p>
       </div>
       <div class="bg-gray-50 dark:bg-gray-900/50 rounded-lg px-4 py-3 border border-gray-100 dark:border-gray-700/50">
-        <p class="text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400 font-medium">Driver</p>
+        <p class="text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400 font-medium">Motorista</p>
         {% if latest.courier_name %}
           <a href="{% url 'cainiao-driver-packages' %}?courier={{ latest.courier_name|urlencode }}"
             class="mt-1 block text-sm font-semibold text-indigo-600 dark:text-indigo-400 hover:underline truncate" title="{{ latest.courier_name }}">
@@ -231,7 +231,7 @@
   <div class="bg-violet-50 dark:bg-violet-900/15 border border-violet-200/50 dark:border-violet-700/30 rounded-xl p-4">
     <div class="flex items-center gap-2 mb-3">
       <i data-lucide="users" class="w-4 h-4 text-violet-600 dark:text-violet-400"></i>
-      <h3 class="text-sm font-bold text-violet-800 dark:text-violet-300">Trilha de Drivers</h3>
+      <h3 class="text-sm font-bold text-violet-800 dark:text-violet-300">Trilha de Motoristas</h3>
       <span class="text-xs text-violet-600/70 dark:text-violet-400/70">· {{ unique_drivers_count }} drivers passaram por este pacote</span>
     </div>
     <div class="flex items-center gap-1 flex-wrap">
@@ -389,11 +389,11 @@
           <div class="flex items-center gap-2 mb-3">
             <p class="text-sm font-bold text-gray-900 dark:text-white">{{ day.task_date|date:"l, d F Y" }}</p>
             {% if day.record.task_status == 'Delivered' %}
-              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400">Delivered</span>
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400">Entregue</span>
             {% elif day.record.task_status == 'Attempt Failure' %}
               <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400">Attempt Failure</span>
             {% elif day.record.task_status == 'Driver_received' %}
-              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400">Driver Received</span>
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400">Motorista Received</span>
             {% elif day.record.task_status == 'Assigned' %}
               <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400">Assigned</span>
             {% elif day.record.task_status == 'Unassign' %}
@@ -513,7 +513,7 @@
                   {% if h.courier_name %} · <span class="text-violet-600 dark:text-violet-400">{{ h.courier_name }}</span>{% endif %}
                   · <span class="text-gray-500">{{ h.task_date|date:"d/m/Y" }}</span>
                 {% elif h.change_type == 'status_change' %}
-                  Status: <span class="line-through text-gray-500">{{ h.previous_task_status|default:"∅" }}</span>
+                  Estado: <span class="line-through text-gray-500">{{ h.previous_task_status|default:"∅" }}</span>
                   <i data-lucide="arrow-right" class="w-3 h-3 inline mx-1"></i>
                   <span class="font-semibold">{{ h.task_status }}</span>
                   {% if h.courier_name %} · {{ h.courier_name }}{% endif %}
@@ -663,7 +663,7 @@
         <dl class="space-y-2 text-sm">
           {% if seller_name %}
           <div>
-            <dt class="text-[10px] uppercase tracking-wider text-gray-400">Seller</dt>
+            <dt class="text-[10px] uppercase tracking-wider text-gray-400">Vendedor</dt>
             <dd class="text-gray-800 dark:text-gray-200 font-semibold">{{ seller_name }}</dd>
           </div>
           {% endif %}
@@ -772,7 +772,7 @@
         <dl class="space-y-1.5 text-xs">
           {% if latest.pre_assigned_driver %}
           <div class="flex justify-between">
-            <dt class="text-violet-700 dark:text-violet-400">Driver pré-atribuído:</dt>
+            <dt class="text-violet-700 dark:text-violet-400">Motorista pré-atribuído:</dt>
             <dd class="font-semibold {% if latest.pre_assigned_driver != latest.courier_name %}text-amber-700 dark:text-amber-300{% else %}text-violet-900 dark:text-violet-200{% endif %}">
               {{ latest.pre_assigned_driver }}
               {% if latest.pre_assigned_driver != latest.courier_name and latest.courier_name %}

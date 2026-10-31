@@ -49,7 +49,7 @@
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-4 mb-6">
         <form method="GET" class="flex gap-4">
             <select name="status" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
-                <option value="">Todos os Status</option>
+                <option value="">Todos os Estado</option>
                 <option value="PENDENTE" {% if status_filter == 'PENDENTE' %}selected{% endif %}>Pendente</option>
                 <option value="EM_ANALISE" {% if status_filter == 'EM_ANALISE' %}selected{% endif %}>Em Analise</option>
             </select>
@@ -283,7 +283,7 @@
                                 <p class="font-medium dark:text-white" x-text="currentDriver?.nome_frota || 'N/A'"></p>
                             </div>
                             <div>
-                                <label class="text-xs text-gray-500 dark:text-gray-400">Status</label>
+                                <label class="text-xs text-gray-500 dark:text-gray-400">Estado</label>
                                 <p>
                                     <span x-show="currentDriver?.status === 'PENDENTE'" class="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm">Pendente</span>
                                     <span x-show="currentDriver?.status === 'EM_ANALISE'" class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm">Em Análise</span>

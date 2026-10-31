@@ -1,4 +1,5 @@
 {% extends "settlements/portal_empresa/_base.html" %}
+{% load ui %}
 {% load static %}
 
 {% block portal_content %}
@@ -31,7 +32,7 @@
             </span>
           </div>
           <div class="text-xs text-gray-500">{{ fi.periodo_inicio|date:"d/m" }}–{{ fi.periodo_fim|date:"d/m/Y" }}</div>
-          <div class="text-sm font-bold text-gray-900 dark:text-white mt-0.5">€{{ fi.total_a_receber|floatformat:2 }}</div>
+          <div class="text-sm font-bold text-gray-900 dark:text-white mt-0.5">{{ fi.total_a_receber|eur }}</div>
         </a>
         {% empty %}
         <div class="px-4 py-8 text-center text-gray-400 text-sm">
@@ -95,19 +96,19 @@
           </div>
           <div class="bg-white/60 dark:bg-gray-800/60 rounded-lg p-3">
             <div class="text-xs text-gray-500">Base</div>
-            <div class="text-xl font-bold">€{{ detail.total_base|floatformat:2 }}</div>
+            <div class="text-xl font-bold">{{ detail.total_base|eur }}</div>
           </div>
           <div class="bg-white/60 dark:bg-gray-800/60 rounded-lg p-3">
             <div class="text-xs text-gray-500">Bónus</div>
-            <div class="text-xl font-bold text-amber-600">€{{ detail.total_bonus|floatformat:2 }}</div>
+            <div class="text-xl font-bold text-amber-600">{{ detail.total_bonus|eur }}</div>
           </div>
           <div class="bg-white/60 dark:bg-gray-800/60 rounded-lg p-3">
-            <div class="text-xs text-gray-500">Claims</div>
-            <div class="text-xl font-bold text-rose-600">-€{{ detail.total_claims|floatformat:2 }}</div>
+            <div class="text-xs text-gray-500">Reclamações</div>
+            <div class="text-xl font-bold text-rose-600">-{{ detail.total_claims|eur }}</div>
           </div>
           <div class="bg-white/60 dark:bg-gray-800/60 rounded-lg p-3">
             <div class="text-xs text-gray-500">Total c/ IVA ({{ detail.vat_rate|floatformat:0 }}%)</div>
-            <div class="text-xl font-bold text-purple-700 dark:text-purple-300">€{{ detail.total_com_iva|floatformat:2 }}</div>
+            <div class="text-xl font-bold text-purple-700 dark:text-purple-300">{{ detail.total_com_iva|eur }}</div>
           </div>
         </div>
       </div>
@@ -176,7 +177,7 @@
                 <th class="px-4 py-2 text-right">€/pacote</th>
                 <th class="px-4 py-2 text-right">Base</th>
                 <th class="px-4 py-2 text-right">Bónus</th>
-                <th class="px-4 py-2 text-right">Claims</th>
+                <th class="px-4 py-2 text-right">Reclamações</th>
                 <th class="px-4 py-2 text-right">Subtotal</th>
               </tr>
             </thead>
@@ -191,16 +192,16 @@
                 </td>
                 <td class="px-4 py-2 text-right font-mono">{{ ln.deliveries }}</td>
                 <td class="px-4 py-2 text-right font-mono text-gray-500">€{{ ln.price_per_package|floatformat:4 }}</td>
-                <td class="px-4 py-2 text-right font-mono">€{{ ln.base_amount|floatformat:2 }}</td>
+                <td class="px-4 py-2 text-right font-mono">{{ ln.base_amount|eur }}</td>
                 <td class="px-4 py-2 text-right font-mono text-amber-600">
-                  €{{ ln.bonus_amount|floatformat:2 }}
+                  {{ ln.bonus_amount|eur }}
                   <span class="text-[9px] text-gray-400">({{ ln.bonus_days_count }}d)</span>
                 </td>
                 <td class="px-4 py-2 text-right font-mono {% if ln.claims_amount %}text-rose-600{% else %}text-gray-400{% endif %}">
-                  -€{{ ln.claims_amount|floatformat:2 }}
+                  -{{ ln.claims_amount|eur }}
                   {% if ln.claims_count %}<span class="text-[9px] text-gray-400">({{ ln.claims_count }})</span>{% endif %}
                 </td>
-                <td class="px-4 py-2 text-right font-mono font-bold text-purple-600">€{{ ln.subtotal|floatformat:2 }}</td>
+                <td class="px-4 py-2 text-right font-mono font-bold text-purple-600">{{ ln.subtotal|eur }}</td>
               </tr>
               {% endfor %}
             </tbody>
@@ -300,7 +301,7 @@
                     <th class="px-3 py-1.5 text-left">Motorista</th>
                     <th class="px-3 py-1.5 text-right">Entregas</th>
                     <th class="px-3 py-1.5 text-right">Bónus</th>
-                    <th class="px-3 py-1.5 text-right">Claims</th>
+                    <th class="px-3 py-1.5 text-right">Reclamações</th>
                     <th class="px-3 py-1.5 text-right">Subtotal</th>
                   </tr>
                 </thead>

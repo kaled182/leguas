@@ -1,7 +1,7 @@
 {% extends 'layouts/admin_base.html' %}
 {% load static %}
 
-{% block title %}Dashboard Operacional{% endblock %}
+{% block title %}Painel Operacional{% endblock %}
 
 {% block content %}
 <div class="{% if tv_mode %}tv-mode{% endif %} max-w-7xl mx-auto" id="dashboard-root">
@@ -14,7 +14,7 @@
         <i data-lucide="activity" class="w-7 h-7 text-white"></i>
       </div>
       <div>
-        <h1 class="text-2xl lg:text-3xl font-extrabold text-white">Dashboard Operacional</h1>
+        <h1 class="text-2xl lg:text-3xl font-extrabold text-white">Painel Operacional</h1>
         <p class="text-white/80 text-sm flex flex-wrap items-center gap-x-2">
           <span class="inline-flex items-center gap-1.5">
             {% if is_today %}
@@ -50,7 +50,7 @@
       {% if tv_mode %}
         <a href="?date={{ target_date|date:'Y-m-d' }}" class="bg-white/20 hover:bg-white/30 text-white px-3 py-2 rounded-lg flex items-center gap-1.5 text-sm font-medium"><i data-lucide="x" class="w-4 h-4"></i>Sair</a>
       {% else %}
-        <a href="?date={{ target_date|date:'Y-m-d' }}&tv=1" title="Modo TV (actualiza a cada 60 s)" class="bg-white/20 hover:bg-white/30 text-white px-3 py-2 rounded-lg flex items-center gap-1.5 text-sm font-medium"><i data-lucide="tv" class="w-4 h-4"></i>Modo TV</a>
+        <a href="?date={{ target_date|date:'Y-m-d' }}&tv=1" title="Modo ecrã (atualiza a cada 60 s)" class="bg-white/20 hover:bg-white/30 text-white px-3 py-2 rounded-lg flex items-center gap-1.5 text-sm font-medium"><i data-lucide="tv" class="w-4 h-4"></i>Modo ecrã</a>
       {% endif %}
     </div>
   </div>
@@ -85,7 +85,7 @@
   {# Taxa de sucesso #}
   <div class="bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl p-4 text-white shadow">
     <div class="flex items-center justify-between">
-      <p class="text-[11px] uppercase font-bold text-emerald-100 tracking-wider">Taxa de sucesso</p>
+      <p class="text-[11px] uppercase font-bold text-emerald-100 tracking-wider">Taxa de entrega</p>
       <i data-lucide="check-circle-2" class="w-4 h-4"></i>
     </div>
     <p class="text-3xl font-extrabold mt-1">{{ kpis.success_rate|floatformat:1 }}%</p>
@@ -110,12 +110,12 @@
       <i data-lucide="truck" class="w-4 h-4 text-amber-500"></i>
     </div>
     <p class="text-3xl font-extrabold text-amber-600 dark:text-amber-400 mt-1">{{ kpis.en_route }}</p>
-    <p class="text-[11px] text-gray-500 mt-1">+ {{ kpis.assigned }} atribuídos · backlog &gt;1 dia: {{ alerts.backlog_total }}</p>
+    <p class="text-[11px] text-gray-500 mt-1">+ {{ kpis.assigned }} atribuídos · pendentes &gt;1 dia: {{ alerts.backlog_total }}</p>
   </div>
   {# Motoristas #}
   <a href="{% url 'drivers_app:drivers_central' %}?tab=todos&flag=worked_today" class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200/50 dark:border-gray-700/50 hover:shadow-md transition">
     <div class="flex items-center justify-between">
-      <p class="text-[11px] uppercase font-bold text-gray-500 dark:text-gray-400 tracking-wider">Motoristas a entregar</p>
+      <p class="text-[11px] uppercase font-bold text-gray-500 dark:text-gray-400 tracking-wider">Motoristas na estrada</p>
       <i data-lucide="users" class="w-4 h-4 text-sky-500"></i>
     </div>
     <p class="text-3xl font-extrabold text-sky-600 dark:text-sky-400 mt-1">{{ kpis.drivers }}</p>
@@ -148,7 +148,7 @@
 <div class="flex flex-wrap gap-2 mb-5">
   {% if alerts.backlog_total %}
   <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-700/50">
-    <i data-lucide="clock" class="w-3.5 h-3.5"></i> Backlog: {{ alerts.backlog_total }} pacotes em rota há mais de 1 dia
+    <i data-lucide="clock" class="w-3.5 h-3.5"></i> Pendentes: {{ alerts.backlog_total }} pacotes em rota há mais de 1 dia
   </span>
   {% endif %}
   {% if alerts.stale_total %}
@@ -374,9 +374,9 @@
 <p class="text-xs uppercase font-bold text-gray-500 dark:text-gray-400 tracking-wider mb-2">Gestão</p>
 <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
   <a href="{% url 'drivers_app:drivers_central' %}" class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200/50 dark:border-gray-700/50 hover:shadow-md transition">
-    <p class="text-[11px] uppercase font-bold text-gray-500">Motoristas activos</p>
+    <p class="text-[11px] uppercase font-bold text-gray-500">Motoristas ativos</p>
     <p class="text-2xl font-extrabold text-gray-900 dark:text-white">{{ mgmt.drivers_active }}</p>
-    <p class="text-[11px] text-gray-500">{{ mgmt.drivers_inactive }} inactivos +7 dias</p>
+    <p class="text-[11px] text-gray-500">{{ mgmt.drivers_inactive }} inativos +7 dias</p>
   </a>
   {% if is_gestao %}
   <a href="{% url 'drivers_app:payments_dashboard' %}?tab=aprovar" class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200/50 dark:border-gray-700/50 hover:shadow-md transition">
@@ -392,7 +392,7 @@
   {% endif %}
   <a href="{% url 'drivers_app:drivers_central' %}?tab=ativos&flag=no_contract" class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200/50 dark:border-gray-700/50 hover:shadow-md transition">
     <p class="text-[11px] uppercase font-bold text-gray-500">Contratos</p>
-    <p class="text-2xl font-extrabold text-gray-900 dark:text-white">{{ mgmt.with_contract }} <span class="text-sm font-semibold text-gray-500">de {{ mgmt.drivers_active }} activos</span></p>
+    <p class="text-2xl font-extrabold text-gray-900 dark:text-white">{{ mgmt.with_contract }} <span class="text-sm font-semibold text-gray-500">de {{ mgmt.drivers_active }} ativos</span></p>
     <p class="text-[11px] text-gray-500">com contrato assinado ou anexado</p>
   </a>
 </div>

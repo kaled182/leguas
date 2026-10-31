@@ -1,4 +1,5 @@
 {% extends 'drivers_app/portal/_base.html' %}
+{% load ui %}
 
 {% block portal_content %}
 
@@ -19,7 +20,7 @@
     <input type="date" name="date_to" value="{{ date_to|date:'Y-m-d' }}"
            class="px-3 py-1.5 text-xs bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
     <button type="submit"
-            class="px-3 py-1.5 text-xs bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold">Actualizar</button>
+            class="px-3 py-1.5 text-xs bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold">Atualizar</button>
   </div>
 </form>
 
@@ -41,12 +42,12 @@
   </div>
   <div class="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 border border-amber-200/50 dark:border-amber-700/30">
     <p class="text-xs uppercase font-bold text-amber-700">Custo motorista</p>
-    <p class="text-2xl font-extrabold text-amber-700 dark:text-amber-300 mt-1">€ {{ kpis.custo_motorista|floatformat:2 }}</p>
+    <p class="text-2xl font-extrabold text-amber-700 dark:text-amber-300 mt-1">{{ kpis.custo_motorista|eur }}</p>
     <p class="text-[11px] text-amber-700 mt-0.5">@€{{ kpis.price_per_pkg|floatformat:3 }}/pacote</p>
   </div>
   <div class="bg-gradient-to-br from-violet-500 to-purple-600 rounded-xl p-4 text-white shadow">
     <p class="text-xs uppercase font-bold text-violet-100">Margem Léguas</p>
-    <p class="text-2xl font-extrabold mt-1">€ {{ kpis.margem|floatformat:2 }}</p>
+    <p class="text-2xl font-extrabold mt-1">{{ kpis.margem|eur }}</p>
     <p class="text-[11px] text-violet-100 mt-0.5">Receita {{ kpis.receita_estimada|floatformat:0 }}€ - Custo {{ kpis.custo_motorista|floatformat:0 }}€</p>
   </div>
 </div>
@@ -64,7 +65,7 @@
       <span class="font-mono font-bold">{{ pf.numero }}</span>
       <span>{{ pf.periodo_inicio|date:"d/m/Y" }} → {{ pf.periodo_fim|date:"d/m/Y" }}</span>
       <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-200 dark:bg-amber-900/60">{{ pf.get_status_display }}</span>
-      <span class="ml-auto font-bold">€ {{ pf.total_a_receber|floatformat:2 }}</span>
+      <span class="ml-auto font-bold">{{ pf.total_a_receber|eur }}</span>
     </div>
     {% endfor %}
   </div>
@@ -79,7 +80,7 @@
     {% if pending_advances %}
     <span class="ml-auto text-xs">
       <span class="font-semibold text-amber-700 dark:text-amber-300">{{ pending_advances.count }} pendente{{ pending_advances.count|pluralize:"s" }}</span>
-      <span class="ml-2 px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 font-bold">€ {{ advances_total_pending|floatformat:2 }}</span>
+      <span class="ml-2 px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 font-bold">{{ advances_total_pending|eur }}</span>
     </span>
     {% endif %}
   </div>
@@ -92,7 +93,7 @@
           <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Tipo</th>
           <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Descrição</th>
           <th class="px-4 py-2 text-right text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Valor</th>
-          <th class="px-4 py-2 text-center text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Status</th>
+          <th class="px-4 py-2 text-center text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">Estado</th>
           <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase">PF</th>
         </tr>
       </thead>
@@ -109,7 +110,7 @@
             </span>
           </td>
           <td class="px-4 py-2 text-xs text-gray-700 dark:text-gray-300">{{ a.descricao|default:"—"|truncatechars:60 }}</td>
-          <td class="px-4 py-2 text-right text-sm font-bold text-rose-600">- € {{ a.valor|floatformat:2 }}</td>
+          <td class="px-4 py-2 text-right text-sm font-bold text-rose-600">- {{ a.valor|eur }}</td>
           <td class="px-4 py-2 text-center">
             <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold
               {% if a.status == 'PENDENTE' %}bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300
@@ -147,7 +148,7 @@
       <div class="flex-1 text-sm text-gray-600 dark:text-gray-400">
         {{ pf.periodo_inicio|date:"d/m" }} → {{ pf.periodo_fim|date:"d/m/Y" }}
       </div>
-      <div class="font-bold text-gray-900 dark:text-white">€ {{ pf.total_a_receber|floatformat:2 }}</div>
+      <div class="font-bold text-gray-900 dark:text-white">{{ pf.total_a_receber|eur }}</div>
       <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase
         {% if pf.status == 'PAGO' %}bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300
         {% elif pf.status == 'APROVADO' %}bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300

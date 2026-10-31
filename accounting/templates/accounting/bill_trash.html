@@ -1,4 +1,5 @@
 {% extends 'settlements/base.html' %}
+{% load ui %}
 {% load static %}
 {% block title %}Lixeira — Contas a Pagar{% endblock %}
 {% block content %}
@@ -32,7 +33,7 @@
           <th class="px-3 py-2">Apagada por</th>
           <th class="px-3 py-2">Apagada em</th>
           <th class="px-3 py-2">Motivo</th>
-          <th class="px-3 py-2 text-right">Acções</th>
+          <th class="px-3 py-2 text-right">Ações</th>
         </tr>
       </thead>
       <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
@@ -43,7 +44,7 @@
             <div class="text-xs text-gray-400">{{ b.supplier|default:"—" }}</div>
           </td>
           <td class="px-3 py-2 text-xs">{{ b.category.name|default:"—" }}</td>
-          <td class="px-3 py-2 text-right font-mono">€{{ b.amount_total|floatformat:2 }}</td>
+          <td class="px-3 py-2 text-right font-mono">{{ b.amount_total|eur }}</td>
           <td class="px-3 py-2 text-xs">{{ b.get_status_display }}</td>
           <td class="px-3 py-2 text-xs">
             {{ b.deleted_by.get_full_name|default:b.deleted_by.username|default:"—" }}

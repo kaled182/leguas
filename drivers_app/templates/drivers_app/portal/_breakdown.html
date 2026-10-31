@@ -1,4 +1,4 @@
-{# Total do motorista primeiro, depois a divisão por tipo e por dia. #}
+{% load ui %}{# Total do motorista primeiro, depois a divisão por tipo e por dia. #}
 {# Contexto: bd = settlements.services_driver_breakdown.driver_breakdown #}
 {#           pf_check (opcional) = {lines, pudo, total, ok}            #}
 {% with t=bd.totals a=bd.amounts %}
@@ -25,17 +25,17 @@
     <div class="bg-white dark:bg-gray-800 p-4">
       <p class="text-xs uppercase font-bold text-indigo-700 dark:text-indigo-300">Porta</p>
       <p class="text-2xl font-extrabold text-gray-900 dark:text-white">{{ t.door_normal }}</p>
-      <p class="text-xs text-gray-500">€ {{ a.door_normal|floatformat:2 }}{% if bd.door_avg_price %} · {{ bd.door_avg_price|floatformat:2 }}/pct{% if bd.cp_pricing %} (média por CP){% endif %}{% endif %}</p>
+      <p class="text-xs text-gray-500">{{ a.door_normal|eur }}{% if bd.door_avg_price %} · {{ bd.door_avg_price|floatformat:2 }}/pct{% if bd.cp_pricing %} (média por CP){% endif %}{% endif %}</p>
     </div>
     <div class="bg-white dark:bg-gray-800 p-4">
       <p class="text-xs uppercase font-bold text-teal-700 dark:text-teal-300">Mesma porta</p>
       <p class="text-2xl font-extrabold text-gray-900 dark:text-white">{{ t.same_door }}</p>
-      <p class="text-xs text-gray-500">{% if bd.same_door_active %}€ {{ a.same_door|floatformat:2 }} · {{ bd.same_door_price|floatformat:2 }}/adicional{% else %}regra inactiva{% endif %}</p>
+      <p class="text-xs text-gray-500">{% if bd.same_door_active %}{{ a.same_door|eur }} · {{ bd.same_door_price|floatformat:2 }}/adicional{% else %}regra inativa{% endif %}</p>
     </div>
     <div class="bg-white dark:bg-gray-800 p-4">
       <p class="text-xs uppercase font-bold text-violet-700 dark:text-violet-300">PUDO</p>
       <p class="text-2xl font-extrabold text-gray-900 dark:text-white">{{ t.pudo }}</p>
-      <p class="text-xs text-gray-500">€ {{ a.pudo|floatformat:2 }} · 1ª + adicionais</p>
+      <p class="text-xs text-gray-500">{{ a.pudo|eur }} · 1ª + adicionais</p>
     </div>
     <div class="bg-white dark:bg-gray-800 p-4">
       <p class="text-xs uppercase font-bold text-rose-700 dark:text-rose-300">Falhas</p>
@@ -49,7 +49,7 @@
       <i data-lucide="calendar-days" class="w-4 h-4 text-gray-400"></i>
       Resumo por dia
       <span class="text-xs font-normal text-gray-500">— compare com os seus apontamentos</span>
-      <span class="ml-auto text-xs text-gray-500">Valor estimado: <b class="text-gray-900 dark:text-white">€ {{ a.total|floatformat:2 }}</b></span>
+      <span class="ml-auto text-xs text-gray-500">Valor estimado: <b class="text-gray-900 dark:text-white">{{ a.total|eur }}</b></span>
     </summary>
     <div class="overflow-x-auto border-t border-gray-100 dark:border-gray-700">
       <table class="w-full text-sm">

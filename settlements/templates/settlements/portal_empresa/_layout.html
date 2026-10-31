@@ -61,10 +61,10 @@
 
         {# Admin: voltar à Central de Empresas Parceiras #}
         {% if request.user.is_staff or request.user.is_superuser %}
-          <a href="{% url 'drivers_app:empresas-parceiras' %}" title="Voltar a Empresas Parceiras"
+          <a href="{% url 'drivers_app:empresas-parceiras' %}" title="Voltar a Frotas subcontratadas"
              class="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold border border-gray-200 dark:border-gray-700 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">
             <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
-            Empresas Parceiras
+            Frotas subcontratadas
           </a>
         {% endif %}
 

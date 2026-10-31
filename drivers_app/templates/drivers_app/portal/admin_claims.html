@@ -1,4 +1,5 @@
 {% extends 'drivers_app/portal/_base.html' %}
+{% load ui %}
 
 {% block portal_content %}
 
@@ -10,12 +11,12 @@
   <div class="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 border border-amber-200/50 dark:border-amber-700/30">
     <p class="text-xs uppercase font-bold text-amber-700 dark:text-amber-300">Pendentes</p>
     <p class="text-2xl font-extrabold text-amber-700 dark:text-amber-300 mt-1">{{ counts.pending }}</p>
-    <p class="text-[10px] text-amber-600 mt-0.5">€ {{ total_pending_value|floatformat:2 }}</p>
+    <p class="text-[10px] text-amber-600 mt-0.5">{{ total_pending_value|eur }}</p>
   </div>
   <div class="bg-rose-50 dark:bg-rose-900/20 rounded-xl p-4 border border-rose-200/50 dark:border-rose-700/30">
     <p class="text-xs uppercase font-bold text-rose-700 dark:text-rose-300">Aprovadas</p>
     <p class="text-2xl font-extrabold text-rose-700 dark:text-rose-300 mt-1">{{ counts.approved }}</p>
-    <p class="text-[10px] text-rose-600 mt-0.5">€ {{ total_approved_value|floatformat:2 }}</p>
+    <p class="text-[10px] text-rose-600 mt-0.5">{{ total_approved_value|eur }}</p>
   </div>
   <div class="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 border border-blue-200/50 dark:border-blue-700/30">
     <p class="text-xs uppercase font-bold text-blue-700 dark:text-blue-300">Em Recurso</p>
@@ -35,7 +36,7 @@
       <div>
         <p class="font-bold text-orange-800 dark:text-orange-200">
           {{ counts.nao_aplicados }} desconto(s) aprovado(s) ainda sem lançamento em fatura
-          <span class="font-extrabold">— € {{ valor_nao_aplicado|floatformat:2 }}</span>
+          <span class="font-extrabold">— {{ valor_nao_aplicado|eur }}</span>
         </p>
         <p class="text-xs text-orange-700 dark:text-orange-300 mt-0.5">
           Estão aprovados mas o desconto não entrou em nenhuma Pré-Fatura.
@@ -89,7 +90,7 @@
             {% endwith %}
           </div>
           {% if claim.waybill_number %}
-            <div class="text-[11px] font-mono text-gray-500 mt-1">Waybill: {{ claim.waybill_number }}</div>
+            <div class="text-[11px] font-mono text-gray-500 mt-1">N.º de envio: {{ claim.waybill_number }}</div>
           {% endif %}
           <p class="text-sm text-gray-700 dark:text-gray-300 mt-1">{{ claim.description|truncatewords:40 }}</p>
           {% if claim.justification %}
@@ -111,7 +112,7 @@
           {% endif %}
         </div>
         <div class="text-right flex-shrink-0">
-          <div class="text-xl font-extrabold {% if claim.status == 'REJECTED' %}text-gray-400 line-through{% else %}text-rose-600 dark:text-rose-400{% endif %}">- € {{ claim.amount|floatformat:2 }}</div>
+          <div class="text-xl font-extrabold {% if claim.status == 'REJECTED' %}text-gray-400 line-through{% else %}text-rose-600 dark:text-rose-400{% endif %}">- {{ claim.amount|eur }}</div>
           <div class="mt-2 flex flex-col gap-1.5 items-end">
             {% if claim.status == 'PENDING' or claim.status == 'APPROVED' %}
               <button type="button" onclick="claimPanel({{ claim.id }}, 'amount')"
@@ -204,7 +205,7 @@
           <button class="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold">Remover da fatura</button>
           <p class="md:col-span-4 text-[11px] text-emerald-700 dark:text-emerald-400">
             {% if claim.billing.code == 'em_fatura' %}Sai da pré-fatura {{ claim.billing.pf }} (ainda não paga).
-            {% elif claim.billing.code == 'pago' %}Já foi pago na {{ claim.billing.pf }}: os € {{ claim.amount|floatformat:2 }} voltam ao motorista em crédito na pré-fatura aberta.
+            {% elif claim.billing.code == 'pago' %}Já foi pago na {{ claim.billing.pf }}: os {{ claim.amount|eur }} voltam ao motorista em crédito na pré-fatura aberta.
             {% else %}Deixa de descontar. Não mexe em nenhuma fatura.{% endif %}
           </p>
         </form>

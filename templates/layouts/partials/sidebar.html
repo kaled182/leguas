@@ -26,13 +26,13 @@
     <!-- Seção Dashboard -->
     <div class="mb-6">
       <div class="px-3 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
-        Dashboard
+        Painel
       </div>
 
       <a href="{% url 'dashboard_leguas:home' %}"
         class="nav-link flex items-center gap-3 p-3 rounded-lg transition-all duration-200 group {% if request.resolver_match.url_name == 'home' %}bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 border-r-2 border-primary-500{% else %}text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:text-primary-600 dark:hover:text-primary-400{% endif %}">
         <i data-lucide="layout-dashboard" class="w-5 h-5 text-current group-hover:scale-110 transition-transform flex-shrink-0"></i>
-        <span class="sidebar-text font-medium">Dashboard Principal</span>
+        <span class="sidebar-text font-medium">Painel Principal</span>
         {% if request.resolver_match.url_name == 'home' %}
           <div class="ml-auto w-2 h-2 bg-primary-500 rounded-full"></div>
         {% endif %}
@@ -134,14 +134,14 @@
 {% if not is_gestao %}
           <a href="{% url 'pudo-fake-delivery-suspects' %}" class="flex items-center gap-2 p-2 rounded-lg text-sm transition-all text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-100">
             <i data-lucide="map-pinned" class="w-4 h-4"></i>
-            <span>Fake Delivery (PUDO)</span>
+            <span>Suspeitas de entrega falsa (PUDO)</span>
           </a>
 {% endif %}
 {% if is_gestao %}
           <a href="{% url 'claim-list' %}"
             class="flex items-center gap-2 p-2 rounded-lg text-sm transition-all {% if request.resolver_match.url_name == 'claim-list' or request.resolver_match.url_name == 'claim-detail' %}bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 font-medium{% else %}text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:text-orange-600 dark:hover:text-orange-400{% endif %}">
             <i data-lucide="minus-circle" class="w-4 h-4"></i>
-            <span>Claims (Motoristas)</span>
+            <span>Reclamações (Motoristas)</span>
           </a>
 {% endif %}
 {% if is_gestao %}
@@ -205,7 +205,7 @@
       <a href="{% url 'drivers_app:empresas-parceiras' %}"
         class="nav-link flex items-center gap-3 p-3 rounded-lg transition-all duration-200 group {% if request.resolver_match.url_name == 'empresas-parceiras' %}bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 border-r-2 border-purple-500{% else %}text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:text-purple-600 dark:hover:text-purple-400{% endif %}">
         <i data-lucide="building-2" class="w-5 h-5 text-current group-hover:scale-110 transition-transform flex-shrink-0"></i>
-        <span class="sidebar-text font-medium">Empresas Parceiras</span>
+        <span class="sidebar-text font-medium">Frotas subcontratadas</span>
       </a>
 
       <!-- Parceiros - Submenu Expansível -->
@@ -235,7 +235,7 @@
           <a href="{% url 'core:integrations-dashboard' %}" 
             class="flex items-center gap-2 p-2 rounded-lg text-sm transition-all {% if request.resolver_match.url_name == 'integrations-dashboard' %}bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 font-medium{% else %}text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-100{% endif %}">
             <i data-lucide="plug" class="w-4 h-4"></i>
-            <span>Dashboard Integrações</span>
+            <span>Painel Integrações</span>
           </a>
         </div>
       </div>
@@ -244,7 +244,7 @@
       <div class="reports-menu">
         <button id="reportsToggle" class="nav-link flex items-center gap-3 p-3 rounded-lg transition-all duration-200 group w-full text-left text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:text-primary-600 dark:hover:text-primary-400">
           <i data-lucide="bar-chart-3" class="w-5 h-5 text-current group-hover:scale-110 transition-transform flex-shrink-0"></i>
-          <span class="sidebar-text font-medium">Relatórios & Analytics</span>
+          <span class="sidebar-text font-medium">Relatórios</span>
           <i data-lucide="chevron-down" id="reportsChevron" class="w-4 h-4 ml-auto transition-transform"></i>
         </button>
 
@@ -259,12 +259,12 @@
 
           <a href="{% url 'analytics:api_status_dashboard' %}" class="flex items-center gap-2 p-2 text-sm rounded-lg transition-colors text-gray-600 dark:text-gray-400 hover:bg-cyan-50 dark:hover:bg-cyan-900/20 hover:text-cyan-600 dark:hover:text-cyan-400">
             <i data-lucide="satellite" class="w-4 h-4"></i>
-            <span>Status de APIs</span>
+            <span>Estado de APIs</span>
           </a>
 
           <a href="{% url 'analytics:sync_logs_list' %}" class="flex items-center gap-2 p-2 text-sm rounded-lg transition-colors text-gray-600 dark:text-gray-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-600 dark:hover:text-indigo-400">
             <i data-lucide="list" class="w-4 h-4"></i>
-            <span>Logs de Sincronização</span>
+            <span>Registos de Sincronização</span>
           </a>
         </div>
       </div>
@@ -310,7 +310,7 @@
           {# Hub Financeiro — entry point #}
           <a href="{% url 'accounting:hub_financeiro' %}" class="flex items-center gap-2 p-2 text-sm rounded-lg transition-colors font-semibold text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20">
             <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
-            <span>Hub Financeiro</span>
+            <span>Visão financeira</span>
           </a>
 
           {# ─── A RECEBER ─── #}
@@ -399,7 +399,7 @@
             <div class="fin-group-body">
               <a href="{% url 'accounting:audit_timeline' %}" class="fin-link"><i data-lucide="history" class="w-4 h-4"></i><span>Auditoria</span></a>
               <a href="{% url 'accounting:bank_statement_list' %}" class="fin-link"><i data-lucide="landmark" class="w-4 h-4"></i><span>Extratos Bancários OFX</span></a>
-              <a href="{% url 'pudo-fake-delivery-suspects' %}" class="fin-link"><i data-lucide="map-pinned" class="w-4 h-4"></i><span>Fake Delivery (PUDO)</span></a>
+              <a href="{% url 'pudo-fake-delivery-suspects' %}" class="fin-link"><i data-lucide="map-pinned" class="w-4 h-4"></i><span>Suspeitas de entrega falsa (PUDO)</span></a>
             </div>
           </details>
         </div>

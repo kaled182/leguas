@@ -1,4 +1,5 @@
 {% extends 'drivers_app/portal/_base.html' %}
+{% load ui %}
 
 {% block portal_content %}
 
@@ -91,10 +92,10 @@
           <span class="text-2xl font-extrabold">#{{ ranking.position }}</span>
         </div>
         <p class="text-sm text-gray-700 dark:text-gray-300 mt-3">
-          de <span class="font-bold">{{ ranking.total }}</span> motoristas activos
+          de <span class="font-bold">{{ ranking.total }}</span> motoristas ativos
         </p>
         <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-          Taxa de sucesso: <span class="font-bold text-emerald-600">{{ ranking.success_rate|floatformat:1 }}%</span>
+          Taxa de entrega: <span class="font-bold text-emerald-600">{{ ranking.success_rate|floatformat:1 }}%</span>
         </p>
       </div>
     {% else %}
@@ -112,7 +113,7 @@
       <p class="text-sm text-gray-500 dark:text-gray-400">
         {{ last_pf.periodo_inicio|date:"d/m" }} → {{ last_pf.periodo_fim|date:"d/m/Y" }}
       </p>
-      <p class="text-3xl font-extrabold text-gray-900 dark:text-white mt-2">€ {{ last_pf.total_a_receber|floatformat:2 }}</p>
+      <p class="text-3xl font-extrabold text-gray-900 dark:text-white mt-2">{{ last_pf.total_a_receber|eur }}</p>
       <span class="inline-block mt-2 px-2 py-0.5 rounded text-xs font-semibold
         {% if last_pf.status == 'PAGO' %}bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300
         {% elif last_pf.status == 'APROVADO' %}bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300
@@ -220,7 +221,7 @@
         <div>
           <h3 class="font-bold text-gray-900 dark:text-white text-base flex items-center gap-2">
             <i data-lucide="package-2" class="w-5 h-5 text-indigo-500"></i>
-            Waybills · <span x-text="drawer.dateLabel"></span>
+            N.os de envio · <span x-text="drawer.dateLabel"></span>
           </h3>
           <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
             <span x-text="drawer.rows.length"></span> total ·
@@ -274,7 +275,7 @@
           <thead class="bg-gray-100 dark:bg-gray-700/50 text-xs uppercase text-gray-500 sticky top-0">
             <tr>
               {% if request.user.is_staff or request.user.is_superuser %}<th class="px-3 py-2 w-8"></th>{% endif %}
-              <th class="px-3 py-2 text-left">Waybill</th>
+              <th class="px-3 py-2 text-left">N.º de envio</th>
               <th class="px-3 py-2 text-left">Destino</th>
               <th class="px-3 py-2 text-left">Hora</th>
               <th class="px-3 py-2 text-left">Atribuído a</th>
@@ -365,7 +366,7 @@
       </div>
       <div class="p-5 space-y-3">
         <div>
-          <label class="block text-xs font-semibold mb-1">Driver destino *</label>
+          <label class="block text-xs font-semibold mb-1">Motorista destino *</label>
           <input type="text" x-model="transferModal.driverQuery" @input.debounce.300ms="searchDrivers()"
                  placeholder="Pesquisar por nome..." class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700">
           <div class="mt-1 max-h-48 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded">
@@ -599,7 +600,7 @@ function portalDayDrawer(driverId) {
   <div class="flex items-center gap-2 mb-3 flex-wrap">
     <i data-lucide="calendar-days" class="w-5 h-5 text-emerald-500"></i>
     <h2 class="font-bold text-gray-900 dark:text-white">Heatmap anual {{ heatmap_year }}</h2>
-    <span class="text-xs text-gray-500">{{ heatmap_total }} entregas em {{ heatmap_active_days }} dia{{ heatmap_active_days|pluralize:"s" }} activo{{ heatmap_active_days|pluralize:"s" }}</span>
+    <span class="text-xs text-gray-500">{{ heatmap_total }} entregas em {{ heatmap_active_days }} dia{{ heatmap_active_days|pluralize:"s" }} ativo{{ heatmap_active_days|pluralize:"s" }}</span>
   </div>
   <div class="overflow-x-auto pb-2">
     <div class="grid grid-flow-col grid-rows-7 gap-[3px] auto-cols-max">
@@ -679,10 +680,10 @@ function portalDayDrawer(driverId) {
       <table class="w-full">
         <thead class="bg-gray-50 dark:bg-gray-900/40">
           <tr>
-            <th class="px-3 py-2 text-left text-[11px] font-semibold text-gray-600 dark:text-gray-400 uppercase">Waybill</th>
+            <th class="px-3 py-2 text-left text-[11px] font-semibold text-gray-600 dark:text-gray-400 uppercase">N.º de envio</th>
             <th class="px-3 py-2 text-left text-[11px] font-semibold text-gray-600 dark:text-gray-400 uppercase">Data</th>
             <th class="px-3 py-2 text-left text-[11px] font-semibold text-gray-600 dark:text-gray-400 uppercase">CP4</th>
-            <th class="px-3 py-2 text-left text-[11px] font-semibold text-gray-600 dark:text-gray-400 uppercase">Status</th>
+            <th class="px-3 py-2 text-left text-[11px] font-semibold text-gray-600 dark:text-gray-400 uppercase">Estado</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-100 dark:divide-gray-700">

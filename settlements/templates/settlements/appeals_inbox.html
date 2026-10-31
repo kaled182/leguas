@@ -1,4 +1,5 @@
 {% extends 'settlements/base.html' %}
+{% load ui %}
 
 {% block title %}Central de Recursos{% endblock %}
 
@@ -28,7 +29,7 @@
        class="bg-purple-50 dark:bg-purple-900/20 rounded-xl p-4 border border-purple-200/50 dark:border-purple-700/30 transition-all hover:shadow-md">
       <p class="text-xs uppercase font-bold text-purple-700 dark:text-purple-300">Sem cobrança</p>
       <p class="text-2xl font-extrabold text-purple-700 dark:text-purple-300 mt-1">{{ kpis.sem_cobranca }}</p>
-      <p class="text-[10px] text-purple-600 mt-0.5">€{{ kpis.sem_cobranca_total|floatformat:2 }} a aguardar fatura</p>
+      <p class="text-[10px] text-purple-600 mt-0.5">{{ kpis.sem_cobranca_total|eur }} a aguardar fatura</p>
     </a>
     <div class="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 border border-blue-200/50 dark:border-blue-700/30">
       <p class="text-xs uppercase font-bold text-blue-700 dark:text-blue-300">Em análise (parceiro)</p>
@@ -40,7 +41,7 @@
     </div>
     <div class="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 border border-amber-200/50 dark:border-amber-700/30">
       <p class="text-xs uppercase font-bold text-amber-700 dark:text-amber-300">Em quarentena</p>
-      <p class="text-2xl font-extrabold text-amber-700 dark:text-amber-300 mt-1">€{{ kpis.total_quarentena|floatformat:2 }}</p>
+      <p class="text-2xl font-extrabold text-amber-700 dark:text-amber-300 mt-1">{{ kpis.total_quarentena|eur }}</p>
     </div>
     <div class="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-4 border border-emerald-200/50 dark:border-emerald-700/30">
       <p class="text-xs uppercase font-bold text-emerald-700 dark:text-emerald-300">Taxa aprovação</p>
@@ -96,7 +97,7 @@
           <thead class="bg-gray-50 dark:bg-gray-700/50 text-xs text-gray-500 dark:text-gray-400 uppercase">
             <tr>
               <th class="px-4 py-2 text-left w-8"></th>
-              <th class="px-4 py-2 text-left">Waybill / LP</th>
+              <th class="px-4 py-2 text-left">N.º de envio / LP</th>
               <th class="px-4 py-2 text-left">Motorista</th>
               <th class="px-4 py-2 text-left">Motivo (Cainiao)</th>
               <th class="px-4 py-2 text-right">Valor</th>
@@ -122,7 +123,7 @@
                     <span class="font-semibold text-sm text-gray-700 dark:text-gray-200">{{ g.label }}</span>
                     <span class="bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-200 px-2 py-0.5 rounded-full text-xs">{{ g.count }}</span>
                   </span>
-                  <span class="text-xs text-gray-400">€{{ g.total|floatformat:2 }}</span>
+                  <span class="text-xs text-gray-400">{{ g.total|eur }}</span>
                 </div>
               </td>
             </tr>
@@ -142,7 +143,7 @@
                   {% endfor %}
                 </select>
               </td>
-              <td class="px-4 py-2 text-right font-semibold">€{{ c.amount|floatformat:2 }}</td>
+              <td class="px-4 py-2 text-right font-semibold">{{ c.amount|eur }}</td>
               <td class="px-4 py-2">
                 {% if c.tem_cobranca %}
                   <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" title="Já existe compensación na fatura do parceiro">
@@ -190,7 +191,7 @@
       <table class="w-full text-sm">
         <thead class="bg-gray-50 dark:bg-gray-700/50 text-xs text-gray-500 dark:text-gray-400 uppercase">
           <tr>
-            <th class="px-4 py-2 text-left">Waybill / LP</th>
+            <th class="px-4 py-2 text-left">N.º de envio / LP</th>
             <th class="px-4 py-2 text-left">Motorista</th>
             <th class="px-4 py-2 text-right">Valor</th>
             <th class="px-4 py-2 text-left">Cobrança</th>
@@ -204,7 +205,7 @@
           <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 {% if it.vencido %}bg-rose-50/50 dark:bg-rose-900/10{% endif %}">
             <td class="px-4 py-2 font-mono text-xs">{{ it.c.waybill_number|default:"—" }}</td>
             <td class="px-4 py-2">{{ it.c.driver.nome_completo }}</td>
-            <td class="px-4 py-2 text-right font-semibold">€{{ it.c.amount|floatformat:2 }}</td>
+            <td class="px-4 py-2 text-right font-semibold">{{ it.c.amount|eur }}</td>
             <td class="px-4 py-2">
               {% if it.c.tem_cobranca %}
                 <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" title="Já existe compensación na fatura do parceiro"><i data-lucide="check-circle-2" class="w-3 h-3"></i> Cobrada</span>
@@ -257,7 +258,7 @@
       <table class="w-full text-sm">
         <thead class="bg-gray-50 dark:bg-gray-700/50 text-xs text-gray-500 dark:text-gray-400 uppercase">
           <tr>
-            <th class="px-4 py-2 text-left">Waybill / LP</th>
+            <th class="px-4 py-2 text-left">N.º de envio / LP</th>
             <th class="px-4 py-2 text-left">Motorista</th>
             <th class="px-4 py-2 text-right">Valor</th>
             <th class="px-4 py-2 text-left">Estado</th>
@@ -269,7 +270,7 @@
           <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
             <td class="px-4 py-2 font-mono text-xs">{{ c.waybill_number|default:"—" }}</td>
             <td class="px-4 py-2">{{ c.driver.nome_completo }}</td>
-            <td class="px-4 py-2 text-right font-semibold">€{{ c.amount|floatformat:2 }}</td>
+            <td class="px-4 py-2 text-right font-semibold">{{ c.amount|eur }}</td>
             <td class="px-4 py-2">
               <span class="px-2 py-0.5 rounded-full text-xs font-semibold {{ c.situacao.classes }}">{{ c.situacao.label }}</span>
             </td>
@@ -303,7 +304,7 @@
       <table class="w-full text-sm">
         <thead class="bg-gray-50 dark:bg-gray-700/50 text-xs text-gray-500 dark:text-gray-400 uppercase">
           <tr>
-            <th class="px-4 py-2 text-left">Waybill / LP</th>
+            <th class="px-4 py-2 text-left">N.º de envio / LP</th>
             <th class="px-4 py-2 text-left">Motorista</th>
             <th class="px-4 py-2 text-left">Resultado</th>
             <th class="px-4 py-2 text-left">Parceiro</th>

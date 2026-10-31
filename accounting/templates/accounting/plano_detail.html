@@ -5,44 +5,33 @@
 {% block content %}
 <style>
   .pill { padding:0.125rem 0.5rem; border-radius:9999px; font-size:0.7rem; font-weight:600; }
-  .pill-pendente { background:#fef3c7; color:#92400e; }
-  .pill-pago { background:#d1fae5; color:#065f46; }
-  .pill-em_atraso { background:#fee2e2; color:#991b1b; }
-  .pill-anulado { background:#e5e7eb; color:#6b7280; }
-  .progress { height:8px; background:#e5e7eb; border-radius:9999px; overflow:hidden; }
+  .pill-pendente { background:var(--tone-warning-bg); color:var(--tone-warning-fg); }
+  .pill-pago { background:var(--tone-success-bg); color:var(--tone-success-fg); }
+  .pill-em_atraso { background:var(--tone-danger-bg); color:var(--tone-danger-fg); }
+  .pill-anulado { background:var(--color-border); color:var(--color-text-muted); }
+  .progress { height:8px; background:var(--color-border); border-radius:9999px; overflow:hidden; }
   .dark .progress { background:#374151; }
-  .progress > div { height:100%; background:linear-gradient(90deg,#6366f1,#8b5cf6); transition:width 0.3s; }
+  .progress > div { height:100%; background:linear-gradient(90deg,var(--brand-purple-wing),#8b5cf6); transition:width 0.3s; }
   .timeline { position:relative; padding-left:2rem; }
-  .timeline::before { content:''; position:absolute; left:0.85rem; top:0.5rem; bottom:0.5rem; width:2px; background:#e5e7eb; }
+  .timeline::before { content:''; position:absolute; left:0.85rem; top:0.5rem; bottom:0.5rem; width:2px; background:var(--color-border); }
   .dark .timeline::before { background:#374151; }
   .tl-item { position:relative; padding:0.75rem 0; }
-  .tl-dot { position:absolute; left:-1.6rem; top:1rem; width:1.3rem; height:1.3rem; border-radius:9999px; background:#fff; border:3px solid #9ca3af; }
+  .tl-dot { position:absolute; left:-1.6rem; top:1rem; width:1.3rem; height:1.3rem; border-radius:9999px; background:#fff; border:3px solid var(--color-text-muted); }
   .dark .tl-dot { background:#1f2937; }
-  .tl-dot.pago { border-color:#10b981; background:#d1fae5; }
-  .tl-dot.atraso { border-color:#ef4444; background:#fee2e2; }
-  .tl-dot.pendente { border-color:#f59e0b; background:#fef3c7; }
-  .tl-dot.anulado { border-color:#9ca3af; background:#e5e7eb; }
+  .tl-dot.pago { border-color:var(--tone-success-fg); background:var(--tone-success-bg); }
+  .tl-dot.atraso { border-color:#ef4444; background:var(--tone-danger-bg); }
+  .tl-dot.pendente { border-color:#f59e0b; background:var(--tone-warning-bg); }
+  .tl-dot.anulado { border-color:var(--color-text-muted); background:var(--color-border); }
 </style>
 <div class="max-w-5xl mx-auto px-4 py-6 space-y-4">
 
   <div class="flex items-center gap-3 text-sm text-gray-500 dark:text-gray-400">
     <a href="{% url 'accounting:plano_list' %}" class="hover:underline flex items-center gap-1">
-      <i data-lucide="arrow-left" class="w-4 h-4"></i> Planos Prestacionais
+      <i data-lucide="arrow-left" class="w-4 h-4"></i> Planos prestacionais
     </a>
     <span>/</span>
     <span class="text-gray-700 dark:text-gray-300">{{ plano.get_tipo_display }}</span>
   </div>
-
-  {% if messages %}
-  <div class="space-y-2">
-    {% for m in messages %}
-    <div class="px-4 py-2.5 rounded-lg text-sm
-      {% if m.tags == 'success' %}bg-emerald-50 dark:bg-emerald-900/20 text-emerald-800 dark:text-emerald-300
-      {% elif m.tags == 'error' %}bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300
-      {% else %}bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300{% endif %}">{{ m }}</div>
-    {% endfor %}
-  </div>
-  {% endif %}
 
   <!-- Header do plano -->
   <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-6">
@@ -52,7 +41,7 @@
           <span class="pill pill-{{ plano.status|lower }}">{{ plano.get_status_display }}</span>
           <span class="text-xs text-gray-500">{{ plano.get_tipo_display }}</span>
         </div>
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{{ plano.nome }}</h1>
+        <h1 class="lf-page-title">{{ plano.nome }}</h1>
         <p class="text-sm text-gray-500 dark:text-gray-400">
           {% if plano.fornecedor %}{{ plano.fornecedor.name }} · {% endif %}
           Ano {{ plano.periodo_ano }} · {{ agg.n_total }} prestações
@@ -70,22 +59,22 @@
         <p class="text-xl font-bold text-gray-900 dark:text-white">{{ plano.valor|eur }}</p>
       </div>
       <div>
-        <p class="text-[11px] uppercase tracking-wide text-emerald-600">Pago</p>
+        <p class="text-[11px] uppercase tracking-wide text-emerald-600 dark:text-emerald-300">Pago</p>
         <p class="text-xl font-bold text-emerald-700 dark:text-emerald-300">{{ agg.pago|eur }}</p>
-        <p class="text-[11px] text-emerald-600/70">{{ agg.n_pagas }}/{{ agg.n_total }} prestações</p>
+        <p class="text-[11px] text-emerald-600 dark:text-emerald-300/70">{{ agg.n_pagas }}/{{ agg.n_total }} prestações</p>
       </div>
       <div>
-        <p class="text-[11px] uppercase tracking-wide text-amber-600">Em aberto</p>
+        <p class="text-[11px] uppercase tracking-wide text-amber-600 dark:text-amber-300">Em aberto</p>
         <p class="text-xl font-bold text-amber-700 dark:text-amber-300">{{ agg.em_aberto|eur }}</p>
         {% if agg.n_atraso %}<p class="text-[11px] text-red-500">{{ agg.n_atraso }} em atraso</p>{% endif %}
       </div>
       <div>
-        <p class="text-[11px] uppercase tracking-wide text-indigo-600">Próxima</p>
+        <p class="text-[11px] uppercase tracking-wide text-indigo-600 dark:text-indigo-300">Próxima</p>
         {% if agg.proxima %}
         <p class="text-base font-semibold text-indigo-700 dark:text-indigo-300">
           {{ agg.proxima.data_vencimento|date:"d/m/Y" }}
         </p>
-        <p class="text-[11px] text-indigo-600/70">{{ agg.proxima.valor|eur }} · #{{ agg.proxima.parcela_numero }}</p>
+        <p class="text-[11px] text-indigo-600 dark:text-indigo-300/70">{{ agg.proxima.valor|eur }} · #{{ agg.proxima.parcela_numero }}</p>
         {% else %}
         <p class="text-base font-semibold text-gray-400">—</p>
         {% endif %}
@@ -121,7 +110,7 @@
             </div>
             <div>
               <div class="text-xs text-gray-500">Vencimento</div>
-              <div class="font-semibold {% if p.status == 'EM_ATRASO' %}text-red-600{% endif %}">
+              <div class="font-semibold {% if p.status == 'EM_ATRASO' %}text-red-600 dark:text-red-300{% endif %}">
                 {{ p.data_vencimento|date:"d/m/Y" }}
               </div>
             </div>
@@ -153,7 +142,7 @@
               {% csrf_token %}
               <button type="submit"
                       onclick="return confirm('Marcar prestação #{{ p.parcela_numero }} ({{ p.valor|eur }}) como PAGA?');"
-                      class="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-semibold">
+                      class="lf-btn lf-btn-ghost">
                 <i data-lucide="check" class="w-3 h-3"></i> Marcar paga
               </button>
             </form>

@@ -5,34 +5,30 @@
 {% block content %}
 <style>
   .num { font-family:monospace; }
-  .pos { color:#059669; }
-  .neg { color:#dc2626; }
+  .pos { color:var(--tone-success-fg); }
+  .neg { color:var(--tone-danger-fg); }
 </style>
 <div class="max-w-screen-xl mx-auto px-4 py-6 space-y-4">
-  <div class="flex items-center justify-between flex-wrap gap-2">
-    <div class="flex items-center gap-3">
-      <a href="{% url 'accounting:bank_statement_list' %}" class="text-gray-500 hover:text-gray-700">
-        <i data-lucide="arrow-left" class="w-5 h-5"></i>
-      </a>
+  <div class="lf-page-header">
+    <div class="min-w-0">
       <h1 class="lf-page-title">{{ statement.name }}</h1>
+      <p class="lf-page-subtitle">{{ statement.period_from|date:"d/m/Y" }} a {{ statement.period_to|date:"d/m/Y" }}</p>
     </div>
-    <div class="text-xs text-gray-500">
-      {{ statement.period_from|date:"d/m/Y" }} → {{ statement.period_to|date:"d/m/Y" }}
-    </div>
+    <div class="lf-page-actions"><a class="lf-btn lf-btn-ghost" href="{% url 'accounting:bank_statement_list' %}"><i data-lucide="arrow-left" class="w-4 h-4" aria-hidden="true"></i>Voltar</a></div>
   </div>
 
   <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
     <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3">
-      <div class="text-[10px] uppercase text-gray-500">Total Transacções</div>
+      <div class="text-[10px] uppercase text-gray-500">Total Transações</div>
       <div class="text-2xl font-bold">{{ n_total }}</div>
     </div>
     <div class="bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-300 dark:border-emerald-700 p-3">
-      <div class="text-[10px] uppercase text-emerald-700">Conciliadas</div>
-      <div class="text-2xl font-bold text-emerald-700">{{ n_matched }}</div>
+      <div class="text-[10px] uppercase text-emerald-700 dark:text-emerald-300">Conciliadas</div>
+      <div class="text-2xl font-bold text-emerald-700 dark:text-emerald-300">{{ n_matched }}</div>
     </div>
     <div class="bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-300 dark:border-amber-700 p-3">
-      <div class="text-[10px] uppercase text-amber-700">Débitos por conciliar</div>
-      <div class="text-2xl font-bold text-amber-700">{{ n_pending }}</div>
+      <div class="text-[10px] uppercase text-amber-700 dark:text-amber-300">Débitos por conciliar</div>
+      <div class="text-2xl font-bold text-amber-700 dark:text-amber-300">{{ n_pending }}</div>
     </div>
     <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3">
       <div class="text-[10px] uppercase text-gray-500">Importado em</div>
@@ -86,7 +82,7 @@
                   {% endfor %}
                 </div>
               {% else %}
-                <span class="text-xs text-amber-600">Sem sugestão · <a href="{% url 'accounting:bill_list' %}" class="text-indigo-600 hover:underline">procurar Bill manualmente</a></span>
+                <span class="text-xs text-amber-600 dark:text-amber-300">Sem sugestão · <a href="{% url 'accounting:bill_list' %}" class="text-indigo-600 dark:text-indigo-300 hover:underline">procurar Conta manualmente</a></span>
               {% endif %}
             </td>
           </tr>

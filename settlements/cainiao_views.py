@@ -2552,9 +2552,23 @@ def cainiao_hub_update(request, hub_id):
 @require_http_methods(["POST"])
 def cainiao_hub_delete(request, hub_id):
     """POST — apaga o HUB (e os seus CP4s em cascata)."""
+    from django.db.models import ProtectedError
+
     from .models import CainiaoHub
     hub = get_object_or_404(CainiaoHub, id=hub_id)
-    hub.delete()
+    try:
+        hub.delete()
+    except ProtectedError as exc:
+        drivers = sorted(
+            obj.driver.apelido or obj.driver.nome_completo
+            for obj in exc.protected_objects
+        )
+        return JsonResponse(
+            {"success": False, "error":
+             f"O HUB {hub.name} tem {len(drivers)} motorista(s) na ficha: "
+             f"{', '.join(drivers)}. Retire o HUB destas fichas."},
+            status=409,
+        )
     return JsonResponse({"success": True})
 
 

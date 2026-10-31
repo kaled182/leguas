@@ -16,17 +16,15 @@
     {% csrf_token %}
 
     <!-- Header -->
-    <div class="flex items-center justify-between">
-        <div>
-            <h1 class="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                <i data-lucide="hand-coins" class="w-6 h-6 text-orange-500"></i>
-                Sócios &amp; Reembolsos a Terceiros
+    <div class="lf-page-header">
+<div class="min-w-0">
+<h1 class="lf-page-title">Sócios &amp; Reembolsos a Terceiros
             </h1>
-            <p class="text-sm text-gray-500 dark:text-gray-400">
+            <p class="lf-page-subtitle">
                 Controlo das dívidas da empresa para sócios que adiantaram dinheiro do bolso (combustível, adiantamentos, etc.).
             </p>
-        </div>
-        <div class="flex gap-2">
+</div>
+<div class="lf-page-actions">
             <button @click="tab = 'reembolsos'" :class="tab === 'reembolsos' ? 'bg-orange-500 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'" class="px-4 py-2 rounded text-sm font-medium">
                 Reembolsos
             </button>
@@ -34,7 +32,7 @@
                 Sócios
             </button>
         </div>
-    </div>
+</div>
 
     <!-- ────────────── REEMBOLSOS TAB ────────────── -->
     <div x-show="tab === 'reembolsos'" class="space-y-4">
@@ -96,7 +94,7 @@
                 </div>
                 <div class="flex items-end gap-2">
                     <button @click="filters = { status: 'PENDENTE', lender_id: '', from: '', to: '' }; load()" class="px-3 py-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded text-sm">Limpar</button>
-                    <button @click="openCreateModal()" class="px-3 py-1 bg-orange-500 text-white rounded text-sm hover:bg-orange-600 flex items-center gap-1">
+                    <button @click="openCreateModal()" class="lf-btn lf-btn-ghost">
                         <i data-lucide="plus" class="w-4 h-4"></i> Novo
                     </button>
                 </div>
@@ -150,7 +148,7 @@
                                        :href="`/accounting/contas-a-pagar/${r.origem_bill_id}/editar/`"
                                        class="text-rose-600 dark:text-rose-400 hover:underline">
                                         <i data-lucide="receipt" class="w-3 h-3 inline"></i>
-                                        Bill #<span x-text="r.origem_bill_id"></span>
+                                        Conta #<span x-text="r.origem_bill_id"></span>
                                         <span x-show="r.bill_supplier" class="text-gray-400" x-text="' · ' + r.bill_supplier"></span>
                                     </a>
                                     <span x-show="!r.driver_nome && !r.origem_bill_id" class="text-gray-400 italic">manual</span>
@@ -158,10 +156,10 @@
                                 <td class="px-3 py-2 text-gray-600 dark:text-gray-400" x-text="r.data_pagamento || '—'"></td>
                                 <td class="px-3 py-2 text-gray-600 dark:text-gray-400 max-w-[10rem] truncate" :title="r.referencia_pagamento" x-text="r.referencia_pagamento || '—'"></td>
                                 <td class="px-3 py-2 text-right space-x-1 whitespace-nowrap">
-                                    <button x-show="r.status === 'PENDENTE'" @click="openMarkPaidModal(r)" class="px-2 py-1 bg-green-500 text-white rounded text-xs hover:bg-green-600">Marcar pago</button>
-                                    <button x-show="r.status !== 'PAGO'" @click="openEditModal(r)" class="px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600">Editar</button>
-                                    <button x-show="r.status === 'PENDENTE'" @click="cancelReimb(r.id)" class="px-2 py-1 bg-gray-400 text-white rounded text-xs hover:bg-gray-500">Cancelar</button>
-                                    <button x-show="r.status !== 'PAGO'" @click="deleteReimb(r)" class="px-2 py-1 bg-rose-600 text-white rounded text-xs hover:bg-rose-700">Apagar</button>
+                                    <button x-show="r.status === 'PENDENTE'" @click="openMarkPaidModal(r)" class="lf-btn lf-btn-ghost">Marcar pago</button>
+                                    <button x-show="r.status !== 'PAGO'" @click="openEditModal(r)" class="lf-btn lf-btn-ghost">Editar</button>
+                                    <button x-show="r.status === 'PENDENTE'" @click="cancelReimb(r.id)" class="lf-btn lf-btn-ghost">Cancelar</button>
+                                    <button x-show="r.status !== 'PAGO'" @click="deleteReimb(r)" class="lf-btn lf-btn-danger">Apagar</button>
                                 </td>
                             </tr>
                         </template>
@@ -174,7 +172,7 @@
             <!-- Bulk actions -->
             <div x-show="selectedIds.length > 0" class="flex items-center gap-3 px-4 py-2 bg-orange-50 dark:bg-orange-900/20 border-t border-orange-200 dark:border-orange-800">
                 <span class="text-sm font-medium text-orange-700 dark:text-orange-300" x-text="selectedIds.length + ' selecionado(s)'"></span>
-                <button @click="openBulkMarkPaidModal()" class="px-3 py-1 bg-green-500 text-white rounded text-sm hover:bg-green-600">Marcar todos como pago</button>
+                <button @click="openBulkMarkPaidModal()" class="lf-btn lf-btn-ghost">Marcar todos como pago</button>
                 <button @click="selectedIds = []" class="px-3 py-1 bg-gray-300 text-gray-700 rounded text-sm">Limpar seleção</button>
             </div>
         </div>
@@ -183,7 +181,7 @@
     <!-- ────────────── SÓCIOS TAB ────────────── -->
     <div x-show="tab === 'socios'" class="space-y-4">
         <div class="flex justify-end">
-            <button @click="openShareholderForm()" class="px-3 py-1.5 bg-orange-500 text-white rounded text-sm hover:bg-orange-600 flex items-center gap-1">
+            <button @click="openShareholderForm()" class="lf-btn lf-btn-ghost">
                 <i data-lucide="plus" class="w-4 h-4"></i> Novo Sócio
             </button>
         </div>
@@ -195,7 +193,7 @@
                         <th class="px-3 py-2 text-left">Nome</th>
                         <th class="px-3 py-2 text-left">IBAN</th>
                         <th class="px-3 py-2 text-left">Telefone</th>
-                        <th class="px-3 py-2 text-right">Saldo Pendente</th>
+                        <th class="px-3 py-2 text-right">Saldo pendente</th>
                         <th class="px-3 py-2 text-center">Ativo</th>
                         <th class="px-3 py-2 text-right">Ações</th>
                     </tr>
@@ -212,8 +210,8 @@
                                 <span x-show="!s.ativo" class="px-2 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-500 rounded text-xs">Inativo</span>
                             </td>
                             <td class="px-3 py-2 text-right space-x-1">
-                                <button @click="openShareholderForm(s)" class="px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600">Editar</button>
-                                <button @click="deleteShareholder(s)" class="px-2 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-600">Remover</button>
+                                <button @click="openShareholderForm(s)" class="lf-btn lf-btn-ghost">Editar</button>
+                                <button @click="deleteShareholder(s)" class="lf-btn lf-btn-danger">Remover</button>
                             </td>
                         </tr>
                     </template>
@@ -230,7 +228,7 @@
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-5 space-y-3">
             <div class="flex justify-between items-center">
                 <h3 class="text-lg font-bold dark:text-white" x-text="shareholderModal.id ? 'Editar Sócio' : 'Novo Sócio'"></h3>
-                <button @click="shareholderModal.open = false" class="text-gray-400">✕</button>
+                <button @click="shareholderModal.open = false" class="text-gray-400"></button>
             </div>
             <div>
                 <label class="text-xs text-gray-500">Nome *</label>
@@ -254,7 +252,7 @@
             </div>
             <div class="flex justify-end gap-2 pt-2">
                 <button @click="shareholderModal.open = false" class="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded">Cancelar</button>
-                <button @click="saveShareholder()" :disabled="shareholderModal.submitting" class="px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600 disabled:opacity-50">Guardar</button>
+                <button @click="saveShareholder()" :disabled="shareholderModal.submitting" class="lf-btn lf-btn-ghost disabled:opacity-50">Guardar</button>
             </div>
         </div>
     </div>
@@ -263,8 +261,8 @@
     <div x-show="markPaidModal.open" x-cloak @click.self="markPaidModal.open = false" class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-5 space-y-3">
             <div class="flex justify-between items-center">
-                <h3 class="text-lg font-bold dark:text-white">Marcar como Pago</h3>
-                <button @click="markPaidModal.open = false" class="text-gray-400">✕</button>
+                <h3 class="text-lg font-bold dark:text-white">Marcar como pago</h3>
+                <button @click="markPaidModal.open = false" class="text-gray-400"></button>
             </div>
             <div class="bg-orange-50 dark:bg-orange-900/20 rounded p-3 text-sm">
                 <div class="text-gray-700 dark:text-gray-300">
@@ -285,7 +283,7 @@
             </div>
             <div class="flex justify-end gap-2 pt-2">
                 <button @click="markPaidModal.open = false" class="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded">Cancelar</button>
-                <button @click="confirmMarkPaid()" :disabled="markPaidModal.submitting" class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50">Confirmar Pagamento</button>
+                <button @click="confirmMarkPaid()" :disabled="markPaidModal.submitting" class="lf-btn lf-btn-ghost disabled:opacity-50">Confirmar Pagamento</button>
             </div>
         </div>
     </div>
@@ -294,8 +292,8 @@
     <div x-show="createModal.open" x-cloak @click.self="createModal.open = false" class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-5 space-y-3">
             <div class="flex justify-between items-center">
-                <h3 class="text-lg font-bold dark:text-white">Novo Reembolso (manual)</h3>
-                <button @click="createModal.open = false" class="text-gray-400">✕</button>
+                <h3 class="text-lg font-bold dark:text-white">Novo reembolso (manual)</h3>
+                <button @click="createModal.open = false" class="text-gray-400"></button>
             </div>
             <div>
                 <label class="text-xs text-gray-500">Sócio *</label>
@@ -320,7 +318,7 @@
             </div>
             <div class="flex justify-end gap-2 pt-2">
                 <button @click="createModal.open = false" class="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded">Cancelar</button>
-                <button @click="confirmCreate()" :disabled="createModal.submitting" class="px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600 disabled:opacity-50">Criar</button>
+                <button @click="confirmCreate()" :disabled="createModal.submitting" class="lf-btn lf-btn-ghost disabled:opacity-50">Criar</button>
             </div>
         </div>
     </div>
@@ -330,7 +328,7 @@
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-5 space-y-3">
             <div class="flex justify-between items-center">
                 <h3 class="text-lg font-bold dark:text-white">Editar Reembolso #<span x-text="editModal.id"></span></h3>
-                <button @click="editModal.open = false" class="text-gray-400">✕</button>
+                <button @click="editModal.open = false" class="text-gray-400"></button>
             </div>
             <div>
                 <label class="text-xs text-gray-500">Sócio *</label>
@@ -354,7 +352,7 @@
             </div>
             <div class="flex justify-end gap-2 pt-2">
                 <button @click="editModal.open = false" class="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded">Cancelar</button>
-                <button @click="confirmEdit()" :disabled="editModal.submitting" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50">Guardar</button>
+                <button @click="confirmEdit()" :disabled="editModal.submitting" class="lf-btn lf-btn-ghost disabled:opacity-50">Guardar</button>
             </div>
         </div>
     </div>
@@ -557,7 +555,7 @@ function shareholderDashboard() {
         },
         async deleteReimb(r) {
             const label = r.descricao || `#${r.id}`;
-            if (!confirm(`Apagar reembolso ${label} (€${parseFloat(r.valor).toFixed(2)})?\n\nEsta acção não pode ser desfeita.`)) return;
+            if (!confirm(`Apagar reembolso ${label} (${lfEur(parseFloat(r.valor))})?\n\nEsta acção não pode ser desfeita.`)) return;
             const resp = await fetch(
                 `/settlements/reembolsos/${r.id}/delete/`,
                 POST_JSON({}),

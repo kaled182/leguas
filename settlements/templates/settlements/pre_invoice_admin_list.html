@@ -7,63 +7,47 @@
 <div class="w-full mx-auto space-y-6">
 
   <!-- Header -->
-  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6">
-    <div class="flex items-center justify-between flex-wrap gap-4">
-      <div class="flex items-center gap-4">
-        <div class="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center">
-          <i data-lucide="receipt" class="w-6 h-6 text-purple-600 dark:text-purple-400"></i>
+  <div class="lf-page-header">
+        <div class="min-w-0">
+          <h1 class="lf-page-title">Pré-faturas</h1>
+          <p class="text-sm text-gray-500 dark:text-gray-400">Motoristas diretos + Frotas subcontratadas — aprovação, pagamento e comprovantes</p>
         </div>
-        <div>
-          <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Pré-Faturas / Contas a Pagar</h1>
-          <p class="text-sm text-gray-500 dark:text-gray-400">Motoristas directos + Frotas subcontratadas — aprovação, pagamento e comprovantes</p>
-        </div>
-      </div>
-      <div class="flex items-center gap-3 flex-wrap">
+      <div class="lf-page-actions">
         <button onclick="openReportModal()"
-                class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold text-sm transition-colors shadow-sm">
+                class="lf-btn lf-btn-ghost">
           <i data-lucide="bar-chart-2" class="w-4 h-4"></i> Relatório
         </button>
         <button onclick="document.getElementById('importModalGlobal').classList.remove('hidden')"
-                class="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold text-sm transition-colors shadow-sm">
-          <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Importar Planilha
+                class="lf-btn lf-btn-ghost">
+          <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Importar folha de cálculo
         </button>
       </div>
-    </div>
   </div>
 
   <!-- KPI Cards -->
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-5 flex items-center gap-4">
-      <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center flex-shrink-0">
-        <i data-lucide="receipt" class="w-6 h-6 text-blue-600 dark:text-blue-400"></i>
-      </div>
+  <div class="lf-kpi-grid">
+<div class="lf-kpi">
       <div>
-        <div class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total a Pagar</div>
-        <div class="text-2xl font-bold text-blue-700 dark:text-blue-300">{{ kpis.total_a_pagar|eur }}</div>
-        <div class="text-xs text-gray-400">Aprovadas + Pendentes</div>
+        <div class="lf-kpi-label">Total a pagar</div>
+        <div class="lf-kpi-value">{{ kpis.total_a_pagar|eur }}</div>
+        <div class="lf-kpi-note">Aprovadas + Pendentes</div>
       </div>
     </div>
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-5 flex items-center gap-4">
-      <div class="w-12 h-12 bg-yellow-100 dark:bg-yellow-900/30 rounded-xl flex items-center justify-center flex-shrink-0">
-        <i data-lucide="clock" class="w-6 h-6 text-yellow-600 dark:text-yellow-400"></i>
-      </div>
+<div class="lf-kpi">
       <div>
-        <div class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Pendente de Pagamento</div>
-        <div class="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{{ kpis.pendente|eur }}</div>
-        <div class="text-xs text-gray-400">Aguardam pagamento</div>
+        <div class="lf-kpi-label">Pendente de pagamento</div>
+        <div class="lf-kpi-value">{{ kpis.pendente|eur }}</div>
+        <div class="lf-kpi-note">Aguardam pagamento</div>
       </div>
     </div>
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-5 flex items-center gap-4">
-      <div class="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl flex items-center justify-center flex-shrink-0">
-        <i data-lucide="check-circle-2" class="w-6 h-6 text-emerald-600 dark:text-emerald-400"></i>
-      </div>
+<div class="lf-kpi">
       <div>
-        <div class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total Pago</div>
-        <div class="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{{ kpis.pago|eur }}</div>
-        <div class="text-xs text-gray-400">Pagamentos confirmados</div>
+        <div class="lf-kpi-label">Total pago</div>
+        <div class="lf-kpi-value">{{ kpis.pago|eur }}</div>
+        <div class="lf-kpi-note">Pagamentos confirmados</div>
       </div>
     </div>
-  </div>
+</div>
 
   <!-- Filtros -->
   <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 px-4 py-3">
@@ -81,7 +65,7 @@
         {% endfor %}
       </select>
       <select name="parceiro" class="flex-none w-36 px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500">
-        <option value="">Parceiro: Todos</option>
+        <option value="">Cliente: Todos</option>
         {% for p in parceiros %}
         <option value="{{ p.id }}" {% if request.GET.parceiro == p.id|stringformat:"s" %}selected{% endif %}>{{ p.name }}</option>
         {% endfor %}
@@ -99,10 +83,10 @@
         </button>
         {% endif %}
       </div>
-      <button type="submit" class="flex-none px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium flex items-center gap-1.5 transition-colors">
+      <button type="submit" class="lf-btn lf-btn-ghost flex-none">
         <i data-lucide="search" class="w-3.5 h-3.5"></i> Filtrar
       </button>
-      <a href="{% url 'pre-invoice-admin-list' %}" class="flex-none px-3 py-1.5 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-white rounded-lg text-sm font-medium transition-colors">
+      <a href="{% url 'pre-invoice-admin-list' %}" class="lf-btn lf-btn-ghost flex-none">
         Limpar
       </a>
     </form>
@@ -117,51 +101,51 @@
         <div class="w-8 h-8 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
           <i data-lucide="user" class="w-4 h-4 text-purple-600 dark:text-purple-400"></i>
         </div>
-        <h2 class="font-semibold text-gray-900 dark:text-white">Pré-Faturas de Motoristas</h2>
+        <h2 class="font-semibold text-gray-900 dark:text-white">Pré-Faturas de motoristas</h2>
         <span class="px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-xs rounded-full font-medium">{{ pre_invoices.paginator.count }}</span>
       </div>
       <!-- Bulk action bar -->
       <div x-show="selected.length > 0" x-cloak class="flex items-center gap-3">
         <span class="text-sm text-gray-600 dark:text-gray-300" x-text="selected.length + ' selecionado(s)'"></span>
-        <button @click="openBulkPay()" class="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold transition-colors">
+        <button @click="openBulkPay()" class="lf-btn lf-btn-ghost">
           <i data-lucide="banknote" class="w-4 h-4"></i> Marcar Pago em Lote
         </button>
       </div>
     </div>
     <div class="overflow-x-auto">
-      <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-        <thead class="bg-gray-50 dark:bg-gray-900">
+      <table class="lf-table">
+        <thead>
           <tr>
-            <th class="px-4 py-3">
-              <input type="checkbox" @change="toggleAll($event)" class="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500 cursor-pointer">
+            <th >
+              <input type="checkbox" @change="toggleAll($event)" class="w-4 h-4 rounded border-gray-300 text-purple-600 dark:text-purple-300 focus:ring-purple-500 cursor-pointer">
             </th>
-            <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nº</th>
-            <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Motorista</th>
-            <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Período</th>
-            <th class="px-5 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Parceiros</th>
-            <th class="px-5 py-3 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total (€)</th>
-            <th class="px-5 py-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Estado</th>
-            <th class="px-5 py-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Ações</th>
+            <th >Nº</th>
+            <th >Motorista</th>
+            <th >Período</th>
+            <th >Clientes</th>
+            <th class="text-right">Total (€)</th>
+            <th class="text-center">Estado</th>
+            <th class="text-center">Ações</th>
           </tr>
         </thead>
-        <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700" id="pf-table-body">
+        <tbody  id="pf-table-body">
           {% for pf in pre_invoices %}
           <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors" id="row-{{ pf.id }}">
-            <td class="px-4 py-4 whitespace-nowrap">
+            <td class="whitespace-nowrap">
               <input type="checkbox" :value="{{ pf.id }}" @change="toggle($event, {{ pf.id }})"
-                     class="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500 cursor-pointer">
+                     class="w-4 h-4 rounded border-gray-300 text-purple-600 dark:text-purple-300 focus:ring-purple-500 cursor-pointer">
             </td>
-            <td class="px-5 py-4 whitespace-nowrap">
+            <td class="whitespace-nowrap">
               <span class="font-mono font-bold text-purple-600 dark:text-purple-400 text-sm">{{ pf.numero }}</span>
             </td>
-            <td class="px-5 py-4 whitespace-nowrap">
+            <td class="whitespace-nowrap">
               <div class="text-sm font-medium text-gray-900 dark:text-white">{{ pf.driver.nome_completo }}</div>
               <div class="text-xs text-gray-400">{{ pf.driver.numero_contribuinte|default:"—" }}</div>
             </td>
-            <td class="px-5 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
+            <td class="whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
               {{ pf.periodo_inicio|date:"d/m/Y" }} → {{ pf.periodo_fim|date:"d/m/Y" }}
             </td>
-            <td class="px-5 py-4">
+            <td >
               <div class="flex flex-wrap gap-1">
                 {% for linha in pf.linhas.all %}
                   {% if linha.parceiro %}
@@ -174,7 +158,7 @@
                 {% endfor %}
               </div>
             </td>
-            <td class="px-5 py-4 whitespace-nowrap text-right">
+            <td class="whitespace-nowrap text-right">
               {% if pf.vat_amount and pf.vat_amount > 0 %}
                 <span class="text-sm font-bold text-gray-900 dark:text-white">{{ pf.total_com_iva|eur }}</span>
                 <span class="block text-[10px] text-violet-600 dark:text-violet-400 font-semibold">c/ IVA 23%</span>
@@ -182,7 +166,7 @@
                 <span class="text-sm font-bold text-gray-900 dark:text-white">{{ pf.total_a_receber|eur }}</span>
               {% endif %}
             </td>
-            <td class="px-5 py-4 whitespace-nowrap text-center">
+            <td class="whitespace-nowrap text-center">
               <span id="badge-{{ pf.id }}" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold
                 {% if pf.status == 'PAGO' %}bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400
                 {% elif pf.status == 'APROVADO' %}bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400
@@ -194,53 +178,53 @@
                 {{ pf.get_status_display }}
               </span>
             </td>
-            <td class="px-5 py-3">
+            <td >
               <div x-data="pfActions({{ pf.id }}, '{{ pf.status }}')">
 
                 <!-- Acções principais -->
                 <div class="flex flex-wrap gap-1.5">
                   {% if pf.status == 'RASCUNHO' %}
-                    <button @click="calcular()" class="inline-flex items-center gap-1 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm">
+                    <button @click="calcular()" class="lf-btn lf-btn-ghost">
                       <i data-lucide="calculator" class="w-3 h-3"></i> Calcular
                     </button>
 
                   {% elif pf.status == 'CALCULADO' %}
-                    <button @click="changeStatus('APROVADO')" class="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm">
+                    <button @click="changeStatus('APROVADO')" class="lf-btn lf-btn-ghost">
                       <i data-lucide="check-circle" class="w-3 h-3"></i> Aprovar
                     </button>
-                    <button @click="changeStatus('CONTESTADO')" class="inline-flex items-center gap-1 px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm">
+                    <button @click="changeStatus('CONTESTADO')" class="lf-btn lf-btn-ghost">
                       <i data-lucide="message-circle-warning" class="w-3 h-3"></i> Contestar
                     </button>
-                    <button @click="changeStatus('REPROVADO')" class="inline-flex items-center gap-1 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm">
+                    <button @click="changeStatus('REPROVADO')" class="lf-btn lf-btn-danger">
                       <i data-lucide="x-circle" class="w-3 h-3"></i> Reprovar
                     </button>
 
                   {% elif pf.status == 'APROVADO' %}
-                    <button @click="changeStatus('PENDENTE')" class="inline-flex items-center gap-1 px-3 py-1.5 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm">
+                    <button @click="changeStatus('PENDENTE')" class="lf-btn lf-btn-ghost">
                       <i data-lucide="clock" class="w-3 h-3"></i> Pend. Pagamento
                     </button>
-                    <button @click="changeStatus('CONTESTADO')" class="inline-flex items-center gap-1 px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm">
+                    <button @click="changeStatus('CONTESTADO')" class="lf-btn lf-btn-ghost">
                       <i data-lucide="message-circle-warning" class="w-3 h-3"></i> Contestar
                     </button>
 
                   {% elif pf.status == 'PENDENTE' %}
-                    <button @click="openPayModal()" class="inline-flex items-center gap-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm">
+                    <button @click="openPayModal()" class="lf-btn lf-btn-ghost">
                       <i data-lucide="banknote" class="w-3 h-3"></i> Marcar Pago
                     </button>
-                    <button @click="changeStatus('APROVADO')" class="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-500 hover:bg-gray-600 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm">
+                    <button @click="changeStatus('APROVADO')" class="lf-btn lf-btn-ghost">
                       <i data-lucide="undo-2" class="w-3 h-3"></i> Reverter
                     </button>
 
                   {% elif pf.status == 'CONTESTADO' %}
-                    <button @click="changeStatus('CALCULADO')" class="inline-flex items-center gap-1 px-3 py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm">
+                    <button @click="changeStatus('CALCULADO')" class="lf-btn lf-btn-ghost">
                       <i data-lucide="refresh-cw" class="w-3 h-3"></i> Enviar Revisão
                     </button>
-                    <button @click="changeStatus('REPROVADO')" class="inline-flex items-center gap-1 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm">
+                    <button @click="changeStatus('REPROVADO')" class="lf-btn lf-btn-danger">
                       <i data-lucide="x-circle" class="w-3 h-3"></i> Reprovar
                     </button>
 
                   {% elif pf.status == 'REPROVADO' %}
-                    <button @click="changeStatus('CALCULADO')" class="inline-flex items-center gap-1 px-3 py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm">
+                    <button @click="changeStatus('CALCULADO')" class="lf-btn lf-btn-ghost">
                       <i data-lucide="refresh-cw" class="w-3 h-3"></i> Reabrir
                     </button>
 
@@ -252,19 +236,19 @@
 
                   <!-- Visualizar -->
                   <button @click="openView({{ pf.id }}, {{ pf.driver.id }})"
-                     class="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-200 dark:bg-gray-700 hover:bg-violet-600 hover:text-white dark:hover:bg-violet-600 text-gray-700 dark:text-gray-300 rounded-lg text-xs font-semibold transition-colors shadow-sm">
+                     class="lf-btn lf-btn-ghost">
                     <i data-lucide="eye" class="w-3 h-3"></i> Ver
                   </button>
 
                   <!-- Editar — modal inline -->
                   <button @click="$store.pfEdit.openPf({{ pf.id }}, {{ pf.driver.id }})"
-                     class="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-200 dark:bg-gray-700 hover:bg-indigo-600 hover:text-white dark:hover:bg-indigo-600 text-gray-700 dark:text-gray-300 rounded-lg text-xs font-semibold transition-colors shadow-sm">
+                     class="lf-btn lf-btn-ghost">
                     <i data-lucide="pencil" class="w-3 h-3"></i> Editar
                   </button>
 
                   <!-- PDF sempre visível -->
                   <a href="{% url 'pre-invoice-pdf' pf.id %}" target="_blank"
-                     class="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-200 dark:bg-gray-700 hover:bg-red-600 hover:text-white dark:hover:bg-red-600 text-gray-700 dark:text-gray-300 rounded-lg text-xs font-semibold transition-colors shadow-sm">
+                     class="lf-btn lf-btn-danger">
                     <i data-lucide="file-down" class="w-3 h-3"></i> PDF
                   </a>
                 </div>
@@ -307,7 +291,7 @@
                           <i data-lucide="banknote" class="w-5 h-5 text-white"></i>
                         </div>
                         <div>
-                          <h3 class="text-base font-bold text-white">Confirmar Pagamento</h3>
+                          <h3 class="text-base font-bold text-white">Confirmar pagamento</h3>
                           <p class="text-xs text-emerald-100">Pré-fatura #{{ pf.numero }}</p>
                         </div>
                       </div>
@@ -348,13 +332,13 @@
           </tr>
           {% empty %}
           <tr>
-            <td colspan="8" class="px-6 py-16 text-center">
+            <td colspan="8" class="text-center">
               <div class="flex flex-col items-center gap-3 text-gray-400">
                 <i data-lucide="file-x" class="w-12 h-12"></i>
                 <p class="text-lg font-medium">Nenhuma pré-fatura encontrada</p>
                 {% if month_f %}
                 <p class="text-sm text-amber-500 font-medium">Filtro de mês ativo: <strong>{{ month_f }}</strong>. As faturas pagas podem estar noutro mês.</p>
-                <button type="button" onclick="location.href='?status={{ request.GET.status }}&tipo={{ request.GET.tipo }}&driver={{ request.GET.driver }}&parceiro={{ request.GET.parceiro }}'" class="px-3 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-800 rounded-lg text-sm font-medium transition-colors">
+                <button type="button" onclick="location.href='?status={{ request.GET.status }}&tipo={{ request.GET.tipo }}&driver={{ request.GET.driver }}&parceiro={{ request.GET.parceiro }}'" class="px-3 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-800 dark:text-amber-300 rounded-lg text-sm font-medium transition-colors">
                   Remover filtro de mês
                 </button>
                 {% else %}
@@ -401,7 +385,7 @@
               <i data-lucide="banknote" class="w-5 h-5 text-white"></i>
             </div>
             <div>
-              <h3 class="text-base font-bold text-white">Pagamento em Lote</h3>
+              <h3 class="text-base font-bold text-white">Pagamento em lote</h3>
               <p class="text-xs text-emerald-100" x-text="selected.length + ' pré-faturas selecionadas'"></p>
             </div>
           </div>
@@ -445,11 +429,11 @@
       <div class="w-8 h-8 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg flex items-center justify-center">
         <i data-lucide="building-2" class="w-4 h-4 text-indigo-600 dark:text-indigo-400"></i>
       </div>
-      <h2 class="font-semibold text-gray-900 dark:text-white">Lançamentos de Frotas subcontratadas</h2>
+      <h2 class="font-semibold text-gray-900 dark:text-white">Lançamentos de frotas subcontratadas</h2>
       <span class="px-2 py-0.5 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 text-xs rounded-full font-medium">{{ lancamentos|length }}</span>
     </div>
     <div>
-      <table class="w-full table-fixed divide-y divide-gray-200 dark:divide-gray-700">
+      <table class="lf-table">
         <colgroup>
           <col style="width:28%">
           <col style="width:20%">
@@ -457,29 +441,29 @@
           <col style="width:18%">
           <col style="width:24%">
         </colgroup>
-        <thead class="bg-gray-50 dark:bg-gray-900">
+        <thead>
           <tr>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Empresa</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Período</th>
-            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total</th>
-            <th class="px-4 py-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Estado</th>
-            <th class="px-4 py-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Ações</th>
+            <th >Empresa</th>
+            <th >Período</th>
+            <th class="text-right">Total</th>
+            <th class="text-center">Estado</th>
+            <th class="text-center">Ações</th>
           </tr>
         </thead>
-        <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+        <tbody>
           {% for lanc in lancamentos %}
           <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors" id="lanc-row-{{ lanc.id }}">
-            <td class="px-4 py-4">
+            <td >
               <div class="text-sm font-medium text-gray-900 dark:text-white truncate" title="{{ lanc.empresa.nome }}">{{ lanc.empresa.nome }}</div>
               <div class="text-xs text-gray-400 truncate" title="{{ lanc.descricao }}">{{ lanc.descricao }}{% if lanc.qtd_entregas > 0 %} · {{ lanc.qtd_entregas }} × €{{ lanc.valor_por_entrega }}{% endif %}</div>
             </td>
-            <td class="px-4 py-4 text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap">
+            <td class="text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap">
               <span data-lanc-periodo>{{ lanc.periodo_inicio|date:"d/m/Y" }} → {{ lanc.periodo_fim|date:"d/m/Y" }}</span>
             </td>
-            <td class="px-4 py-4 text-right">
+            <td class="text-right">
               <span data-lanc-total class="text-sm font-bold text-gray-900 dark:text-white">{{ lanc.total_a_receber|eur }}</span>
             </td>
-            <td class="px-4 py-4 text-center">
+            <td class="text-center">
               <span id="lanc-badge-{{ lanc.id }}" class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold leading-tight
                 {% if lanc.status == 'PAGO' %}bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400
                 {% elif lanc.status == 'APROVADO' %}bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400
@@ -489,27 +473,27 @@
                 {{ lanc.get_status_display }}
               </span>
               {% if lanc.comprovante_pagamento %}
-              <a href="{{ lanc.comprovante_pagamento.url }}" target="_blank" class="ml-1 text-emerald-600 hover:text-emerald-700" title="Ver comprovante">
+              <a href="{{ lanc.comprovante_pagamento.url }}" target="_blank" class="ml-1 text-emerald-600 dark:text-emerald-300 hover:text-emerald-700" title="Ver comprovante">
                 <i data-lucide="paperclip" class="w-3 h-3 inline"></i>
               </a>
               {% endif %}
             </td>
-            <td class="px-2 py-3 overflow-visible">
+            <td class="overflow-visible">
               <div x-data="lancActions({{ lanc.id }}, '{{ lanc.status }}')">
                 <div class="flex flex-wrap gap-1 items-start">
                   {% if lanc.status == 'RASCUNHO' %}
-                    <button @click="changeStatus('APROVADO')" class="inline-flex items-center gap-1 px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold whitespace-nowrap">
+                    <button @click="changeStatus('APROVADO')" class="lf-btn lf-btn-ghost">
                       <i data-lucide="check-circle" class="w-3 h-3 flex-shrink-0"></i> Aprovar
                     </button>
                   {% elif lanc.status == 'APROVADO' %}
-                    <button @click="changeStatus('PENDENTE')" class="inline-flex items-center gap-1 px-2.5 py-1.5 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg text-xs font-semibold whitespace-nowrap">
+                    <button @click="changeStatus('PENDENTE')" class="lf-btn lf-btn-ghost">
                       <i data-lucide="clock" class="w-3 h-3 flex-shrink-0"></i> Pendente
                     </button>
                   {% elif lanc.status == 'PENDENTE' %}
-                    <button @click="openPayModal()" class="inline-flex items-center gap-1 px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold whitespace-nowrap">
+                    <button @click="openPayModal()" class="lf-btn lf-btn-ghost">
                       <i data-lucide="banknote" class="w-3 h-3 flex-shrink-0"></i> Marcar Pago
                     </button>
-                    <button @click="changeStatus('APROVADO')" class="inline-flex items-center gap-1 px-2.5 py-1.5 bg-gray-500 hover:bg-gray-600 text-white rounded-lg text-xs whitespace-nowrap">
+                    <button @click="changeStatus('APROVADO')" class="lf-btn lf-btn-ghost">
                       <i data-lucide="undo-2" class="w-3 h-3 flex-shrink-0"></i> Reverter
                     </button>
                   {% elif lanc.status == 'PAGO' %}
@@ -526,17 +510,17 @@
                 <!-- Ver / Editar / PDF -->
                 <div class="flex flex-wrap gap-1 mt-1">
                   <button @click="$store.lancView.open({{ lanc.id }})"
-                          class="inline-flex items-center gap-1 px-2.5 py-1.5 bg-gray-200 dark:bg-gray-700 hover:bg-indigo-600 hover:text-white dark:hover:bg-indigo-600 text-gray-700 dark:text-gray-300 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap">
+                          class="lf-btn lf-btn-ghost">
                     <i data-lucide="eye" class="w-3 h-3"></i> Ver
                   </button>
                   {% if lanc.status not in 'PAGO,CANCELADO' %}
                   <button @click="$store.lancEdit.openLanc({{ lanc.id }})"
-                          class="inline-flex items-center gap-1 px-2.5 py-1.5 bg-gray-200 dark:bg-gray-700 hover:bg-blue-600 hover:text-white dark:hover:bg-blue-600 text-gray-700 dark:text-gray-300 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap">
+                          class="lf-btn lf-btn-ghost">
                     <i data-lucide="pencil" class="w-3 h-3"></i> Editar
                   </button>
                   {% endif %}
                   <a href="{% url 'empresa-lancamento-pdf' lanc.id %}" target="_blank"
-                     class="inline-flex items-center gap-1 px-2.5 py-1.5 bg-gray-200 dark:bg-gray-700 hover:bg-red-600 hover:text-white dark:hover:bg-red-600 text-gray-700 dark:text-gray-300 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap">
+                     class="lf-btn lf-btn-danger">
                     <i data-lucide="file-down" class="w-3 h-3"></i> PDF
                   </a>
                 </div>
@@ -550,7 +534,7 @@
                           <i data-lucide="banknote" class="w-5 h-5 text-white"></i>
                         </div>
                         <div>
-                          <h3 class="text-base font-bold text-white">Confirmar Pagamento</h3>
+                          <h3 class="text-base font-bold text-white">Confirmar pagamento</h3>
                           <p class="text-xs text-emerald-100">{{ lanc.empresa.nome }} — {{ lanc.descricao|truncatechars:30 }}</p>
                         </div>
                       </div>
@@ -591,7 +575,7 @@
           </tr>
           {% empty %}
           <tr>
-            <td colspan="5" class="px-6 py-12 text-center">
+            <td colspan="5" class="text-center">
               <div class="flex flex-col items-center gap-3 text-gray-400">
                 <i data-lucide="building-2" class="w-10 h-10"></i>
                 <p class="text-base font-medium">Nenhum lançamento encontrado</p>
@@ -617,7 +601,7 @@
           <i data-lucide="file-spreadsheet" class="w-5 h-5 text-white"></i>
         </div>
         <div>
-          <h2 class="text-base font-bold text-white">Importar Planilha de Parceiro</h2>
+          <h2 class="text-base font-bold text-white">Importar folha de cálculo de cliente</h2>
           <p id="import-subtitle" class="text-xs text-purple-200">Etapa 1 de 2 — Configuração</p>
         </div>
       </div>
@@ -629,9 +613,9 @@
     <!-- ETAPA 1: Formulário -->
     <div id="import-step1" class="flex-1 overflow-y-auto px-6 py-5 space-y-4">
       <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Parceiro</label>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Cliente</label>
         <select id="g-parceiro" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-purple-500">
-          <option value="">— Selecionar parceiro —</option>
+          <option value="">— Selecionar cliente —</option>
           {% for p in parceiros %}
           <option value="{{ p.id }}">{{ p.name }}</option>
           {% endfor %}
@@ -674,16 +658,16 @@
       <!-- Hint dinâmico -->
       <div id="g-hint-courier" class="bg-blue-50 dark:bg-blue-900/20 rounded-lg px-4 py-3 text-xs text-blue-700 dark:text-blue-300 space-y-1">
         <div class="font-semibold">Mapeamento de colunas Cainiao:</div>
-        <div>📦 <strong>Signed Parcels</strong> → Pacotes faturados (entregues com sucesso)</div>
-        <div>📊 <strong>Delivery Success Rate</strong> → DSR (lido automaticamente)</div>
-        <div>📋 <strong>Total Parcels</strong> → Guardado nas observações (referência)</div>
+        <div><strong>Signed Parcels</strong> → Pacotes faturados (entregues com sucesso)</div>
+        <div><strong>Delivery Success Rate</strong> → DSR (lido automaticamente)</div>
+        <div><strong>Total Parcels</strong> → Guardado nas observações (referência)</div>
       </div>
       <div id="g-hint-helper" class="hidden bg-teal-50 dark:bg-teal-900/20 rounded-lg px-4 py-3 text-xs text-teal-700 dark:text-teal-300 space-y-1">
         <div class="font-semibold">Mapeamento de colunas Helper Report:</div>
         <div>🆔 <strong>Courier ID</strong> → Identifica o driver principal</div>
-        <div>👤 <strong>Courier Helper</strong> → Nome do ajudante (pode estar vazio)</div>
-        <div>✅ <strong>Task Estado = Entregue</strong> → Só estas linhas são contabilizadas</div>
-        <div>📦 <strong>N.º de envio / LP No.</strong> → Guardados por entrega para rastreio</div>
+        <div><strong>Courier Helper</strong> → Nome do ajudante (pode estar vazio)</div>
+        <div><strong>Task Estado = Entregue</strong> → Só estas linhas são contabilizadas</div>
+        <div><strong>N.º de envio / LP No.</strong> → Guardados por entrega para rastreio</div>
       </div>
     </div>
 
@@ -695,10 +679,10 @@
             Confirme o mapeamento de cada motorista antes de importar
           </div>
           <div class="flex gap-2 text-xs">
-            <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full">
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-100 text-emerald-700 dark:text-emerald-300 rounded-full">
               <span id="preview-matched-count">0</span> identificados
             </span>
-            <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full">
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-100 text-amber-700 dark:text-amber-300 rounded-full">
               <span id="preview-new-count">0</span> novos
             </span>
             <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded-full">
@@ -719,16 +703,16 @@
         </label>
       </div>
       <div class="overflow-x-auto">
-        <table class="w-full text-sm">
-          <thead class="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+        <table class="lf-table">
+          <thead>
             <tr>
-              <th class="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase">ID/Nome no Parceiro</th>
-              <th class="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 uppercase">Pacotes</th>
-              <th class="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 uppercase">DSR</th>
-              <th class="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase w-56">Motorista no Sistema</th>
+              <th >ID/Nome no cliente</th>
+              <th class="text-center">Pacotes</th>
+              <th class="text-center">DSR</th>
+              <th >Motorista no sistema</th>
             </tr>
           </thead>
-          <tbody id="preview-tbody" class="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-800">
+          <tbody id="preview-tbody" >
           </tbody>
         </table>
       </div>
@@ -754,14 +738,14 @@
         </div>
       </div>
       <div class="overflow-x-auto">
-        <table class="w-full text-sm">
-          <thead class="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+        <table class="lf-table">
+          <thead>
             <tr>
-              <th class="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase">Courier ID</th>
-              <th class="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase">Motorista no Sistema</th>
-              <th class="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 uppercase">Total</th>
-              <th class="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 uppercase">Direto</th>
-              <th class="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase">Helpers</th>
+              <th >Courier ID</th>
+              <th >Motorista no sistema</th>
+              <th class="text-center">Total</th>
+              <th class="text-center">Direto</th>
+              <th >Helpers</th>
             </tr>
           </thead>
           <tbody id="helper-preview-tbody"></tbody>
@@ -847,10 +831,10 @@
           <div class="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden bg-white dark:bg-gray-800">
             <div class="flex items-center justify-between px-4 py-3 bg-indigo-50 dark:bg-indigo-900/30 border-b border-indigo-100 dark:border-indigo-800/50">
               <h3 class="text-sm font-semibold text-indigo-900 dark:text-indigo-200 flex items-center gap-2">
-                <i data-lucide="layers" class="w-4 h-4 text-indigo-500"></i> Linhas de Trabalho por Parceiro
+                <i data-lucide="layers" class="w-4 h-4 text-indigo-500"></i> Linhas de Trabalho por Cliente
               </h3>
               <button @click="$store.pfEdit.showLinhaForm = !$store.pfEdit.showLinhaForm"
-                      class="text-xs px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold transition-colors">
+                      class="lf-btn lf-btn-ghost">
                 + Adicionar
               </button>
             </div>
@@ -858,9 +842,9 @@
             <div x-show="$store.pfEdit.showLinhaForm" class="px-4 py-3 bg-indigo-50 dark:bg-indigo-900/20 border-b border-gray-200 dark:border-gray-700">
               <div class="grid grid-cols-2 md:grid-cols-5 gap-2">
                 <div class="md:col-span-2">
-                  <label class="text-xs text-gray-500 mb-1 block">Parceiro</label>
+                  <label class="text-xs text-gray-500 mb-1 block">Cliente</label>
                   <select x-model="$store.pfEdit.linhaForm.parceiro_id" class="w-full text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-                    <option value="">— Sem parceiro —</option>
+                    <option value="">— Sem cliente —</option>
                     <template x-for="p in $store.pfEdit.parceiros" :key="p.id">
                       <option :value="p.id" x-text="p.name"></option>
                     </template>
@@ -880,15 +864,15 @@
                 </div>
               </div>
               <div class="flex gap-2 mt-2">
-                <button @click="$store.pfEdit.addLinha()" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs rounded-lg font-semibold transition-colors">Guardar</button>
-                <button @click="$store.pfEdit.showLinhaForm = false" class="px-3 py-1.5 bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500 text-gray-800 dark:text-white text-xs rounded-lg transition-colors">Cancelar</button>
+                <button @click="$store.pfEdit.addLinha()" class="lf-btn lf-btn-ghost">Guardar</button>
+                <button @click="$store.pfEdit.showLinhaForm = false" class="lf-btn lf-btn-ghost">Cancelar</button>
               </div>
             </div>
             <!-- Lines list -->
             <div>
               <!-- Cabeçalho -->
               <div class="flex items-center text-xs font-semibold text-gray-500 uppercase tracking-wide bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700 px-4 py-2">
-                <div style="width:33%;min-width:0">Parceiro</div>
+                <div style="width:33%;min-width:0">Cliente</div>
                 <div style="width:12%" class="text-right">Pacotes</div>
                 <div style="width:12%" class="text-right">Taxa</div>
                 <div style="width:10%" class="text-right">DSR</div>
@@ -950,9 +934,9 @@
                   <div x-show="linha._isEditing" class="px-4 py-3 bg-indigo-50 dark:bg-indigo-900/20">
                     <div class="grid grid-cols-2 gap-2">
                       <div>
-                        <label class="text-xs text-gray-500 mb-1 block">Parceiro</label>
+                        <label class="text-xs text-gray-500 mb-1 block">Cliente</label>
                         <select x-model="linha._editForm.parceiro_id" class="w-full px-2 py-1 border border-indigo-300 dark:border-indigo-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-xs">
-                          <option value="">— Sem parceiro —</option>
+                          <option value="">— Sem cliente —</option>
                           <template x-for="p in $store.pfEdit.parceiros" :key="p.id">
                             <option :value="p.id" x-text="p.name" :selected="p.id == linha._editForm.parceiro_id"></option>
                           </template>
@@ -976,10 +960,10 @@
                       </div>
                     </div>
                     <div class="flex gap-2 pt-2">
-                      <button @click="$store.pfEdit.updateLinha(linha)" class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs rounded-lg font-semibold transition-colors flex items-center gap-1">
+                      <button @click="$store.pfEdit.updateLinha(linha)" class="lf-btn lf-btn-ghost">
                         <i data-lucide="check" class="w-3 h-3"></i> Guardar
                       </button>
-                      <button @click="$store.pfEdit.cancelEditLinha(linha)" class="px-3 py-1 bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 text-gray-800 dark:text-white text-xs rounded-lg transition-colors">
+                      <button @click="$store.pfEdit.cancelEditLinha(linha)" class="lf-btn lf-btn-ghost">
                         Cancelar
                       </button>
                     </div>
@@ -1025,7 +1009,7 @@
                 <i data-lucide="sun" class="w-4 h-4 text-yellow-500"></i> Bonificações Dom/Feriado
               </h3>
               <button @click="$store.pfEdit.showBonusForm = !$store.pfEdit.showBonusForm"
-                      class="text-xs px-3 py-1.5 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg font-semibold transition-colors">
+                      class="lf-btn lf-btn-ghost">
                 + Adicionar
               </button>
             </div>
@@ -1048,8 +1032,8 @@
                 </div>
               </div>
               <div class="flex gap-2 mt-2">
-                <button @click="$store.pfEdit.addBonus()" class="px-3 py-1.5 bg-yellow-500 hover:bg-yellow-600 text-white text-xs rounded-lg font-semibold transition-colors">Guardar</button>
-                <button @click="$store.pfEdit.showBonusForm = false" class="px-3 py-1.5 bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500 text-gray-800 dark:text-white text-xs rounded-lg transition-colors">Cancelar</button>
+                <button @click="$store.pfEdit.addBonus()" class="lf-btn lf-btn-ghost">Guardar</button>
+                <button @click="$store.pfEdit.showBonusForm = false" class="lf-btn lf-btn-ghost">Cancelar</button>
               </div>
             </div>
             <div class="divide-y divide-gray-100 dark:divide-gray-700">
@@ -1077,7 +1061,7 @@
                 <i data-lucide="package-x" class="w-4 h-4 text-red-500"></i> Pacotes Perdidos
               </h3>
               <button @click="$store.pfEdit.showLostForm = !$store.pfEdit.showLostForm"
-                      class="text-xs px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-lg font-semibold transition-colors">
+                      class="lf-btn lf-btn-danger">
                 + Adicionar
               </button>
             </div>
@@ -1105,8 +1089,8 @@
                 Total c/ IVA: €<span x-text="(parseFloat($store.pfEdit.lostForm.valor || 0) * (1 + parseFloat($store.pfEdit.lostForm.iva_percentual || 0) / 100)).toFixed(2)"></span>
               </div>
               <div class="flex gap-2 mt-2">
-                <button @click="$store.pfEdit.addLostPackage()" class="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs rounded-lg font-semibold transition-colors">Guardar</button>
-                <button @click="$store.pfEdit.showLostForm = false" class="px-3 py-1.5 bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500 text-gray-800 dark:text-white text-xs rounded-lg transition-colors">Cancelar</button>
+                <button @click="$store.pfEdit.addLostPackage()" class="lf-btn lf-btn-danger">Guardar</button>
+                <button @click="$store.pfEdit.showLostForm = false" class="lf-btn lf-btn-ghost">Cancelar</button>
               </div>
             </div>
             <div class="divide-y divide-gray-100 dark:divide-gray-700">
@@ -1137,7 +1121,7 @@
                 <i data-lucide="wallet" class="w-4 h-4 text-orange-500"></i> Adiantamentos / Combustível
               </h3>
               <button @click="$store.pfEdit.showAdvForm = !$store.pfEdit.showAdvForm"
-                      class="text-xs px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-semibold transition-colors">
+                      class="lf-btn lf-btn-ghost">
                 + Adicionar
               </button>
             </div>
@@ -1165,8 +1149,8 @@
                 </div>
               </div>
               <div class="flex gap-2 mt-2">
-                <button @click="$store.pfEdit.addAdvance()" class="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-xs rounded-lg font-semibold transition-colors">Guardar</button>
-                <button @click="$store.pfEdit.showAdvForm = false" class="px-3 py-1.5 bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500 text-gray-800 dark:text-white text-xs rounded-lg transition-colors">Cancelar</button>
+                <button @click="$store.pfEdit.addAdvance()" class="lf-btn lf-btn-ghost">Guardar</button>
+                <button @click="$store.pfEdit.showAdvForm = false" class="lf-btn lf-btn-ghost">Cancelar</button>
               </div>
             </div>
             <div class="divide-y divide-gray-100 dark:divide-gray-700">
@@ -1194,7 +1178,7 @@
     <!-- Footer -->
     <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex items-center justify-between flex-shrink-0">
       <a :href="'/settlements/pre-invoices/' + ($store.pfEdit.pfId || '') + '/pdf/'" target="_blank"
-         class="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-red-600 hover:text-white dark:hover:bg-red-600 text-gray-700 dark:text-gray-200 rounded-lg text-sm font-semibold transition-colors border border-gray-200 dark:border-gray-600">
+         class="lf-btn lf-btn-danger">
         <i data-lucide="file-down" class="w-4 h-4"></i> PDF
       </a>
       <button @click="$store.pfEdit.close()" class="px-5 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-800 dark:text-white rounded-lg text-sm font-semibold transition-colors border border-gray-200 dark:border-gray-600">
@@ -2283,7 +2267,7 @@ function lancActions(lancId, initialStatus) {
         </div>
         <!-- Cabeçalho das colunas -->
         <div class="flex items-center text-xs font-semibold text-gray-500 uppercase tracking-wide bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700 px-3 py-2">
-          <div style="width:35%;min-width:0">Parceiro</div>
+          <div style="width:35%;min-width:0">Cliente</div>
           <div style="width:13%" class="text-right">Pacotes</div>
           <div style="width:13%" class="text-right">Taxa</div>
           <div style="width:11%" class="text-right">DSR</div>
@@ -2375,7 +2359,7 @@ function lancActions(lancId, initialStatus) {
           <table class="w-full text-xs">
             <thead class="bg-gray-50 dark:bg-gray-700/50">
               <tr>
-                <th class="px-3 py-2 text-left font-semibold text-gray-500">Motorista Indicado</th>
+                <th class="px-3 py-2 text-left font-semibold text-gray-500">Motorista indicado</th>
                 <th class="px-3 py-2 text-right font-semibold text-gray-500">Pacotes</th>
                 <th class="px-3 py-2 text-right font-semibold text-gray-500">€/pacote</th>
                 <th class="px-3 py-2 text-right font-semibold text-gray-500">Comissão</th>
@@ -2646,7 +2630,7 @@ document.addEventListener('alpine:init', () => {
                 'bg-gray-100 text-gray-700': $store.lancView.lanc.status==='RASCUNHO',
                 'bg-blue-100 text-blue-700': $store.lancView.lanc.status==='APROVADO',
                 'bg-yellow-100 text-yellow-700': $store.lancView.lanc.status==='PENDENTE',
-                'bg-emerald-100 text-emerald-700': $store.lancView.lanc.status==='PAGO',
+                'bg-emerald-100 text-emerald-700 dark:text-emerald-300': $store.lancView.lanc.status==='PAGO',
                 'bg-red-100 text-red-700': $store.lancView.lanc.status==='CANCELADO',
               }" x-text="$store.lancView.lanc.status_display"></span>
             <span x-show="$store.lancView.lanc.data_pagamento" class="text-xs text-gray-500">
@@ -2694,13 +2678,13 @@ document.addEventListener('alpine:init', () => {
               <template x-if="parseFloat($store.lancView.lanc.valor_bonus) > 0">
                 <div class="flex justify-between items-center px-4 py-2.5 bg-white dark:bg-gray-800">
                   <span class="text-sm text-gray-600 dark:text-gray-300">Bónus</span>
-                  <span class="text-sm font-medium text-emerald-600">+ €<span x-text="parseFloat($store.lancView.lanc.valor_bonus).toFixed(2)"></span></span>
+                  <span class="text-sm font-medium text-emerald-600 dark:text-emerald-300">+ €<span x-text="parseFloat($store.lancView.lanc.valor_bonus).toFixed(2)"></span></span>
                 </div>
               </template>
               <template x-if="parseFloat($store.lancView.lanc.pacotes_perdidos) > 0">
                 <div class="flex justify-between items-center px-4 py-2.5 bg-white dark:bg-gray-800">
                   <span class="text-sm text-gray-600 dark:text-gray-300">Pacotes Perdidos</span>
-                  <span class="text-sm font-medium text-red-600">- €<span x-text="parseFloat($store.lancView.lanc.pacotes_perdidos).toFixed(2)"></span></span>
+                  <span class="text-sm font-medium text-red-600 dark:text-red-300">- €<span x-text="parseFloat($store.lancView.lanc.pacotes_perdidos).toFixed(2)"></span></span>
                 </div>
               </template>
               <div class="flex justify-between items-center px-4 py-2.5 bg-gray-50 dark:bg-gray-700/50">
@@ -2722,7 +2706,7 @@ document.addEventListener('alpine:init', () => {
               <template x-if="parseFloat($store.lancView.lanc.adiantamentos) > 0">
                 <div class="flex justify-between items-center px-4 py-2.5 bg-white dark:bg-gray-800">
                   <span class="text-sm text-gray-600 dark:text-gray-300">Adiantamentos / Combustível <span class="text-xs text-gray-400">(após IVA)</span></span>
-                  <span class="text-sm font-medium text-red-600">- €<span x-text="parseFloat($store.lancView.lanc.adiantamentos).toFixed(2)"></span></span>
+                  <span class="text-sm font-medium text-red-600 dark:text-red-300">- €<span x-text="parseFloat($store.lancView.lanc.adiantamentos).toFixed(2)"></span></span>
                 </div>
               </template>
               <div class="flex justify-between items-center px-4 py-3 bg-indigo-600">
@@ -2744,7 +2728,7 @@ document.addEventListener('alpine:init', () => {
                 <div class="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-4">
                   <div class="text-xs text-gray-500 mb-2">Comprovante</div>
                   <a :href="$store.lancView.lanc.comprovante_url" target="_blank"
-                     class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold transition-colors">
+                     class="lf-btn lf-btn-ghost">
                     <i data-lucide="paperclip" class="w-3 h-3"></i> Ver Comprovante
                   </a>
                 </div>
@@ -2754,7 +2738,7 @@ document.addEventListener('alpine:init', () => {
           <!-- Notas -->
           <template x-if="$store.lancView.lanc.notas">
             <div class="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4">
-              <div class="text-xs font-semibold text-amber-600 mb-1">Notas</div>
+              <div class="text-xs font-semibold text-amber-600 dark:text-amber-300 mb-1">Notas</div>
               <p class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-line" x-text="$store.lancView.lanc.notas"></p>
             </div>
           </template>
@@ -2767,7 +2751,7 @@ document.addEventListener('alpine:init', () => {
       <div class="flex gap-2">
         <template x-if="$store.lancView.lanc && $store.lancView.lanc.status !== 'PAGO' && $store.lancView.lanc.status !== 'CANCELADO'">
           <button @click="$store.lancEdit.open($store.lancView.lanc.id); $store.lancView.show = false;"
-                  class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold transition-colors">
+                  class="lf-btn lf-btn-ghost">
             <i data-lucide="pencil" class="w-3.5 h-3.5"></i> Editar
           </button>
         </template>
@@ -3066,7 +3050,7 @@ document.addEventListener('alpine:init', () => {
                 <th class="px-2 py-2 text-right font-semibold text-gray-500">Bónus</th>
                 <th class="px-2 py-2 text-right font-semibold text-gray-500">Indic.</th>
                 <th class="px-2 py-2 text-right font-semibold text-gray-500">Desc.</th>
-                <th class="px-2 py-2 text-right font-semibold text-gray-500">A Receber</th>
+                <th class="px-2 py-2 text-right font-semibold text-gray-500">A receber</th>
               </tr>
             </thead>
             <tbody id="reportTableBody"></tbody>

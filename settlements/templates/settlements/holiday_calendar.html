@@ -7,14 +7,14 @@
 <div class="px-6 py-6 max-w-7xl mx-auto" x-data="holidayCalendar()" x-init="init()">
 
   <!-- Header -->
-  <div class="flex items-center justify-between mb-6">
-    <div>
-      <h1 class="lf-page-title">Calendário de Feriados</h1>
-      <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+  <div class="lf-page-header">
+<div class="min-w-0">
+<h1 class="lf-page-title">Calendário de feriados</h1>
+      <p class="lf-page-subtitle">
         Configura os dias com bónus de pré-fatura. Domingos são detectados automaticamente.
       </p>
-    </div>
-    <div class="flex items-center gap-2">
+</div>
+<div class="lf-page-actions">
       <a href="?year={{ year_prev }}"
          class="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-sm">
         <i data-lucide="chevron-left" class="w-4 h-4 inline"></i> {{ year_prev }}
@@ -30,16 +30,16 @@
         {{ year_next }} <i data-lucide="chevron-right" class="w-4 h-4 inline"></i>
       </a>
     </div>
-  </div>
+</div>
 
   <!-- Action bar -->
   <div class="flex flex-wrap gap-2 mb-6">
     <button @click="openCreate()"
-            class="px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold flex items-center gap-2">
+            class="lf-btn lf-btn-ghost">
       <i data-lucide="plus" class="w-4 h-4"></i> Adicionar Feriado
     </button>
     <button @click="importPreset()"
-            class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold flex items-center gap-2">
+            class="lf-btn lf-btn-ghost">
       <i data-lucide="download-cloud" class="w-4 h-4"></i>
       Importar móveis PT {{ year }}
     </button>
@@ -138,7 +138,7 @@
             </td>
             <td class="px-4 py-2">
               {% if h.is_recurring_yearly %}
-                <i data-lucide="repeat" class="w-4 h-4 text-emerald-600"></i>
+                <i data-lucide="repeat" class="w-4 h-4 text-emerald-600 dark:text-emerald-300"></i>
               {% else %}
                 <span class="text-gray-400 text-xs">—</span>
               {% endif %}
@@ -151,7 +151,7 @@
                 Editar
               </button>
               <button @click="del({{ h.id }}, '{{ h.name|escapejs }}')"
-                      class="px-2 py-1 text-xs text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded">
+                      class="px-2 py-1 text-xs text-rose-600 dark:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded">
                 Remover
               </button>
             </td>
@@ -197,7 +197,7 @@
             <td class="px-4 py-2 text-gray-700 dark:text-gray-300">{{ b.reason|default:"—" }}</td>
             <td class="px-4 py-2 text-right">
               <button @click="delBlackout({{ b.id }}, '{{ b.date|date:"d/m/Y" }}')"
-                      class="px-2 py-1 text-xs text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded">
+                      class="px-2 py-1 text-xs text-rose-600 dark:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded">
                 Remover
               </button>
             </td>
@@ -314,7 +314,7 @@
           <button type="button" @click="modalOpen = false"
                   class="px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-sm">Cancelar</button>
           <button type="submit"
-                  class="px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold">
+                  class="lf-btn lf-btn-ghost">
             <span x-text="editing ? 'Guardar' : 'Criar'"></span>
           </button>
         </div>

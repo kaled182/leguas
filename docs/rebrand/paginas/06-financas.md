@@ -25,12 +25,14 @@ Finanças passa ao cabeçalho único, com `lf-table`, `lf-kpi` e `lf-badge`. A p
 | 7 | Tabelas com `lf-table` e botões com `lf-btn` |
 
 ## Pendente
-- `pre_invoice_admin_list.html` mantém 38 `toFixed` e 19 `alert()` em JavaScript.
+- `pre_invoice_admin_list.html` mantém 39 `toFixed` e 8 `alert()` em JavaScript.
 - Outros `alert()` em `bill_form`, `payables_inbox`, `treasury_dashboard`, `cash_entries_dashboard` e `shareholder_dashboard`.
 - Títulos e textos gerados em JavaScript não passaram pela substituição de termos.
 - `bill_form` e `imposto_form` mantêm os campos com o estilo próprio.
 - Nas linhas de Pré-faturas ficam até 4 botões. O menu de ações fica para a passagem final.
 - Regras de bónus continuam sem guardar, por decisão do utilizador.
+- `financial_dashboard_v2`, `invoice_list_v2`, `invoice_detail` e `settlement_list_v2` não entraram nesta passagem.
+- As 126 capturas são anteriores aos últimos ajustes de texto. Depois delas, repeti só Tesouraria, Pagamentos e Break-even.
 
 ## Métricas
 247 testes: as mesmas 4 falhas antigas de `main`, 0 regressões. 126 capturas (42 páginas × 3 modos): 0 erros de consola e 0 scroll horizontal. 0 alterações em `{% %}`, `{{ }}` e atributos de código, além das listadas. Dados sintéticos.

@@ -15,6 +15,8 @@ CAINIAO_STATUS = {
     "Attempt Failure": ("Falhada", "danger"),
     "Driver_received": ("Em distribuição", "warning"),
     "Assigned": ("Atribuído", "neutral"),
+    "Unassign": ("Por atribuir", "neutral"),
+    "Stale_Armazem": ("Parado no armazém", "warning"),
     "Wrong HUB": ("Hub errado", "neutral"),
     "Exception": ("Exceção", "danger"),
 }

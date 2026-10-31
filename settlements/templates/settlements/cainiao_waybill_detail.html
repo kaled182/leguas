@@ -23,7 +23,7 @@
       </div>
       <div class="flex-1 min-w-0">
         <div class="flex items-center gap-2 flex-wrap">
-          <span class="text-sm font-bold text-amber-900 dark:text-amber-200">📤 DEVOLVIDO AO REMETENTE</span>
+          <span class="text-sm font-bold text-amber-900 dark:text-amber-200">DEVOLVIDO AO REMETENTE</span>
           <span class="px-2 py-0.5 bg-amber-200 dark:bg-amber-900/50 text-amber-800 dark:text-amber-200 rounded text-xs font-bold">
             {{ return_record.get_return_status_display }}
           </span>
@@ -51,11 +51,8 @@
 
   {# Banner: PRIORITÁRIO (computado) #}
   {% if priority_info.is_priority %}
-  <div class="bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 border-l-4 border-orange-500 dark:border-orange-400 rounded-xl p-5">
+  <div class="bg-orange-50 dark:bg-orange-900/20 border-l-4 border-orange-500 dark:border-orange-400 rounded-xl p-5">
     <div class="flex items-start gap-3">
-      <div class="w-10 h-10 bg-gradient-to-br from-orange-500 to-amber-500 rounded-lg flex items-center justify-center flex-shrink-0 text-white text-xl">
-        🔥
-      </div>
       <div class="flex-1 min-w-0">
         <div class="flex items-center gap-2 flex-wrap">
           <span class="text-sm font-bold text-orange-800 dark:text-orange-300">PACOTE PRIORITÁRIO</span>
@@ -79,7 +76,7 @@
       </div>
       <div class="flex-1 min-w-0">
         <div class="flex items-center gap-2 flex-wrap">
-          <span class="text-sm font-bold text-rose-800 dark:text-rose-300">🚨 PACOTE SINALIZADO</span>
+          <span class="text-sm font-bold text-rose-800 dark:text-rose-300">PACOTE SINALIZADO</span>
           <span class="px-2 py-0.5 bg-rose-200 dark:bg-rose-900/50 text-rose-800 dark:text-rose-200 rounded text-xs font-bold">
             {{ active_flag.get_flag_type_display }}
           </span>
@@ -111,7 +108,7 @@
       </div>
       <div class="flex-1 min-w-0">
         <div class="flex items-center gap-2 flex-wrap">
-          <span class="text-sm font-bold text-blue-800 dark:text-blue-300">✅ RESOLVIDO</span>
+          <span class="text-sm font-bold text-blue-800 dark:text-blue-300">RESOLVIDO</span>
           <span class="px-2 py-0.5 bg-blue-200 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200 rounded text-xs font-bold">
             {{ resolution.get_resolution_type_display }}
           </span>
@@ -554,7 +551,7 @@
 
       {# Cliente / Destinatário (com contatos) #}
       {% if customer_name or customer_phone or customer_email %}
-      <div class="bg-gradient-to-br from-fuchsia-50 to-pink-50 dark:from-fuchsia-900/20 dark:to-pink-900/20 rounded-xl border border-fuchsia-200/50 dark:border-fuchsia-700/50 p-5">
+      <div class="bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-fuchsia-200/50 dark:border-fuchsia-700/50 p-5">
         <h3 class="text-sm font-bold text-fuchsia-900 dark:text-fuchsia-200 flex items-center gap-2 mb-3">
           <i data-lucide="user-circle" class="w-4 h-4"></i>
           Cliente
@@ -776,7 +773,7 @@
             <dd class="font-semibold {% if latest.pre_assigned_driver != latest.courier_name %}text-amber-700 dark:text-amber-300{% else %}text-violet-900 dark:text-violet-200{% endif %}">
               {{ latest.pre_assigned_driver }}
               {% if latest.pre_assigned_driver != latest.courier_name and latest.courier_name %}
-              <span class="block text-[10px] text-amber-600 dark:text-amber-400">⚠ diferente do real ({{ latest.courier_name }})</span>
+              <span class="block text-[10px] text-amber-600 dark:text-amber-400">diferente do real ({{ latest.courier_name }})</span>
               {% endif %}
             </dd>
           </div>
@@ -816,8 +813,8 @@
           <i data-lucide="alert-triangle" class="w-4 h-4"></i>
           Problema de roteamento
         </h3>
-        {% if latest.wrong_hub_parcel %}<p class="text-xs text-amber-700 dark:text-amber-300">⚠ Wrong HUB Parcel</p>{% endif %}
-        {% if latest.arrive_wrong_hub %}<p class="text-xs text-amber-700 dark:text-amber-300">⚠ Chegou ao HUB errado</p>{% endif %}
+        {% if latest.wrong_hub_parcel %}<p class="text-xs text-amber-700 dark:text-amber-300">Hub errado Parcel</p>{% endif %}
+        {% if latest.arrive_wrong_hub %}<p class="text-xs text-amber-700 dark:text-amber-300">Chegou ao HUB errado</p>{% endif %}
         {% if latest.hub_exception_reason %}<p class="text-xs text-amber-700 dark:text-amber-300 mt-1">{{ latest.hub_exception_reason }}</p>{% endif %}
       </div>
       {% endif %}
@@ -938,7 +935,7 @@
           {% endif %}
           {% if planning.exception_type %}
           <div class="mt-2 px-2 py-1 bg-rose-100 dark:bg-rose-900/30 rounded text-rose-700 dark:text-rose-300">
-            <strong>⚠ {{ planning.exception_type }}</strong>
+            <strong>{{ planning.exception_type }}</strong>
             {% if planning.exception_reason %}
               <div class="text-[11px]">{{ planning.exception_reason }}</div>
             {% endif %}

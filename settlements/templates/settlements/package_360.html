@@ -7,24 +7,14 @@
 <div class="max-w-7xl mx-auto space-y-6">
 
   <!-- ── Header ──────────────────────────────────────────────────────────── -->
-  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-5 fade-in">
-    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-      <div class="flex items-center gap-3 min-w-0">
-        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center flex-shrink-0">
-          <i data-lucide="package-search" class="w-6 h-6 text-white"></i>
+  <div class="lf-page-header">
+    <div class="contents">
+      <div class="min-w-0">
+        <div class="flex flex-wrap items-center gap-2">
+          <h1 class="lf-page-title font-mono">{{ waybill }}</h1>
+          {% if package.task_status %}{% include "components/status_badge.html" with label=package.task_status|status_label tone=package.task_status|status_tone title=package.task_status %}{% endif %}
         </div>
-        <div class="min-w-0">
-          <div class="flex items-center gap-2 flex-wrap">
-            <h1 class="text-xl font-bold text-gray-900 dark:text-white font-mono truncate">{{ waybill }}</h1>
-            {% if package.task_status %}
-            <span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">{{ package.task_status }}</span>
-            {% endif %}
-          </div>
-          <p class="text-xs text-gray-500 dark:text-gray-400">
-            {% if package.lp_number %}LP: <span class="font-mono">{{ package.lp_number }}</span> · {% endif %}
-            Visão 360º do pacote
-          </p>
-        </div>
+        <p class="lf-page-subtitle">{% if package.lp_number %}LP: <span class="font-mono">{{ package.lp_number }}</span> · {% endif %}Tudo sobre este pacote</p>
       </div>
 
       <!-- Busca rápida: saltar para outro waybill -->
@@ -32,7 +22,7 @@
             onsubmit="event.preventDefault(); var v=this.wb.value.trim(); if(v){ window.location.href='/settlements/pacote/'+encodeURIComponent(v)+'/'; }">
         <div class="relative">
           <i data-lucide="search" class="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"></i>
-          <input type="text" name="wb" placeholder="Ir para waybill / LP…"
+          <input type="text" name="wb" placeholder="Ir para n.º de envio ou LP"
                  class="w-64 pl-9 pr-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
         </div>
         <a href="{% url 'cainiao-packages-page' %}"

@@ -8,22 +8,9 @@
   <!-- Header com Título e Ações -->
   <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 fade-in">
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-      <div class="flex items-start gap-4">
-        <div class="flex-shrink-0">
-          <div class="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-xl flex items-center justify-center">
-            <i data-lucide="alert-circle" class="w-6 h-6 text-red-600 dark:text-red-400"></i>
-          </div>
-        </div>
-        <div>
-          <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-1">
-            Reclamação #{{ claim.id }}
-          </h1>
-          <p class="text-sm text-gray-500 dark:text-gray-400">
-            <a href="{% url 'claim-list' %}" class="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
-              ← Voltar para Reclamações
-            </a>
-          </p>
-        </div>
+      <div class="min-w-0">
+        <h1 class="lf-page-title">Reclamação #{{ claim.id }}</h1>
+        <p class="lf-page-subtitle"><a class="underline" href="{% url 'claim-list' %}">Voltar a Reclamações</a></p>
       </div>
       <div class="flex flex-wrap gap-3">
         {% if claim.status == 'PENDING' %}
@@ -133,7 +120,7 @@
 
     <div x-show="open" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
       <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg mx-4 border border-gray-200 dark:border-gray-700 overflow-hidden">
-        <div class="bg-gradient-to-r from-green-500 to-emerald-600 px-6 py-4 flex items-center justify-between">
+        <div class="bg-emerald-700 px-6 py-4 flex items-center justify-between">
           <h3 class="text-base font-bold text-white">WhatsApp ao motorista</h3>
           <button @click="open = false" class="text-white/70 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
         </div>
@@ -289,7 +276,7 @@
     <!-- Coluna Direita: Cards Resumo -->
     <div class="space-y-6">
       <!-- Card Valor (editável se ainda não está num settlement) -->
-      <div class="bg-gradient-to-br from-red-600 to-red-700 dark:from-red-700 dark:to-red-800 rounded-xl shadow-sm p-6 text-white scale-in"
+      <div class="bg-brand-purple rounded-xl shadow-sm p-6 text-white scale-in"
            x-data="{ editing: false }">
         <div class="flex items-start justify-between mb-4">
           <h3 class="text-sm font-medium opacity-90">Valor da Reclamação</h3>

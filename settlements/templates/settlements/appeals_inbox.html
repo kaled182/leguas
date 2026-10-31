@@ -1,60 +1,58 @@
 {% extends 'settlements/base.html' %}
 {% load ui %}
 
-{% block title %}Central de Recursos{% endblock %}
+{% block title %}Recursos{% endblock %}
 
 {% block content %}
 <div class="w-full mx-auto space-y-6" x-data="recursosManager()">
 
-  <!-- Header -->
-  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-5 fade-in">
-    <div class="flex items-center gap-3">
-      <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
-        <i data-lucide="shield" class="w-6 h-6 text-white"></i>
-      </div>
-      <div>
-        <h1 class="text-xl font-bold text-gray-900 dark:text-white">Central de Recursos</h1>
-        <p class="text-sm text-gray-500 dark:text-gray-400">Disputas com o parceiro — junta provas, gera PDF e acompanha a quarentena de 60 dias</p>
-      </div>
+  <div class="lf-page-header">
+    <div class="min-w-0">
+      <h1 class="lf-page-title">Recursos</h1>
+      <p class="lf-page-subtitle">Disputas com o cliente: junte provas, gere o PDF e acompanhe a quarentena de 60 dias</p>
     </div>
   </div>
 
   <!-- KPIs -->
-  <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3">
-    <div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200/50 dark:border-gray-700/50">
-      <p class="text-xs uppercase font-bold text-gray-500">Aguardando envio</p>
-      <p class="text-2xl font-extrabold text-gray-900 dark:text-white mt-1">{{ kpis.aguardando }}</p>
+  <div class="lf-kpi-grid">
+<div class="lf-kpi">
+      <p class="lf-kpi-label">Aguardando envio</p>
+      <p class="lf-kpi-value">{{ kpis.aguardando }}</p>
     </div>
-    <a href="#sem-cobranca"
-       class="bg-purple-50 dark:bg-purple-900/20 rounded-xl p-4 border border-purple-200/50 dark:border-purple-700/30 transition-all hover:shadow-md">
-      <p class="text-xs uppercase font-bold text-purple-700 dark:text-purple-300">Sem cobrança</p>
-      <p class="text-2xl font-extrabold text-purple-700 dark:text-purple-300 mt-1">{{ kpis.sem_cobranca }}</p>
-      <p class="text-[10px] text-purple-600 mt-0.5">{{ kpis.sem_cobranca_total|eur }} a aguardar fatura</p>
+<a href="#sem-cobranca"
+       class="lf-kpi">
+      <p class="lf-kpi-label">Sem cobrança</p>
+      <p class="lf-kpi-value">{{ kpis.sem_cobranca }}</p>
+      <p class="lf-kpi-note">{{ kpis.sem_cobranca_total|eur }} a aguardar fatura</p>
     </a>
-    <div class="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 border border-blue-200/50 dark:border-blue-700/30">
-      <p class="text-xs uppercase font-bold text-blue-700 dark:text-blue-300">Em análise (parceiro)</p>
-      <p class="text-2xl font-extrabold text-blue-700 dark:text-blue-300 mt-1">{{ kpis.em_analise }}</p>
+<div class="lf-kpi">
+      <p class="lf-kpi-label">Em análise (parceiro)</p>
+      <p class="lf-kpi-value">{{ kpis.em_analise }}</p>
     </div>
-    <div class="bg-rose-50 dark:bg-rose-900/20 rounded-xl p-4 border border-rose-200/50 dark:border-rose-700/30">
-      <p class="text-xs uppercase font-bold text-rose-700 dark:text-rose-300">Prazo vencido</p>
-      <p class="text-2xl font-extrabold text-rose-700 dark:text-rose-300 mt-1">{{ kpis.vencidos }}</p>
+<div class="lf-kpi">
+      <p class="lf-kpi-label">Prazo vencido</p>
+      <p class="lf-kpi-value">{{ kpis.vencidos }}</p>
     </div>
-    <div class="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 border border-amber-200/50 dark:border-amber-700/30">
-      <p class="text-xs uppercase font-bold text-amber-700 dark:text-amber-300">Em quarentena</p>
-      <p class="text-2xl font-extrabold text-amber-700 dark:text-amber-300 mt-1">{{ kpis.total_quarentena|eur }}</p>
+</div>
+<details class="lf-more"><summary>Mais indicadores</summary>
+<div class="lf-kpi-grid">
+<div class="lf-kpi">
+      <p class="lf-kpi-label">Em quarentena</p>
+      <p class="lf-kpi-value">{{ kpis.total_quarentena|eur }}</p>
     </div>
-    <div class="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-4 border border-emerald-200/50 dark:border-emerald-700/30">
-      <p class="text-xs uppercase font-bold text-emerald-700 dark:text-emerald-300">Taxa aprovação</p>
-      <p class="text-2xl font-extrabold text-emerald-700 dark:text-emerald-300 mt-1">{% if kpis.taxa_aprovacao is not None %}{{ kpis.taxa_aprovacao }}%{% else %}—{% endif %}</p>
-      <p class="text-[10px] text-emerald-600 mt-0.5">{{ kpis.aprovados }} aceites · {{ kpis.negados }} negados</p>
+<div class="lf-kpi">
+      <p class="lf-kpi-label">Taxa aprovação</p>
+      <p class="lf-kpi-value">{% if kpis.taxa_aprovacao is not None %}{{ kpis.taxa_aprovacao }}%{% else %}—{% endif %}</p>
+      <p class="lf-kpi-note">{{ kpis.aprovados }} aceites · {{ kpis.negados }} negados</p>
     </div>
-    <a href="?show=fechados#fechados"
-       class="bg-gray-100 dark:bg-gray-700/40 rounded-xl p-4 border-2 transition-all hover:shadow-md {% if show_fechados %}border-indigo-400{% else %}border-transparent{% endif %}">
-      <p class="text-xs uppercase font-bold text-gray-600 dark:text-gray-300 flex items-center gap-1">Fechados <i data-lucide="archive" class="w-3.5 h-3.5"></i></p>
-      <p class="text-2xl font-extrabold text-gray-700 dark:text-gray-200 mt-1">{{ kpis.fechados }}</p>
-      <p class="text-[10px] text-gray-400 mt-0.5">clicar para listar</p>
+<a href="?show=fechados#fechados"
+       class="lf-kpi">
+      <p class="lf-kpi-label">Fechados <i data-lucide="archive" class="w-3.5 h-3.5"></i></p>
+      <p class="lf-kpi-value">{{ kpis.fechados }}</p>
+      <p class="lf-kpi-note">clicar para listar</p>
     </a>
-  </div>
+</div>
+</details>
 
   <!-- ░░ Aguardando envio ░░ -->
   <form method="post" action="{% url 'appeals-inbox' %}">

@@ -1,34 +1,19 @@
 {% extends 'settlements/base.html' %}
 {% load ui %}
 
-{% block title %}Suspeitas Suspeitas de entrega falsa (PUDO){% endblock %}
+{% block title %}Suspeitas de entrega falsa (PUDO){% endblock %}
 
 {% block content %}
 <div class="max-w-7xl mx-auto space-y-8">
 
-  <!-- Header -->
-  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 fade-in">
-    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-      <div>
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-          <i data-lucide="map-pinned" class="w-6 h-6 text-violet-600"></i>
-          Suspeitas Suspeitas de entrega falsa (PUDO)
-        </h1>
-        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          Pacotes PUDO marcados como Entregue cuja entrega real ficou a mais de
-          <strong>{{ tolerance_m }}m</strong> do destino.
-          Confirmar gera desconto de <strong>{{ penalty|eur }}</strong> ao motorista.
-        </p>
-      </div>
-      <div class="flex items-center gap-3">
-        <div class="px-3 py-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-300 text-sm font-medium">
-          <i data-lucide="alert-triangle" class="w-4 h-4 inline-block"></i>
-          {{ n_pending }} pendente{{ n_pending|pluralize }}
-        </div>
-        <div class="px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium">
-          {{ n_total }} total
-        </div>
-      </div>
+  <div class="lf-page-header">
+    <div class="min-w-0">
+      <h1 class="lf-page-title">Suspeitas de entrega falsa (PUDO)</h1>
+      <p class="lf-page-subtitle">Pacotes PUDO entregues a mais de {{ tolerance_m }} m do destino. Confirmar gera um desconto de {{ penalty|eur }} ao motorista.</p>
+    </div>
+    <div class="lf-page-actions">
+      {% include "components/status_badge.html" with label=n_pending|stringformat:"d"|add:" pendentes" tone="warning" %}
+      {% include "components/status_badge.html" with label=n_total|stringformat:"d"|add:" no total" tone="neutral" %}
     </div>
   </div>
 
@@ -118,11 +103,11 @@
     </div>
     {# Mensagens accionáveis quando o funil "morre" #}
     {% if not stats.partner_pudo_enabled %}
-      <p class="mt-2 text-xs text-rose-600">⚠ PUDO desactivado no parceiro CAINIAO — atualiza em /core/partners/.</p>
+      <p class="mt-2 text-xs text-rose-600">PUDO desactivado no parceiro CAINIAO — atualiza em /core/partners/.</p>
     {% elif not stats.n_pudo_delivered %}
-      <p class="mt-2 text-xs text-rose-600">⚠ Nenhuma task PUDO Entregue no período. Confirma o intervalo de datas ou se as importações têm <code>delivery_type='PUDO'</code>.</p>
+      <p class="mt-2 text-xs text-rose-600">Nenhuma task PUDO Entregue no período. Confirma o intervalo de datas ou se as importações têm <code>delivery_type='PUDO'</code>.</p>
     {% elif not stats.n_with_coords %}
-      <p class="mt-2 text-xs text-rose-600">⚠ Há {{ stats.n_pudo_delivered }} tasks PUDO mas <strong>nenhuma com coordenadas</strong> (receiver_lat/lng + actual_lat/lng). O importador não está a popular estes campos.</p>
+      <p class="mt-2 text-xs text-rose-600">Há {{ stats.n_pudo_delivered }} tasks PUDO mas <strong>nenhuma com coordenadas</strong> (receiver_lat/lng + actual_lat/lng). O importador não está a popular estes campos.</p>
     {% elif not stats.n_above_tolerance %}
       <p class="mt-2 text-xs text-gray-500">Todas as tasks PUDO estão dentro da tolerância de {{ stats.tolerance_m }}m — sem suspeitos.</p>
     {% endif %}
@@ -162,7 +147,7 @@
                 {{ s.driver.nome_completo }}
                 <div class="text-xs text-gray-500 dark:text-gray-400">{{ s.courier_name }}</div>
               {% else %}
-                <span class="text-amber-600 dark:text-amber-400 text-xs">⚠ não resolvido</span>
+                <span class="text-amber-600 dark:text-amber-400 text-xs">não resolvido</span>
                 <div class="text-xs text-gray-500 dark:text-gray-400">{{ s.courier_name }}</div>
               {% endif %}
             </td>

@@ -1,32 +1,19 @@
 {% extends 'settlements/base.html' %}
 {% load ui %}
 
-{% block title %}Reclamações de Motoristas{% endblock %}
+{% block title %}Reclamações{% endblock %}
 
 {% block content %}
 <div class="w-full mx-auto space-y-6">
 
-  <!-- Header -->
-  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 fade-in">
-    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-      {% if is_appeals_area %}
-        {% include 'settlements/partials/financial_header.html' with page_title="Recursos de Claims" page_subtitle="Claims contestados, ligados ao protocolo de reclamações e aguardando decisão" icon="shield" %}
-      {% else %}
-        {% include 'settlements/partials/financial_header.html' with page_title="Reclamações de Motoristas" page_subtitle="Claims financeiros integrados com reclamações de clientes" icon="alert-circle" %}
-      {% endif %}
-      <div class="flex flex-wrap gap-2">
-        <a href="{% url 'claim-appeals' %}"
-           class="flex-shrink-0 inline-flex items-center gap-2 px-4 py-2 {% if is_appeals_area %}bg-blue-700 text-white{% else %}bg-blue-600 hover:bg-blue-700 text-white{% endif %} rounded-lg font-medium transition-colors duration-200">
-          <i data-lucide="shield" class="w-4 h-4"></i>
-          Recursos
-        </a>
-        <button
-          onclick="document.getElementById('modalNovaClaim').classList.remove('hidden')"
-          class="flex-shrink-0 inline-flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors duration-200">
-          <i data-lucide="plus" class="w-4 h-4"></i>
-          Nova Reclamação
-        </button>
-      </div>
+  <div class="lf-page-header">
+    <div class="min-w-0">
+      <h1 class="lf-page-title">{% if is_appeals_area %}Recursos de reclamações{% else %}Reclamações{% endif %}</h1>
+      <p class="lf-page-subtitle">{% if is_appeals_area %}Reclamações contestadas, ligadas ao processo de recurso{% else %}Descontos a motoristas e a sua entrada nas pré-faturas{% endif %}</p>
+    </div>
+    <div class="lf-page-actions">
+      <a href="{% url 'claim-appeals' %}" class="lf-btn lf-btn-ghost"><i data-lucide="shield" class="w-4 h-4" aria-hidden="true"></i>Recursos</a>
+      <button type="button" onclick="document.getElementById('modalNovaClaim').classList.remove('hidden')" class="lf-btn lf-btn-primary"><i data-lucide="plus" class="w-4 h-4" aria-hidden="true"></i>Nova reclamação</button>
     </div>
   </div>
 
@@ -45,38 +32,42 @@
   {% endif %}
 
   <!-- KPIs integrados -->
-  <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
-    <div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200/50 dark:border-gray-700/50">
-      <p class="text-xs uppercase font-bold text-gray-500">Total</p>
-      <p class="text-2xl font-extrabold text-gray-900 dark:text-white mt-1">{{ claim_kpis.total }}</p>
+  <div class="lf-kpi-grid">
+<div class="lf-kpi">
+      <p class="lf-kpi-label">Total</p>
+      <p class="lf-kpi-value">{{ claim_kpis.total }}</p>
     </div>
-    <div class="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 border border-amber-200/50 dark:border-amber-700/30">
-      <p class="text-xs uppercase font-bold text-amber-700 dark:text-amber-300">Pendentes</p>
-      <p class="text-2xl font-extrabold text-amber-700 dark:text-amber-300 mt-1">{{ claim_kpis.pending }}</p>
-      <p class="text-[10px] text-amber-600 mt-0.5">{{ claim_kpis.pending_amount|eur }}</p>
+<div class="lf-kpi">
+      <p class="lf-kpi-label">Pendentes</p>
+      <p class="lf-kpi-value">{{ claim_kpis.pending }}</p>
+      <p class="lf-kpi-note">{{ claim_kpis.pending_amount|eur }}</p>
     </div>
-    <div class="bg-rose-50 dark:bg-rose-900/20 rounded-xl p-4 border border-rose-200/50 dark:border-rose-700/30">
-      <p class="text-xs uppercase font-bold text-rose-700 dark:text-rose-300">Aprovados</p>
-      <p class="text-2xl font-extrabold text-rose-700 dark:text-rose-300 mt-1">{{ claim_kpis.approved }}</p>
-      <p class="text-[10px] text-rose-600 mt-0.5">{{ claim_kpis.approved_amount|eur }}</p>
+<div class="lf-kpi">
+      <p class="lf-kpi-label">Aprovados</p>
+      <p class="lf-kpi-value">{{ claim_kpis.approved }}</p>
+      <p class="lf-kpi-note">{{ claim_kpis.approved_amount|eur }}</p>
     </div>
-    <div class="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 border border-blue-200/50 dark:border-blue-700/30">
-      <p class="text-xs uppercase font-bold text-blue-700 dark:text-blue-300">Em recurso</p>
-      <p class="text-2xl font-extrabold text-blue-700 dark:text-blue-300 mt-1">{{ claim_kpis.appealed }}</p>
+<div class="lf-kpi">
+      <p class="lf-kpi-label">Em recurso</p>
+      <p class="lf-kpi-value">{{ claim_kpis.appealed }}</p>
     </div>
-    <div class="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-4 border border-emerald-200/50 dark:border-emerald-700/30">
-      <p class="text-xs uppercase font-bold text-emerald-700 dark:text-emerald-300">Rejeitados</p>
-      <p class="text-2xl font-extrabold text-emerald-700 dark:text-emerald-300 mt-1">{{ claim_kpis.rejected }}</p>
+</div>
+<details class="lf-more"><summary>Mais indicadores</summary>
+<div class="lf-kpi-grid">
+<div class="lf-kpi">
+      <p class="lf-kpi-label">Rejeitados</p>
+      <p class="lf-kpi-value">{{ claim_kpis.rejected }}</p>
     </div>
-    <div class="bg-violet-50 dark:bg-violet-900/20 rounded-xl p-4 border border-violet-200/50 dark:border-violet-700/30">
-      <p class="text-xs uppercase font-bold text-violet-700 dark:text-violet-300">Com chamado</p>
-      <p class="text-2xl font-extrabold text-violet-700 dark:text-violet-300 mt-1">{{ claim_kpis.linked_complaints }}</p>
+<div class="lf-kpi">
+      <p class="lf-kpi-label">Com chamado</p>
+      <p class="lf-kpi-value">{{ claim_kpis.linked_complaints }}</p>
     </div>
-    <div class="bg-orange-50 dark:bg-orange-900/20 rounded-xl p-4 border border-orange-200/50 dark:border-orange-700/30">
-      <p class="text-xs uppercase font-bold text-orange-700 dark:text-orange-300">Prazo vencido</p>
-      <p class="text-2xl font-extrabold text-orange-700 dark:text-orange-300 mt-1">{{ claim_kpis.overdue_complaints }}</p>
+<div class="lf-kpi">
+      <p class="lf-kpi-label">Prazo vencido</p>
+      <p class="lf-kpi-value">{{ claim_kpis.overdue_complaints }}</p>
     </div>
-  </div>
+</div>
+</details>
 
   <!-- Filtros -->
   <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 slide-in">
@@ -110,7 +101,7 @@
           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-red-500">
       </div>
       <div class="md:col-span-4 flex gap-2">
-        <button type="submit" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors duration-200 flex items-center gap-2">
+        <button type="submit" class="lf-btn lf-btn-primary">
           <i data-lucide="search" class="w-4 h-4"></i>
           Filtrar
         </button>

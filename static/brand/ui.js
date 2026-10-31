@@ -95,5 +95,18 @@
     }
   });
 
+  const STATUS_LABELS = {
+    'Delivered': 'Entregue', 'Attempt Failure': 'Falhada', 'Driver_received': 'Em distribuição',
+    'Assigned': 'Atribuído', 'Unassign': 'Por atribuir', 'Stale_Armazem': 'Parado no armazém',
+    'Wrong HUB': 'Hub errado', 'Exception': 'Exceção',
+  };
+
+  // Datas ISO da API passam a dd/mm/aaaa, com a hora quando existe.
+  window.lfDate = (value) => {
+    const match = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}:\d{2}))?/);
+    if (!match) return value || '';
+    return `${match[3]}/${match[2]}/${match[1]}${match[4] ? ` ${match[4]}` : ''}`;
+  };
+  window.lfStatus = (value) => STATUS_LABELS[value] || value;
   window.lfToast = toast;
 })();

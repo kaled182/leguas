@@ -2554,10 +2554,16 @@ def cainiao_hub_delete(request, hub_id):
     """POST — apaga o HUB (e os seus CP4s em cascata)."""
     from django.db.models import ProtectedError
 
+    from drivers_app.services_hubs import retire_hub
+
     from .models import CainiaoHub
     hub = get_object_or_404(CainiaoHub, id=hub_id)
     try:
-        hub.delete()
+        # Sem CP no parceiro, as fichas seguem os CP para o novo hub.
+        if hub.cp4_codes.exists():
+            hub.delete()
+        else:
+            retire_hub(hub)
     except ProtectedError as exc:
         drivers = sorted(
             obj.driver.apelido or obj.driver.nome_completo

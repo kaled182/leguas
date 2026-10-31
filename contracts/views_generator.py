@@ -32,16 +32,20 @@ def _ficha_url(driver_id):
 
 
 def _hub_payload(driver):
-    from drivers_app.services_hubs import hub_options
+    from drivers_app.services_hubs import driver_cp_selection, hub_options
 
-    assigned = {a.hub_id: a for a in driver.hub_assignments.all()}
-    primary = next((a.hub_id for a in assigned.values() if a.is_primary), None)
+    options = hub_options()
+    chosen, negotiated = driver_cp_selection(driver)
+    shown = {opt["hub"].id for opt in options}
+    primary = next(
+        (a.hub_id for a in driver.hub_assignments.all() if a.is_primary and a.hub_id in shown),
+        None,
+    )
     hubs = []
-    for opt in hub_options():
+    for opt in options:
         hub, terms = opt["hub"], opt["terms"]
-        a = assigned.get(hub.id)
-        chosen = set(a.cp4s) if a else set()
-        negotiated = (a.cp_prices or {}) if a else {}
+        if primary is None and chosen & {cp["cp4"] for cp in opt["cps"]}:
+            primary = hub.id
         hubs.append({
             "id": hub.id,
             "name": hub.name,

@@ -17,7 +17,7 @@ from .models import (
     DriverProfileEditLog,
 )
 from .services_hubs import (
-    contract_completeness, driver_hub_suggestions, hub_options,
+    contract_completeness, driver_cp_selection, driver_hub_suggestions, hub_options,
     is_placeholder_email, is_placeholder_phone,
 )
 
@@ -264,15 +264,18 @@ def driver_ficha(request, driver_id):
     pct, missing = contract_completeness(driver)
     assignments = {a.hub_id: a for a in driver.hub_assignments.select_related("hub")}
     options = hub_options()
+    selected, negotiated = driver_cp_selection(driver)
     for opt in options:
         a = assignments.get(opt["hub"].id)
-        opt["assigned"] = a is not None
-        opt["primary"] = bool(a and a.is_primary)
-        selected = set(a.cp4s) if a else set()
-        negotiated = (a.cp_prices or {}) if a else {}
         for cp in opt["cps"]:
             cp["checked"] = cp["cp4"] in selected
             cp["negotiated"] = negotiated.get(cp["cp4"], "") if cp["checked"] else ""
+        opt["assigned"] = a is not None or any(cp["checked"] for cp in opt["cps"])
+        opt["primary"] = bool(a and a.is_primary)
+    # O hub principal pode já não existir no parceiro.
+    shown = [opt for opt in options if opt["assigned"]]
+    if shown and not any(opt["primary"] for opt in shown):
+        shown[0]["primary"] = True
     suggestions = driver_hub_suggestions(driver)
 
     from contracts.models import GeneratedContract

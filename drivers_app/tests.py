@@ -489,7 +489,7 @@ class ContractGeneratorTests(TestCase):
         from decimal import Decimal
 
         from contracts.models import HubContractTerms, HubZoneTariff
-        from settlements.models import CainiaoHub
+        from settlements.models import CainiaoHub, CainiaoHubCP4
 
         from .models import DriverHubAssignment
 
@@ -507,6 +507,8 @@ class ContractGeneratorTests(TestCase):
         HubZoneTariff.objects.create(hub=self.fao, cp4="4740", zone_name="Esposende", tier="A", price_monthly=Decimal("0.95"), price_weekly=Decimal("0.90"))
         HubZoneTariff.objects.create(hub=self.fao, cp4="4920", zone_name="Cerveira", tier="C", price_monthly=Decimal("1.15"), price_weekly=Decimal("1.10"))
         HubZoneTariff.objects.create(hub=self.ave, cp4="3880", zone_name="Ovar", price_monthly=Decimal("1.00"))
+        for hub, cp in ((self.fao, "4740"), (self.fao, "4920"), (self.ave, "3880")):
+            CainiaoHubCP4.objects.create(hub=hub, cp4=cp)
         DriverHubAssignment.objects.create(driver=self.d, hub=self.fao, cp4s=["4740", "4920"], is_primary=True)
         DriverHubAssignment.objects.create(driver=self.d, hub=self.ave, cp4s=["3880"])
 
@@ -645,7 +647,7 @@ class CpPricingTests(TestCase):
 
         from contracts.models import ContractSettings, HubContractTerms, HubZoneTariff
         from core.models import Partner
-        from settlements.models import CainiaoHub
+        from settlements.models import CainiaoHub, CainiaoHubCP4
 
         from .models import DriverHubAssignment
 
@@ -665,6 +667,8 @@ class CpPricingTests(TestCase):
                 hub=self.hub, cp4=cp, zone_name=cp, price_monthly=Decimal(pm),
                 price_weekly=Decimal(pw), valid_from=date(2026, 1, 1),
             )
+        for cp in ("4740", "4920", "4900"):
+            CainiaoHubCP4.objects.create(hub=self.hub, cp4=cp)
         self.drv = _driver("700000001", apelido="Cp_LF")
         self.drv.price_per_package = Decimal("1.20")  # preço individual antigo
         self.drv.save()
@@ -749,6 +753,78 @@ class CpPricingTests(TestCase):
         })
         a = self.drv.hub_assignments.get()
         self.assertEqual(a.cp_prices, {"4740": "1.05"})
+
+
+class PartnerHubConfigTests(TestCase):
+    """A ficha segue os hubs e CP configurados no parceiro."""
+
+    def setUp(self):
+        from datetime import date
+        from decimal import Decimal
+
+        from contracts.models import HubZoneTariff
+        from settlements.models import CainiaoHub, CainiaoHubCP4
+
+        from .models import DriverHubAssignment
+
+        self.fao = CainiaoHub.objects.create(name="Fão")
+        self.porto = CainiaoHub.objects.create(name="Porto")
+        CainiaoHubCP4.objects.create(hub=self.fao, cp4="4480")
+        CainiaoHubCP4.objects.create(hub=self.fao, cp4="4900")
+        self.tariff = HubZoneTariff.objects.create(
+            hub=self.porto, cp4="4480", zone_name="Porto",
+            price_monthly=Decimal("1.10"), valid_from=date(2026, 1, 1),
+        )
+        HubZoneTariff.objects.create(
+            hub=self.porto, cp4="4970", zone_name="Arcos",
+            price_monthly=Decimal("1.20"), valid_from=date(2026, 1, 1),
+        )
+        self.drv = _driver("710000001", apelido="Hub_LF")
+        self.a_porto = DriverHubAssignment.objects.create(
+            driver=self.drv, hub=self.porto, is_primary=True,
+            cp4s=["4480", "4970"], cp_prices={"4480": "1.40", "4970": "1.30"},
+        )
+        DriverHubAssignment.objects.create(
+            driver=self.drv, hub=self.fao, cp4s=["4900"], cp_prices={"4900": "1.30"},
+        )
+
+    def test_options_only_show_partner_hubs_and_cps(self):
+        from .services_hubs import hub_options
+
+        opts = hub_options()
+        self.assertEqual([o["hub"].name for o in opts], ["Fão"])
+        self.assertEqual([c["cp4"] for c in opts[0]["cps"]], ["4480", "4900"])
+        self.assertEqual(opts[0]["cps"][0]["zone"], "Porto")
+
+    def test_selection_keeps_value_and_drops_extinct_cp(self):
+        from .services_hubs import driver_cp_selection
+
+        chosen, negotiated = driver_cp_selection(self.drv)
+        self.assertEqual(chosen, {"4480", "4900"})
+        self.assertEqual(negotiated, {"4480": "1.40", "4900": "1.30"})
+
+    def test_retire_hub_moves_profile_and_tariff(self):
+        from .services_hubs import retire_hub
+
+        retire_hub(self.porto)
+        a = self.drv.hub_assignments.get()
+        self.assertEqual(a.hub_id, self.fao.id)
+        self.assertTrue(a.is_primary)
+        self.assertEqual(a.cp4s, ["4480", "4900"])
+        self.assertEqual(a.cp_prices, {"4480": "1.40", "4900": "1.30"})
+        self.tariff.refresh_from_db()
+        self.assertEqual(self.tariff.hub_id, self.fao.id)
+
+    def test_saving_ficha_moves_cp_to_partner_hub(self):
+        admin = User.objects.create_user("adm6", password="x", is_staff=True, is_superuser=True)
+        self.client.force_login(admin)
+        self.client.post(reverse("drivers_app:driver_admin_edit", args=[self.drv.id]), {
+            "section": "hubs", f"cp_{self.fao.id}": ["4480", "4900"],
+            "primary_hub": str(self.fao.id),
+            f"cpp_{self.fao.id}_4480": "1.40", f"cpp_{self.fao.id}_4900": "1.30",
+        })
+        a = self.drv.hub_assignments.get()
+        self.assertEqual((a.hub_id, a.cp4s), (self.fao.id, ["4480", "4900"]))
 
 
 class CopyIndividualPriceCommandTests(TestCase):

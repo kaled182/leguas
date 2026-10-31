@@ -43,13 +43,13 @@ class CpPricer:
         self.negotiated = {}
         if not self.active:
             return
-        # order_by: o hub principal fica por último e tem prioridade.
-        for a in driver.hub_assignments.order_by("is_primary"):
-            prices = a.cp_prices or {}
-            for cp in a.cp4s or []:
-                d = _dec(prices.get(cp))
-                if d:
-                    self.negotiated[cp] = d
+        from .services_hubs import driver_cp_selection
+
+        chosen, negotiated = driver_cp_selection(driver)
+        for cp in chosen:
+            d = _dec(negotiated.get(cp))
+            if d:
+                self.negotiated[cp] = d
 
     def price(self, zip_code):
         cp = (zip_code or "").strip()[:4]

@@ -81,14 +81,14 @@ def _get_driver_courier_names(driver):
 
 
 def _other_driver_courier_names(this_driver):
-    """Cache leve: courier_names de OUTROS drivers (apelido +
-    DriverCourierMapping.courier_name). Usado para excluir tasks com
-    courier_id partilhado mas courier_name de outro driver real
-    (bug do EPOD em que o id do hub aparece em entregas de drivers
-    normais).
+    """Cache leve: courier_names de OUTROS drivers (apelido,
+    DriverCourierMapping.courier_name e aliases dos seus logins). Usado
+    para excluir tasks com courier_id partilhado mas courier_name de
+    outro driver real (bug do EPOD em que o id do hub aparece em entregas
+    de drivers normais).
     """
     from .models import DriverProfile
-    from settlements.models import DriverCourierMapping
+    from settlements.models import CourierNameAlias, DriverCourierMapping
 
     own_id = this_driver.id
     names = set()
@@ -102,6 +102,17 @@ def _other_driver_courier_names(this_driver):
     ).exclude(courier_name="").values_list("courier_name", flat=True):
         if cn:
             names.add(cn)
+    # Aliases: o nome pertence ao dono do courier_id, como em _courier_index.
+    other_ids = set(DriverProfile.objects.exclude(id=own_id).exclude(
+        courier_id_cainiao="",
+    ).values_list("courier_id_cainiao", flat=True))
+    other_ids |= set(DriverCourierMapping.objects.filter(
+        partner__name__iexact="CAINIAO",
+    ).exclude(driver_id=own_id).values_list("courier_id", flat=True))
+    other_ids -= _driver_courier_keys(this_driver)[0]
+    names.update(CourierNameAlias.objects.filter(
+        partner__name__iexact="CAINIAO", courier_id__in=other_ids,
+    ).exclude(courier_name="").values_list("courier_name", flat=True))
     return names
 
 

@@ -96,6 +96,51 @@ class ActivityMappingTests(TestCase):
         self.assertEqual(last_activity_map(self.today)[a.id], self.today - timedelta(days=1))
 
 
+class PortalAliasOwnerTests(TestCase):
+    """O portal e a regra de atividade dão a mesma task ao mesmo motorista."""
+
+    def setUp(self):
+        from core.models import Partner
+        from settlements.models import CourierNameAlias
+
+        self.today = timezone.localdate()
+        self.partner = Partner.objects.create(
+            name="CAINIAO", nif="500000000", contact_email="c@x.pt",
+        )
+        self.old = _driver("400000001", apelido="Antigo_LF", cid="C-OLD")
+        self.new = _driver("400000002", apelido="Novo_LF", cid="C-NEW")
+        CourierNameAlias.objects.create(
+            partner=self.partner, courier_name="Renomeado_LF",
+            courier_id="C-NEW", source="manual",
+        )
+
+    def _portal(self, driver):
+        from .portal_views import _driver_base_queryset
+
+        return set(_driver_base_queryset(driver, self.today, self.today)
+                   .values_list("waybill_number", flat=True))
+
+    def test_stale_id_does_not_count_for_previous_owner(self):
+        _task("W20", self.today, name="Renomeado_LF", cid="C-OLD")
+        self.assertEqual(self._portal(self.old), set())
+        self.assertEqual(self._portal(self.new), {"W20"})
+        self.assertEqual(last_activity_map(self.today), {self.new.id: self.today})
+
+    def test_alias_of_own_id_still_counts(self):
+        _task("W21", self.today, name="Renomeado_LF", cid="C-NEW")
+        self.assertEqual(self._portal(self.new), {"W21"})
+
+    def test_alias_of_unowned_id_keeps_id_match(self):
+        from settlements.models import CourierNameAlias
+
+        CourierNameAlias.objects.create(
+            partner=self.partner, courier_name="Sem_Dono_LF",
+            courier_id="C-NONE", source="manual",
+        )
+        _task("W22", self.today, name="Sem_Dono_LF", cid="C-OLD")
+        self.assertEqual(self._portal(self.old), {"W22"})
+
+
 class RefreshActivityTests(TestCase):
     def test_inactivate_and_reactivate(self):
         today = timezone.localdate()

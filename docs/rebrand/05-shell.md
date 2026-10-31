@@ -22,7 +22,7 @@
 | Item | Motivo |
 |---|---|
 | Heróis gradiente | Passam a usar a marca, mas continuam. Cada um tem ações próprias: Fase 3 |
-| Seletor de hub e data na topbar | Decisão pedida. O Dashboard não tem filtro por hub |
+| Seletor de hub e data na topbar | Retirado em 2026-10-31, por decisão. O Dashboard não tem filtro por hub |
 | Precisa de atenção | Vista nova: Fase 3 |
 | Portais, login e `converter` | Layout próprio, ainda com CDN: Fase 3 |
 

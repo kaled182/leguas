@@ -49,7 +49,7 @@ Todos os pares passam WCAG AA (4,5:1) nos 2 temas.
 
 ## Cores acrescentadas à secção 5
 
-**Precisa de validação:** estas cores não estão no manual.
+**Aprovadas em 2026-10-31.** Estas cores não estão no manual.
 
 - **Tema escuro:** superfícies `#2A1138` e `#351B45`. O manual só define o fundo `#1C0627`.
 - **Estados:** fundos e textos derivados, porque `--success`, `--danger` e `--warning` não passam AA em texto pequeno.

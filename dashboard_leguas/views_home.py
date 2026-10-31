@@ -63,7 +63,8 @@ class DashboardView(TemplateView):
         )
 
         ctx = super().get_context_data(**kwargs)
-        T = CainiaoOperationTask.objects
+        # Uma baixa não é operação da Léguas: fica fora de todos os KPIs.
+        T = CainiaoOperationTask.objects.exclude(task_status="Baixa")
 
         today = timezone.localdate()
         try:

@@ -99,6 +99,8 @@
     'Delivered': 'Entregue', 'Attempt Failure': 'Falhada', 'Driver_received': 'Em distribuição',
     'Assigned': 'Atribuído', 'Unassign': 'Por atribuir', 'Stale_Armazem': 'Parado no armazém',
     'Wrong HUB': 'Hub errado', 'Exception': 'Exceção',
+    'Cancel': 'Retirado da rota', 'Baixa': 'Baixa', 'Driver_received_incidence': 'Recebido anormal',
+    'Return to seller success': 'Devolvido ao remetente',
   };
 
   // Datas ISO da API passam a dd/mm/aaaa, com a hora quando existe.

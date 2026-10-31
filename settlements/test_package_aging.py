@@ -67,3 +67,9 @@ class PackageAgingTests(TestCase):
         mark_stale_armazem()
         self.assertEqual(self._status(task)[0], "Driver_received")
 
+    def test_open_task_with_old_date_rolls_to_today(self):
+        """O CES exporta tarefas abertas com Task Date antiga."""
+        task = self._task("LF7", seen_days_ago=0, date_days_ago=60)
+        roll_forward_active_packages()
+        self.assertEqual(self._status(task), ("Driver_received", timezone.now().date()))
+

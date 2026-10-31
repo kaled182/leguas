@@ -251,22 +251,20 @@ def roll_forward_active_packages(threshold_days=None, dry_run=False):
     threshold_days = int(threshold_days)
 
     today = timezone.now().date()
-    cutoff_old = today - timedelta(days=threshold_days)
     seen_cutoff = timezone.now() - timedelta(days=threshold_days)
 
-    # Pacotes Driver_received com task_date < hoje, data >= hoje - threshold
-    # e novidade recente. Excluímos hoje (já estão lá) e o resto vai para stale.
+    # Tarefas abertas com novidade recente, mesmo com Task Date antiga: o CES
+    # exporta-as enquanto estiverem abertas. O resto vai para stale.
     qs = _with_last_seen(CainiaoOperationTask.objects.filter(
         task_status="Driver_received",
         task_date__lt=today,
-        task_date__gte=cutoff_old,
     )).filter(last_seen__gt=seen_cutoff)
 
     total = qs.count()
     if total == 0:
         logger.info(
             "[RollForward] sem pacotes activos a mover (today=%s, cutoff=%s).",
-            today, cutoff_old,
+            today, seen_cutoff,
         )
         return {
             "rolled": 0, "today": str(today),

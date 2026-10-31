@@ -642,3 +642,22 @@ class PublicRegistrationTests(TestCase):
             self.assertNotContains(r, "cdn.tailwindcss.com")
             self.assertContains(r, "registration-form")
 
+
+class WriteOffStatusTests(TestCase):
+    def test_write_off_stays_out_of_daily_volume(self):
+        from django.utils import timezone
+
+        from settlements.models import CainiaoOperationTask
+
+        today = timezone.localdate()
+        for waybill, status in (("LF1", "Delivered"), ("LF2", "Baixa"), ("LF3", "Cancel")):
+            CainiaoOperationTask.objects.create(waybill_number=waybill, task_date=today, task_status=status)
+        self.client.force_login(User.objects.create_superuser("g", password="x"))
+        r = self.client.get("/")
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.context["kpis"]["total"] if "kpis" in r.context else sum(r.context["status_counts"].values()), 2)
+
+    def test_status_labels(self):
+        self.assertEqual(status_label("Cancel"), "Retirado da rota")
+        self.assertEqual(status_label("Driver_received_incidence"), "Recebido anormal")
+

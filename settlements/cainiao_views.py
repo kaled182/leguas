@@ -925,8 +925,35 @@ def cainiao_operation_audit(request):
 # O CES usa outro nome para o mesmo estado em alguns exports.
 _STATUS_ALIASES = {
     "Driver pick up": "Driver_received",
-    "Driver_received_incidence": "Driver_received",
+    "Driver received incidence": "Driver_received_incidence",
 }
+_OPEN_STATUSES = ("Driver_received", "Driver_received_incidence")
+
+
+def _is_new_task(old_status, old_date, new_status, new_date):
+    """Regras do ReliableMaps: o estado do pacote é o da tarefa mais recente.
+
+    Uma entrega nunca recua por aqui: as divergências ficam para revisão.
+    """
+    if old_status == "Attempt Failure":
+        return new_status in _OPEN_STATUSES and new_date > old_date
+    if old_status in _OPEN_STATUSES + ("Assigned",):
+        return new_status == "Cancel" and new_date >= old_date
+    return False
+
+
+def _keeps_failure_row(old_status, old_date, new_date):
+    """A falha conta no dia em que aconteceu, mesmo com nova tarefa depois."""
+    return old_status == "Attempt Failure" and new_date > old_date
+
+
+def _pick_current_row(cur, new, priority):
+    """Linha que representa o pacote quando há mais do que uma data."""
+    if cur["task_status"] == "Attempt Failure" and new["task_status"] in _OPEN_STATUSES:
+        return new if new["task_date"] > cur["task_date"] else cur
+    if new["task_status"] == "Attempt Failure" and cur["task_status"] in _OPEN_STATUSES:
+        return cur if cur["task_date"] > new["task_date"] else new
+    return new if priority.get(new["task_status"], 0) > priority.get(cur["task_status"], 0) else cur
 
 
 def _apply_status_aliases(rows, header_idx, status_idx):
@@ -1052,11 +1079,18 @@ def import_operation_file(content, filename, user=None):
                 return dt.date()
         return None
 
-    STATUS_PRIORITY = {"Delivered": 4, "Attempt Failure": 3, "Driver_received": 2, "Assigned": 1, "Unassign": 0, "Cancel": -1}
+    STATUS_PRIORITY = {
+        "Delivered": 4, "Attempt Failure": 3, "Return to seller success": 3,
+        "Driver_received": 2, "Driver_received_incidence": 2, "Assigned": 1,
+        "Unassign": 0, "Baixa": 0, "Cancel": -1,
+    }
     # Cancel é incluído para preservar histórico (driver pegou e devolveu/
     # passou para outro). Não é considerado nas KPIs de operação porque
     # core/views.py filtra explicitamente os 5 status operacionais.
-    _VALID = {"Delivered", "Driver_received", "Attempt Failure", "Unassign", "Assigned", "Cancel"}
+    _VALID = {
+        "Delivered", "Driver_received", "Driver_received_incidence", "Attempt Failure",
+        "Unassign", "Assigned", "Cancel", "Return to seller success",
+    }
 
     from collections import defaultdict
     from .models import (
@@ -1289,15 +1323,9 @@ def import_operation_file(content, filename, user=None):
     ):
         wb = r["waybill_number"]
         cur = existing_full.get(wb)
-        # Em caso de múltiplas rows (datas diferentes), ficamos com a
-        # de maior priority como representante do "estado vigente".
-        if cur is None:
-            existing_full[wb] = r
-        else:
-            cur_pri = STATUS_PRIORITY.get(cur["task_status"], 0)
-            new_pri = STATUS_PRIORITY.get(r["task_status"], 0)
-            if new_pri > cur_pri:
-                existing_full[wb] = r
+        # Em caso de múltiplas rows (datas diferentes), a representante é a
+        # do "estado vigente": uma falha antiga não tapa uma tarefa nova.
+        existing_full[wb] = _pick_current_row(cur, r, STATUS_PRIORITY) if cur else r
 
     # Atalho para o resto do código que só precisa de (date, status)
     existing_by_waybill = {
@@ -1342,7 +1370,9 @@ def import_operation_file(content, filename, user=None):
             old_status = existing_main["task_status"]
             old_courier = existing_main["courier_name"]
             old_priority = STATUS_PRIORITY.get(old_status, 0)
-            if new_priority < old_priority:
+            if new_priority < old_priority and not _is_new_task(
+                old_status, old_date, new_status, smart_dt,
+            ):
                 # Downgrade: manter na data antiga e não tocar no status
                 is_status_upgrade = False
                 target_date = old_date
@@ -1360,7 +1390,8 @@ def import_operation_file(content, filename, user=None):
             elif old_date != smart_dt:
                 # MOVE-DATE: status válido para upgrade mas data mudou
                 # → apaga row antiga e insere em smart_date
-                waybills_to_delete.append((waybill, old_date))
+                if not _keeps_failure_row(old_status, old_date, smart_dt):
+                    waybills_to_delete.append((waybill, old_date))
                 audit["waybills_moved_date"] += 1
                 if len(audit["moved_date_examples"]) < 20:
                     audit["moved_date_examples"].append({

@@ -19,6 +19,10 @@ CAINIAO_STATUS = {
     "Stale_Armazem": ("Parado no armazém", "warning"),
     "Wrong HUB": ("Hub errado", "neutral"),
     "Exception": ("Exceção", "danger"),
+    "Cancel": ("Retirado da rota", "neutral"),
+    "Baixa": ("Baixa", "neutral"),
+    "Driver_received_incidence": ("Recebido anormal", "warning"),
+    "Return to seller success": ("Devolvido ao remetente", "neutral"),
 }
 
 # Estado de ReliableEpodSync: (texto, tom).

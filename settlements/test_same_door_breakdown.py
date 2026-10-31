@@ -178,17 +178,15 @@ class BreakdownPagesTests(TestCase):
         r = self.client.get(reverse("drivers_app:driver_portal", args=[self.d.id]))
         self.assertEqual(r.status_code, 200)
         self.assertContains(r, "mesma porta")
-        urls = [
-            reverse("drivers_app:driver_portal_invoices", args=[self.d.id]),
-            reverse("drivers_app:driver_pre_invoice_detail", args=[self.d.id, self.pf.id]),
-        ]
-        for url in urls:
-            r = self.client.get(url)
-            self.assertEqual(r.status_code, 200, url)
-            self.assertContains(r, "Total entregue pelo motorista")
-            self.assertContains(r, "Mesma porta")
+        r = self.client.get(reverse("drivers_app:driver_portal_invoices", args=[self.d.id]))
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, "Total entregue pelo motorista")
+        self.assertContains(r, "Mesma porta")
         r = self.client.get(reverse("drivers_app:driver_pre_invoice_detail", args=[self.d.id, self.pf.id]))
-        self.assertContains(r, "Pré-fatura não confere")  # PF tem 2, sistema tem 3
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, "Entregas pagas")
+        self.assertContains(r, "Mesma porta")
+        self.assertContains(r, "Não confere com o sistema")  # PF tem 2, sistema tem 3
         r = self.client.get(reverse("core:partner-detail", args=[self.p.id]))
         self.assertEqual(r.status_code, 200)
         self.assertContains(r, "Mesma porta")

@@ -1,0 +1,23 @@
+{% load ui %}{# Contexto: t = bd.totals, a = bd.amounts, bd = driver_breakdown #}
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-px bg-gray-100 dark:bg-gray-700">
+    <div class="bg-white dark:bg-gray-800 p-4">
+      <p class="text-xs uppercase font-bold text-indigo-700 dark:text-indigo-300">Porta</p>
+      <p class="text-2xl font-extrabold text-gray-900 dark:text-white">{{ t.door_normal }}</p>
+      <p class="text-xs text-gray-500">{{ a.door_normal|eur }}{% if bd.door_avg_price %} · {{ bd.door_avg_price|floatformat:2 }}/pct{% if bd.cp_pricing %} (média por CP){% endif %}{% endif %}</p>
+    </div>
+    <div class="bg-white dark:bg-gray-800 p-4">
+      <p class="text-xs uppercase font-bold text-teal-700 dark:text-teal-300">Mesma porta</p>
+      <p class="text-2xl font-extrabold text-gray-900 dark:text-white">{{ t.same_door }}</p>
+      <p class="text-xs text-gray-500">{% if bd.same_door_active %}{{ a.same_door|eur }} · {{ bd.same_door_price|floatformat:2 }}/adicional{% else %}regra inativa{% endif %}</p>
+    </div>
+    <div class="bg-white dark:bg-gray-800 p-4">
+      <p class="text-xs uppercase font-bold text-violet-700 dark:text-violet-300">PUDO</p>
+      <p class="text-2xl font-extrabold text-gray-900 dark:text-white">{{ t.pudo }}</p>
+      <p class="text-xs text-gray-500">{{ a.pudo|eur }} · 1ª + adicionais</p>
+    </div>
+    <div class="bg-white dark:bg-gray-800 p-4">
+      <p class="text-xs uppercase font-bold text-rose-700 dark:text-rose-300">Falhas</p>
+      <p class="text-2xl font-extrabold text-gray-900 dark:text-white">{{ t.failures }}</p>
+      <p class="text-xs text-gray-500">não pagas</p>
+    </div>
+  </div>

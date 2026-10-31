@@ -1,6 +1,5 @@
 {% load ui %}{# Total do motorista primeiro, depois a divisão por tipo e por dia. #}
 {# Contexto: bd = settlements.services_driver_breakdown.driver_breakdown #}
-{#           pf_check (opcional) = {lines, pudo, total, ok}            #}
 {% with t=bd.totals a=bd.amounts %}
 <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden mb-4">
   <div class="px-5 py-4 flex items-center gap-4 flex-wrap border-b border-gray-100 dark:border-gray-700">
@@ -13,36 +12,9 @@
         <p class="text-3xl font-extrabold text-gray-900 dark:text-white leading-tight">{{ t.delivered }} <span class="text-sm font-medium text-gray-500">pacotes · {{ bd.n_days }} dia{{ bd.n_days|pluralize }}</span></p>
       </div>
     </div>
-    {% if pf_check %}
-    <div class="ml-auto text-xs px-3 py-2 rounded-lg {% if pf_check.ok %}bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300{% else %}bg-amber-50 text-amber-800 dark:bg-amber-900/20 dark:text-amber-300{% endif %}">
-      <p class="font-bold">{% if pf_check.ok %}Pré-fatura confere{% else %}Pré-fatura não confere — recalcular{% endif %}</p>
-      <p>Na pré-fatura: {{ pf_check.lines }} porta + {{ pf_check.pudo }} PUDO = {{ pf_check.total }} · Sistema: {{ t.delivered }}</p>
-    </div>
-    {% endif %}
   </div>
 
-  <div class="grid grid-cols-2 md:grid-cols-4 gap-px bg-gray-100 dark:bg-gray-700">
-    <div class="bg-white dark:bg-gray-800 p-4">
-      <p class="text-xs uppercase font-bold text-indigo-700 dark:text-indigo-300">Porta</p>
-      <p class="text-2xl font-extrabold text-gray-900 dark:text-white">{{ t.door_normal }}</p>
-      <p class="text-xs text-gray-500">{{ a.door_normal|eur }}{% if bd.door_avg_price %} · {{ bd.door_avg_price|floatformat:2 }}/pct{% if bd.cp_pricing %} (média por CP){% endif %}{% endif %}</p>
-    </div>
-    <div class="bg-white dark:bg-gray-800 p-4">
-      <p class="text-xs uppercase font-bold text-teal-700 dark:text-teal-300">Mesma porta</p>
-      <p class="text-2xl font-extrabold text-gray-900 dark:text-white">{{ t.same_door }}</p>
-      <p class="text-xs text-gray-500">{% if bd.same_door_active %}{{ a.same_door|eur }} · {{ bd.same_door_price|floatformat:2 }}/adicional{% else %}regra inativa{% endif %}</p>
-    </div>
-    <div class="bg-white dark:bg-gray-800 p-4">
-      <p class="text-xs uppercase font-bold text-violet-700 dark:text-violet-300">PUDO</p>
-      <p class="text-2xl font-extrabold text-gray-900 dark:text-white">{{ t.pudo }}</p>
-      <p class="text-xs text-gray-500">{{ a.pudo|eur }} · 1ª + adicionais</p>
-    </div>
-    <div class="bg-white dark:bg-gray-800 p-4">
-      <p class="text-xs uppercase font-bold text-rose-700 dark:text-rose-300">Falhas</p>
-      <p class="text-2xl font-extrabold text-gray-900 dark:text-white">{{ t.failures }}</p>
-      <p class="text-xs text-gray-500">não pagas</p>
-    </div>
-  </div>
+  {% include "drivers_app/portal/_breakdown_counts.html" %}
 
   <details class="group" {% if open_days %}open{% endif %}>
     <summary class="px-5 py-3 cursor-pointer text-sm font-semibold text-gray-700 dark:text-gray-200 flex items-center gap-2 select-none">
@@ -51,46 +23,7 @@
       <span class="text-xs font-normal text-gray-500">— compare com os seus apontamentos</span>
       <span class="ml-auto text-xs text-gray-500">Valor estimado: <b class="text-gray-900 dark:text-white">{{ a.total|eur }}</b></span>
     </summary>
-    <div class="overflow-x-auto border-t border-gray-100 dark:border-gray-700">
-      <table class="lf-table">
-        <thead>
-          <tr>
-            <th >Dia</th>
-            <th class="text-right">Total entregue</th>
-            <th class="text-right">Porta</th>
-            <th class="text-right">Mesma porta</th>
-            <th class="text-right">PUDO</th>
-            <th class="text-right">Falhas</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for d in bd.days %}
-          <tr class="text-gray-800 dark:text-gray-200">
-            <td class="font-mono">{{ d.date|date:"D d/m"|capfirst }}</td>
-            <td class="text-right font-bold">{{ d.delivered }}</td>
-            <td class="text-right">{{ d.door_normal }}</td>
-            <td class="px-4 py-1.5 text-right {% if d.same_door %}text-teal-600 dark:text-teal-400 font-semibold{% else %}text-gray-400{% endif %}">{{ d.same_door }}</td>
-            <td class="px-4 py-1.5 text-right {% if d.pudo %}text-violet-600 dark:text-violet-400 font-semibold{% else %}text-gray-400{% endif %}">{{ d.pudo }}</td>
-            <td class="px-4 py-1.5 text-right {% if d.failures %}text-rose-600 dark:text-rose-400{% else %}text-gray-400{% endif %}">{{ d.failures }}</td>
-          </tr>
-          {% empty %}
-          <tr><td colspan="6" class="text-center text-gray-500 italic">Sem entregas no período.</td></tr>
-          {% endfor %}
-        </tbody>
-        {% if bd.days %}
-        <tfoot class="bg-gray-50 dark:bg-gray-900/40 font-bold text-gray-900 dark:text-white tabular-nums">
-          <tr>
-            <td >Total</td>
-            <td class="text-right">{{ t.delivered }}</td>
-            <td class="text-right">{{ t.door_normal }}</td>
-            <td class="text-right">{{ t.same_door }}</td>
-            <td class="text-right">{{ t.pudo }}</td>
-            <td class="text-right">{{ t.failures }}</td>
-          </tr>
-        </tfoot>
-        {% endif %}
-      </table>
-    </div>
+    {% include "drivers_app/portal/_breakdown_days.html" %}
   </details>
 </div>
 {% endwith %}

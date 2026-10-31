@@ -3,169 +3,113 @@
 
 {% block portal_content %}
 
-{# Header da PF #}
-<div class="lf-kpi">
+{# Cabeçalho fixo: identifica a PF e concentra as ações #}
+<div class="lf-kpi md:sticky mb-4" style="top: 65px; z-index: var(--z-sticky);">
   <div class="flex items-center justify-between flex-wrap gap-3">
-    <div class="flex items-center gap-3">
-      <div>
-        <p class="lf-kpi-note">{{ pf.numero }} · {{ linhas.count }} cliente{{ linhas.count|pluralize:"s" }}</p>
-        <p class="lf-kpi-value">{{ pf.periodo_inicio|date:"d/m/Y" }} → {{ pf.periodo_fim|date:"d/m/Y" }}</p>
-      </div>
+    <div class="min-w-0">
+      <p class="font-bold text-gray-900 dark:text-white">{{ pf.numero }} · {{ pf.periodo_inicio|date:"d/m/Y" }} → {{ pf.periodo_fim|date:"d/m/Y" }}</p>
+      <span class="lf-badge lf-tone-brand">{{ pf.get_status_display }}</span>
     </div>
-    <div class="flex items-center gap-2">
-      <span class="lf-kpi-label">
-        {{ pf.get_status_display }}
-      </span>
-      <a href="{% url 'drivers_app:driver_portal_invoices' driver.id %}"
-         class="lf-btn lf-btn-ghost">
+    <div class="flex items-center gap-2 flex-wrap">
+      <button type="button" onclick="alterarStatus()" class="lf-btn lf-btn-primary">
+        <i data-lucide="check-circle" class="w-3.5 h-3.5"></i> Mudar estado
+      </button>
+      <a href="/settlements/pre-invoices/{{ pf.id }}/pdf/" target="_blank" class="lf-btn lf-btn-ghost">
+        <i data-lucide="file-down" class="w-3.5 h-3.5"></i> PDF
+      </a>
+      <button type="button" onclick="enviarWhatsapp()" class="lf-btn lf-btn-ghost">
+        <i data-lucide="message-circle" class="w-3.5 h-3.5"></i> WhatsApp
+      </button>
+      <button type="button" onclick="recalcularPF()" class="lf-btn lf-btn-ghost">
+        <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Recalcular
+      </button>
+      <details class="relative">
+        <summary class="lf-btn lf-btn-ghost" style="list-style: none;" aria-label="Mais ações">
+          <i data-lucide="more-horizontal" class="w-4 h-4"></i>
+        </summary>
+        <div class="lf-menu">
+          <button type="button" onclick="apagarPF()" class="lf-menu-item lf-menu-danger">
+            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Eliminar pré-fatura
+          </button>
+        </div>
+      </details>
+      <a href="{% url 'drivers_app:driver_portal_invoices' driver.id %}" class="lf-btn lf-btn-ghost">
         <i data-lucide="arrow-left" class="w-4 h-4"></i> Voltar
       </a>
     </div>
   </div>
 </div>
 
-{% include "drivers_app/portal/_breakdown.html" with open_days=True %}
-
-{# Cards KPIs financeiros #}
-<div class="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
-  <div class="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 border border-amber-200/50 dark:border-amber-700/30">
-    <p class="text-xs uppercase font-bold text-amber-700 dark:text-amber-300">Base Entregas</p>
-    <p class="text-xs text-amber-700 dark:text-amber-400 mt-0.5">{{ linhas.count }} linha{{ linhas.count|pluralize:"s" }}</p>
-    <p class="text-2xl font-extrabold text-amber-700 dark:text-amber-300 mt-1">{{ pf.base_entregas|eur }}</p>
-  </div>
-  <div class="bg-rose-50 dark:bg-rose-900/20 rounded-xl p-4 border border-rose-200/50 dark:border-rose-700/30">
-    <p class="text-xs uppercase font-bold text-rose-700 dark:text-rose-300">Bónus Dom/Feriado</p>
-    <p class="text-xs text-rose-700 dark:text-rose-400 mt-0.5">{{ bonus|length }} bónus</p>
-    <p class="text-2xl font-extrabold text-rose-700 dark:text-rose-300 mt-1">{{ pf.total_bonus|default:"0.00"|eur }}</p>
-  </div>
-  {% if pudos or pudo_computed.totals.n_packages %}
-  <div class="bg-violet-50 dark:bg-violet-900/20 rounded-xl p-4 border border-violet-200/50 dark:border-violet-700/30">
-    <p class="text-xs uppercase font-bold text-violet-700 dark:text-violet-300">Entregas PUDO</p>
-    <p class="text-xs text-violet-700 dark:text-violet-400 mt-0.5">
-      {% if pudo_in_total %}{{ pudos|length }} dia(s)/PUDO{% else %}{{ pudo_computed.totals.n_packages }} pacotes · {{ pudo_computed.totals.n_pudo_days }} PUDO/dias{% endif %}
-    </p>
-    <p class="text-2xl font-extrabold text-violet-700 dark:text-violet-300 mt-1">
-      + € {% if pudo_in_total %}{{ pf.total_pudo|floatformat:2 }}{% else %}{{ pudo_computed.totals.amount|floatformat:2 }}{% endif %}
-    </p>
-    {% if not pudo_in_total %}
-    <p class="text-[10px] text-amber-600 dark:text-amber-400 mt-1 italic">Ainda não incluído no total</p>
-    {% endif %}
-  </div>
-  {% endif %}
-  {% if extras %}
-  <div class="bg-sky-50 dark:bg-sky-900/20 rounded-xl p-4 border border-sky-200/50 dark:border-sky-700/30">
-    <p class="text-xs uppercase font-bold text-sky-700 dark:text-sky-300">Serviços Extra</p>
-    <p class="text-xs text-sky-700 dark:text-sky-400 mt-0.5">{{ extras|length }} lançamento{{ extras|length|pluralize:"s" }}</p>
-    <p class="text-2xl font-extrabold text-sky-700 dark:text-sky-300 mt-1">+ {{ pf.total_extras|default:"0.00"|eur }}</p>
-  </div>
-  {% endif %}
-  <div class="lf-kpi">
-    {% if pf.driver.vat_regime == 'normal' %}
-      <p class="lf-kpi-label">Total a Receber <span class="normal-case font-normal">(após adiantam.)</span></p>
-      <p class="lf-kpi-value">{{ pf.total_com_iva|eur }}</p>
-      <div class="lf-kpi-note">
-        <div class="flex items-center justify-between gap-2">
-          <span>Base Faturável:</span>
-          <span class="font-mono font-bold">{{ pf.base_faturavel|eur }}</span>
-        </div>
-        <div class="flex items-center justify-between gap-2">
-          <span>IVA (23%):</span>
-          <span class="font-mono font-bold">+{{ pf.vat_amount|eur }}</span>
-        </div>
-        <div class="flex items-center justify-between gap-2 pt-0.5 border-t border-white/20">
-          <span class="font-bold">Fatura-Recibo (bruto):</span>
-          <span class="font-mono font-bold">{{ pf.total_fatura|eur }}</span>
-        </div>
-        <div class="flex items-center justify-between gap-2 text-amber-200">
-          <span>Adiantamentos:</span>
-          <span class="font-mono font-bold">-{{ pf.total_adiantamentos|eur }}</span>
-        </div>
-        {% if pf.irs_retention_amount and pf.irs_retention_amount > 0 %}
-        <div class="flex items-center justify-between gap-2 text-amber-200">
-          <span>Retenção IRS:</span>
-          <span class="font-mono font-bold">-{{ pf.irs_retention_amount|eur }}</span>
-        </div>
-        <div class="flex items-center justify-between gap-2 pt-0.5 border-t border-white/20">
-          <span>Líquido:</span>
-          <span class="font-mono font-bold">{{ pf.total_liquido|eur }}</span>
-        </div>
-        {% endif %}
-      </div>
+{# Conferência com o sistema #}
+<div class="lf-alert {% if pf_check.ok %}lf-tone-success{% else %}lf-tone-warning{% endif %} mb-4">
+  <i data-lucide="{% if pf_check.ok %}check-circle{% else %}alert-triangle{% endif %}" class="w-4 h-4 mt-0.5"></i>
+  <span>
+    {% if pf_check.ok %}
+      <b>Confere com o sistema:</b> {{ pf_check.lines }} à porta + {{ pf_check.pudo }} PUDO = {{ bd.totals.delivered }} entregas.
     {% else %}
-      <p class="lf-kpi-label">Total a Receber <span class="normal-case font-normal">(após adiantam.)</span></p>
-      <p class="lf-kpi-value">{{ pf.total_a_receber|eur }}</p>
-      <div class="lf-kpi-note">
-        <div class="flex items-center justify-between gap-2">
-          <span class="font-bold">Fatura-Recibo (bruto):</span>
-          <span class="font-mono font-bold">{{ pf.total_fatura|eur }}</span>
-        </div>
-        <div class="flex items-center justify-between gap-2 text-amber-200">
-          <span>Adiantamentos:</span>
-          <span class="font-mono font-bold">-{{ pf.total_adiantamentos|eur }}</span>
-        </div>
-      </div>
-      {% if pf.driver.vat_regime == 'isento' %}
-        <p class="lf-kpi-note">Isento de IVA (art. 53º)</p>
-      {% elif pf.driver.vat_regime == 'simplificado' %}
-        <p class="lf-kpi-note">Regime Simplificado (sem IVA)</p>
-      {% endif %}
-      {% if pf.driver.vat_regime == 'normal' and pf.vat_amount == 0 %}
-        <p class="lf-kpi-note">Regime Normal — precisa recalcular para aplicar IVA</p>
-      {% endif %}
+      <b>Não confere com o sistema:</b> a pré-fatura tem {{ pf_check.lines }} à porta + {{ pf_check.pudo }} PUDO = {{ pf_check.total }}; o sistema tem {{ bd.totals.delivered }}. Elimine a pré-fatura e gere-a de novo.
+    {% endif %}
+  </span>
+</div>
+
+{# Indicadores principais #}
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+  <div class="lf-kpi col-span-2 lg:col-span-1" style="border-color: var(--brand-orange);">
+    <p class="lf-kpi-label">A receber</p>
+    <p class="lf-kpi-value"{% if pf.total_com_iva < 0 %} style="color: var(--tone-danger-fg);"{% endif %}>{{ pf.total_com_iva|eur }}</p>
+    {% if pf.driver.vat_regime == 'normal' %}
+      <p class="lf-kpi-note">Inclui IVA (23%): {{ pf.vat_amount|eur }}</p>
+      {% if pf.vat_amount == 0 %}<p class="lf-kpi-note">Regime Normal: recalcule para aplicar o IVA</p>{% endif %}
+    {% endif %}
+    {% if pf.irs_retention_amount and pf.irs_retention_amount > 0 %}
+      <p class="lf-kpi-note">Retenção IRS: -{{ pf.irs_retention_amount|eur }} · Líquido: {{ pf.total_liquido|eur }}</p>
     {% endif %}
   </div>
-  <div class="bg-rose-50 dark:bg-rose-900/20 rounded-xl p-4 border border-rose-200/50 dark:border-rose-700/30">
-    <p class="text-xs uppercase font-bold text-rose-700 dark:text-rose-300">Pacotes Perdidos</p>
-    <p class="text-xs text-rose-700 dark:text-rose-400 mt-0.5">{{ lost_packages|length }} pacotes</p>
-    <p class="text-2xl font-extrabold text-rose-700 dark:text-rose-300 mt-1">- {{ pf.total_pacotes_perdidos|default:"0.00"|eur }}</p>
+  <div class="lf-kpi">
+    <p class="lf-kpi-label">Fatura-Recibo (bruto)</p>
+    <p class="lf-kpi-value">{{ pf.total_fatura|eur }}</p>
+    <p class="lf-kpi-note">{% if pf.driver.vat_regime == 'isento' %}Isento de IVA (art. 53º){% elif pf.driver.vat_regime == 'simplificado' %}Regime Simplificado (sem IVA){% else %}Base: {{ pf.base_faturavel|eur }}{% endif %}</p>
   </div>
-  <div class="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 border border-amber-200/50 dark:border-amber-700/30">
-    <p class="text-xs uppercase font-bold text-amber-700 dark:text-amber-300">Adiantamentos</p>
-    <p class="text-xs text-amber-700 dark:text-amber-400 mt-0.5">{{ advances|length }} lançamentos</p>
-    <p class="text-2xl font-extrabold text-amber-700 dark:text-amber-300 mt-1">- {{ pf.total_adiantamentos|default:"0.00"|eur }}</p>
+  <div class="lf-kpi">
+    <p class="lf-kpi-label">Descontos e adiantamentos</p>
+    <p class="lf-kpi-value">{{ deductions|eur }}</p>
+    <p class="lf-kpi-note">{{ lost_packages|length }} pacote{{ lost_packages|length|pluralize:"s" }} · {{ advances|length }} adiantamento{{ advances|length|pluralize:"s" }}</p>
   </div>
-  <div class="bg-rose-50 dark:bg-rose-900/20 rounded-xl p-4 border border-rose-200/50 dark:border-rose-700/30">
-    <p class="text-xs uppercase font-bold text-rose-700 dark:text-rose-300">Penalizações</p>
-    <p class="text-2xl font-extrabold text-rose-700 dark:text-rose-300 mt-1">- {{ pf.penalizacoes_gerais|default:"0.00"|eur }}</p>
+  <div class="lf-kpi">
+    <p class="lf-kpi-label">Entregas pagas</p>
+    <p class="lf-kpi-value">{{ bd.totals.delivered }}</p>
+    <p class="lf-kpi-note">{{ bd.days|length }} dia{{ bd.days|length|pluralize:"s" }} · {{ bd.totals.failures }} falha{{ bd.totals.failures|pluralize:"s" }} não paga{{ bd.totals.failures|pluralize:"s" }}</p>
   </div>
-  {% if indicacoes_detail %}
-  <div class="bg-teal-50 dark:bg-teal-900/20 rounded-xl p-4 border border-teal-200/50 dark:border-teal-700/30">
-    <p class="text-xs uppercase font-bold text-teal-700 dark:text-teal-300">Indicações</p>
-    <p class="text-xs text-teal-700 dark:text-teal-400 mt-0.5">{{ indicacoes_detail|length }} motorista{{ indicacoes_detail|length|pluralize:"s" }}</p>
-    <p class="text-2xl font-extrabold text-teal-700 dark:text-teal-300 mt-1">+ {{ pf.total_comissoes_indicacao|default:"0.00"|eur }}</p>
-  </div>
-  {% endif %}
 </div>
 
-{# Acções rápidas #}
-<div class="bg-white dark:bg-gray-800 rounded-xl p-3 border border-gray-200/50 dark:border-gray-700/50 shadow-sm mb-4 flex flex-wrap items-center gap-2">
-  <button onclick="recalcularPF()"
-          class="lf-btn lf-btn-ghost">
-    <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Recalcular
-  </button>
-  <a href="/settlements/pre-invoices/{{ pf.id }}/pdf/" target="_blank"
-     class="lf-btn lf-btn-danger">
-    <i data-lucide="file-down" class="w-3.5 h-3.5"></i> PDF
-  </a>
-  <button onclick="enviarWhatsapp()"
-          class="lf-btn lf-btn-ghost">
-    <i data-lucide="message-circle" class="w-3.5 h-3.5"></i> Enviar WhatsApp
-  </button>
-  <button onclick="alterarStatus()"
-          class="px-3 py-2 text-xs border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg font-medium inline-flex items-center gap-1.5">
-    <i data-lucide="check-circle" class="w-3.5 h-3.5"></i> Mudar Estado
-  </button>
-  <button onclick="apagarPF()"
-          class="px-3 py-2 text-xs bg-rose-50 dark:bg-rose-900/20 text-rose-700 dark:text-rose-300 hover:bg-rose-100 rounded-lg font-medium inline-flex items-center gap-1.5 ml-auto">
-    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Eliminar pré-fatura
-  </button>
+{# Gráficos #}
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-4">
+  <div class="lf-chart">
+    <p class="lf-chart-title">Como se chega ao valor a receber</p>
+    <div class="lf-chart-canvas"><canvas id="pf-chart-steps" role="img" aria-label="Conta da pré-fatura, das entregas até ao valor a receber."></canvas></div>
+  </div>
+  <div class="lf-chart">
+    <p class="lf-chart-title">Entregas por dia</p>
+    <div class="lf-chart-canvas"><canvas id="pf-chart-days" role="img" aria-label="Entregas por dia, por tipo, e falhas."></canvas></div>
+  </div>
+</div>
+{{ pf_charts|json_script:"pf-charts" }}
+
+{# Detalhe por separador #}
+<div class="lf-tabs" role="tablist" aria-label="Detalhe da pré-fatura">
+  <button type="button" role="tab" class="lf-tab lf-tab-active" aria-selected="true" data-pf-tab="preco">Preço por CP</button>
+  <button type="button" role="tab" class="lf-tab" aria-selected="false" data-pf-tab="dias">Por dia ({{ bd.days|length }})</button>
+  <button type="button" role="tab" class="lf-tab" aria-selected="false" data-pf-tab="descontos">Descontos ({{ deduction_count }})</button>
+  <button type="button" role="tab" class="lf-tab" aria-selected="false" data-pf-tab="creditos">Bónus e extras ({{ credit_count }})</button>
+  <button type="button" role="tab" class="lf-tab" aria-selected="false" data-pf-tab="dados">Dados e pagamento</button>
 </div>
 
+<div data-pf-panel="preco">
 {# ─── Linhas de Trabalho por Parceiro ─── #}
 <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden mb-4">
   <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
     <i data-lucide="layers" class="w-5 h-5 text-indigo-500"></i>
-    <h3 class="font-bold text-gray-900 dark:text-white">Linhas de trabalho por cliente</h3>
+    <h3 class="font-bold text-gray-900 dark:text-white">Preço por CP e tipo de entrega</h3>
     <button onclick="addLinha()"
             class="lf-btn lf-btn-ghost ml-auto">
       <i data-lucide="plus" class="w-3.5 h-3.5"></i> Adicionar
@@ -175,18 +119,22 @@
     <table class="lf-table">
       <thead>
         <tr>
-          <th >Cliente</th>
+          <th>Tipo</th>
+          <th>CP</th>
+          <th>Login</th>
           <th class="text-right">Pacotes</th>
-          <th class="text-right">Taxa €</th>
-          <th class="text-right">DSR %</th>
-          <th class="text-right">Base €</th>
-          <th ></th>
+          <th class="text-right">Preço</th>
+          {% if show_dsr %}<th class="text-right">DSR %</th>{% endif %}
+          <th class="text-right">Valor</th>
+          <th></th>
         </tr>
       </thead>
       <tbody>
         {% for l in linhas %}
         <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
-          <td >
+          <td class="text-sm font-semibold text-gray-900 dark:text-white">{{ l.kind_label }}</td>
+          <td class="text-sm font-mono text-gray-700 dark:text-gray-300">{{ l.cp_label }}</td>
+          <td>
             <div class="flex items-center gap-2 flex-wrap">
               <span class="inline-flex items-center px-2 py-1 rounded text-xs font-bold bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300">
                 {{ l.parceiro.name }}
@@ -219,9 +167,9 @@
             </div>
           </td>
           <td class="text-right text-sm font-bold text-gray-900 dark:text-white">{{ l.total_pacotes }}</td>
-          <td class="text-right text-sm text-gray-700 dark:text-gray-300">{{ l.taxa_por_entrega|floatformat:2 }}</td>
-          <td class="text-right text-sm text-gray-700 dark:text-gray-300">{{ l.dsr_percentual|default:"0.0"|pct }}</td>
-          <td class="text-right text-sm font-bold text-blue-600">{{ l.base_entregas|eur }}</td>
+          <td class="text-right text-sm text-gray-700 dark:text-gray-300">{{ l.taxa_por_entrega|floatformat:2 }} €</td>
+          {% if show_dsr %}<td class="text-right text-sm text-gray-700 dark:text-gray-300">{{ l.dsr_percentual|default:"0.0"|pct }}</td>{% endif %}
+          <td class="text-right text-sm font-bold text-gray-900 dark:text-white">{{ l.base_entregas|eur }}</td>
           <td class="text-right whitespace-nowrap">
             <button onclick="editLinha({{ l.id }}, {{ l.total_pacotes }}, '{{ l.taxa_por_entrega|stringformat:'.4f' }}', '{{ l.dsr_percentual|default:0|stringformat:'.2f' }}')"
                     title="Editar"
@@ -236,21 +184,100 @@
           </td>
         </tr>
         {% empty %}
-        <tr><td colspan="6" class="text-center text-sm text-gray-500 italic">Sem linhas registadas.</td></tr>
+        <tr><td colspan="8" class="text-center text-sm text-gray-500 italic">Sem linhas registadas.</td></tr>
         {% endfor %}
       </tbody>
       {% if linhas %}
-      <tfoot class="bg-indigo-50 dark:bg-indigo-900/20">
+      <tfoot class="bg-gray-50 dark:bg-gray-900/40">
+        {% if pf.total_pudo %}
         <tr>
-          <td colspan="4" class="text-right text-xs font-bold text-indigo-700 dark:text-indigo-300 uppercase">Total Base Entregas</td>
-          <td colspan="2" class="text-right text-sm font-extrabold text-indigo-700 dark:text-indigo-300">{{ pf.base_entregas|eur }}</td>
+          <td colspan="{% if show_dsr %}6{% else %}5{% endif %}" class="text-right text-xs font-bold text-gray-500 uppercase">PUDO ({{ bd.totals.pudo }} pacotes)</td>
+          <td colspan="2" class="text-right text-sm font-bold text-gray-900 dark:text-white">{{ pf.total_pudo|eur }}</td>
+        </tr>
+        {% endif %}
+        <tr>
+          <td colspan="{% if show_dsr %}6{% else %}5{% endif %}" class="text-right text-xs font-bold text-gray-500 uppercase">Total entregas</td>
+          <td colspan="2" class="text-right text-sm font-extrabold text-gray-900 dark:text-white">{{ delivery_total|eur }}</td>
         </tr>
       </tfoot>
       {% endif %}
     </table>
   </div>
 </div>
+</div>
+<div data-pf-panel="dias" hidden>
+<div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden mb-4">
+  {% with t=bd.totals a=bd.amounts %}
+  {% include "drivers_app/portal/_breakdown_counts.html" %}
+  {% include "drivers_app/portal/_breakdown_days.html" %}
+  {% endwith %}
+</div>
+</div>
+<div data-pf-panel="descontos" hidden>
+{# ─── Pacotes Perdidos ─── #}
+<div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden mb-4">
+  <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
+    <i data-lucide="package-x" class="w-5 h-5 text-rose-500"></i>
+    <h3 class="font-bold text-gray-900 dark:text-white">Pacotes perdidos</h3>
+    <span class="text-xs text-gray-500">({{ lost_packages|length }} · {{ pf.total_pacotes_perdidos|default:"0.00"|eur }})</span>
+    <button onclick="addLostPackage()"
+            class="lf-btn lf-btn-danger ml-auto">
+      <i data-lucide="plus" class="w-3.5 h-3.5"></i> Adicionar
+    </button>
+  </div>
+  <div class="divide-y divide-gray-100 dark:divide-gray-700">
+    {% for p in lost_packages %}
+    <div class="px-5 py-3 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-700/30">
+      <span class="font-mono text-sm text-gray-900 dark:text-white w-24">{{ p.data|date:"d/m/Y" }}</span>
+      <span class="font-mono text-xs text-gray-700 dark:text-gray-300">{{ p.numero_pacote }}</span>
+      <span class="text-sm text-gray-700 dark:text-gray-300 flex-1 truncate">{{ p.descricao|default:"—" }}</span>
+      <span class="font-bold text-rose-600 dark:text-rose-300">- {{ p.valor|eur }}</span>
+      <button onclick="deleteLostPackage({{ p.id }})"
+              class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-600 dark:text-gray-400 hover:text-rose-600">
+        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+      </button>
+    </div>
+    {% empty %}
+    <p class="px-5 py-6 text-center text-sm text-gray-500 italic">Sem pacotes perdidos.</p>
+    {% endfor %}
+  </div>
+</div>
 
+{# ─── Adiantamentos Incluídos ─── #}
+<div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden mb-4">
+  <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
+    <i data-lucide="wallet" class="w-5 h-5 text-amber-500"></i>
+    <h3 class="font-bold text-gray-900 dark:text-white">Adiantamentos incluídos</h3>
+    <span class="text-xs text-gray-500">({{ advances|length }} · {{ pf.total_adiantamentos|default:"0.00"|eur }})</span>
+    <button onclick="addAdvance()"
+            class="lf-btn lf-btn-ghost ml-auto">
+      <i data-lucide="plus" class="w-3.5 h-3.5"></i> Adicionar
+    </button>
+  </div>
+  <div class="divide-y divide-gray-100 dark:divide-gray-700">
+    {% for a in advances %}
+    <div class="px-5 py-3 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-700/30">
+      <span class="font-mono text-sm text-gray-900 dark:text-white w-24">{{ a.data|date:"d/m/Y" }}</span>
+      <span class="px-2 py-0.5 rounded text-[11px] font-semibold w-32
+        {% if a.tipo == 'COMBUSTIVEL' %}bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300
+        {% elif a.tipo == 'ABASTECIMENTO' %}bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300
+        {% else %}bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300{% endif %}">
+        {{ a.get_tipo_display }}
+      </span>
+      <span class="text-sm text-gray-700 dark:text-gray-300 flex-1 truncate">{{ a.descricao|default:"—" }}</span>
+      <span class="font-bold text-amber-700 dark:text-amber-300">- {{ a.valor|eur }}</span>
+      <button onclick="deleteAdvance({{ a.id }})"
+              class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-600 dark:text-gray-400 hover:text-rose-600">
+        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+      </button>
+    </div>
+    {% empty %}
+    <p class="px-5 py-6 text-center text-sm text-gray-500 italic">Sem adiantamentos.</p>
+    {% endfor %}
+  </div>
+</div>
+</div>
+<div data-pf-panel="creditos" hidden>
 {# ─── Bónus Dom/Feriado ─── #}
 <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden mb-4">
   <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
@@ -365,69 +392,6 @@
 </div>
 {% endif %}
 
-{# ─── Pacotes Perdidos ─── #}
-<div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden mb-4">
-  <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
-    <i data-lucide="package-x" class="w-5 h-5 text-rose-500"></i>
-    <h3 class="font-bold text-gray-900 dark:text-white">Pacotes perdidos</h3>
-    <span class="text-xs text-gray-500">({{ lost_packages|length }} · {{ pf.total_pacotes_perdidos|default:"0.00"|eur }})</span>
-    <button onclick="addLostPackage()"
-            class="lf-btn lf-btn-danger ml-auto">
-      <i data-lucide="plus" class="w-3.5 h-3.5"></i> Adicionar
-    </button>
-  </div>
-  <div class="divide-y divide-gray-100 dark:divide-gray-700">
-    {% for p in lost_packages %}
-    <div class="px-5 py-3 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-700/30">
-      <span class="font-mono text-sm text-gray-900 dark:text-white w-24">{{ p.data|date:"d/m/Y" }}</span>
-      <span class="font-mono text-xs text-gray-700 dark:text-gray-300">{{ p.numero_pacote }}</span>
-      <span class="text-sm text-gray-700 dark:text-gray-300 flex-1 truncate">{{ p.descricao|default:"—" }}</span>
-      <span class="font-bold text-rose-600 dark:text-rose-300">- {{ p.valor|eur }}</span>
-      <button onclick="deleteLostPackage({{ p.id }})"
-              class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-600 dark:text-gray-400 hover:text-rose-600">
-        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-      </button>
-    </div>
-    {% empty %}
-    <p class="px-5 py-6 text-center text-sm text-gray-500 italic">Sem pacotes perdidos.</p>
-    {% endfor %}
-  </div>
-</div>
-
-{# ─── Adiantamentos Incluídos ─── #}
-<div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden mb-4">
-  <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
-    <i data-lucide="wallet" class="w-5 h-5 text-amber-500"></i>
-    <h3 class="font-bold text-gray-900 dark:text-white">Adiantamentos incluídos</h3>
-    <span class="text-xs text-gray-500">({{ advances|length }} · {{ pf.total_adiantamentos|default:"0.00"|eur }})</span>
-    <button onclick="addAdvance()"
-            class="lf-btn lf-btn-ghost ml-auto">
-      <i data-lucide="plus" class="w-3.5 h-3.5"></i> Adicionar
-    </button>
-  </div>
-  <div class="divide-y divide-gray-100 dark:divide-gray-700">
-    {% for a in advances %}
-    <div class="px-5 py-3 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-700/30">
-      <span class="font-mono text-sm text-gray-900 dark:text-white w-24">{{ a.data|date:"d/m/Y" }}</span>
-      <span class="px-2 py-0.5 rounded text-[11px] font-semibold w-32
-        {% if a.tipo == 'COMBUSTIVEL' %}bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300
-        {% elif a.tipo == 'ABASTECIMENTO' %}bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300
-        {% else %}bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300{% endif %}">
-        {{ a.get_tipo_display }}
-      </span>
-      <span class="text-sm text-gray-700 dark:text-gray-300 flex-1 truncate">{{ a.descricao|default:"—" }}</span>
-      <span class="font-bold text-amber-700 dark:text-amber-300">- {{ a.valor|eur }}</span>
-      <button onclick="deleteAdvance({{ a.id }})"
-              class="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-600 dark:text-gray-400 hover:text-rose-600">
-        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-      </button>
-    </div>
-    {% empty %}
-    <p class="px-5 py-6 text-center text-sm text-gray-500 italic">Sem adiantamentos.</p>
-    {% endfor %}
-  </div>
-</div>
-
 {# ─── Comissões de Indicação ─── #}
 {% if indicacoes_detail %}
 <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden mb-4">
@@ -478,7 +442,8 @@
   </div>
 </div>
 {% endif %}
-
+</div>
+<div data-pf-panel="dados" hidden>
 {# ─── Dados Gerais (editáveis) ─── #}
 <form onsubmit="event.preventDefault(); guardarDadosGerais();"
       class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
@@ -542,6 +507,7 @@
     </div>
   </div>
 </form>
+</div>
 
 <script>
 const PF_ID = {{ pf.id }};
@@ -585,7 +551,7 @@ async function _post(url, data) {
 async function recalcularPF() {
   const ok = await window.confirmModal({
     type: 'info', title: 'Recalcular pré-fatura?',
-    message: 'Bónus, totais e linhas serão actualizados.',
+    message: 'Os totais serão somados de novo. Os pacotes e os preços das linhas não mudam.',
     confirmText: 'Recalcular', icon: 'refresh-cw',
   });
   if (!ok) return;
@@ -777,6 +743,77 @@ async function deleteAdvance(id) {
   if (d.success) { window.toast({type:'success', message:'Removido.'}); setTimeout(()=>location.reload(), 600); }
   else window.toast({type:'error', message: d.error || 'Erro'});
 }
+
+// ─── Separadores ───
+const PF_TABS = document.querySelectorAll('[data-pf-tab]');
+
+function abrirSeparador(nome) {
+  PF_TABS.forEach(tab => {
+    const ativo = tab.dataset.pfTab === nome;
+    tab.classList.toggle('lf-tab-active', ativo);
+    tab.setAttribute('aria-selected', ativo ? 'true' : 'false');
+  });
+  document.querySelectorAll('[data-pf-panel]').forEach(panel => {
+    panel.hidden = panel.dataset.pfPanel !== nome;
+  });
+  history.replaceState(null, '', '#' + nome);
+}
+
+PF_TABS.forEach(tab => tab.addEventListener('click', () => abrirSeparador(tab.dataset.pfTab)));
+// As ações recarregam a página: o operador continua no mesmo separador.
+if ([...PF_TABS].some(tab => tab.dataset.pfTab === location.hash.slice(1))) {
+  abrirSeparador(location.hash.slice(1));
+}
+
+// ─── Gráficos ───
+(function () {
+  if (typeof Chart === 'undefined' || !window.lfChartColors) return;
+  const data = JSON.parse(document.getElementById('pf-charts').textContent);
+  const cores = window.lfChartColors();
+  const eur = v => v.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+  const corPasso = p => p.total ? cores.primary : (p.value < 0 ? cores.danger : cores.success);
+
+  new Chart(document.getElementById('pf-chart-steps'), {
+    type: 'bar',
+    data: {
+      labels: data.steps.map(p => [p.label, eur(p.value)]),
+      datasets: [{
+        data: data.steps.map(p => [p.from, p.to]),
+        backgroundColor: data.steps.map(corPasso),
+        borderRadius: 3,
+      }],
+    },
+    options: {
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: c => eur(data.steps[c.dataIndex].value) } },
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { autoSkip: false } },
+        y: { ticks: { callback: v => eur(v) } },
+      },
+    },
+  });
+
+  new Chart(document.getElementById('pf-chart-days'), {
+    type: 'bar',
+    data: {
+      labels: data.days.labels,
+      datasets: [
+        { label: 'Porta', data: data.days.door, backgroundColor: cores.secondary, stack: 'entregas' },
+        { label: 'Mesma porta', data: data.days.same_door, backgroundColor: cores.primary, stack: 'entregas' },
+        { label: 'PUDO', data: data.days.pudo, backgroundColor: cores.success, stack: 'entregas' },
+        { label: 'Falhas', data: data.days.failures, backgroundColor: cores.danger, stack: 'falhas' },
+      ],
+    },
+    options: {
+      maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } } },
+      scales: { x: { stacked: true, grid: { display: false } }, y: { stacked: true } },
+    },
+  });
+})();
 
 // ─── Dados Gerais ───
 async function guardarDadosGerais() {

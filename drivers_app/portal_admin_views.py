@@ -599,8 +599,23 @@ def driver_pre_invoice_detail(request, driver_id, pre_invoice_id):
         "ok": n_lines + n_pudo == bd["totals"]["delivered"],
     }
 
+    from settlements.services_pf_overview import (
+        day_series, line_kind, pf_deductions, waterfall_steps,
+    )
+    for l in linhas:
+        l.kind_label, l.cp_label = line_kind(l)
+    credit_count = len(bonus) + len(extras) + len(pudos) + len(indicacoes_detail)
+
     return render(request, "drivers_app/portal/admin_pf_detail.html", {
         "bd": bd,
+        "deductions": pf_deductions(pf),
+        "deduction_count": len(lost_packages) + len(advances),
+        "credit_count": credit_count,
+        "delivery_total": pf.base_entregas + pf.total_pudo,
+        "show_dsr": any(l.dsr_percentual for l in linhas),
+        "pf_charts": {
+            "steps": waterfall_steps(pf), "days": day_series(bd["days"]),
+        },
         "pf_check": pf_check,
         "driver": driver,
         "pf": pf,

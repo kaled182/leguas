@@ -80,6 +80,19 @@ def _get_driver_courier_names(driver):
     return names
 
 
+def driver_owned_delivered_ids(driver, date_from, date_to):
+    """IDs das entregas do driver, com a regra de `_driver_base_queryset`.
+
+    PF, frota e lacunas usam este conjunto: uma linha com o ID deste
+    driver e o nome de outro pertence ao outro.
+    """
+    return set(
+        _driver_base_queryset(driver, date_from, date_to)
+        .filter(task_status="Delivered")
+        .values_list("id", flat=True),
+    )
+
+
 def _other_driver_courier_names(this_driver):
     """Cache leve: courier_names de OUTROS drivers (apelido,
     DriverCourierMapping.courier_name e aliases dos seus logins). Usado

@@ -16,7 +16,8 @@ Para cada driver, no período:
                          atribuiu a este driver vindos de outros logins).
 
   2. Para CADA login, query independente em CainiaoOperationTask:
-        - filtrada por courier_id OU courier_name desse login
+        - filtrada por courier_id OU courier_name desse login, só com
+          entregas do driver (`driver_owned_delivered_ids`)
         - status == 'Delivered'
         - exclui waybills com WaybillAttributionOverride saindo
           (ie, atribuídos a outro driver)
@@ -67,6 +68,18 @@ BONUS_30 = Decimal("30.00")
 BONUS_50 = Decimal("50.00")
 
 
+def _get_driver_courier_names(driver):
+    from drivers_app.portal_views import _get_driver_courier_names as names
+
+    return names(driver)
+
+
+def driver_owned_delivered_ids(driver, date_from, date_to):
+    from drivers_app.portal_views import driver_owned_delivered_ids as owned
+
+    return owned(driver, date_from, date_to)
+
+
 def _collect_driver_logins(exclude_fleet=True):
     """Retorna driver_logins: dict driver_id → list[(cid, cname)].
 
@@ -108,6 +121,11 @@ def _collect_driver_logins(exclude_fleet=True):
         if not m.driver_id or m.driver_id not in drivers_by_id:
             continue
         _add(m.driver_id, m.courier_id or "", m.courier_name or "")
+
+    # 3) Aliases: o portal e a PF também contam estes nomes
+    for d in drivers:
+        for name in sorted(_get_driver_courier_names(d)):
+            _add(d.id, "", name)
 
     return drivers_by_id, driver_logins
 
@@ -234,6 +252,7 @@ def find_drivers_without_pf(date_from, date_to, min_gap_days=MIN_GAP_DAYS,
             cainiao and getattr(cainiao, "pudo_enabled", False)
         )
         seen_task_ids = set()
+        owned_ids = driver_owned_delivered_ids(driver, date_from, date_to)
 
         # Helper que processa um conjunto de tasks (rows) como um
         # "login" — agrega base + bónus por dia desse login isolado.
@@ -302,7 +321,7 @@ def find_drivers_without_pf(date_from, date_to, min_gap_days=MIN_GAP_DAYS,
             qs = CainiaoOperationTask.objects.filter(
                 task_date__range=(date_from, date_to),
                 task_status="Delivered",
-            ).filter(login_q)
+            ).filter(login_q, id__in=owned_ids)
             if outgoing_waybills:
                 qs = qs.exclude(waybill_number__in=outgoing_waybills)
             if seen_task_ids:
@@ -520,6 +539,8 @@ def find_fleets_without_invoice(date_from, date_to,
             _add(d.courier_id_cainiao or "", d.apelido or "")
             for m in d.courier_mappings.filter(partner=cainiao):
                 _add(m.courier_id or "", m.courier_name or "")
+            for name in sorted(_get_driver_courier_names(d)):
+                _add("", name)
             if not logins:
                 continue
 
@@ -527,6 +548,7 @@ def find_fleets_without_invoice(date_from, date_to,
             base_price = base_price or Decimal("0")
 
             seen_task_ids = set()
+            owned_ids = driver_owned_delivered_ids(d, date_from, date_to)
             d_delivered = 0
             d_active_dates = set()
 
@@ -541,7 +563,7 @@ def find_fleets_without_invoice(date_from, date_to,
                 qs = CainiaoOperationTask.objects.filter(
                     task_date__range=(date_from, date_to),
                     task_status="Delivered",
-                ).filter(login_q)
+                ).filter(login_q, id__in=owned_ids)
                 if seen_task_ids:
                     qs = qs.exclude(id__in=seen_task_ids)
                 rows = list(qs.values("id", "task_date"))

@@ -1738,6 +1738,11 @@ def driver_pre_invoice_create(request, driver_id):
             )
         for m in driver.courier_mappings.filter(partner=cainiao_partner):
             _add_login(m.courier_id, m.courier_name, "mapping")
+        from drivers_app.portal_views import (
+            _get_driver_courier_names, driver_owned_delivered_ids,
+        )
+        for name in sorted(_get_driver_courier_names(driver)):
+            _add_login("", name, "alias")
 
         # Um driver pode não ter login próprio mas RECEBER transferências —
         # nesse caso ainda há que processar os pacotes recebidos na PF.
@@ -1796,6 +1801,9 @@ def driver_pre_invoice_create(request, driver_id):
             }
 
             seen_task_ids = set()  # evita dupla-contagem entre logins
+            owned_ids = driver_owned_delivered_ids(
+                driver, periodo_inicio, periodo_fim,
+            )
 
             for ln in logins:
                 cid = ln["courier_id"]
@@ -1807,7 +1815,7 @@ def driver_pre_invoice_create(request, driver_id):
                     login_q |= Q(courier_name=cname)
                 if not login_q:
                     continue
-                qs_login = base_qs.filter(login_q)
+                qs_login = base_qs.filter(login_q, id__in=owned_ids)
                 if outgoing:
                     qs_login = qs_login.exclude(
                         waybill_number__in=outgoing,
@@ -4220,6 +4228,11 @@ def driver_pre_invoice_preview(request, driver_id):
         partner__name__iexact="CAINIAO",
     ):
         _add_login(m.courier_id, m.courier_name, "mapping")
+    from drivers_app.portal_views import (
+        _get_driver_courier_names, driver_owned_delivered_ids,
+    )
+    for name in sorted(_get_driver_courier_names(driver)):
+        _add_login("", name, "alias")
 
     # Pricing
     from core.models import Partner
@@ -4301,6 +4314,7 @@ def driver_pre_invoice_preview(request, driver_id):
     # Breakdown por login
     login_breakdown = []
     seen_task_ids = set()  # para evitar dupla-contagem entre logins
+    owned_ids = driver_owned_delivered_ids(driver, date_from, date_to)
     total_delivered = 0
     total_base = Decimal("0")
     total_bonus = Decimal("0")
@@ -4315,7 +4329,7 @@ def driver_pre_invoice_preview(request, driver_id):
         if not login_q:
             continue
         # Tasks deste login (ainda não vistas em logins anteriores)
-        qs_login = base_qs.filter(login_q)
+        qs_login = base_qs.filter(login_q, id__in=owned_ids)
         if outgoing:
             qs_login = qs_login.exclude(waybill_number__in=outgoing)
         if seen_task_ids:
@@ -4614,6 +4628,11 @@ def _empresa_lote_compute(empresa, date_from, date_to):
             _add_login(d.courier_id_cainiao, d.apelido, "perfil")
         for m in d.courier_mappings.filter(partner=cainiao_partner):
             _add_login(m.courier_id, m.courier_name, "mapping")
+        from drivers_app.portal_views import (
+            _get_driver_courier_names, driver_owned_delivered_ids,
+        )
+        for name in sorted(_get_driver_courier_names(d)):
+            _add_login("", name, "alias")
 
         if not logins:
             rows.append({
@@ -4651,6 +4670,7 @@ def _empresa_lote_compute(empresa, date_from, date_to):
         bonus_amount = Decimal("0")
         login_breakdown = []
         native_ids = set()
+        owned_ids = driver_owned_delivered_ids(d, date_from, date_to)
 
         for ln in logins:
             cid = ln["courier_id"]
@@ -4662,7 +4682,9 @@ def _empresa_lote_compute(empresa, date_from, date_to):
                 login_q |= Q(courier_name=cname)
             if not login_q:
                 continue
-            qs_login = base_qs.filter(login_q).exclude(id__in=native_ids)
+            qs_login = base_qs.filter(
+                login_q, id__in=owned_ids,
+            ).exclude(id__in=native_ids)
             ids_this = list(qs_login.values_list("id", flat=True))
             if not ids_this:
                 continue
@@ -4972,6 +4994,11 @@ def empresa_lote_emit(request, empresa_id):
             _add(d.courier_id_cainiao, d.apelido)
         for m in d.courier_mappings.filter(partner=cainiao_partner):
             _add(m.courier_id, m.courier_name)
+        from drivers_app.portal_views import (
+            _get_driver_courier_names, driver_owned_delivered_ids,
+        )
+        for name in sorted(_get_driver_courier_names(d)):
+            _add("", name)
 
         if not logins:
             skipped.append({
@@ -4992,6 +5019,7 @@ def empresa_lote_emit(request, empresa_id):
         native_ids = set()
         all_ids = set()
         all_names = set()
+        owned_ids = driver_owned_delivered_ids(d, date_from, date_to)
         for ln in logins:
             cid = ln["courier_id"]
             cname = ln["courier_name"]
@@ -5007,7 +5035,9 @@ def empresa_lote_emit(request, empresa_id):
             if not login_q:
                 continue
             native_ids.update(
-                base_qs.filter(login_q).values_list("id", flat=True)
+                base_qs.filter(
+                    login_q, id__in=owned_ids,
+                ).values_list("id", flat=True)
             )
 
         # Aplicar transferências de atribuição (WaybillAttributionOverride),

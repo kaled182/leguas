@@ -1,63 +1,51 @@
 {% extends 'settlements/base.html' %}
+{% load ui %}
 {% load static %}
 {% block title %}Fornecedores{% endblock %}
 {% block content %}
 <style>
   .fld { width:100%; padding:0.5rem 0.75rem; border:1px solid #d1d5db; border-radius:0.5rem; font-size:0.875rem; background:#fff; }
   .dark .fld { background:#1f2937; border-color:#374151; color:#fff; }
-  .tag-pill { padding:0.125rem 0.5rem; border-radius:9999px; font-size:0.7rem; font-weight:600; background:#e5e7eb; color:#374151; }
+  .tag-pill { padding:0.125rem 0.5rem; border-radius:9999px; font-size:0.7rem; font-weight:600; background:var(--color-border); color:#374151; }
 </style>
 <div class="max-w-screen-2xl mx-auto px-4 py-6 space-y-4">
 
   <!-- Header -->
-  <div class="flex items-center justify-between flex-wrap gap-3">
-    <div>
-      <h1 class="lf-page-title">Fornecedores</h1>
-      <p class="text-sm text-gray-500 dark:text-gray-400">
+  <div class="lf-page-header">
+<div class="min-w-0">
+<h1 class="lf-page-title">Fornecedores</h1>
+      <p class="lf-page-subtitle">
         Cadastro de empresas, prestadores de serviços, arrendatários e impostos.
       </p>
-    </div>
-    <div class="flex gap-2">
+</div>
+<div class="lf-page-actions">
       <a href="{% url 'accounting:fornecedor_tag_list' %}"
-        class="px-3 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg text-sm font-semibold flex items-center gap-1.5">
+        class="lf-btn lf-btn-ghost">
         <i data-lucide="tags" class="w-4 h-4"></i> Gerir Tags
       </a>
       <a href="{% url 'accounting:fornecedor_create' %}"
-        class="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold flex items-center gap-1.5">
+        class="lf-btn lf-btn-ghost">
         <i data-lucide="plus" class="w-4 h-4"></i> Novo Fornecedor
       </a>
     </div>
-  </div>
+</div>
 
   <!-- Mensagens -->
-  {% if messages %}
-  <div class="space-y-2">
-    {% for m in messages %}
-    <div class="px-4 py-2.5 rounded-lg text-sm
-      {% if m.tags == 'success' %}bg-emerald-50 dark:bg-emerald-900/20 text-emerald-800 dark:text-emerald-300
-      {% elif m.tags == 'error' %}bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300
-      {% else %}bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300{% endif %}">
-      {{ m }}
-    </div>
-    {% endfor %}
-  </div>
-  {% endif %}
-
   <!-- KPIs -->
-  <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
-    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-      <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Ativos</p>
-      <p class="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{{ kpis.active }}</p>
+  <div class="lf-kpi-grid">
+<div class="lf-kpi">
+      <p class="lf-kpi-label">Ativos</p>
+      <p class="lf-kpi-value">{{ kpis.active }}</p>
     </div>
-    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-      <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Inativos</p>
-      <p class="text-2xl font-bold text-gray-600 dark:text-gray-300">{{ kpis.inactive }}</p>
+<div class="lf-kpi">
+      <p class="lf-kpi-label">Inativos</p>
+      <p class="lf-kpi-value">{{ kpis.inactive }}</p>
     </div>
-    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-      <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Com IVA Dedutível</p>
-      <p class="text-2xl font-bold text-violet-600 dark:text-violet-400">{{ kpis.iva_dedutivel }}</p>
+<div class="lf-kpi">
+      <p class="lf-kpi-label">Com IVA dedutível</p>
+      <p class="lf-kpi-value">{{ kpis.iva_dedutivel }}</p>
     </div>
-  </div>
+</div>
 
   <!-- Filtros -->
   <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
@@ -84,7 +72,7 @@
         </select>
       </div>
       <div class="flex gap-2">
-        <button type="submit" class="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold">
+        <button type="submit" class="lf-btn lf-btn-ghost">
           Filtrar
         </button>
         <a href="{% url 'accounting:fornecedor_list' %}" class="px-3 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-lg text-sm font-semibold">
@@ -97,46 +85,46 @@
   <!-- Tabela -->
   <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
     <div class="overflow-x-auto">
-      <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-        <thead class="bg-gray-50 dark:bg-gray-900">
+      <table class="lf-table">
+        <thead>
           <tr>
-            <th class="px-4 py-2.5 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nome</th>
-            <th class="px-4 py-2.5 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">NIF</th>
-            <th class="px-4 py-2.5 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tipo</th>
-            <th class="px-4 py-2.5 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tags</th>
-            <th class="px-4 py-2.5 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Recorrência</th>
-            <th class="px-4 py-2.5 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Pago (histórico)</th>
-            <th class="px-4 py-2.5 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">N° Contas</th>
-            <th class="px-4 py-2.5 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">IVA</th>
-            <th class="px-4 py-2.5 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Ações</th>
+            <th >Nome</th>
+            <th >NIF</th>
+            <th >Tipo</th>
+            <th >Tags</th>
+            <th >Recorrência</th>
+            <th class="text-right">Pago (histórico)</th>
+            <th class="text-center">N° contas</th>
+            <th class="text-center">IVA</th>
+            <th class="text-right">Ações</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+        <tbody>
           {% for f in fornecedores %}
           <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 {% if not f.is_active %}opacity-60{% endif %}">
-            <td class="px-4 py-2.5 font-medium text-gray-900 dark:text-white">{{ f.name }}</td>
-            <td class="px-4 py-2.5 font-mono text-xs text-gray-600 dark:text-gray-300">{{ f.nif|default:"—" }}</td>
-            <td class="px-4 py-2.5 text-xs text-gray-500 dark:text-gray-400">{{ f.get_tipo_display }}</td>
-            <td class="px-4 py-2.5">
+            <td class="font-medium text-gray-900 dark:text-white">{{ f.name }}</td>
+            <td class="font-mono text-xs text-gray-600 dark:text-gray-300">{{ f.nif|default:"—" }}</td>
+            <td class="text-xs text-gray-500 dark:text-gray-400">{{ f.get_tipo_display }}</td>
+            <td >
               <div class="flex flex-wrap gap-1">
                 {% for t in f.tags.all %}
                 <span class="tag-pill" style="background:#{% if t.color %}fde68a{% else %}e5e7eb{% endif %};">{{ t.name }}</span>
                 {% endfor %}
               </div>
             </td>
-            <td class="px-4 py-2.5 text-xs text-gray-500 dark:text-gray-400">{{ f.get_recorrencia_default_display }}</td>
-            <td class="px-4 py-2.5 text-right font-mono text-xs text-gray-700 dark:text-gray-300">
-              €{{ f.total_pago|default:"0.00"|floatformat:2 }}
+            <td class="text-xs text-gray-500 dark:text-gray-400">{{ f.get_recorrencia_default_display }}</td>
+            <td class="text-right font-mono text-xs text-gray-700 dark:text-gray-300">
+              {{ f.total_pago|default:"0.00"|eur }}
             </td>
-            <td class="px-4 py-2.5 text-center text-xs text-gray-500 dark:text-gray-400">{{ f.n_bills }}</td>
-            <td class="px-4 py-2.5 text-center">
+            <td class="text-center text-xs text-gray-500 dark:text-gray-400">{{ f.n_bills }}</td>
+            <td class="text-center">
               {% if f.iva_dedutivel %}
                 <span class="tag-pill" style="background:#ddd6fe;color:#5b21b6;">Dedutível</span>
               {% else %}
                 <span class="text-xs text-gray-400">—</span>
               {% endif %}
             </td>
-            <td class="px-4 py-2.5 text-right whitespace-nowrap">
+            <td class="text-right whitespace-nowrap">
               <a href="{% url 'accounting:fornecedor_edit' f.pk %}" class="text-indigo-600 dark:text-indigo-400 hover:underline text-sm">Editar</a>
               <form method="post" action="{% url 'accounting:fornecedor_toggle_active' f.pk %}" class="inline ml-2">
                 {% csrf_token %}
@@ -148,7 +136,7 @@
           </tr>
           {% empty %}
           <tr>
-            <td colspan="9" class="px-4 py-12 text-center">
+            <td colspan="9" class="text-center">
               <i data-lucide="user-plus" class="w-10 h-10 mx-auto text-gray-300 dark:text-gray-600 mb-2"></i>
               <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Nenhum fornecedor encontrado.</p>
               <p class="text-xs mt-1"><a href="{% url 'accounting:fornecedor_create' %}" class="text-indigo-600 dark:text-indigo-400 hover:underline">Criar o primeiro →</a></p>

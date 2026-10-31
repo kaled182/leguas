@@ -5,12 +5,12 @@
 {% block content %}
 <style>
   .pill { padding:0.125rem 0.5rem; border-radius:9999px; font-size:0.7rem; font-weight:600; }
-  .pill-pending { background:#fef3c7; color:#92400e; }
-  .pill-paid { background:#d1fae5; color:#065f46; }
-  .pill-overdue { background:#fee2e2; color:#991b1b; }
-  .pill-cancelled { background:#e5e7eb; color:#6b7280; }
+  .pill-pending { background:var(--tone-warning-bg); color:var(--tone-warning-fg); }
+  .pill-paid { background:var(--tone-success-bg); color:var(--tone-success-fg); }
+  .pill-overdue { background:var(--tone-danger-bg); color:var(--tone-danger-fg); }
+  .pill-cancelled { background:var(--color-border); color:var(--color-text-muted); }
   .pill-awaiting { background:#ede9fe; color:#5b21b6; }
-  .pill-rejected { background:#fce7f3; color:#9d174d; }
+  .pill-rejected { background:var(--tone-brand-bg); color:var(--tone-brand-fg); }
 </style>
 <div class="max-w-5xl mx-auto px-4 py-6 space-y-4">
   <div class="flex items-center justify-between">
@@ -19,32 +19,32 @@
     </a>
     <div class="flex gap-2 flex-wrap">
       {% if bill.status == 'AWAITING' and can_approve %}
-      <button onclick="approveBill()" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold flex items-center gap-1.5"
+      <button onclick="approveBill()" class="lf-btn lf-btn-ghost"
               title="Aprovar esta conta para pagamento">
         <i data-lucide="check-check" class="w-4 h-4"></i> Aprovar
       </button>
-      <button onclick="rejectBill()" class="px-3 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-sm font-semibold flex items-center gap-1.5"
+      <button onclick="rejectBill()" class="lf-btn lf-btn-danger"
               title="Rejeitar esta conta">
         <i data-lucide="x-circle" class="w-4 h-4"></i> Rejeitar
       </button>
       {% endif %}
-      <a href="{% url 'accounting:bill_edit' bill.pk %}" class="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold flex items-center gap-1.5">
+      <a href="{% url 'accounting:bill_edit' bill.pk %}" class="lf-btn lf-btn-ghost">
         <i data-lucide="edit" class="w-4 h-4"></i> Editar
       </a>
       {% if bill.status == 'PENDING' or bill.status == 'OVERDUE' %}
-      <button onclick="markPaid()" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold flex items-center gap-1.5">
+      <button onclick="markPaid()" class="lf-btn lf-btn-ghost">
         <i data-lucide="check-circle" class="w-4 h-4"></i> Marcar Pago
       </button>
       {% endif %}
       {% if bill.recurrence != 'NONE' %}
-      <button onclick="generateNext()" class="px-3 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg text-sm font-semibold flex items-center gap-1.5"
+      <button onclick="generateNext()" class="lf-btn lf-btn-ghost"
               title="Cria a próxima conta nesta cadeia de recorrência">
         <i data-lucide="repeat" class="w-4 h-4"></i> Gerar Próxima
       </button>
       {% endif %}
       <form method="post" action="{% url 'accounting:bill_delete' bill.pk %}" onsubmit="return confirm('Apagar esta conta?')">
         {% csrf_token %}
-        <button type="submit" class="px-3 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-sm font-semibold flex items-center gap-1.5">
+        <button type="submit" class="lf-btn lf-btn-danger">
           <i data-lucide="trash-2" class="w-4 h-4"></i> Apagar
         </button>
       </form>
@@ -62,13 +62,13 @@
           {{ bill.supplier }}{% if bill.supplier_nif %} · NIF {{ bill.supplier_nif }}{% endif %}
         </p>
         {% if bill.invoice_number %}
-        <p class="text-xs text-gray-500">Factura nº {{ bill.invoice_number }}</p>
+        <p class="text-xs text-gray-500">Fatura nº {{ bill.invoice_number }}</p>
         {% endif %}
       </div>
       <div class="text-right">
         <span class="pill pill-{{ bill.status|lower }}">{{ bill.get_status_display }}</span>
         <p class="text-3xl font-bold mt-2 text-gray-900 dark:text-white">{{ bill.amount_total|eur }}</p>
-        <p class="text-xs text-gray-500">net {{ bill.amount_net|eur }} + IVA {{ bill.iva_rate|floatformat:2 }}% ({{ bill.iva_amount|eur }})</p>
+        <p class="text-xs text-gray-500">net {{ bill.amount_net|eur }} + IVA {{ bill.iva_rate|pct:2 }} ({{ bill.iva_amount|eur }})</p>
       </div>
     </div>
     <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -94,7 +94,7 @@
         <p class="text-[10px] text-gray-500 uppercase">Pago em</p>
         <p class="text-sm font-mono">{% if bill.paid_date %}{{ bill.paid_date|date:"d/m/Y" }}{% else %}—{% endif %}</p>
         {% if bill.recurrence != 'NONE' %}
-        <p class="text-[10px] text-violet-600">↻ {{ bill.get_recurrence_display }}</p>
+        <p class="text-[10px] text-violet-600 dark:text-violet-300">↻ {{ bill.get_recurrence_display }}</p>
         {% endif %}
       </div>
     </div>
@@ -112,7 +112,7 @@
     </h2>
     {% if bill.status == 'AWAITING' and not can_approve %}
     <p class="text-xs text-gray-500 italic mb-2">
-      Esta conta está a aguardar aprovação. Não tens permissão para aprovar bills neste valor —
+      Esta conta está a aguardar aprovação. Não tens permissão para aprovar contas neste valor —
       contacta um aprovador autorizado.
     </p>
     {% endif %}
@@ -120,7 +120,7 @@
     <ul class="space-y-2">
       {% for a in bill.approvals.all %}
       <li class="flex items-start gap-2 p-2 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
-        <i data-lucide="{% if a.decision == 'APPROVED' %}check-circle{% else %}x-circle{% endif %}" class="w-4 h-4 mt-0.5 {% if a.decision == 'APPROVED' %}text-emerald-600{% else %}text-rose-600{% endif %}"></i>
+        <i data-lucide="{% if a.decision == 'APPROVED' %}check-circle{% else %}x-circle{% endif %}" class="w-4 h-4 mt-0.5 {% if a.decision == 'APPROVED' %}text-emerald-600 dark:text-emerald-300{% else %}text-rose-600{% endif %}"></i>
         <div class="flex-1 min-w-0">
           <p class="text-sm font-semibold {% if a.decision == 'APPROVED' %}text-emerald-700 dark:text-emerald-400{% else %}text-rose-700 dark:text-rose-400{% endif %}">
             {{ a.get_decision_display }} por {{ a.approver|default:"—" }}
@@ -154,7 +154,7 @@
               {{ att.get_kind_display }}
             </span>
           </p>
-          <a href="{{ att.file.url }}" target="_blank" class="text-xs text-indigo-600 hover:underline block truncate">{{ att.filename }}</a>
+          <a href="{{ att.file.url }}" target="_blank" class="text-xs text-indigo-600 dark:text-indigo-300 hover:underline block truncate">{{ att.filename }}</a>
           <p class="text-[10px] text-gray-500">{{ att.uploaded_at|date:"d/m/Y H:i" }}</p>
         </div>
         <button onclick="deleteAttachment({{ att.pk }})" class="text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 p-1.5 rounded">
@@ -164,7 +164,7 @@
       {% endfor %}
     </div>
     {% else %}
-    <p class="text-xs text-gray-400 italic">Sem anexos. Edita a conta para adicionar facturas/comprovantes.</p>
+    <p class="text-xs text-gray-400 italic">Sem anexos. Edita a conta para adicionar faturas/comprovantes.</p>
     {% endif %}
   </div>
 

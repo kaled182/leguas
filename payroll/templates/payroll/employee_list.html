@@ -4,38 +4,38 @@
 {% block content %}
 <div class="max-w-screen-2xl mx-auto px-4 py-6 space-y-4">
 
-  <div class="flex items-center justify-between flex-wrap gap-3">
-    <div>
-      <h1 class="lf-page-title">Funcionários (Mensalistas)</h1>
-      <p class="text-sm text-gray-500 dark:text-gray-400">
+  <div class="lf-page-header">
+<div class="min-w-0">
+<h1 class="lf-page-title">Funcionários (mensalistas)</h1>
+      <p class="lf-page-subtitle">
         Contratos CLT, descontam SS+IRS, geram TSU para empregador.
       </p>
-    </div>
-    <div class="flex gap-2">
+</div>
+<div class="lf-page-actions">
       <a href="{% url 'payroll:payroll_list' %}"
         class="px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg text-sm font-semibold">
         <i data-lucide="file-text" class="w-4 h-4 inline"></i> Folhas
       </a>
       <a href="{% url 'payroll:employee_create' %}"
-        class="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold">
+        class="lf-btn lf-btn-ghost">
         <i data-lucide="plus" class="w-4 h-4 inline"></i> Novo Funcionário
       </a>
     </div>
-  </div>
+</div>
 
   <!-- KPIs -->
   <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
     <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
       <div class="text-xs text-gray-500">Funcionários ativos</div>
-      <div class="text-2xl font-bold text-indigo-600">{{ total }}</div>
+      <div class="text-2xl font-bold text-indigo-600 dark:text-indigo-300">{{ total }}</div>
     </div>
     <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
       <div class="text-xs text-gray-500">Folha bruta mensal (vencimento base)</div>
-      <div class="text-2xl font-bold text-amber-600">{{ folha_mensal_bruto|eur }}</div>
+      <div class="text-2xl font-bold text-amber-600 dark:text-amber-300">{{ folha_mensal_bruto|eur }}</div>
     </div>
     <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm flex items-center justify-end">
       <a href="?ativo={% if apenas_activos %}0{% else %}1{% endif %}"
-        class="text-sm text-indigo-600 hover:underline">
+        class="text-sm text-indigo-600 dark:text-indigo-300 hover:underline">
         {% if apenas_activos %}Mostrar inativos{% else %}Só ativos{% endif %}
       </a>
     </div>
@@ -59,7 +59,7 @@
         {% for e in employees %}
         <tr class="border-t border-gray-100 dark:border-gray-700">
           <td class="p-3">
-            <a href="{% url 'payroll:employee_edit' e.pk %}" class="font-medium text-indigo-600 hover:underline">{{ e.nome }}</a>
+            <a href="{% url 'payroll:employee_edit' e.pk %}" class="font-medium text-indigo-600 dark:text-indigo-300 hover:underline">{{ e.nome }}</a>
             <div class="text-xs text-gray-500">NIF {{ e.nif|default:'—' }}</div>
           </td>
           <td class="p-3">
@@ -71,7 +71,7 @@
             {% if e.subsidios_mode == 'DUODECIMOS' %}
               <span class="px-2 py-0.5 bg-blue-100 text-blue-800 rounded">Duodécimos</span>
             {% else %}
-              <span class="px-2 py-0.5 bg-purple-100 text-purple-800 rounded">Jun/Dez</span>
+              <span class="px-2 py-0.5 bg-purple-100 text-purple-800 dark:text-purple-300 rounded">Jun/Dez</span>
             {% endif %}
           </td>
           <td class="p-3 text-center">{{ e.irs_tabela }}{% if e.dependentes_irs %} · {{ e.dependentes_irs }}d{% endif %}</td>
@@ -83,7 +83,7 @@
             {% endif %}
           </td>
           <td class="p-3 text-right">
-            <a href="{% url 'payroll:employee_edit' e.pk %}" class="text-indigo-600 hover:underline text-xs">Editar</a>
+            <a href="{% url 'payroll:employee_edit' e.pk %}" class="text-indigo-600 dark:text-indigo-300 hover:underline text-xs">Editar</a>
           </td>
         </tr>
         {% empty %}

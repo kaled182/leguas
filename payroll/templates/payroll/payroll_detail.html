@@ -4,53 +4,53 @@
 {% block content %}
 <style>
   .pill { padding:0.25rem 0.75rem; border-radius:9999px; font-size:0.75rem; font-weight:600; }
-  .pill-RASCUNHO { background:#fef3c7; color:#92400e; }
+  .pill-RASCUNHO { background:var(--tone-warning-bg); color:var(--tone-warning-fg); }
   .pill-APROVADO { background:#dbeafe; color:#1e40af; }
-  .pill-PAGO { background:#d1fae5; color:#065f46; }
-  .pill-CANCELADO { background:#e5e7eb; color:#6b7280; }
+  .pill-PAGO { background:var(--tone-success-bg); color:var(--tone-success-fg); }
+  .pill-CANCELADO { background:var(--color-border); color:var(--color-text-muted); }
   .fld { width:100%; padding:0.4rem 0.6rem; border:1px solid #d1d5db; border-radius:0.4rem; font-size:0.85rem; background:#fff; color:#111827; }
   .dark .fld { background:#1f2937; border-color:#374151; color:#f9fafb; }
 </style>
 <div class="max-w-5xl mx-auto px-4 py-6 space-y-4">
 
-  <div class="flex items-center justify-between flex-wrap gap-3">
-    <div>
-      <h1 class="lf-page-title">{{ pf.employee.nome }} — {{ pf.periodo_label }}</h1>
-      <p class="text-sm text-gray-500">
+  <div class="lf-page-header">
+<div class="min-w-0">
+<h1 class="lf-page-title">{{ pf.employee.nome }} — {{ pf.periodo_label }}</h1>
+      <p class="lf-page-subtitle">
         <span class="pill pill-{{ pf.status }}">{{ pf.get_status_display }}</span>
         · NIF {{ pf.employee.nif|default:'—' }}
         · NISS {{ pf.employee.niss|default:'—' }}
         · {{ pf.employee.get_contrato_tipo_display }}
       </p>
-    </div>
-    <div class="flex gap-2">
+</div>
+<div class="lf-page-actions">
       <a href="{% url 'payroll:payroll_pdf' pf.pk %}" target="_blank"
         class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
         <i data-lucide="printer" class="w-4 h-4 inline"></i> Recibo PDF
       </a>
       <a href="{% url 'payroll:payroll_list' %}" class="px-3 py-2 text-sm text-gray-500">← Voltar</a>
     </div>
-  </div>
+</div>
 
   <!-- Totais -->
-  <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-    <div class="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-sm">
-      <div class="text-xs text-gray-500">Bruto</div>
-      <div class="text-xl font-bold">{{ pf.total_bruto|eur }}</div>
+  <div class="lf-kpi-grid">
+<div class="lf-kpi">
+      <div class="lf-kpi-note">Bruto</div>
+      <div class="lf-kpi-value">{{ pf.total_bruto|eur }}</div>
     </div>
-    <div class="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-sm">
-      <div class="text-xs text-gray-500">Descontos</div>
-      <div class="text-xl font-bold text-red-600">{{ pf.total_descontos|eur }}</div>
+<div class="lf-kpi">
+      <div class="lf-kpi-note">Descontos</div>
+      <div class="lf-kpi-value">{{ pf.total_descontos|eur }}</div>
     </div>
-    <div class="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-sm">
-      <div class="text-xs text-gray-500">Líquido</div>
-      <div class="text-xl font-bold text-emerald-600">{{ pf.total_liquido|eur }}</div>
+<div class="lf-kpi">
+      <div class="lf-kpi-note">Líquido</div>
+      <div class="lf-kpi-value">{{ pf.total_liquido|eur }}</div>
     </div>
-    <div class="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-sm">
-      <div class="text-xs text-gray-500">TSU empregador</div>
-      <div class="text-xl font-bold text-amber-600">{{ pf.tsu_empregador|eur }}</div>
+<div class="lf-kpi">
+      <div class="lf-kpi-note">TSU empregador</div>
+      <div class="lf-kpi-value">{{ pf.tsu_empregador|eur }}</div>
     </div>
-  </div>
+</div>
 
   <!-- Brutos / Descontos -->
   <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -88,7 +88,7 @@
 
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
       <h3 class="font-semibold text-sm mb-2 flex items-center gap-1">
-        <i data-lucide="minus-circle" class="w-4 h-4 text-red-600"></i>
+        <i data-lucide="minus-circle" class="w-4 h-4 text-red-600 dark:text-red-300"></i>
         Descontos
       </h3>
       <table class="w-full text-sm">
@@ -128,7 +128,7 @@
       <div class="md:col-span-1">{{ form.tipo }}</div>
       <div class="md:col-span-2">{{ form.descricao }}</div>
       <div>{{ form.valor }}</div>
-      <button class="px-3 py-2 bg-indigo-600 text-white rounded-lg text-sm">Adicionar</button>
+      <button class="lf-btn lf-btn-ghost">Adicionar</button>
     </form>
   </div>
   {% endif %}
@@ -144,7 +144,7 @@
       </form>
       <form method="post" action="{% url 'payroll:payroll_approve' pf.pk %}" class="inline">
         {% csrf_token %}
-        <button class="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold"
+        <button class="lf-btn lf-btn-ghost"
           onclick="return confirm('Aprovar folha? Vai criar Imposto SS (TSU) e IRS.')">
           <i data-lucide="check" class="w-4 h-4 inline"></i> Aprovar
         </button>
@@ -155,7 +155,7 @@
       <form method="post" action="{% url 'payroll:payroll_pay' pf.pk %}" class="inline flex items-center gap-2">
         {% csrf_token %}
         <input type="date" name="paid_date" value="{{ today|date:'Y-m-d' }}" class="fld" style="width:auto">
-        <button class="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold"
+        <button class="lf-btn lf-btn-ghost"
           onclick="return confirm('Marcar como paga? Vai criar Bill no DRE.')">
           <i data-lucide="credit-card" class="w-4 h-4 inline"></i> Marcar Paga
         </button>
@@ -165,7 +165,7 @@
     {% if pf.status != 'CANCELADO' %}
       <form method="post" action="{% url 'payroll:payroll_cancel' pf.pk %}" class="inline">
         {% csrf_token %}
-        <button class="px-3 py-2 border border-red-300 text-red-600 hover:bg-red-50 rounded-lg text-sm"
+        <button class="px-3 py-2 border border-red-300 text-red-600 dark:text-red-300 hover:bg-red-50 rounded-lg text-sm"
           onclick="return confirm('Cancelar folha? Vai anular Impostos e Bill em cascata.')">
           <i data-lucide="x-circle" class="w-4 h-4 inline"></i> Cancelar
         </button>
@@ -176,9 +176,9 @@
   <!-- Vínculos -->
   {% if pf.tsu_imposto or pf.irs_imposto or pf.bill_espelho %}
   <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-3 text-xs space-y-1">
-    {% if pf.tsu_imposto %}<div>TSU Imposto: <a class="text-indigo-600" href="/financeiro/impostos/{{ pf.tsu_imposto_id }}/">#{{ pf.tsu_imposto_id }}</a> — €{{ pf.tsu_imposto.valor }}</div>{% endif %}
-    {% if pf.irs_imposto %}<div>IRS Imposto: <a class="text-indigo-600" href="/financeiro/impostos/{{ pf.irs_imposto_id }}/">#{{ pf.irs_imposto_id }}</a> — €{{ pf.irs_imposto.valor }}</div>{% endif %}
-    {% if pf.bill_espelho %}<div>Bill (DRE): <a class="text-indigo-600" href="/financeiro/a-pagar/{{ pf.bill_espelho_id }}/">#{{ pf.bill_espelho_id }}</a> — €{{ pf.bill_espelho.amount_total }}</div>{% endif %}
+    {% if pf.tsu_imposto %}<div>TSU Imposto: <a class="text-indigo-600 dark:text-indigo-300" href="/financeiro/impostos/{{ pf.tsu_imposto_id }}/">#{{ pf.tsu_imposto_id }}</a> — €{{ pf.tsu_imposto.valor }}</div>{% endif %}
+    {% if pf.irs_imposto %}<div>IRS Imposto: <a class="text-indigo-600 dark:text-indigo-300" href="/financeiro/impostos/{{ pf.irs_imposto_id }}/">#{{ pf.irs_imposto_id }}</a> — €{{ pf.irs_imposto.valor }}</div>{% endif %}
+    {% if pf.bill_espelho %}<div>Conta (DRE): <a class="text-indigo-600 dark:text-indigo-300" href="/financeiro/a-pagar/{{ pf.bill_espelho_id }}/">#{{ pf.bill_espelho_id }}</a> — €{{ pf.bill_espelho.amount_total }}</div>{% endif %}
   </div>
   {% endif %}
 </div>

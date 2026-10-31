@@ -1,23 +1,25 @@
 {% extends 'settlements/base.html' %}
 {% load ui %}
 {% load static %}
-{% block title %}Lixeira — Contas a Pagar{% endblock %}
+{% block title %}Reciclagem — Contas a pagar{% endblock %}
 {% block content %}
 <div class="max-w-screen-2xl mx-auto px-4 py-6 space-y-4">
 
-  <div class="flex items-center justify-between flex-wrap gap-3">
-    <div>
-      <h1 class="lf-page-title">Lixeira — Contas a Pagar</h1>
-      <p class="text-sm text-gray-500 dark:text-gray-400">
+  <div class="lf-page-header">
+<div class="min-w-0">
+<h1 class="lf-page-title">Reciclagem — Contas a pagar</h1>
+      <p class="lf-page-subtitle">
         Contas apagadas ({{ total }}). Ficam aqui para auditoria —
         podem ser restauradas ou eliminadas definitivamente.
       </p>
-    </div>
-    <a href="{% url 'accounting:bill_list' %}"
+</div>
+<div class="lf-page-actions">
+<a href="{% url 'accounting:bill_list' %}"
       class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-semibold flex items-center gap-1.5">
       <i data-lucide="arrow-left" class="w-4 h-4"></i> Voltar
     </a>
-  </div>
+</div>
+</div>
 
   <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-x-auto">
     <table class="w-full text-sm">
@@ -54,12 +56,12 @@
             <div class="flex justify-end gap-1">
               <button type="button"
                 onclick="restoreBill({{ b.pk }}, '{{ b.description|escapejs }}')"
-                class="p-1 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded" title="Restaurar">
+                class="p-1 text-emerald-600 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded" title="Restaurar">
                 <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
               </button>
               <button type="button"
                 onclick="hardDeleteBill({{ b.pk }}, '{{ b.description|escapejs }}')"
-                class="p-1 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded" title="Eliminar definitivamente">
+                class="p-1 text-rose-600 dark:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded" title="Eliminar definitivamente">
                 <i data-lucide="x-circle" class="w-4 h-4"></i>
               </button>
             </div>

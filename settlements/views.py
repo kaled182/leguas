@@ -1873,7 +1873,7 @@ def driver_pre_invoice_create(request, driver_id):
                         price_groups[key]["reasons"].add(po.reason)
                     if is_sd:
                         price_groups[key]["reasons"].add(SD_REASON)
-                    if kind in ("negociado", "tarifa") and cp4:
+                    if kind == "negociado" and cp4:
                         price_groups[key]["cps"].add(cp4)
 
                 # Criar 1 PreInvoiceLine por grupo de preço/origem
@@ -1887,10 +1887,10 @@ def driver_pre_invoice_create(request, driver_id):
                         obs_extra = (
                             f" · Preço especial €{unit_price}: {reasons_txt}"
                         )
-                    elif kind in ("negociado", "tarifa"):
+                    elif kind == "negociado":
                         obs_extra = (
                             f" · {SOURCE_LABELS[kind].capitalize()} "
-                            f"({pricer.regime.lower()}) €{unit_price}: "
+                            f"€{unit_price}: "
                             f"CP {', '.join(sorted(info['cps']))}"
                         )
                     line = PreInvoiceLine(
@@ -2000,7 +2000,7 @@ def driver_pre_invoice_create(request, driver_id):
                             price_groups_inc[key]["reasons"].add(po.reason)
                         if is_sd:
                             price_groups_inc[key]["reasons"].add(SD_REASON)
-                        if kind in ("negociado", "tarifa") and cp4:
+                        if kind == "negociado" and cp4:
                             price_groups_inc[key]["cps"].add(cp4)
 
                     # Criar 1 PreInvoiceLine por grupo de preço/origem
@@ -2018,10 +2018,10 @@ def driver_pre_invoice_create(request, driver_id):
                                 f" · Preço especial €{unit_price}: "
                                 f"{reasons_txt}"
                             )
-                        elif kind in ("negociado", "tarifa"):
+                        elif kind == "negociado":
                             obs_extra = (
                                 f" · {SOURCE_LABELS[kind].capitalize()} "
-                                f"({pricer.regime.lower()}) €{unit_price}: "
+                                f"€{unit_price}: "
                                 f"CP {', '.join(sorted(info['cps']))}"
                             )
                         line_inc = PreInvoiceLine(

@@ -637,7 +637,7 @@ class PaymentsTests(TestCase):
 
 
 class CpPricingTests(TestCase):
-    """Decisão C1: valor negociado do CP → tarifa padrão do CP → base."""
+    """Valor negociado na ficha → base; a tarifa do hub não paga o motorista."""
 
     def setUp(self):
         from datetime import date
@@ -682,17 +682,25 @@ class CpPricingTests(TestCase):
         d = self.date
         p = self._pricer(d(2026, 11, 1), d(2026, 11, 30))
         self.assertEqual(p.price("4740-123")[:2], (self.D("1.10"), "negociado"))
-        self.assertEqual(p.price("4920-001")[:2], (self.D("1.15"), "tarifa"))
-        # CP não selecionado: tarifa padrão (o valor 9,99 não conta).
-        self.assertEqual(p.price("4900-001")[:2], (self.D("1.00"), "tarifa"))
-        # CP sem tarifa (ex.: Porto): preço do motorista.
+        # CP selecionado sem valor negociado: preço do motorista, não a tarifa.
+        self.assertEqual(p.price("4920-001")[:2], (self.D("1.20"), "base"))
+        # CP não selecionado: o valor 9,99 não conta.
+        self.assertEqual(p.price("4900-001")[:2], (self.D("1.20"), "base"))
+        # CP sem tarifa: preço do motorista.
         self.assertEqual(p.price("4490-001")[:2], (self.D("1.20"), "base"))
 
-    def test_weekly_uses_weekly_column(self):
+    def test_weekly_period_keeps_same_rule(self):
         d = self.date
         p = self._pricer(d(2026, 11, 2), d(2026, 11, 8))
-        self.assertEqual(p.price("4920")[:2], (self.D("1.10"), "tarifa"))
+        self.assertEqual(p.price("4920")[:2], (self.D("1.20"), "base"))
         self.assertEqual(p.price("4740")[:2], (self.D("1.10"), "negociado"))
+
+    def test_partner_price_when_profile_has_no_price(self):
+        d = self.date
+        DriverProfile.objects.filter(pk=self.drv.pk).update(price_per_package=None)
+        self.drv.refresh_from_db()
+        p = self._pricer(d(2026, 11, 1), d(2026, 11, 30))
+        self.assertEqual(p.price("4920")[:2], (self.D("1.00"), "base"))
 
     def test_inactive_before_start_date(self):
         d = self.date
@@ -721,15 +729,14 @@ class CpPricingTests(TestCase):
         lines = {(l.taxa_por_entrega, l.total_pacotes, l.api_source) for l in pf.linhas.all()}
         self.assertEqual(lines, {
             (self.D("1.10"), 3, "auto:per_login_cp"),
-            (self.D("1.15"), 2, "auto:per_login_cp"),
-            (self.D("1.20"), 1, "auto:per_login"),
+            (self.D("1.20"), 3, "auto:per_login"),
         })
-        self.assertEqual(pf.base_entregas, self.D("6.80"))
+        self.assertEqual(pf.base_entregas, self.D("6.90"))
         # O portal (driver_breakdown) mostra o mesmo valor à porta.
         from settlements.services_driver_breakdown import driver_breakdown
 
         bd = driver_breakdown(self.drv, d(2026, 11, 1), d(2026, 11, 30), partner=self.partner)
-        self.assertEqual(bd["amounts"]["door_normal"], self.D("6.80"))
+        self.assertEqual(bd["amounts"]["door_normal"], self.D("6.90"))
 
     def test_ficha_saves_negotiated_price_only_for_valid_values(self):
         admin = User.objects.create_user("adm5", password="x", is_staff=True, is_superuser=True)

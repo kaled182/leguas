@@ -198,3 +198,25 @@ class DashboardV2AccessTests(TestCase):
         response = self.client.get(reverse("dashboard_leguas:dashboard_v2"))
         self.assertEqual(response.status_code, 302)
         self.assertIn("/auth/login/", response["Location"])
+
+
+class DashboardPresentationTests(TestCase):
+    def setUp(self):
+        user = User.objects.create_superuser("g", password="x")
+        self.client.force_login(user)
+
+    def test_top_kpis_stay_at_four(self):
+        response = self.client.get(reverse("dashboard_leguas:home"))
+        html = response.content.decode()
+        top = html[html.index('class="lf-kpi-grid'):html.index("Dia concluído")]
+        self.assertEqual(top.count("lf-kpi-value"), 4)
+
+    def test_duplicated_status_donut_is_gone(self):
+        response = self.client.get(reverse("dashboard_leguas:home"))
+        self.assertNotContains(response, "chStatus")
+        self.assertNotContains(response, "Stale:")
+
+    def test_screen_mode_has_no_menus(self):
+        response = self.client.get(reverse("dashboard_leguas:home"), {"tv": 1})
+        self.assertContains(response, "lf-tv")
+        self.assertContains(response, "location.reload")

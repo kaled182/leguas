@@ -1,184 +1,95 @@
 {% extends 'layouts/admin_base.html' %}
-{% load static %}
+{% load static ui %}
 
-{% block title %}Painel Operacional{% endblock %}
+{% block title %}Painel do dia{% endblock %}
 
 {% block content %}
-<div class="{% if tv_mode %}tv-mode{% endif %} max-w-7xl mx-auto" id="dashboard-root">
+<div id="dashboard-root">
 
-{# ─── HEADER ─── #}
-<div class="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 rounded-2xl p-5 mb-5 shadow-lg">
-  <div class="flex flex-wrap items-center justify-between gap-4">
-    <div class="flex items-center gap-3">
-      <div class="bg-white/20 backdrop-blur-sm rounded-xl p-3">
-        <i data-lucide="activity" class="w-7 h-7 text-white"></i>
-      </div>
-      <div>
-        <h1 class="text-2xl lg:text-3xl font-extrabold text-white">Painel Operacional</h1>
-        <p class="text-white/80 text-sm flex flex-wrap items-center gap-x-2">
-          <span class="inline-flex items-center gap-1.5">
-            {% if is_today %}
-            <span class="relative flex h-2 w-2">
-              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-              <span class="relative inline-flex rounded-full h-2 w-2 bg-green-400"></span>
-            </span>
-            Tempo real · {{ target_date|date:"l, d/m" }}
-            {% else %}Histórico · {{ target_date|date:"l, d/m/Y" }}{% endif %}
-          </span>
-          {% if last_sync %}<span>· Última importação {{ last_sync|date:"d/m H:i" }}</span>{% endif %}
-        </p>
-      </div>
-    </div>
-
-    <div class="flex flex-wrap items-center gap-2">
-      <div class="flex items-center bg-white/10 backdrop-blur-sm rounded-lg">
-        <a href="?date={{ prev_date|date:'Y-m-d' }}{% if tv_mode %}&tv=1{% endif %}" title="Dia anterior" class="px-2 py-2 text-white hover:bg-white/10 rounded-l-lg"><i data-lucide="chevron-left" class="w-4 h-4"></i></a>
-        <form method="get" class="flex items-center gap-1.5 px-2">
-          <i data-lucide="calendar" class="w-4 h-4 text-white"></i>
-          <input type="date" name="date" value="{{ target_date|date:'Y-m-d' }}" max="{{ today|date:'Y-m-d' }}"
-                 class="bg-transparent text-white text-sm outline-none [&::-webkit-calendar-picker-indicator]:invert"
-                 onchange="this.form.submit()">
-          {% if tv_mode %}<input type="hidden" name="tv" value="1">{% endif %}
-        </form>
-        {% if next_date %}
-        <a href="?date={{ next_date|date:'Y-m-d' }}{% if tv_mode %}&tv=1{% endif %}" title="Dia seguinte" class="px-2 py-2 text-white hover:bg-white/10 rounded-r-lg"><i data-lucide="chevron-right" class="w-4 h-4"></i></a>
-        {% endif %}
-      </div>
-      {% if not is_today %}
-        <a href="?{% if tv_mode %}tv=1{% endif %}" class="bg-white text-indigo-700 px-3 py-2 rounded-lg text-sm font-bold">Hoje</a>
-      {% endif %}
-      {% if tv_mode %}
-        <a href="?date={{ target_date|date:'Y-m-d' }}" class="bg-white/20 hover:bg-white/30 text-white px-3 py-2 rounded-lg flex items-center gap-1.5 text-sm font-medium"><i data-lucide="x" class="w-4 h-4"></i>Sair</a>
-      {% else %}
-        <a href="?date={{ target_date|date:'Y-m-d' }}&tv=1" title="Modo ecrã (atualiza a cada 60 s)" class="bg-white/20 hover:bg-white/30 text-white px-3 py-2 rounded-lg flex items-center gap-1.5 text-sm font-medium"><i data-lucide="tv" class="w-4 h-4"></i>Modo ecrã</a>
-      {% endif %}
-    </div>
+{# ─── Cabeçalho ─── #}
+<div class="lf-page-header">
+  <div class="min-w-0">
+    <h1 class="lf-page-title">Painel do dia</h1>
+    <p class="lf-page-subtitle">{% if is_today %}Tempo real{% else %}Histórico{% endif %} · {{ target_date|date:"l, d/m/Y" }}{% if last_sync %} · Última sincronização {{ last_sync|date:"d/m H:i" }}{% endif %}</p>
+  </div>
+  <div class="lf-page-actions">
+    <a class="lf-btn lf-btn-ghost" href="?date={{ prev_date|date:'Y-m-d' }}{% if tv_mode %}&tv=1{% endif %}" aria-label="Dia anterior"><i data-lucide="chevron-left" class="w-4 h-4" aria-hidden="true"></i></a>
+    <form method="get">
+      <label class="sr-only" for="dash-date">Data</label>
+      <input id="dash-date" class="lf-control w-auto" type="date" name="date" value="{{ target_date|date:'Y-m-d' }}" max="{{ today|date:'Y-m-d' }}" onchange="this.form.submit()">
+      {% if tv_mode %}<input type="hidden" name="tv" value="1">{% endif %}
+    </form>
+    {% if next_date %}
+    <a class="lf-btn lf-btn-ghost" href="?date={{ next_date|date:'Y-m-d' }}{% if tv_mode %}&tv=1{% endif %}" aria-label="Dia seguinte"><i data-lucide="chevron-right" class="w-4 h-4" aria-hidden="true"></i></a>
+    {% endif %}
+    {% if not is_today %}<a class="lf-btn lf-btn-ghost" href="?{% if tv_mode %}tv=1{% endif %}">Hoje</a>{% endif %}
+    {% if tv_mode %}
+    <a class="lf-btn lf-btn-ghost" href="?date={{ target_date|date:'Y-m-d' }}">Sair do modo ecrã</a>
+    {% else %}
+    <a class="lf-btn lf-btn-primary" href="?date={{ target_date|date:'Y-m-d' }}&tv=1" title="Atualiza a cada 60 s"><i data-lucide="tv" class="w-4 h-4" aria-hidden="true"></i>Modo ecrã</a>
+    {% endif %}
   </div>
 </div>
 
-{# ─── KPIs ─── #}
-<div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 mb-3">
-  {# Volume #}
-  <div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200/50 dark:border-gray-700/50">
-    <div class="flex items-center justify-between">
-      <p class="text-[11px] uppercase font-bold text-gray-500 dark:text-gray-400 tracking-wider">Volume do dia</p>
-      <i data-lucide="package" class="w-4 h-4 text-indigo-500"></i>
-    </div>
-    <p class="text-3xl font-extrabold text-gray-900 dark:text-white mt-1">{{ kpis.total }}</p>
-    {% if compare.delta_total_d7 is not None %}
-      <span class="inline-block mt-1 px-1.5 py-0.5 rounded text-[11px] font-bold {% if compare.delta_total_d7 >= 0 %}bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300{% else %}bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300{% endif %}">{% if compare.delta_total_d7 >= 0 %}↑{% else %}↓{% endif %} {{ compare.delta_total_d7|floatformat:0 }}% vs {{ target_date|date:"D" }} passada</span>
-    {% endif %}
-    <p class="text-[11px] text-gray-500 mt-1">média 7 dias: {{ compare.avg7_total }} · ontem {{ compare.total_d1 }}</p>
+{# ─── KPIs: 4 no topo, números em neutro ─── #}
+<div class="lf-kpi-grid mb-3">
+  <div class="lf-kpi">
+    <span class="lf-kpi-label">Volume do dia</span>
+    <span class="lf-kpi-value">{{ kpis.total|pt_int }}</span>
+    {% if compare.delta_total_d7 is not None %}<span><span class="lf-badge {% if compare.delta_total_d7 >= 0 %}lf-tone-success{% else %}lf-tone-danger{% endif %}">{% if compare.delta_total_d7 >= 0 %}↑{% else %}↓{% endif %} {{ compare.delta_total_d7|floatformat:0 }}% vs. {{ target_date|date:"D" }} passada</span></span>{% endif %}
+    <span class="lf-kpi-note">média de 7 dias: {{ compare.avg7_total|pt_int }} · ontem: {{ compare.total_d1|pt_int }}</span>
   </div>
-  {# Entregues #}
-  <div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200/50 dark:border-gray-700/50">
-    <div class="flex items-center justify-between">
-      <p class="text-[11px] uppercase font-bold text-gray-500 dark:text-gray-400 tracking-wider">Entregues</p>
-      <i data-lucide="package-check" class="w-4 h-4 text-emerald-500"></i>
-    </div>
-    <p class="text-3xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-1">{{ kpis.delivered }}</p>
-    {% if compare.delta_del_d7 is not None %}
-      <span class="inline-block mt-1 px-1.5 py-0.5 rounded text-[11px] font-bold {% if compare.delta_del_d7 >= 0 %}bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300{% else %}bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300{% endif %}">{% if compare.delta_del_d7 >= 0 %}↑{% else %}↓{% endif %} {{ compare.delta_del_d7|floatformat:0 }}% vs {{ target_date|date:"D" }} passada</span>
-    {% endif %}
-    <p class="text-[11px] text-gray-500 mt-1">{% if is_today %}esperado até agora: {{ compare.expected_now }}{% else %}média 7 dias: {{ compare.expected_now }}{% endif %}</p>
+  <div class="lf-kpi">
+    <span class="lf-kpi-label">Entregues</span>
+    <span class="lf-kpi-value">{{ kpis.delivered|pt_int }}</span>
+    {% if compare.delta_del_d7 is not None %}<span><span class="lf-badge {% if compare.delta_del_d7 >= 0 %}lf-tone-success{% else %}lf-tone-danger{% endif %}">{% if compare.delta_del_d7 >= 0 %}↑{% else %}↓{% endif %} {{ compare.delta_del_d7|floatformat:0 }}% vs. {{ target_date|date:"D" }} passada</span></span>{% endif %}
+    <span class="lf-kpi-note">{% if is_today %}esperado até agora: {% else %}média de 7 dias: {% endif %}{{ compare.expected_now|pt_int }}</span>
   </div>
-  {# Taxa de sucesso #}
-  <div class="bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl p-4 text-white shadow">
-    <div class="flex items-center justify-between">
-      <p class="text-[11px] uppercase font-bold text-emerald-100 tracking-wider">Taxa de entrega</p>
-      <i data-lucide="check-circle-2" class="w-4 h-4"></i>
-    </div>
-    <p class="text-3xl font-extrabold mt-1">{{ kpis.success_rate|floatformat:1 }}%</p>
-    {% if compare.delta_success_pp is not None %}
-      <span class="inline-block mt-1 px-1.5 py-0.5 rounded text-[11px] font-bold bg-white/20">{% if compare.delta_success_pp >= 0 %}+{% endif %}{{ compare.delta_success_pp|floatformat:1 }} pp vs média 7d</span>
-    {% endif %}
-    <p class="text-[11px] text-emerald-100 mt-1">{{ kpis.delivered }} de {{ kpis.attempted }} tentadas</p>
+  <div class="lf-kpi">
+    <span class="lf-kpi-label">Taxa de entrega</span>
+    <span class="lf-kpi-value">{{ kpis.success_rate|pct }}</span>
+    {% if compare.delta_success_pp is not None %}<span><span class="lf-badge {% if compare.delta_success_pp >= 0 %}lf-tone-success{% else %}lf-tone-danger{% endif %}">{% if compare.delta_success_pp >= 0 %}+{% endif %}{{ compare.delta_success_pp|floatformat:1 }} pp vs. média de 7 dias</span></span>{% endif %}
+    <span class="lf-kpi-note">{{ kpis.delivered|pt_int }} de {{ kpis.attempted|pt_int }} tentadas</span>
   </div>
-  {# Falhas #}
-  <a href="#atencao" class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200/50 dark:border-gray-700/50 hover:shadow-md transition">
-    <div class="flex items-center justify-between">
-      <p class="text-[11px] uppercase font-bold text-gray-500 dark:text-gray-400 tracking-wider">Falhas</p>
-      <i data-lucide="x-circle" class="w-4 h-4 text-rose-500"></i>
-    </div>
-    <p class="text-3xl font-extrabold text-rose-600 dark:text-rose-400 mt-1">{{ kpis.failures }}</p>
-    <p class="text-[11px] text-gray-500 mt-1">{{ kpis.failure_rate|floatformat:1 }}% das tentadas · ver motoristas</p>
-  </a>
-  {# Por entregar #}
-  <div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200/50 dark:border-gray-700/50">
-    <div class="flex items-center justify-between">
-      <p class="text-[11px] uppercase font-bold text-gray-500 dark:text-gray-400 tracking-wider">Em rota</p>
-      <i data-lucide="truck" class="w-4 h-4 text-amber-500"></i>
-    </div>
-    <p class="text-3xl font-extrabold text-amber-600 dark:text-amber-400 mt-1">{{ kpis.en_route }}</p>
-    <p class="text-[11px] text-gray-500 mt-1">+ {{ kpis.assigned }} atribuídos · pendentes &gt;1 dia: {{ alerts.backlog_total }}</p>
-  </div>
-  {# Motoristas #}
-  <a href="{% url 'drivers_app:drivers_central' %}?tab=todos&flag=worked_today" class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200/50 dark:border-gray-700/50 hover:shadow-md transition">
-    <div class="flex items-center justify-between">
-      <p class="text-[11px] uppercase font-bold text-gray-500 dark:text-gray-400 tracking-wider">Motoristas na estrada</p>
-      <i data-lucide="users" class="w-4 h-4 text-sky-500"></i>
-    </div>
-    <p class="text-3xl font-extrabold text-sky-600 dark:text-sky-400 mt-1">{{ kpis.drivers }}</p>
-    <p class="text-[11px] text-gray-500 mt-1">{{ kpis.per_driver|floatformat:0 }} entregas por motorista</p>
+  <a class="lf-kpi" href="#atencao">
+    <span class="lf-kpi-label">Falhas</span>
+    <span class="lf-kpi-value">{{ kpis.failures|pt_int }}</span>
+    <span class="lf-kpi-note">{{ kpis.failure_rate|pct }} das tentadas · ver motoristas</span>
   </a>
 </div>
 
-{# ─── Progresso do dia (segmentado) ─── #}
-<div class="bg-white dark:bg-gray-800 rounded-xl px-4 py-3 border border-gray-200/50 dark:border-gray-700/50 mb-3">
-  <div class="flex flex-wrap items-center justify-between gap-2 text-xs">
-    <p class="font-bold text-gray-700 dark:text-gray-200">Dia concluído: {{ kpis.progress_pct|floatformat:1 }}%</p>
-    <div class="flex flex-wrap gap-3 text-gray-500">
-      <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-emerald-500"></span>entregue {{ kpis.delivered }}</span>
-      <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-rose-500"></span>falha {{ kpis.failures }}</span>
-      <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-amber-400"></span>em rota {{ kpis.en_route }}</span>
-      <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-gray-300 dark:bg-gray-600"></span>outros</span>
-    </div>
+{# ─── Progresso do dia ─── #}
+<div class="lf-chart mb-3">
+  <div class="flex flex-wrap items-center justify-between gap-2 text-sm">
+    <p class="font-semibold">Dia concluído: {{ kpis.progress_pct|pct }}</p>
+    <p class="text-content-muted">Em distribuição: {{ kpis.en_route|pt_int }} · atribuídos: {{ kpis.assigned|pt_int }} · <a class="underline" href="{% url 'drivers_app:drivers_central' %}?tab=todos&flag=worked_today">motoristas na estrada: {{ kpis.drivers|pt_int }}</a> · {{ kpis.per_driver|floatformat:0 }} entregas por motorista</p>
   </div>
-  <div class="mt-2 h-3 rounded-full overflow-hidden flex bg-gray-200 dark:bg-gray-700">
+  <div class="lf-progress mt-2">
     {% if kpis.total %}
-    <div class="bg-emerald-500" style="width: {% widthratio kpis.delivered kpis.total 100 %}%"></div>
-    <div class="bg-rose-500" style="width: {% widthratio kpis.failures kpis.total 100 %}%"></div>
-    <div class="bg-amber-400" style="width: {% widthratio kpis.en_route kpis.total 100 %}%"></div>
+    <div class="lf-progress-ok" style="width: {% widthratio kpis.delivered kpis.total 100 %}%"></div>
+    <div class="lf-progress-fail" style="width: {% widthratio kpis.failures kpis.total 100 %}%"></div>
+    <div class="lf-progress-route" style="width: {% widthratio kpis.en_route kpis.total 100 %}%"></div>
     {% endif %}
   </div>
 </div>
 
 {# ─── Alertas ─── #}
 {% if alerts.stale_total or alerts.backlog_total or alerts.hubs_dropping %}
-<div class="flex flex-wrap gap-2 mb-5">
-  {% if alerts.backlog_total %}
-  <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-700/50">
-    <i data-lucide="clock" class="w-3.5 h-3.5"></i> Pendentes: {{ alerts.backlog_total }} pacotes em rota há mais de 1 dia
-  </span>
-  {% endif %}
-  {% if alerts.stale_total %}
-  <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-50 dark:bg-rose-900/20 text-rose-800 dark:text-rose-300 border border-rose-200 dark:border-rose-700/50">
-    <i data-lucide="package-x" class="w-3.5 h-3.5"></i> Stale: {{ alerts.stale_total }} esquecidos há mais de 7 dias
-  </span>
-  {% endif %}
-  {% for h in alerts.hubs_dropping %}
-  <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-purple-50 dark:bg-purple-900/20 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-700/50">
-    <i data-lucide="trending-down" class="w-3.5 h-3.5"></i> {{ h.name }}: {{ h.total }} hoje (média {{ h.avg_7d }})
-  </span>
-  {% endfor %}
+<div class="mb-5 flex flex-wrap gap-2">
+  {% if alerts.stale_total %}<span class="lf-badge lf-tone-danger">{{ alerts.stale_total|pt_int }} pacotes parados há mais de 7 dias</span>{% endif %}
+  {% if alerts.backlog_total %}<span class="lf-badge lf-tone-warning">{{ alerts.backlog_total|pt_int }} pacotes em distribuição há mais de 1 dia</span>{% endif %}
+  {% for h in alerts.hubs_dropping %}<span class="lf-badge lf-tone-brand">{{ h.name }}: {{ h.total|pt_int }} hoje (média {{ h.avg_7d|pt_int }})</span>{% endfor %}
 </div>
 {% else %}<div class="mb-5"></div>{% endif %}
 
-{# ─── Gráficos: 30 dias + estado ─── #}
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
-  <div class="lg:col-span-2 bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200/50 dark:border-gray-700/50">
-    <div class="flex items-center justify-between">
-      <p class="text-sm font-bold text-gray-900 dark:text-white">Últimos 30 dias</p>
-      <p class="text-[11px] text-gray-500">clique num dia para o abrir</p>
-    </div>
-    <p class="text-xs text-gray-500 mb-2">Volume por estado e taxa de sucesso</p>
-    <div class="h-72"><canvas id="ch30"></canvas></div>
+{# ─── Últimos 30 dias ─── #}
+<div class="lf-chart mb-4">
+  <div class="flex items-center justify-between">
+    <p class="lf-chart-title">Últimos 30 dias</p>
+    <p class="lf-help">Clique num dia para o abrir</p>
   </div>
-  <div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200/50 dark:border-gray-700/50">
-    <p class="text-sm font-bold text-gray-900 dark:text-white">Estado do dia</p>
-    <p class="text-xs text-gray-500 mb-2">{{ kpis.total }} pacotes</p>
-    <div class="h-72"><canvas id="chStatus"></canvas></div>
-  </div>
+  <p class="lf-help">Volume por estado e taxa de entrega</p>
+  <div class="mt-2 h-72"><canvas id="ch30" role="img" aria-label="Volume por estado nos últimos 30 dias"></canvas></div>
 </div>
 
 {# ─── Ritmo + hubs ─── #}
@@ -191,7 +102,7 @@
   </div>
   <div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200/50 dark:border-gray-700/50">
     <p class="text-sm font-bold text-gray-900 dark:text-white">Por hub</p>
-    <p class="text-xs text-gray-500 mb-2">Entregues, falhas e em rota · taxa de sucesso no fim de cada barra</p>
+    <p class="text-xs text-gray-500 mb-2">Entregues, falhas e em distribuição · taxa de entrega no fim de cada barra</p>
     <div class="h-64"><canvas id="chHubs"></canvas></div>
   </div>
 </div>
@@ -310,7 +221,7 @@
       <p class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5"><i data-lucide="trophy" class="w-4 h-4 text-amber-500"></i>Top motoristas</p>
       <div class="flex text-[11px] rounded-lg bg-gray-100 dark:bg-gray-700 p-0.5">
         <button type="button" @click="t='vol'" :class="t==='vol' ? 'bg-white dark:bg-gray-600 shadow font-bold' : ''" class="px-2 py-0.5 rounded-md">Entregas</button>
-        <button type="button" @click="t='qual'" :class="t==='qual' ? 'bg-white dark:bg-gray-600 shadow font-bold' : ''" class="px-2 py-0.5 rounded-md">Sucesso</button>
+        <button type="button" @click="t='qual'" :class="t==='qual' ? 'bg-white dark:bg-gray-600 shadow font-bold' : ''" class="px-2 py-0.5 rounded-md">Taxa</button>
       </div>
     </div>
     <ol x-show="t==='vol'" class="space-y-1">
@@ -415,12 +326,6 @@
 {{ sla_chart|json_script:"sla-charts" }}
 
 {% if tv_mode %}
-<style>
-  aside, #sidebar-toggle, footer { display: none !important; }
-  main { padding: 1rem !important; }
-  .tv-mode { font-size: 1.05em; max-width: none !important; }
-  body { overflow-x: hidden; }
-</style>
 <script>setTimeout(() => location.reload(), 60000);</script>
 {% endif %}
 {% endblock %}
@@ -435,7 +340,8 @@
   const grid = dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
   Chart.defaults.color = dark ? '#9ca3af' : '#6b7280';
   Chart.defaults.font.family = 'inherit';
-  const C = { ok: '#10b981', fail: '#f43f5e', route: '#fbbf24', other: dark ? '#4b5563' : '#d1d5db', line: '#6366f1' };
+  const brand = lfChartColors();
+  const C = { ok: brand.success, fail: brand.danger, route: brand.warning, other: brand.neutral, line: brand.primary };
 
   new Chart(document.getElementById('ch30'), {
     data: {
@@ -443,8 +349,8 @@
       datasets: [
         { type: 'bar', label: 'Entregues', data: data.delivered, backgroundColor: C.ok, stack: 's', yAxisID: 'y' },
         { type: 'bar', label: 'Falhas', data: data.failures, backgroundColor: C.fail, stack: 's', yAxisID: 'y' },
-        { type: 'bar', label: 'Outros (em rota, atribuídos…)', data: data.other, backgroundColor: C.other, stack: 's', yAxisID: 'y' },
-        { type: 'line', label: 'Sucesso %', data: data.success, borderColor: C.line, backgroundColor: C.line,
+        { type: 'bar', label: 'Outros (em distribuição, atribuídos…)', data: data.other, backgroundColor: C.other, stack: 's', yAxisID: 'y' },
+        { type: 'line', label: 'Taxa de entrega %', data: data.success, borderColor: C.line, backgroundColor: C.line,
           yAxisID: 'y1', tension: 0.3, pointRadius: 2, spanGaps: true },
       ],
     },
@@ -458,15 +364,6 @@
       },
       onClick: (_e, els) => { if (els.length) window.location = '?date=' + data.iso[els[0].index]; },
     },
-  });
-
-  const st = data.status.filter(s => s.n > 0);
-  new Chart(document.getElementById('chStatus'), {
-    type: 'doughnut',
-    data: { labels: st.map(s => s.label), datasets: [{ data: st.map(s => s.n),
-      backgroundColor: st.map(s => ({Entregue: C.ok, Falha: C.fail, 'Em rota': C.route, 'Atribuído': '#60a5fa', Stale: '#a855f7'}[s.label] || C.other)),
-      borderColor: dark ? '#1f2937' : '#fff', borderWidth: 2 }] },
-    options: { maintainAspectRatio: false, cutout: '62%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 10 } } } },
   });
 
   new Chart(document.getElementById('chRhythm'), {
@@ -509,7 +406,7 @@
     data: { labels: data.hubs.map(h => h.label + ' · ' + h.rate + '%'), datasets: [
       { label: 'Entregues', data: data.hubs.map(h => h.delivered), backgroundColor: C.ok },
       { label: 'Falhas', data: data.hubs.map(h => h.failures), backgroundColor: C.fail },
-      { label: 'Em rota', data: data.hubs.map(h => h.en_route), backgroundColor: C.route },
+      { label: 'Em distribuição', data: data.hubs.map(h => h.en_route), backgroundColor: C.route },
     ]},
     options: { maintainAspectRatio: false, indexAxis: 'y',
       plugins: { legend: { position: 'bottom', labels: { boxWidth: 10 } } },

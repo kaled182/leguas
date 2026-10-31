@@ -91,6 +91,17 @@
   .lf-chart-title { font-size: var(--text-sm); font-weight: var(--weight-subtitle); color: var(--color-text); }
   .lf-chart-canvas { position: relative; height: 240px; margin-top: var(--space-3); }
 
+  /* Barra de progresso do dia */
+  .lf-progress { display: flex; height: 12px; overflow: hidden; border-radius: var(--radius-full); background: var(--color-surface-alt); }
+  .lf-progress-ok { background: var(--success); }
+  .lf-progress-fail { background: var(--danger); }
+  .lf-progress-route { background: var(--warning); }
+
+  /* Modo ecrã: sempre escuro, sem menus */
+  .lf-tv .lf-sidebar, .lf-tv .lf-topbar { display: none; }
+  .lf-tv .lf-main { padding: var(--space-6); }
+  .lf-tv .lf-kpi-value { font-size: 3.5rem; }
+
   /* Sidebar e Topbar */
   .lf-sidebar { display: flex; flex-direction: column; gap: var(--space-4); width: var(--sidebar-width); min-height: 100%; padding: var(--space-4) var(--space-3); background: var(--color-sidebar); color: var(--color-on-sidebar); transition: width var(--duration-base) var(--ease-standard); }
   .lf-sidebar[data-collapsed="true"] { width: var(--sidebar-width-collapsed); }
@@ -136,6 +147,9 @@
   .lf-topbar-search { flex: 1 1 220px; min-width: 0; }
   .lf-kbd { padding: 0 var(--space-1); border: 1px solid var(--color-border); border-radius: var(--radius-sm); font-size: var(--text-xs); color: var(--color-text-muted); }
 }
+
+/* Texto secundário sem variante dark: mantém o contraste AA no tema escuro */
+.dark .text-gray-500, .dark .text-gray-600 { color: var(--color-text-muted); }
 
 @keyframes lf-pulse { 50% { opacity: .55; } }
 

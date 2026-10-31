@@ -395,7 +395,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const monthName = ocrData.periodo_mes
         ? new Date(2000, ocrData.periodo_mes - 1, 1).toLocaleDateString('pt-PT', { month: 'long' })
         : '';
-      const fmt = v => v ? `€ ${parseFloat(v).toFixed(2)}` : '—';
+      const fmt = v => v ? `${lfEur(parseFloat(v))}` : '—';
       const $ = id => document.getElementById(id);
       const show = (id) => $(id)?.classList.remove('hidden');
       const hide = (id) => $(id)?.classList.add('hidden');

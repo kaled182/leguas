@@ -1,0 +1,39 @@
+{% extends 'settlements/base.html' %}
+{% load ui %}
+
+{% block title %}Precisa de atenção{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+  <div class="lf-page-header">
+    <div class="min-w-0">
+      <h1 class="lf-page-title">Precisa de atenção</h1>
+      <p class="lf-page-subtitle">O que espera por uma ação da equipa</p>
+    </div>
+  </div>
+
+  {% if items %}
+  <div class="space-y-2 mb-6">
+    {% for i in items %}
+    {% include "components/attention_item.html" with label=i.label count=i.count|pt_int tone=i.tone url=i.url %}
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="lf-empty"><i data-lucide="check-circle-2" class="w-8 h-8" aria-hidden="true"></i><p class="lf-empty-title">Nada precisa de atenção</p></div>
+  {% endif %}
+
+  {% if backlog_by_cp4 %}
+  <h2 class="text-base font-semibold text-gray-900 dark:text-white mb-2">Pendentes por CP4</h2>
+  <div class="lf-table-wrap">
+    <table class="lf-table">
+      <thead><tr><th scope="col">CP4</th><th scope="col" class="text-right">Pacotes</th></tr></thead>
+      <tbody>
+        {% for row in backlog_by_cp4 %}
+        <tr><td>{{ row.cp4 }}</td><td class="text-right lf-num">{{ row.total|pt_int }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

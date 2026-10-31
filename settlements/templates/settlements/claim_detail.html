@@ -7,29 +7,29 @@
 <div class="max-w-7xl mx-auto space-y-6">
   <!-- Header com Título e Ações -->
   <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 fade-in">
-    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-      <div class="min-w-0">
-        <h1 class="lf-page-title">Reclamação #{{ claim.id }}</h1>
+    <div class="lf-page-header">
+<div class="min-w-0">
+<h1 class="lf-page-title">Reclamação #{{ claim.id }}</h1>
         <p class="lf-page-subtitle"><a class="underline" href="{% url 'claim-list' %}">Voltar a Reclamações</a></p>
-      </div>
-      <div class="flex flex-wrap gap-3">
+</div>
+<div class="lf-page-actions">
         {% if claim.status == 'PENDING' %}
         <form method="post" class="contents" onsubmit="return confirm('Confirmar aprovação desta reclamação?')">
           {% csrf_token %}
           <input type="hidden" name="action" value="approve">
-          <button type="submit" class="inline-flex items-center px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium transition-colors duration-200 gap-2">
+          <button type="submit" class="lf-btn lf-btn-ghost duration-200">
             <i data-lucide="check" class="w-4 h-4"></i>
             Aprovar
           </button>
         </form>
         <button onclick="document.getElementById('modalRejeitar').classList.remove('hidden')"
-          class="inline-flex items-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors duration-200 gap-2">
+          class="lf-btn lf-btn-danger duration-200">
           <i data-lucide="x" class="w-4 h-4"></i>
           Rejeitar
         </button>
         {% elif claim.status == 'APPROVED' %}
         <button onclick="document.getElementById('modalRejeitar').classList.remove('hidden')"
-          class="inline-flex items-center px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium transition-colors duration-200 gap-2">
+          class="lf-btn lf-btn-ghost duration-200">
           <i data-lucide="undo-2" class="w-4 h-4"></i>
           Remover desconto
         </button>
@@ -38,7 +38,7 @@
           {% csrf_token %}
           <input type="hidden" name="action" value="accept_appeal">
           <button type="submit" title="Dar razão ao motorista — o desconto é cancelado"
-                  class="inline-flex items-center px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium transition-colors duration-200 gap-2">
+                  class="lf-btn lf-btn-ghost duration-200">
             <i data-lucide="shield-check" class="w-4 h-4"></i>
             Aceitar recurso (cancelar desconto)
           </button>
@@ -47,7 +47,7 @@
           {% csrf_token %}
           <input type="hidden" name="action" value="reject_appeal">
           <button type="submit" title="Não dar razão ao motorista — o desconto mantém-se"
-                  class="inline-flex items-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors duration-200 gap-2">
+                  class="lf-btn lf-btn-danger duration-200">
             <i data-lucide="shield-x" class="w-4 h-4"></i>
             Rejeitar recurso (manter desconto)
           </button>
@@ -55,9 +55,9 @@
         <form method="post" class="contents" onsubmit="return confirm('Enviar este recurso ao parceiro? Estorna o valor ao motorista (quarentena 60 dias).')">
           {% csrf_token %}
           <input type="hidden" name="action" value="send_appeal">
-          <button type="submit" class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200 gap-2">
+          <button type="submit" class="lf-btn lf-btn-ghost duration-200">
             <i data-lucide="send" class="w-4 h-4"></i>
-            Enviar ao parceiro
+            Enviar ao cliente
           </button>
         </form>
         {% elif claim.status == 'QUARANTINE' %}
@@ -68,22 +68,22 @@
         <form method="post" class="contents" onsubmit="return confirm('Parceiro ACEITOU o recurso? O estorno fica permanente (motorista não paga).')">
           {% csrf_token %}
           <input type="hidden" name="action" value="partner_approved">
-          <button type="submit" class="inline-flex items-center px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium transition-colors duration-200 gap-2">
+          <button type="submit" class="lf-btn lf-btn-ghost duration-200">
             <i data-lucide="shield-check" class="w-4 h-4"></i>
-            Recurso aceite (parceiro)
+            Recurso aceite (cliente)
           </button>
         </form>
         <form method="post" class="contents" onsubmit="return confirm('Parceiro NEGOU o recurso? O desconto será re-aplicado na pré-fatura.')">
           {% csrf_token %}
           <input type="hidden" name="action" value="partner_denied">
-          <button type="submit" class="inline-flex items-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors duration-200 gap-2">
+          <button type="submit" class="lf-btn lf-btn-danger duration-200">
             <i data-lucide="shield-x" class="w-4 h-4"></i>
-            Recurso negado (parceiro)
+            Recurso negado (cliente)
           </button>
         </form>
         {% endif %}
       </div>
-    </div>
+</div>
   </div>
 
   <!-- Notificar motorista por WhatsApp (com confirmação) -->
@@ -113,7 +113,7 @@
         {% if not driver_phone %}<span class="text-xs text-amber-600">(sem telefone registado)</span>{% endif %}
       </div>
       <button type="button" @click="open = true; $nextTick(() => window.lucide && lucide.createIcons())"
-              class="px-3 py-1.5 text-sm rounded-lg bg-green-600 hover:bg-green-700 text-white inline-flex items-center gap-1.5">
+              class="lf-btn lf-btn-ghost">
         <i data-lucide="message-circle" class="w-4 h-4"></i> Notificar motorista
       </button>
     </div>
@@ -223,7 +223,7 @@
         {% if claim.evidence_file %}
         <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
           <label class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 block">Evidência</label>
-          <a href="{{ claim.evidence_file.url }}" target="_blank" class="inline-flex items-center px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg font-medium transition-colors duration-200 gap-2">
+          <a href="{{ claim.evidence_file.url }}" target="_blank" class="lf-btn lf-btn-ghost duration-200">
             <i data-lucide="paperclip" class="w-4 h-4"></i>
             Ver Ficheiro Anexado
           </a>
@@ -446,11 +446,11 @@
       </div>
       <div class="flex justify-end gap-3 pt-2 border-t border-gray-200 dark:border-gray-700">
         <button type="button" onclick="document.getElementById('modalRejeitar').classList.add('hidden')"
-          class="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg font-medium transition-colors text-sm">
+          class="lf-btn lf-btn-ghost">
           Cancelar
         </button>
         <button type="submit"
-          class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors text-sm flex items-center gap-2">
+          class="lf-btn lf-btn-danger">
           <i data-lucide="x-circle" class="w-4 h-4"></i>
           Confirmar Rejeição
         </button>

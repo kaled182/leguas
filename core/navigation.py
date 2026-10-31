@@ -13,7 +13,10 @@ def parent(label, icon, *children):
 
 
 MENU = (
-    ("Hoje", (item("Painel do dia", "dashboard_leguas:home", "layout-dashboard"),)),
+    ("Hoje", (
+        item("Painel do dia", "dashboard_leguas:home", "layout-dashboard"),
+        item("Precisa de atenção", "dashboard_leguas:attention", "alert-triangle", count="attention_count"),
+    )),
     ("Operação", (
         parent("Pacotes", "package",
                item("Pesquisa", "cainiao-packages-page"),

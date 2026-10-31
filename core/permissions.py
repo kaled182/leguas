@@ -38,6 +38,7 @@ OPERATOR_PATTERNS = tuple(re.compile(p) for p in (
     r"^/$",
     r"^/sla/prazos/$",
     r"^/_design/$",
+    r"^/atencao/$",
     r"^/search/$",
     r"^/driversapp/admin/(?!pagamentos|tickets-cainiao)",
     r"^/driversapp/empresas-parceiras/$",

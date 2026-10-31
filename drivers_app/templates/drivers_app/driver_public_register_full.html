@@ -1,24 +1,12 @@
-<!DOCTYPE html>
-<html lang="pt-PT">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cadastro Completo de Motoristas - Leguas Franzinas</title>
-    
-    <script src="https://cdn.tailwindcss.com/3.4.17"></script>
-    <script src="https://unpkg.com/lucide@1.65.0"></script>
-    
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        
-        * {
-            font-family: 'Inter', sans-serif;
-        }
-        
-        .gradient-bg {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-        
+{% extends "brand/portal.html" %}
+{% load static %}
+
+{% block title %}Cadastro completo de motoristas{% endblock %}
+{% block portal_name %}Cadastro completo de motoristas{% endblock %}
+
+{% block portal_head %}
+<style>
+                
         .step-section {
             display: none;
         }
@@ -34,8 +22,8 @@
         }
         
         .input-field:focus {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.1);
+            
+            box-shadow: var(--shadow-sm);
         }
         
         .progress-bar {
@@ -43,45 +31,27 @@
         }
         
         .file-upload-area {
-            border: 2px dashed #cbd5e0;
+            border: 2px dashed var(--color-border);
             transition: all 0.3s;
         }
         
         .file-upload-area:hover {
-            border-color: #667eea;
-            background-color: #f7fafc;
+            border-color: var(--brand-purple-wing);
+            background-color: var(--color-surface-alt);
         }
         
         .file-upload-area.dragover {
-            border-color: #667eea;
-            background-color: #eef2ff;
+            border-color: var(--brand-purple-wing);
+            background-color: var(--color-surface-alt);
         }
     </style>
-</head>
-<body class="bg-gray-50">
-    <header class="gradient-bg text-white py-6 shadow-lg">
-        <div class="max-w-6xl mx-auto px-4">
-            <div class="flex items-center gap-3">
-                <i data-lucide="truck" class="w-10 h-10"></i>
-                <div>
-                    <h1 class="text-2xl font-bold">Leguas Franzinas</h1>
-                    <p class="text-sm opacity-90">Cadastro Completo de Motoristas</p>
-                </div>
-            </div>
-        </div>
-    </header>
+{% endblock %}
 
-    <main class="max-w-6xl mx-auto px-4 py-12">
-        {% if messages %}
-        <div class="mb-8 space-y-4">
-            {% for message in messages %}
-            <div class="{% if message.level == 25 %}bg-green-50 border-green-200 text-green-800{% else %}bg-red-50 border-red-200 text-red-800{% endif %} border-l-4 p-4 rounded-lg flex items-center gap-3">
-                <i data-lucide="{% if message.level == 25 %}check-circle{% else %}alert-circle{% endif %}" class="w-5 h-5"></i>
-                <span>{{ message }}</span>
-            </div>
-            {% endfor %}
-        </div>
-        {% endif %}
+{% block content %}
+<div class="lf-page-header"><div class="min-w-0"><h1 class="lf-page-title">Cadastro completo de motoristas</h1></div></div>
+
+    <div class="max-w-4xl mx-auto">
+
 
         <!-- Progress Bar -->
         <div class="bg-white rounded-2xl shadow-lg p-6 mb-8">
@@ -95,8 +65,8 @@
             <div class="flex justify-between mt-3 text-xs text-gray-600">
                 <span>Dados Pessoais</span>
                 <span>Documentos</span>
-                <span>Veiculo</span>
-                <span>Revisao</span>
+                <span>Veículo</span>
+                <span>Revisão</span>
             </div>
         </div>
 
@@ -107,7 +77,7 @@
             <div class="step-section active" data-step="1">
                 <h2 class="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
                     <i data-lucide="user" class="w-6 h-6 text-purple-600"></i>
-                    Dados Pessoais e Identificacao
+                    Dados Pessoais e Identificação
                 </h2>
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -119,7 +89,7 @@
                         </label>
                         <input type="text" name="nif" id="nif" required maxlength="9" pattern="[0-9]{9}" 
                                placeholder="123456789" class="input-field w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
-                        <p class="mt-1 text-xs text-gray-500">9 digitos numericos</p>
+                        <p class="mt-1 text-xs text-gray-500">9 dígitos numéricos</p>
                     </div>
 
                     <!-- Nome Completo -->
@@ -129,7 +99,7 @@
                             Nome Completo <span class="text-red-500">*</span>
                         </label>
                         <input type="text" name="nome_completo" required minlength="3" 
-                               placeholder="Joao Silva Santos" class="input-field w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                               placeholder="João Silva Santos" class="input-field w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
                     </div>
 
                     <!-- NISS -->
@@ -140,7 +110,7 @@
                         </label>
                         <input type="text" name="niss" required maxlength="11" pattern="[0-9]{11}" 
                                placeholder="12345678901" class="input-field w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
-                        <p class="mt-1 text-xs text-gray-500">11 digitos - Seguranca Social</p>
+                        <p class="mt-1 text-xs text-gray-500">11 dígitos - Segurança Social</p>
                     </div>
 
                     <!-- Data Nascimento -->
@@ -187,7 +157,7 @@
                     <div class="md:col-span-2">
                         <label class="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
                             <i data-lucide="map-pin" class="w-4 h-4"></i>
-                            Endereco Completo <span class="text-red-500">*</span>
+                            Endereço Completo <span class="text-red-500">*</span>
                         </label>
                         <input type="text" name="endereco_residencia" required 
                                placeholder="Rua Example, n123, 1 Esquerdo" class="input-field w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
@@ -197,7 +167,7 @@
                     <div>
                         <label class="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
                             <i data-lucide="map" class="w-4 h-4"></i>
-                            Codigo Postal <span class="text-red-500">*</span>
+                            Código Postal <span class="text-red-500">*</span>
                         </label>
                         <input type="text" name="codigo_postal" required pattern="[0-9]{4}-[0-9]{3}" 
                                placeholder="1000-001" class="input-field w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
@@ -217,7 +187,7 @@
                     <div class="md:col-span-2">
                         <label class="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
                             <i data-lucide="briefcase" class="w-4 h-4"></i>
-                            Tipo de Vinculo Profissional <span class="text-red-500">*</span>
+                            Tipo de Vínculo Profissional <span class="text-red-500">*</span>
                         </label>
                         <div class="grid grid-cols-2 gap-4">
                             <label class="flex items-center p-4 border-2 border-gray-300 rounded-lg cursor-pointer hover:border-purple-500 transition-all">
@@ -249,8 +219,8 @@
                 </div>
 
                 <div class="mt-8 flex justify-end">
-                    <button type="button" onclick="nextStep()" class="gradient-bg text-white px-8 py-3 rounded-lg font-semibold flex items-center gap-2 hover:shadow-lg transition-all">
-                        Proximo <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                    <button type="button" onclick="nextStep()" class="lf-btn lf-btn-primary">
+                        Próximo <i data-lucide="arrow-right" class="w-5 h-5"></i>
                     </button>
                 </div>
             </div>
@@ -267,12 +237,12 @@
                     <div>
                         <label class="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
                             <i data-lucide="id-card" class="w-4 h-4"></i>
-                            Tipo de Documento de Identificacao <span class="text-red-500">*</span>
+                            Tipo de Documento de Identificação <span class="text-red-500">*</span>
                         </label>
                         <select name="tipo_doc_id" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
                             <option value="">Selecione...</option>
-                            <option value="CC">Cartao de Cidadao</option>
-                            <option value="TR">Titulo de Residencia</option>
+                            <option value="CC">Cartão de Cidadao</option>
+                            <option value="TR">Titulo de Residência</option>
                             <option value="PP">Passaporte</option>
                         </select>
                     </div>
@@ -281,7 +251,7 @@
                     <div class="file-upload-area p-6 rounded-lg text-center">
                         <i data-lucide="upload-cloud" class="w-12 h-12 mx-auto text-gray-400 mb-3"></i>
                         <label class="block cursor-pointer">
-                            <span class="text-sm font-medium text-gray-700">Documento de Identificacao <span class="text-red-500">*</span></span>
+                            <span class="text-sm font-medium text-gray-700">Documento de Identificação <span class="text-red-500">*</span></span>
                             <input type="file" name="doc_identificacao" accept=".pdf,.jpg,.jpeg,.png" required class="hidden" onchange="showFileName(this, 'file-name-id')">
                             <p class="text-xs text-gray-500 mt-1">PDF, JPG ou PNG (max 5MB)</p>
                             <p id="file-name-id" class="text-xs text-green-600 mt-2 font-medium"></p>
@@ -301,7 +271,7 @@
                     <div class="file-upload-area p-6 rounded-lg text-center">
                         <i data-lucide="upload-cloud" class="w-12 h-12 mx-auto text-gray-400 mb-3"></i>
                         <label class="block cursor-pointer">
-                            <span class="text-sm font-medium text-gray-700">Carta de Conducao - Frente <span class="text-red-500">*</span></span>
+                            <span class="text-sm font-medium text-gray-700">Carta de Condução - Frente <span class="text-red-500">*</span></span>
                             <input type="file" name="cnh_frente" accept=".pdf,.jpg,.jpeg,.png" required class="hidden" onchange="showFileName(this, 'file-name-cnh-f')">
                             <p class="text-xs text-gray-500 mt-1">PDF, JPG ou PNG</p>
                             <p id="file-name-cnh-f" class="text-xs text-green-600 mt-2 font-medium"></p>
@@ -312,7 +282,7 @@
                     <div class="file-upload-area p-6 rounded-lg text-center">
                         <i data-lucide="upload-cloud" class="w-12 h-12 mx-auto text-gray-400 mb-3"></i>
                         <label class="block cursor-pointer">
-                            <span class="text-sm font-medium text-gray-700">Carta de Conducao - Verso <span class="text-red-500">*</span></span>
+                            <span class="text-sm font-medium text-gray-700">Carta de Condução - Verso <span class="text-red-500">*</span></span>
                             <input type="file" name="cnh_verso" accept=".pdf,.jpg,.jpeg,.png" required class="hidden" onchange="showFileName(this, 'file-name-cnh-v')">
                             <p class="text-xs text-gray-500 mt-1">PDF, JPG ou PNG</p>
                             <p id="file-name-cnh-v" class="text-xs text-green-600 mt-2 font-medium"></p>
@@ -359,9 +329,9 @@
                     <div id="declaracao-field" class="file-upload-area p-6 rounded-lg text-center" style="display: none;">
                         <i data-lucide="upload-cloud" class="w-12 h-12 mx-auto text-gray-400 mb-3"></i>
                         <label class="block cursor-pointer">
-                            <span class="text-sm font-medium text-gray-700">Declaracao de Inicio de Atividade <span class="text-red-500">*</span></span>
+                            <span class="text-sm font-medium text-gray-700">Declaração de Inicio de Atividade <span class="text-red-500">*</span></span>
                             <input type="file" name="declaracao_atividade" accept=".pdf,.jpg,.jpeg,.png" class="hidden" onchange="showFileName(this, 'file-name-decl')">
-                            <p class="text-xs text-gray-500 mt-1">Recibos Verdes - Obrigatorio para vinculos diretos</p>
+                            <p class="text-xs text-gray-500 mt-1">Recibos Verdes - Obrigatório para vinculos diretos</p>
                             <p id="file-name-decl" class="text-xs text-green-600 mt-2 font-medium"></p>
                         </label>
                     </div>
@@ -371,17 +341,17 @@
                     <button type="button" onclick="prevStep()" class="bg-gray-200 text-gray-700 px-8 py-3 rounded-lg font-semibold flex items-center gap-2 hover:bg-gray-300 transition-all">
                         <i data-lucide="arrow-left" class="w-5 h-5"></i> Anterior
                     </button>
-                    <button type="button" onclick="nextStep()" class="gradient-bg text-white px-8 py-3 rounded-lg font-semibold flex items-center gap-2 hover:shadow-lg transition-all">
-                        Proximo <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                    <button type="button" onclick="nextStep()" class="lf-btn lf-btn-primary">
+                        Próximo <i data-lucide="arrow-right" class="w-5 h-5"></i>
                     </button>
                 </div>
             </div>
 
-            <!-- STEP 3: Dados do Veiculo -->
+            <!-- STEP 3: Dados do Veículo -->
             <div class="step-section" data-step="3">
                 <h2 class="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
                     <i data-lucide="car" class="w-6 h-6 text-purple-600"></i>
-                    Dados do Veiculo
+                    Dados do Veículo
                 </h2>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -389,7 +359,7 @@
                     <div>
                         <label class="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
                             <i data-lucide="tag" class="w-4 h-4"></i>
-                            Matricula <span class="text-red-500">*</span>
+                            Matrícula <span class="text-red-500">*</span>
                         </label>
                         <input type="text" name="matricula" required placeholder="00-AA-00" style="text-transform: uppercase;"
                                class="input-field w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
@@ -425,11 +395,11 @@
                                class="input-field w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
                     </div>
 
-                    <!-- Tipo Veiculo -->
+                    <!-- Tipo Veículo -->
                     <div class="md:col-span-2">
                         <label class="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
                             <i data-lucide="truck" class="w-4 h-4"></i>
-                            Tipo de Veiculo <span class="text-red-500">*</span>
+                            Tipo de Veículo <span class="text-red-500">*</span>
                         </label>
                         <select name="tipo_veiculo" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
                             <option value="">Selecione...</option>
@@ -444,14 +414,14 @@
 
                 <hr class="my-8">
 
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Documentos do Veiculo</h3>
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Documentos do Veículo</h3>
 
                 <div class="space-y-6">
                     <!-- DUA -->
                     <div class="file-upload-area p-6 rounded-lg text-center">
                         <i data-lucide="upload-cloud" class="w-12 h-12 mx-auto text-gray-400 mb-3"></i>
                         <label class="block cursor-pointer">
-                            <span class="text-sm font-medium text-gray-700">DUA - Documento Unico Automovel <span class="text-red-500">*</span></span>
+                            <span class="text-sm font-medium text-gray-700">DUA - Documento Unico Automóvel <span class="text-red-500">*</span></span>
                             <input type="file" name="dua" accept=".pdf,.jpg,.jpeg,.png" required class="hidden" onchange="showFileName(this, 'file-name-dua')">
                             <p class="text-xs text-gray-500 mt-1">PDF, JPG ou PNG</p>
                             <p id="file-name-dua" class="text-xs text-green-600 mt-2 font-medium"></p>
@@ -462,7 +432,7 @@
                     <div class="file-upload-area p-6 rounded-lg text-center">
                         <i data-lucide="upload-cloud" class="w-12 h-12 mx-auto text-gray-400 mb-3"></i>
                         <label class="block cursor-pointer">
-                            <span class="text-sm font-medium text-gray-700">Folha da Inspecao (IPO)</span>
+                            <span class="text-sm font-medium text-gray-700">Folha da Inspeção (IPO)</span>
                             <input type="file" name="ipo" accept=".pdf,.jpg,.jpeg,.png" class="hidden" onchange="showFileName(this, 'file-name-ipo')">
                             <p class="text-xs text-gray-500 mt-1">Se aplicavel</p>
                             <p id="file-name-ipo" class="text-xs text-green-600 mt-2 font-medium"></p>
@@ -493,17 +463,17 @@
                     <button type="button" onclick="prevStep()" class="bg-gray-200 text-gray-700 px-8 py-3 rounded-lg font-semibold flex items-center gap-2 hover:bg-gray-300 transition-all">
                         <i data-lucide="arrow-left" class="w-5 h-5"></i> Anterior
                     </button>
-                    <button type="button" onclick="nextStep()" class="gradient-bg text-white px-8 py-3 rounded-lg font-semibold flex items-center gap-2 hover:shadow-lg transition-all">
+                    <button type="button" onclick="nextStep()" class="lf-btn lf-btn-primary">
                         Revisar <i data-lucide="check" class="w-5 h-5"></i>
                     </button>
                 </div>
             </div>
 
-            <!-- STEP 4: Revisao e Envio -->
+            <!-- STEP 4: Revisão e Envio -->
             <div class="step-section" data-step="4">
                 <h2 class="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
                     <i data-lucide="check-circle" class="w-6 h-6 text-purple-600"></i>
-                    Revisao e Envio
+                    Revisão e Envio
                 </h2>
 
                 <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6">
@@ -525,7 +495,7 @@
                     <div class="flex items-start gap-3 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
                         <i data-lucide="alert-triangle" class="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5"></i>
                         <div class="text-sm text-yellow-800">
-                            <strong>Sistema de Alertas:</strong> Voce sera notificado por email 30 dias antes do vencimento de qualquer documento.
+                            <strong>Sistema de Alertas:</strong> Você será notificado por email 30 dias antes do vencimento de qualquer documento.
                         </div>
                     </div>
 
@@ -543,21 +513,19 @@
                     <button type="button" onclick="prevStep()" class="bg-gray-200 text-gray-700 px-8 py-3 rounded-lg font-semibold flex items-center gap-2 hover:bg-gray-300 transition-all">
                         <i data-lucide="arrow-left" class="w-5 h-5"></i> Anterior
                     </button>
-                    <button type="submit" class="gradient-bg text-white px-12 py-4 rounded-lg font-semibold flex items-center gap-2 hover:shadow-xl transition-all text-lg">
+                    <button type="submit" class="lf-btn lf-btn-primary">
                         <i data-lucide="send" class="w-6 h-6"></i>
-                        Enviar Cadastro Completo
+                        Enviar cadastro Completo
                     </button>
                 </div>
             </div>
         </form>
-    </main>
+    </div>
 
-    <footer class="bg-gray-900 text-gray-400 py-8 mt-16">
-        <div class="max-w-4xl mx-auto px-4 text-center">
-            <p class="text-sm">© {{ current_year }} Leguas Franzinas. Todos os direitos reservados.</p>
-        </div>
-    </footer>
+    
+{% endblock %}
 
+{% block extra_js %}
     <script>
         lucide.createIcons();
 
@@ -610,12 +578,12 @@
                         const name = input.name;
                         const radioChecked = currentSection.querySelector(`[name="${name}"]:checked`);
                         if (!radioChecked) {
-                            alert('Por favor, preencha todos os campos obrigatorios (*)');
+                            alert('Por favor, preencha todos os campos obrigatórios (*)');
                             input.focus();
                             return false;
                         }
                     } else {
-                        alert('Por favor, preencha todos os campos obrigatorios (*)');
+                        alert('Por favor, preencha todos os campos obrigatórios (*)');
                         input.focus();
                         return false;
                     }
@@ -669,5 +637,4 @@
             this.value = this.value.toUpperCase();
         });
     </script>
-</body>
-</html>
+{% endblock %}

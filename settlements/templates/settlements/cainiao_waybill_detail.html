@@ -137,7 +137,7 @@
     <div class="flex items-start justify-between gap-4 flex-wrap">
       <div class="min-w-0">
         <p class="text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500 font-medium">N.º de envio Number</p>
-        <h1 class="mt-1 text-2xl font-mono font-bold text-gray-900 dark:text-white select-all">{{ waybill }}</h1>
+        <h1 class="lf-page-title font-mono select-all">{{ waybill }}</h1>
         {% if latest.lp_number %}
           <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">LP: <span class="font-mono font-semibold text-gray-700 dark:text-gray-300">{{ latest.lp_number }}</span></p>
         {% endif %}
@@ -350,7 +350,7 @@
             </div>
           </div>
           <a href="/driversapp/admin/reclamacoes/?id={{ c.id }}" target="_blank"
-             class="inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white flex-shrink-0"
+             class="lf-btn lf-btn-danger flex-shrink-0"
              title="Abrir no painel de reclama&ccedil;&otilde;es">
             <i data-lucide="external-link" class="w-3 h-3"></i> Abrir
           </a>
@@ -743,7 +743,7 @@
               {% if priority_info.is_delivered %}Esteve no HUB:{% else %}No HUB há:{% endif %}
             </dt>
             <dd class="font-mono font-bold {% if priority_info.is_delivered %}text-emerald-600 dark:text-emerald-400{% elif priority_info.days_in_hub >= 5 %}text-rose-600{% elif priority_info.days_in_hub >= 3 %}text-orange-600{% else %}text-gray-700 dark:text-gray-300{% endif %}">
-              {{ priority_info.days_in_hub }} dia(s)
+              {{ priority_info.days_in_hub }} dia{{ priority_info.days_in_hub|pluralize }}
             </dd>
           </div>
           {% endif %}
@@ -847,7 +847,7 @@
         <div class="flex gap-1">
           <input type="text" x-model="newTag" @keydown.enter="addTag()" placeholder="ex: VIP, Frágil…"
                  class="flex-1 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-700">
-          <button @click="addTag()" class="px-2 py-1 bg-pink-600 hover:bg-pink-700 text-white rounded text-xs">+</button>
+          <button @click="addTag()" class="lf-btn lf-btn-ghost">+</button>
         </div>
       </div>
 
@@ -890,7 +890,7 @@
       <div class="bg-indigo-50 dark:bg-indigo-900/20 rounded-xl border border-indigo-200/50 dark:border-indigo-700/30 p-5">
         <h3 class="text-sm font-bold text-indigo-900 dark:text-indigo-300 flex items-center gap-2 mb-3">
           <i data-lucide="calendar-check" class="w-4 h-4"></i>
-          Forecast / Planning
+          Previsão / Planning
         </h3>
         <dl class="space-y-1.5 text-xs">
           <div class="flex justify-between">

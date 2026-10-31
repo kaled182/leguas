@@ -1,74 +1,31 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cadastro de Motoristas - Léguas Franzinas</title>
-    
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com/3.4.17"></script>
-    
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@1.65.0"></script>
-    
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        
-        * {
-            font-family: 'Inter', sans-serif;
-        }
-        
-        .gradient-bg {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-        
+{% extends "brand/portal.html" %}
+{% load static %}
+
+{% block title %}Cadastro de motoristas{% endblock %}
+{% block portal_name %}Cadastro de motoristas{% endblock %}
+
+{% block portal_head %}
+<style>
+                
         .input-field {
             transition: all 0.3s ease;
         }
         
         .input-field:focus {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.1);
-        }
-        
-        .btn-submit {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            transition: all 0.3s ease;
-        }
-        
-        .btn-submit:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+            
+            box-shadow: var(--shadow-sm);
         }
     </style>
-</head>
-<body class="bg-gray-50">
-    <!-- Header -->
-    <header class="gradient-bg text-white py-6 shadow-lg">
-        <div class="max-w-4xl mx-auto px-4">
-            <div class="flex items-center gap-3">
-                <i data-lucide="truck" class="w-10 h-10"></i>
-                <div>
-                    <h1 class="text-2xl font-bold">Léguas Franzinas</h1>
-                    <p class="text-sm opacity-90">Cadastro de Motoristas</p>
-                </div>
-            </div>
-        </div>
-    </header>
+{% endblock %}
 
+{% block content %}
+<div class="lf-page-header"><div class="min-w-0"><h1 class="lf-page-title">Cadastro de motoristas</h1></div></div>
+
+    <!-- Header -->
     <!-- Main Content -->
-    <main class="max-w-4xl mx-auto px-4 py-12">
+    <div class="max-w-4xl mx-auto">
         <!-- Success/Error Messages -->
-        {% if messages %}
-        <div class="mb-8 space-y-4">
-            {% for message in messages %}
-            <div class="{% if message.level == 25 %}bg-green-50 border-green-200 text-green-800{% elif message.level == 40 %}bg-red-50 border-red-200 text-red-800{% else %}bg-blue-50 border-blue-200 text-blue-800{% endif %} border-l-4 p-4 rounded-lg flex items-center gap-3 shadow-sm">
-                <i data-lucide="{% if message.level == 25 %}check-circle{% elif message.level == 40 %}alert-circle{% else %}info{% endif %}" class="w-5 h-5"></i>
-                <span>{{ message }}</span>
-            </div>
-            {% endfor %}
-        </div>
-        {% endif %}
+
 
         <!-- Info Card -->
         <div class="bg-white rounded-2xl shadow-lg p-8 mb-8 border border-gray-100">
@@ -77,7 +34,7 @@
                     <i data-lucide="info" class="w-6 h-6 text-blue-600"></i>
                 </div>
                 <div>
-                    <h2 class="text-lg font-semibold text-gray-900 mb-2">Bem-vindo ao Processo de Cadastro</h2>
+                    <h2 class="text-lg font-semibold text-gray-900 mb-2">Bem-vindo ao cadastro</h2>
                     <p class="text-gray-600 leading-relaxed">
                         Preencha o formulário abaixo para se candidatar como motorista da Léguas Franzinas. 
                         Após o envio, nossa equipe analisará sua solicitação e entrará em contato em até <strong>48 horas úteis</strong>.
@@ -182,7 +139,7 @@
                 <!-- Submit Button -->
                 <button 
                     type="submit" 
-                    class="btn-submit w-full text-white font-semibold py-4 px-6 rounded-lg flex items-center justify-center gap-2 shadow-lg"
+                    class="lf-btn lf-btn-primary w-full"
                 >
                     <i data-lucide="send" class="w-5 h-5"></i>
                     <span>Enviar Candidatura</span>
@@ -234,21 +191,15 @@
                 </div>
             </div>
         </div>
-    </main>
+    </div>
 
     <!-- Footer -->
-    <footer class="bg-gray-900 text-gray-400 py-8 mt-16">
-        <div class="max-w-4xl mx-auto px-4 text-center">
-            <p class="text-sm">
-                © {{ current_year }} Léguas Franzinas. Todos os direitos reservados.
-            </p>
-            <p class="text-xs mt-2">
-                Sistema de Gestão de Entregas
-            </p>
-        </div>
-    </footer>
-
     <!-- Initialize Lucide Icons -->
+
+
+{% endblock %}
+
+{% block extra_js %}
     <script>
         lucide.createIcons();
         
@@ -279,5 +230,4 @@
             this.value = this.value.replace(/\D/g, '').slice(0, 9);
         });
     </script>
-</body>
-</html>
+{% endblock %}

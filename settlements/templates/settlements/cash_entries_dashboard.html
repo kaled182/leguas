@@ -38,17 +38,17 @@
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 border-l-4 border-amber-500">
             <div class="text-xs text-gray-500 dark:text-gray-400">Pendente (filtro actual)</div>
-            <div class="text-2xl font-bold text-amber-600 dark:text-amber-400" x-text="'€ ' + parseFloat(kpis.total_pendente || 0).toFixed(2)"></div>
+            <div class="text-2xl font-bold text-amber-600 dark:text-amber-400" x-text="lfEur(parseFloat(kpis.total_pendente || 0))"></div>
             <div class="text-xs text-gray-400" x-text="(kpis.n_pendente || 0) + ' lançamento(s)'"></div>
         </div>
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 border-l-4 border-blue-500">
             <div class="text-xs text-gray-500 dark:text-gray-400">Já incluídos em pré-fatura</div>
-            <div class="text-2xl font-bold text-blue-600 dark:text-blue-400" x-text="'€ ' + parseFloat(kpis.total_incluido || 0).toFixed(2)"></div>
+            <div class="text-2xl font-bold text-blue-600 dark:text-blue-400" x-text="lfEur(parseFloat(kpis.total_incluido || 0))"></div>
             <div class="text-xs text-gray-400" x-text="(kpis.n_incluido || 0) + ' lançamento(s)'"></div>
         </div>
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 border-l-4 border-gray-400">
             <div class="text-xs text-gray-500 dark:text-gray-400">Cancelados</div>
-            <div class="text-2xl font-bold text-gray-600 dark:text-gray-400" x-text="'€ ' + parseFloat(kpis.total_cancelado || 0).toFixed(2)"></div>
+            <div class="text-2xl font-bold text-gray-600 dark:text-gray-400" x-text="lfEur(parseFloat(kpis.total_cancelado || 0))"></div>
             <div class="text-xs text-gray-400" x-text="(kpis.n_cancelado || 0) + ' lançamento(s)'"></div>
         </div>
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
@@ -57,7 +57,7 @@
                 <template x-for="t in topPending" :key="t.driver_id">
                     <div class="flex justify-between text-sm cursor-pointer hover:underline" @click="filters.driver_id = t.driver_id; load()">
                         <span class="text-gray-700 dark:text-gray-300 truncate" x-text="t.driver_nome"></span>
-                        <span class="font-bold text-amber-600 dark:text-amber-400" x-text="'€ ' + parseFloat(t.total).toFixed(2)"></span>
+                        <span class="font-bold text-amber-600 dark:text-amber-400" x-text="lfEur(parseFloat(t.total))"></span>
                     </div>
                 </template>
                 <div x-show="topPending.length === 0" class="text-xs text-gray-400 italic">Sem pendentes</div>
@@ -148,7 +148,7 @@
                             <td class="px-3 py-2 font-medium dark:text-white" x-text="e.driver_nome"></td>
                             <td class="px-3 py-2 text-gray-600 dark:text-gray-400" x-text="e.data_pt || '—'"></td>
                             <td class="px-3 py-2 text-gray-600 dark:text-gray-400" x-text="e.tipo_display"></td>
-                            <td class="px-3 py-2 text-right font-bold text-amber-600 dark:text-amber-400" x-text="'€ ' + parseFloat(e.valor).toFixed(2)"></td>
+                            <td class="px-3 py-2 text-right font-bold text-amber-600 dark:text-amber-400" x-text="lfEur(parseFloat(e.valor))"></td>
                             <td class="px-3 py-2 text-xs">
                                 <span x-show="e.paid_by_source === 'EMPRESA'" class="text-gray-500">Empresa</span>
                                 <span x-show="e.paid_by_source === 'TERCEIRO'" class="px-2 py-0.5 bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300 rounded font-semibold">

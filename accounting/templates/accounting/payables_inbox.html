@@ -304,12 +304,12 @@
           </div>
           <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3">
             <div class="text-[10px] uppercase font-semibold text-blue-700 dark:text-blue-300">Média/Pré-fatura</div>
-            <div class="text-lg font-extrabold text-blue-700 dark:text-blue-300" x-text="'€' + (health.data?.stats?.avg || 0).toFixed(2)"></div>
+            <div class="text-lg font-extrabold text-blue-700 dark:text-blue-300" x-text="lfEur((health.data?.stats?.avg || 0))"></div>
             <div class="text-[10px] text-blue-600" x-text="'σ €' + (health.data?.stats?.stdev || 0).toFixed(2)"></div>
           </div>
           <div class="bg-amber-50 dark:bg-amber-900/20 rounded-lg p-3">
             <div class="text-[10px] uppercase font-semibold text-amber-700 dark:text-amber-300">Pré-fatura atual</div>
-            <div class="text-lg font-extrabold text-amber-700 dark:text-amber-300" x-text="'€' + (health.data?.current_pf?.total || 0).toFixed(2)"></div>
+            <div class="text-lg font-extrabold text-amber-700 dark:text-amber-300" x-text="lfEur((health.data?.current_pf?.total || 0))"></div>
             <div class="text-[10px] text-amber-600 dark:text-amber-300" x-text="health.data?.current_pf?.status_display || ''"></div>
           </div>
         </div>
@@ -368,7 +368,7 @@
               <div class="bg-rose-50 dark:bg-rose-900/20 rounded p-2 text-xs flex items-center gap-2">
                 <span class="font-mono text-[10px] bg-rose-200 dark:bg-rose-900/50 px-1.5 rounded" x-text="c.waybill || '#' + c.id"></span>
                 <span class="flex-1 text-gray-700 dark:text-gray-300" x-text="c.claim_type + ' · ' + c.description"></span>
-                <span class="font-bold text-rose-700 dark:text-rose-300" x-text="'€' + c.amount.toFixed(2)"></span>
+                <span class="font-bold text-rose-700 dark:text-rose-300" x-text="lfEur(c.amount)"></span>
               </div>
             </template>
           </div>
@@ -385,7 +385,7 @@
               <div class="bg-amber-50 dark:bg-amber-900/20 rounded p-2 text-xs flex items-center gap-2 mb-1">
                 <span class="text-[10px]" x-text="a.data"></span>
                 <span class="flex-1" x-text="a.tipo + ' · ' + a.descricao"></span>
-                <span class="font-bold text-amber-700 dark:text-amber-300" x-text="'€' + a.valor.toFixed(2)"></span>
+                <span class="font-bold text-amber-700 dark:text-amber-300" x-text="lfEur(a.valor)"></span>
               </div>
             </template>
           </div>
@@ -395,7 +395,7 @@
               <div class="bg-emerald-50 dark:bg-emerald-900/20 rounded p-2 text-xs flex items-center gap-2 mb-1">
                 <span class="text-[10px]" x-text="a.data"></span>
                 <span class="flex-1" x-text="a.tipo + ' · ' + a.descricao"></span>
-                <span class="font-bold text-emerald-700 dark:text-emerald-300" x-text="'€' + a.valor.toFixed(2)"></span>
+                <span class="font-bold text-emerald-700 dark:text-emerald-300" x-text="lfEur(a.valor)"></span>
               </div>
             </template>
           </div>

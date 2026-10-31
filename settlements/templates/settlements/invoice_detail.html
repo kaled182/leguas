@@ -6,27 +6,13 @@
 {% block content %}
 <div class="max-w-7xl mx-auto space-y-6">
   <!-- Header com Título e Ações -->
-  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 fade-in">
-    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-      <div class="flex items-start gap-4">
-        <div class="flex-shrink-0">
-          <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center">
-            <i data-lucide="file-text" class="w-6 h-6 text-blue-600 dark:text-blue-400"></i>
-          </div>
-        </div>
-        <div>
-          <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-1">
-            Fatura {{ invoice.invoice_number }}
-          </h1>
-          <p class="text-sm text-gray-500 dark:text-gray-400">
-            <a href="{% url 'invoice-list' %}" class="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
-              ← Voltar para Faturas
-            </a>
-          </p>
-        </div>
-      </div>
-      <div class="flex flex-wrap gap-3">
-        <a href="{% url 'invoice-pdf' invoice.id %}" class="inline-flex items-center px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium transition-colors duration-200 gap-2">
+  <div class="lf-page-header">
+    <div class="min-w-0">
+      <h1 class="lf-page-title">Fatura {{ invoice.invoice_number }}</h1>
+      <p class="lf-page-subtitle"><a class="underline" href="{% url 'invoice-list' %}">Voltar às faturas</a></p>
+    </div>
+    <div class="lf-page-actions">
+        <a href="{% url 'invoice-pdf' invoice.id %}" class="lf-btn lf-btn-ghost duration-200">
           <i data-lucide="download" class="w-4 h-4"></i>
           Baixar PDF
         </a>
@@ -35,7 +21,7 @@
         {% if transitions %}
         <div x-data="{open:false}" @keydown.escape.window="open=false" @click.outside="open=false" class="relative inline-block">
           <button type="button" @click="open=!open"
-                  class="inline-flex items-center px-4 py-2 rounded-lg font-medium transition-colors duration-200 gap-2 text-white bg-indigo-600 hover:bg-indigo-700">
+                  class="lf-btn lf-btn-ghost duration-200">
             <i data-lucide="list" class="w-4 h-4"></i>
             Alterar Estado
             <i data-lucide="chevron-down" class="w-4 h-4"></i>
@@ -61,7 +47,6 @@
         {% endif %}
         {% endwith %}
       </div>
-    </div>
   </div>
 
   <!-- Grid Principal -->
@@ -110,7 +95,7 @@
             </div>
           </div>
           <div>
-            <label class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Parceiro</label>
+            <label class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Cliente</label>
             <p class="mt-1 text-sm font-semibold text-gray-900 dark:text-white">{{ invoice.partner.name }}</p>
           </div>
           <div>

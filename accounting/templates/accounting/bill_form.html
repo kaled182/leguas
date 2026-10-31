@@ -463,7 +463,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const t = parseFloat(tot?.value || '0');
     const ir = parseFloat(irsAmt?.value || '0');
     const payable = (isNaN(t) ? 0 : t) - (isNaN(ir) ? 0 : ir);
-    payableDisplay.textContent = '€ ' + payable.toFixed(2).replace('.', ',');
+    payableDisplay.textContent = lfEur(payable).replace('.', ',');
   }
   updatePayableDisplay();
 

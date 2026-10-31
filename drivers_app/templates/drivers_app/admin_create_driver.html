@@ -5,14 +5,12 @@
 {% block sidebar_title %}Motoristas{% endblock %}
 
 {% block content %}
-<div class="p-6 max-w-4xl mx-auto">
+<div class="max-w-4xl mx-auto">
     <!-- Header -->
-    <div class="mb-8">
-        <div class="flex items-center gap-3 mb-2">
-            <div>
-                <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Cadastrar Motorista/Frota</h1>
-                <p class="text-gray-600 dark:text-gray-400">Criacao rapida de motorista ou frota diretamente no sistema</p>
-            </div>
+    <div class="lf-page-header">
+        <div class="min-w-0">
+            <h1 class="lf-page-title">Novo motorista ou frota</h1>
+            <p class="lf-page-subtitle">Cria o cadastro diretamente no sistema.</p>
         </div>
     </div>
 
@@ -90,7 +88,7 @@
                         <label class="flex items-center p-4 border-2 border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:border-blue-500 transition-all">
                             <input type="radio" name="tipo_vinculo" value="PARCEIRO" class="mr-3 text-blue-600">
                             <div>
-                                <div class="font-medium dark:text-white">Parceiro</div>
+                                <div class="font-medium dark:text-white">Cliente</div>
                                 <div class="text-xs text-gray-500 dark:text-gray-400">Frota</div>
                             </div>
                         </label>

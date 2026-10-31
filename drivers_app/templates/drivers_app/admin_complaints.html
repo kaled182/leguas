@@ -22,20 +22,15 @@
   }
 </style>
 
-<div class="p-6" x-data="complaintsPanel()" x-init="init()">
+<div x-data="complaintsPanel()" x-init="init()">
 
   <!-- ── Header ───────────────────────────────────────────────────────── -->
-  <div class="mb-6 flex items-center justify-between">
-    <div class="flex items-center gap-3">
-      <div>
-        <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Reclamações de Clientes</h1>
-        <p class="text-gray-600 dark:text-gray-400">Gestão e acompanhamento de tickets de reclamação</p>
-      </div>
+  <div class="lf-page-header">
+    <div class="min-w-0">
+      <h1 class="lf-page-title">Reclamações de clientes</h1>
+      <p class="lf-page-subtitle">Gestão e acompanhamento das reclamações</p>
     </div>
-    <button @click="openNewModal()"
-            class="px-5 py-2.5 bg-brand-purple text-white rounded-lg font-semibold hover:shadow-lg transition-all flex items-center gap-2">
-      <i data-lucide="plus" class="w-5 h-5"></i> Nova Reclamação
-    </button>
+    <div class="lf-page-actions"><button type="button" @click="openNewModal()" class="lf-btn lf-btn-primary"><i data-lucide="plus" class="w-4 h-4" aria-hidden="true"></i>Nova reclamação</button></div>
   </div>
 
   <!-- ── KPI Cards (monitoramento) ─────────────────────────────────────── -->
@@ -269,7 +264,7 @@
                    class="text-xs flex-1 file:mr-2 file:px-3 file:py-1.5 file:rounded-lg file:border-0 file:bg-violet-600 file:text-white file:font-semibold file:cursor-pointer hover:file:bg-violet-700">
             <button type="button" x-show="ocrLastData"
                     @click="applyComplaintOCR()"
-                    class="px-3 py-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold inline-flex items-center gap-1.5 whitespace-nowrap">
+                    class="lf-btn lf-btn-ghost">
               <i data-lucide="check" class="w-3.5 h-3.5"></i> Aplicar
             </button>
           </div>
@@ -523,37 +518,37 @@
                 x-text="editComplaint?.status_display"></span>
           <template x-if="editComplaint?.status === 'ABERTO'">
             <button @click="changeStatus(editComplaint, 'NOTIFICADO')"
-                    class="inline-flex items-center gap-1 px-3 py-1.5 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg text-xs font-semibold">
+                    class="lf-btn lf-btn-ghost">
               <i data-lucide="send" class="w-3 h-3"></i> Marcar Notificado
             </button>
           </template>
           <template x-if="editComplaint?.status === 'NOTIFICADO'">
             <button @click="changeStatus(editComplaint, 'RESPONDIDO')"
-                    class="inline-flex items-center gap-1 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-semibold">
+                    class="lf-btn lf-btn-ghost">
               <i data-lucide="check" class="w-3 h-3"></i> Marcar Respondido
             </button>
           </template>
           <template x-if="editComplaint?.status === 'RESPONDIDO'">
             <button @click="changeStatus(editComplaint, 'FECHADO')"
-                    class="inline-flex items-center gap-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold">
+                    class="lf-btn lf-btn-ghost">
               <i data-lucide="check-circle" class="w-3 h-3"></i> Fechar Ticket
             </button>
           </template>
           <template x-if="editComplaint && !['FECHADO','CANCELADO'].includes(editComplaint.status)">
             <button @click="markLost(editComplaint)"
-                    class="inline-flex items-center gap-1 px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-semibold">
+                    class="lf-btn lf-btn-danger">
               <i data-lucide="package-x" class="w-3 h-3"></i> Marcar como perdido
             </button>
           </template>
           <template x-if="editComplaint && !['FECHADO','CANCELADO'].includes(editComplaint.status)">
             <button @click="changeStatus(editComplaint, 'CANCELADO', false)"
-                    class="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-500 hover:bg-gray-600 text-white rounded-lg text-xs font-semibold">
+                    class="lf-btn lf-btn-ghost">
               <i data-lucide="x-circle" class="w-3 h-3"></i> Cancelar ticket
             </button>
           </template>
           <template x-if="editComplaint && ['FECHADO','CANCELADO'].includes(editComplaint.status)">
             <button @click="changeStatus(editComplaint, 'ABERTO', false)"
-                    class="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold">
+                    class="lf-btn lf-btn-ghost">
               <i data-lucide="rotate-ccw" class="w-3 h-3"></i> Reabrir
             </button>
           </template>
@@ -678,7 +673,7 @@
           <div class="flex justify-end gap-2 pt-1">
             <button @click="cancelEdit()" class="px-4 py-2 text-sm bg-gray-200 dark:bg-gray-700 rounded-lg font-medium text-gray-700 dark:text-gray-300">Cancelar</button>
             <button @click="saveEditFields()" :disabled="savingEdit"
-                    class="px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-lg font-semibold inline-flex items-center gap-2">
+                    class="lf-btn lf-btn-ghost disabled:opacity-50">
               <i data-lucide="save" class="w-4 h-4"></i>
               <span x-text="savingEdit ? 'A guardar…' : 'Guardar alterações'"></span>
             </button>
@@ -694,7 +689,7 @@
                    @change="addComplaintAttachments($event)"
                    class="hidden">
             <button type="button" @click="$refs.complaintAttachFile.click()"
-                    class="inline-flex items-center gap-1 px-2.5 py-1 text-xs bg-violet-600 hover:bg-violet-700 text-white rounded-lg font-semibold">
+                    class="lf-btn lf-btn-ghost">
               <i data-lucide="plus" class="w-3 h-3"></i> Adicionar anexo(s)
             </button>
           </div>
@@ -784,7 +779,7 @@
             <!-- Guardar resposta -->
             <div class="flex justify-end">
               <button @click="saveResposta()"
-                      class="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition-colors">
+                      class="lf-btn lf-btn-ghost">
                 <i data-lucide="save" class="w-3.5 h-3.5"></i> Guardar Resposta
               </button>
             </div>
@@ -798,7 +793,7 @@
               <i data-lucide="message-circle" class="w-3.5 h-3.5"></i> Mensagem para o cliente (WhatsApp)
             </span>
             <button @click="copyWA(editComplaint?.whatsapp_text)"
-                    class="text-xs px-2 py-1 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold flex items-center gap-1">
+                    class="lf-btn lf-btn-ghost">
               <i data-lucide="copy" class="w-3 h-3"></i> Copiar
             </button>
           </div>
@@ -829,7 +824,7 @@
             <i data-lucide="file-down" class="w-4 h-4"></i> PDF
           </a>
           <button @click="showEditModal = false"
-                  class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold transition-colors">
+                  class="lf-btn lf-btn-ghost">
             Fechar
           </button>
         </div>

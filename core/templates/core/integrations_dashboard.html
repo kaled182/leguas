@@ -38,7 +38,7 @@
     </div>
     <div class="space-y-2">
       {% for integration in overdue_integrations %}
-      <div class="flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-lg">
+      <div class="flex flex-wrap items-center justify-between gap-2 p-3 bg-white dark:bg-gray-800 rounded-lg">
         <div class="flex items-center gap-3">
           <i data-lucide="building-2" class="w-4 h-4 text-red-600 dark:text-red-400"></i>
           <span class="font-medium text-gray-900 dark:text-white">{{ integration.partner.name }}</span>

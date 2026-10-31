@@ -21,6 +21,11 @@ def user_access(request):
 def navigation(request):
     if not hasattr(request, "user"):
         return {"menu_groups": []}
+    from dashboard_leguas.views_attention import attention_count
     from drivers_app.context_processors import drivers_counts
 
-    return {"menu_groups": build_menu(request, drivers_counts(request))}
+    counts = dict(drivers_counts(request))
+    user = request.user
+    if user.is_authenticated and user.is_staff:
+        counts["attention_count"] = attention_count(request)
+    return {"menu_groups": build_menu(request, counts)}

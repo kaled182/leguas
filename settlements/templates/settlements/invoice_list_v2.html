@@ -1,17 +1,13 @@
 {% extends 'settlements/base.html' %}
 {% load ui %}
 
-{% block title %}Faturas de Parceiros{% endblock %}
+{% block title %}Faturas de Clientes{% endblock %}
 
 {% block content %}
 <div class="w-full mx-auto space-y-8">
   <!-- Header -->
-  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-6 fade-in">
-    <div class="flex items-start justify-between flex-wrap gap-3">
-      <div class="flex-1">
-        {% include 'settlements/partials/financial_header.html' with page_title="Faturas de Parceiros" page_subtitle="Gestão e acompanhamento de faturas emitidas para parceiros" icon="file-text" %}
-      </div>
-      <form method="post" enctype="multipart/form-data"
+  {% include 'settlements/partials/financial_header.html' with page_title="Faturas de clientes" page_subtitle="Gestão e acompanhamento de faturas emitidas para parceiros" icon="file-text" %}
+  <div class="lf-page-actions justify-end mb-4"><form method="post" enctype="multipart/form-data"
             action="{% url 'cainiao-billing-upload' %}"
             class="flex items-center gap-2">
         {% csrf_token %}
@@ -20,13 +16,11 @@
                class="hidden"
                onchange="this.form.submit()">
         <label for="cainiao-billing-file"
-               class="px-4 py-2.5 bg-brand-purple text-white rounded-lg font-medium shadow-sm cursor-pointer inline-flex items-center gap-2">
+               class="lf-btn lf-btn-ghost cursor-pointer">
           <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
           Importar Pré-fatura Cainiao
         </label>
-      </form>
-    </div>
-  </div>
+      </form></div>
 
   <!-- KPIs -->
   <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -63,7 +57,7 @@
         </select>
       </div>
       <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Parceiro</label>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Cliente</label>
         <input type="text" name="partner" value="{{ request.GET.partner }}" placeholder="Nome do parceiro" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500">
       </div>
       <div>
@@ -75,11 +69,11 @@
         <input type="date" name="date_to" value="{{ request.GET.date_to }}" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500">
       </div>
       <div class="md:col-span-4 flex gap-2">
-        <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200 flex items-center gap-2">
+        <button type="submit" class="lf-btn lf-btn-ghost duration-200">
           <i data-lucide="search" class="w-4 h-4"></i>
           Filtrar
         </button>
-        <a href="{% url 'invoice-list' %}" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg font-medium transition-colors duration-200">
+        <a href="{% url 'invoice-list' %}" class="lf-btn lf-btn-ghost duration-200">
           Limpar
         </a>
       </div>
@@ -89,22 +83,22 @@
   <!-- Tabela de Faturas -->
   <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 overflow-hidden scale-in">
     <div class="overflow-x-auto">
-      <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-        <thead class="bg-gray-50 dark:bg-gray-900">
+      <table class="lf-table">
+        <thead>
           <tr>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Número</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Parceiro</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Período</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Valor</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Estado</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Ações</th>
+            <th >Número</th>
+            <th >Cliente</th>
+            <th >Período</th>
+            <th >Valor</th>
+            <th >Estado</th>
+            <th >Ações</th>
           </tr>
         </thead>
-        <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+        <tbody>
           {% if invoices %}
             {% for invoice in invoices %}
             <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-150">
-              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+              <td class="whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                 <div class="flex items-center gap-2">
                   <span class="font-mono">{{ invoice.invoice_number }}</span>
                   {% if invoice.cainiao_import %}
@@ -115,16 +109,16 @@
                   {% endif %}
                 </div>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+              <td class="whitespace-nowrap text-sm text-gray-900 dark:text-white">
                 {{ invoice.partner }}
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+              <td class="whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                 {{ invoice.period_start|date:"d/m/Y" }} - {{ invoice.period_end|date:"d/m/Y" }}
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900 dark:text-white">
+              <td class="whitespace-nowrap text-sm font-semibold text-gray-900 dark:text-white">
                 {{ invoice.net_amount|eur }}
               </td>
-              <td class="px-6 py-4 whitespace-nowrap">
+              <td class="whitespace-nowrap">
                 {% if invoice.status == 'PAID' %}
                   <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400">Recebida</span>
                 {% elif invoice.status == 'APPROVED' %}
@@ -141,7 +135,7 @@
                   <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">{{ invoice.get_status_display }}</span>
                 {% endif %}
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+              <td class="whitespace-nowrap text-sm font-medium">
                 {% if invoice.cainiao_import %}
                   <a href="{% url 'cainiao-billing-detail' invoice.cainiao_import.id %}"
                      class="text-violet-600 hover:text-violet-900 dark:text-violet-400 dark:hover:text-violet-300 mr-2 inline-flex items-center gap-1">
@@ -155,7 +149,7 @@
                 {% with transitions=invoice.available_transitions %}
                 {% if transitions %}
                   <button type="button"
-                          class="status-menu-trigger ml-1 px-2 py-0.5 rounded text-xs font-semibold text-white inline-flex items-center gap-1 bg-indigo-600 hover:bg-indigo-700"
+                          class="lf-btn lf-btn-ghost status-menu-trigger ml-1"
                           data-invoice-id="{{ invoice.id }}"
                           data-invoice-number="{{ invoice.invoice_number|escapejs }}"
                           data-transitions='{% for t in transitions %}{"status":"{{ t.status }}","label":"{{ t.label|escapejs }}","color":"{{ t.color }}","icon":"{{ t.icon }}"}{% if not forloop.last %},{% endif %}{% endfor %}'>
@@ -171,7 +165,7 @@
             {% endfor %}
           {% else %}
             <tr>
-              <td colspan="6" class="px-6 py-12">
+              <td colspan="6" >
                 {% include 'settlements/partials/financial_empty_state.html' with icon="file-text" title="Nenhuma fatura encontrada" message="Não há faturas que correspondam aos filtros selecionados." %}
               </td>
             </tr>
@@ -191,7 +185,7 @@
       <div class="flex items-center gap-2">
         {% if invoices.has_previous %}
           <a href="?page={{ invoices.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" 
-             class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200 flex items-center gap-2">
+             class="lf-btn lf-btn-ghost duration-200">
             <i data-lucide="chevron-left" class="w-4 h-4"></i>
             Anterior
           </a>
@@ -208,7 +202,7 @@
         
         {% if invoices.has_next %}
           <a href="?page={{ invoices.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" 
-             class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200 flex items-center gap-2">
+             class="lf-btn lf-btn-ghost duration-200">
             Próxima
             <i data-lucide="chevron-right" class="w-4 h-4"></i>
           </a>

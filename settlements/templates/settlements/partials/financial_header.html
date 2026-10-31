@@ -1,28 +1,7 @@
-<!--
-  - Cabeçalho do Dashboard Financeiro
-  - Título, subtítulo e informações do sistema
-  - Design moderno e responsivo
--->
-<header class="dashboard-header">
-  <div class="dashboard-header-content flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-    <div class="flex items-center gap-4">
-      <div class="dashboard-icon-container p-4 bg-brand-purple rounded-2xl shadow-lg border border-emerald-400/20">
-        <div class="relative">
-          <i data-lucide="{{ icon|default:'dollar-sign' }}" class="w-12 h-12 text-white drop-shadow-sm"></i>
-          <div class="absolute -top-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-white animate-pulse"></div>
-        </div>
-      </div>
-      <div>
-        <h1 class="dashboard-title text-3xl font-bold text-gray-900 dark:text-gray-100">
-          {{ page_title|default:"Dashboard Financeiro" }}
-        </h1>
-        <p class="dashboard-subtitle text-gray-600 dark:text-gray-400 flex items-center gap-2 mt-2">
-          <span class="flex items-center gap-1">
-            <span class="status-live w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
-            {{ page_subtitle|default:"Gestão de Faturas, Liquidações e Reclamações" }}
-          </span>
-        </p>
-      </div>
-    </div>
+{# Cabeçalho das páginas financeiras. #}
+<div class="lf-page-header">
+  <div class="min-w-0">
+    <h1 class="lf-page-title">{{ page_title|default:"Painel financeiro" }}</h1>
+    <p class="lf-page-subtitle">{{ page_subtitle|default:"Faturas, liquidações e reclamações" }}</p>
   </div>
-</header>
+</div>

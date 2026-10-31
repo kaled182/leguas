@@ -548,7 +548,7 @@ function ccDriver() {
       if (!v || v <= 0) { this.formError = 'O valor tem de ser > 0.'; return; }
       const lim = {{ adv_limit|default:0|stringformat:"s" }}, used = {{ adv_used_month|stringformat:"s" }};
       if (lim > 0 && used + v > lim && !this.overLimitOk) {
-        this.formError = `Passa o limite mensal: € ${(used + v).toFixed(2)} de € ${lim.toFixed(2)}. Clique de novo em "Criar lançamento" para confirmar.`;
+        this.formError = `Passa o limite mensal: ${lfEur((used + v))} de ${lfEur(lim)}. Clique de novo em "Criar lançamento" para confirmar.`;
         this.overLimitOk = true;
         return;
       }

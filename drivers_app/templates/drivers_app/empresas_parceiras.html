@@ -11,16 +11,18 @@
   {% csrf_token %}
 
   <!-- Header -->
-  <div class="flex items-center justify-between">
-    <div>
-      <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Frotas subcontratadas</h1>
-      <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Empresas que fornecem motoristas à Léguas Franzinas</p>
-    </div>
-    <button @click="openCreate()"
-            class="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold text-sm transition-colors shadow-sm">
+  <div class="lf-page-header">
+<div class="min-w-0">
+<h1 class="lf-page-title">Frotas subcontratadas</h1>
+      <p class="lf-page-subtitle">Empresas que fornecem motoristas à Léguas Franzinas</p>
+</div>
+<div class="lf-page-actions">
+<button @click="openCreate()"
+            class="lf-btn lf-btn-ghost">
       <i data-lucide="plus" class="w-4 h-4"></i> Nova Empresa
     </button>
-  </div>
+</div>
+</div>
 
   <!-- Cards de resumo -->
   <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -64,53 +66,53 @@
     </div>
 
     <div class="overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead class="bg-gray-50 dark:bg-gray-700/50">
+      <table class="lf-table">
+        <thead>
           <tr>
-            <th class="px-4 py-3 text-left font-semibold text-gray-500">Empresa</th>
-            <th class="px-4 py-3 text-left font-semibold text-gray-500">NIF</th>
-            <th class="px-4 py-3 text-left font-semibold text-gray-500">Contacto</th>
-            <th class="px-4 py-3 text-center font-semibold text-gray-500">IVA (%)</th>
-            <th class="px-4 py-3 text-center font-semibold text-gray-500">Motoristas</th>
-            <th class="px-4 py-3 text-center font-semibold text-gray-500">Estado</th>
-            <th class="px-4 py-3 text-center font-semibold text-gray-500">Ações</th>
+            <th >Empresa</th>
+            <th >NIF</th>
+            <th >Contacto</th>
+            <th class="text-center">IVA (%)</th>
+            <th class="text-center">Motoristas</th>
+            <th class="text-center">Estado</th>
+            <th class="text-center">Ações</th>
           </tr>
         </thead>
         <tbody>
           <template x-if="filteredEmpresas().length === 0">
-            <tr><td colspan="7" class="px-4 py-8 text-center text-gray-400">
+            <tr><td colspan="7" class="text-center text-gray-400">
               <i data-lucide="building-2" class="w-8 h-8 mx-auto mb-2 opacity-30"></i>
               <div>Nenhuma empresa encontrada.</div>
             </td></tr>
           </template>
           <template x-for="e in filteredEmpresas()" :key="e.id">
             <tr class="border-t border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
-              <td class="px-4 py-3">
+              <td >
                 <div class="font-semibold text-gray-900 dark:text-white" x-text="e.nome"></div>
                 <div class="text-xs text-gray-400" x-text="[e.cidade, e.codigo_postal].filter(Boolean).join(' — ')"></div>
               </td>
-              <td class="px-4 py-3 font-mono text-gray-600 dark:text-gray-300" x-text="e.nif || '—'"></td>
-              <td class="px-4 py-3">
+              <td class="font-mono text-gray-600 dark:text-gray-300" x-text="e.nif || '—'"></td>
+              <td >
                 <div class="text-gray-700 dark:text-gray-300" x-text="e.contacto_nome || '—'"></div>
                 <div class="text-xs text-gray-400" x-text="e.email || ''"></div>
                 <div class="text-xs text-gray-400" x-text="e.telefone || ''"></div>
               </td>
-              <td class="px-4 py-3 text-center">
+              <td class="text-center">
                 <span class="px-2 py-0.5 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-full text-xs font-semibold" x-text="e.taxa_iva + '%'"></span>
               </td>
-              <td class="px-4 py-3 text-center">
+              <td class="text-center">
                 <button @click="openMotoristas(e)"
                         class="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-lg text-xs font-semibold hover:bg-blue-200 transition-colors">
                   <i data-lucide="users" class="w-3 h-3"></i>
                   <span x-text="e.num_motoristas"></span>
                 </button>
               </td>
-              <td class="px-4 py-3 text-center">
+              <td class="text-center">
                 <span class="px-2 py-0.5 rounded-full text-xs font-semibold"
                       :class="e.ativo ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-gray-200 text-gray-500 dark:bg-gray-700'"
                       x-text="e.ativo ? 'Ativa' : 'Inativa'"></span>
               </td>
-              <td class="px-4 py-3 text-center">
+              <td class="text-center">
                 <div class="flex items-center justify-center gap-1">
                   <a :href="`/settlements/empresas/${e.id}/portal/`"
                      class="w-7 h-7 flex items-center justify-center rounded-lg bg-purple-100 dark:bg-purple-900/30 text-purple-600 hover:bg-purple-200 transition-colors" title="Abrir Portal da Frota">
@@ -204,7 +206,7 @@
             </label>
             <input type="number" step="0.0001" min="0" x-model="form.driver_default_price_per_package" placeholder="ex: 1.30 (vazio = usar default do parceiro)"
                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
-            <p class="text-[10px] text-gray-400 mt-1">Cascata: Motorista override → Frota → Parceiro</p>
+            <p class="text-[10px] text-gray-400 mt-1">Cascata: Motorista override → Frota → Cliente</p>
           </div>
           <div class="md:col-span-2">
             <label class="text-xs font-semibold text-gray-500 block mb-1">Morada</label>
@@ -273,7 +275,7 @@
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-700 rounded-lg p-3">
             <label class="flex items-center gap-2 text-sm cursor-pointer md:col-span-2">
               <input type="checkbox" x-model="autoEmit.enabled" class="w-4 h-4 rounded accent-amber-600">
-              <span class="font-semibold text-gray-700 dark:text-gray-300">Activar emissão automática</span>
+              <span class="font-semibold text-gray-700 dark:text-gray-300">Ativar emissão automática</span>
               <span class="text-xs text-gray-400" x-show="autoEmit.last_emitted_at" x-text="'Último: ' + autoEmit.last_emitted_at + ' (' + (autoEmit.last_emitted_period_from || '?') + ' → ' + (autoEmit.last_emitted_period_to || '?') + ')'"></span>
             </label>
 
@@ -317,13 +319,13 @@
 
             <div class="md:col-span-2 flex justify-end gap-2">
               <button @click="saveAutoEmitConfig()" type="button"
-                      class="px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white text-sm rounded-lg font-semibold flex items-center gap-2">
+                      class="lf-btn lf-btn-ghost">
                 <i data-lucide="save" class="w-4 h-4"></i>
                 Guardar configuração auto-emit
               </button>
               <button @click="runAutoEmitNow()" type="button"
                       :disabled="!autoEmit.enabled"
-                      class="px-3 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-40 text-white text-sm rounded-lg font-semibold flex items-center gap-2"
+                      class="lf-btn lf-btn-ghost disabled:opacity-40"
                       title="Dispara agora (apenas se hoje for o dia configurado)">
                 <i data-lucide="play" class="w-4 h-4"></i>
                 Disparar agora
@@ -391,7 +393,7 @@
                 <div>
                   <span x-show="d.nesta_empresa" class="text-xs text-blue-600 font-semibold">Na frota</span>
                   <button x-show="!d.nesta_empresa" @click="assignDriverToFrota(d)"
-                          class="text-xs px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors">
+                          class="lf-btn lf-btn-ghost">
                     Adicionar
                   </button>
                 </div>
@@ -434,7 +436,7 @@
                 <span class="text-gray-500">Entregas:</span>
                 <span class="font-bold text-emerald-600 dark:text-emerald-400" x-text="dashboard?.summary?.deliveries"></span>
                 <span class="text-gray-500">Margem:</span>
-                <span class="font-bold" :class="parseFloat(dashboard?.summary?.margem || 0) < 0 ? 'text-rose-600' : 'text-emerald-600'" x-text="'€' + parseFloat(dashboard?.summary?.margem || 0).toFixed(2)"></span>
+                <span class="font-bold" :class="parseFloat(dashboard?.summary?.margem || 0) < 0 ? 'text-rose-600' : 'text-emerald-600'" x-text="lfEur(parseFloat(dashboard?.summary?.margem || 0))"></span>
               </div>
             </div>
           </div>
@@ -453,13 +455,13 @@
                      x-text="((dashboard?.delta?.deliveries_pct >= 0 ? '+' : '') + (dashboard?.delta?.deliveries_pct ?? 0) + '% vs ant.')"></div>
               </div>
               <div class="bg-white dark:bg-gray-800 rounded-lg p-2.5">
-                <div class="text-[10px] uppercase text-gray-500">Receita (parceiro)</div>
-                <div class="text-xl font-bold text-blue-600" x-text="'€' + parseFloat(dashboard?.summary?.receita || 0).toFixed(2)"></div>
+                <div class="text-[10px] uppercase text-gray-500">Receita (cliente)</div>
+                <div class="text-xl font-bold text-blue-600" x-text="lfEur(parseFloat(dashboard?.summary?.receita || 0))"></div>
               </div>
               <div class="bg-white dark:bg-gray-800 rounded-lg p-2.5">
                 <div class="text-[10px] uppercase text-gray-500">Custo (drivers)</div>
-                <div class="text-xl font-bold text-amber-600" x-text="'€' + parseFloat(dashboard?.summary?.amount_driver || 0).toFixed(2)"></div>
-                <div class="text-[9px] text-gray-400" x-text="'média €' + parseFloat(dashboard?.summary?.avg_per_driver || 0).toFixed(2) + '/driver'"></div>
+                <div class="text-xl font-bold text-amber-600" x-text="lfEur(parseFloat(dashboard?.summary?.amount_driver || 0))"></div>
+                <div class="text-[9px] text-gray-400" x-text="'média ' + lfEur(dashboard?.summary?.avg_per_driver || 0) + '/driver'"></div>
               </div>
               <div class="bg-white dark:bg-gray-800 rounded-lg p-2.5">
                 <div class="text-[10px] uppercase text-gray-500 flex items-center gap-1">
@@ -468,7 +470,7 @@
                 </div>
                 <div class="text-xl font-bold"
                      :class="parseFloat(dashboard?.summary?.margem || 0) < 0 ? 'text-rose-600' : 'text-emerald-600'"
-                     x-text="'€' + parseFloat(dashboard?.summary?.margem || 0).toFixed(2)"></div>
+                     x-text="lfEur(parseFloat(dashboard?.summary?.margem || 0))"></div>
               </div>
             </div>
             <!-- Top 5 ranking -->
@@ -480,7 +482,7 @@
                     <span class="w-5 h-5 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 flex items-center justify-center font-bold text-[10px]" x-text="idx + 1"></span>
                     <span class="font-semibold flex-1" x-text="r.name"></span>
                     <span class="text-gray-500" x-text="r.deliveries + ' entregas'"></span>
-                    <span class="font-mono font-bold text-purple-600" x-text="'€' + parseFloat(r.amount).toFixed(2)"></span>
+                    <span class="font-mono font-bold text-purple-600" x-text="lfEur(parseFloat(r.amount))"></span>
                   </div>
                 </template>
               </div>
@@ -502,12 +504,12 @@
           </select>
           <input type="number" x-model="pfAno" @change="loadPrefaturas()" min="2020" max="2030"
                  class="w-24 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm">
-          <button @click="loadPrefaturas()" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold" title="Recarregar lista de pré-faturas já emitidas">Recarregar</button>
+          <button @click="loadPrefaturas()" class="lf-btn lf-btn-ghost" title="Recarregar lista de pré-faturas já emitidas">Recarregar</button>
           <div class="ml-auto flex items-center gap-2">
             <a :href="`/driversapp/empresas-parceiras/${editId}/prefatura/pdf/?mes=${pfMes}&ano=${pfAno}`"
                target="_blank"
                x-show="(pfData?.pre_invoices?.length > 0) || (pfData?.lancamentos?.length > 0)"
-               class="inline-flex items-center gap-2 px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-semibold transition-colors">
+               class="lf-btn lf-btn-danger">
               <i data-lucide="file-down" class="w-4 h-4"></i> Exportar PDF
             </a>
             <button @click="openLotePreview()"
@@ -518,12 +520,12 @@
             </button>
             <button @click="sendWhatsAppLote()"
                     x-show="pfData?.pre_invoices?.length > 0"
-                    class="inline-flex items-center gap-2 px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-semibold transition-colors"
+                    class="lf-btn lf-btn-ghost"
                     title="Enviar resumo das PFs deste mês por WhatsApp aos motoristas">
               <i data-lucide="message-circle" class="w-4 h-4"></i> WhatsApp Lote
             </button>
             <button @click="openLancamentoForm()"
-                    class="inline-flex items-center gap-2 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold transition-colors">
+                    class="lf-btn lf-btn-ghost">
               <i data-lucide="plus" class="w-4 h-4"></i> Lançamento Manual
             </button>
           </div>
@@ -637,7 +639,7 @@
           <div class="flex items-center gap-2 pt-1">
             <button @click="saveLancamento()"
                     :disabled="lancamentoSaving"
-                    class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-lg text-sm font-semibold transition-colors flex items-center gap-2">
+                    class="lf-btn lf-btn-ghost disabled:opacity-50">
               <svg x-show="lancamentoSaving" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
@@ -700,25 +702,25 @@
                   </div>
                   <div class="flex items-center gap-3">
                     <div class="text-right">
-                      <span class="font-bold text-lg" x-text="'€' + parseFloat(fi.total_com_iva || fi.total_a_receber).toFixed(2)"></span>
+                      <span class="font-bold text-lg" x-text="lfEur(parseFloat(fi.total_com_iva || fi.total_a_receber))"></span>
                       <div class="text-[10px] text-violet-600 dark:text-violet-400 font-semibold leading-none mt-0.5"
                            x-show="parseFloat(fi.vat_amount || 0) > 0"
-                           x-text="'c/ IVA ' + parseFloat(fi.vat_rate).toFixed(0) + '% (€' + parseFloat(fi.vat_amount).toFixed(2) + ')'"></div>
+                           x-text="'c/ IVA ' + parseFloat(fi.vat_rate).toFixed(0) + '% (' + lfEur(fi.vat_amount) + ')'"></div>
                     </div>
                     <button @click.stop="changeFIStatus(fi, 'APROVADO')" x-show="fi.status === 'CALCULADO'"
-                            class="px-2 py-1 bg-yellow-500 hover:bg-yellow-600 text-white text-xs rounded font-semibold" title="Aprovar">
+                            class="lf-btn lf-btn-ghost" title="Aprovar">
                       <i data-lucide="check" class="w-3 h-3 inline"></i>
                     </button>
                     <button @click.stop="changeFIStatus(fi, 'PAGO')" x-show="fi.status === 'APROVADO'"
-                            class="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs rounded font-semibold" title="Marcar Pago">
+                            class="lf-btn lf-btn-ghost" title="Marcar Pago">
                       <i data-lucide="banknote" class="w-3 h-3 inline"></i>
                     </button>
                     <button @click.stop="changeFIStatus(fi, 'CANCELADO')" x-show="['RASCUNHO','CALCULADO'].includes(fi.status)"
-                            class="px-2 py-1 bg-gray-400 hover:bg-rose-500 text-white text-xs rounded" title="Cancelar">
+                            class="lf-btn lf-btn-danger" title="Cancelar">
                       <i data-lucide="x" class="w-3 h-3 inline"></i>
                     </button>
                     <button @click.stop="deleteFI(fi)" x-show="['RASCUNHO','CANCELADO'].includes(fi.status)"
-                            class="px-2 py-1 bg-rose-600 hover:bg-rose-700 text-white text-xs rounded" title="Apagar">
+                            class="lf-btn lf-btn-danger" title="Apagar">
                       <i data-lucide="trash-2" class="w-3 h-3 inline"></i>
                     </button>
                   </div>
@@ -731,15 +733,15 @@
                     </div>
                     <div class="bg-white dark:bg-gray-800 rounded p-2.5 text-center">
                       <div class="text-[10px] uppercase text-gray-500">Base €</div>
-                      <div class="text-lg font-bold" x-text="'€' + parseFloat(fleetInvoiceDetail?.total_base || 0).toFixed(2)"></div>
+                      <div class="text-lg font-bold" x-text="lfEur(parseFloat(fleetInvoiceDetail?.total_base || 0))"></div>
                     </div>
                     <div class="bg-white dark:bg-gray-800 rounded p-2.5 text-center">
                       <div class="text-[10px] uppercase text-gray-500">Bónus €</div>
-                      <div class="text-lg font-bold text-amber-600" x-text="'€' + parseFloat(fleetInvoiceDetail?.total_bonus || 0).toFixed(2)"></div>
+                      <div class="text-lg font-bold text-amber-600" x-text="lfEur(parseFloat(fleetInvoiceDetail?.total_bonus || 0))"></div>
                     </div>
                     <div class="bg-white dark:bg-gray-800 rounded p-2.5 text-center">
                       <div class="text-[10px] uppercase text-gray-500">Reclamações €</div>
-                      <div class="text-lg font-bold text-rose-600" x-text="'-€' + parseFloat(fleetInvoiceDetail?.total_claims || 0).toFixed(2)"></div>
+                      <div class="text-lg font-bold text-rose-600" x-text="'-' + lfEur(fleetInvoiceDetail?.total_claims || 0)"></div>
                     </div>
                   </div>
 
@@ -749,15 +751,15 @@
                     <div class="grid grid-cols-3 gap-3 text-sm">
                       <div>
                         <div class="text-[10px] uppercase text-gray-500">Subtotal s/ IVA</div>
-                        <div class="font-bold" x-text="'€' + parseFloat(fleetInvoiceDetail?.total_a_receber || 0).toFixed(2)"></div>
+                        <div class="font-bold" x-text="lfEur(parseFloat(fleetInvoiceDetail?.total_a_receber || 0))"></div>
                       </div>
                       <div>
                         <div class="text-[10px] uppercase text-violet-700 dark:text-violet-300" x-text="'IVA (' + parseFloat(fleetInvoiceDetail?.vat_rate || 0).toFixed(0) + '%)'"></div>
-                        <div class="font-bold text-violet-700 dark:text-violet-300" x-text="'€' + parseFloat(fleetInvoiceDetail?.vat_amount || 0).toFixed(2)"></div>
+                        <div class="font-bold text-violet-700 dark:text-violet-300" x-text="lfEur(parseFloat(fleetInvoiceDetail?.vat_amount || 0))"></div>
                       </div>
                       <div>
                         <div class="text-[10px] uppercase text-emerald-700 dark:text-emerald-300">Total c/ IVA</div>
-                        <div class="font-extrabold text-emerald-700 dark:text-emerald-300" x-text="'€' + parseFloat(fleetInvoiceDetail?.total_com_iva || 0).toFixed(2)"></div>
+                        <div class="font-extrabold text-emerald-700 dark:text-emerald-300" x-text="lfEur(parseFloat(fleetInvoiceDetail?.total_com_iva || 0))"></div>
                       </div>
                     </div>
                   </div>
@@ -771,26 +773,26 @@
                             <span class="font-bold" x-text="line.driver_name"></span>
                             <span class="text-xs text-gray-400 font-mono" x-text="line.courier_id"></span>
                           </div>
-                          <span class="font-bold text-purple-600" x-text="'€' + parseFloat(line.subtotal).toFixed(2)"></span>
+                          <span class="font-bold text-purple-600" x-text="lfEur(parseFloat(line.subtotal))"></span>
                         </div>
                         <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
                           <div>
                             <span class="text-gray-500">Entregas:</span>
                             <span class="font-mono font-bold" x-text="line.deliveries"></span>
-                            <span class="text-gray-400" x-text="' × €' + parseFloat(line.price_per_package).toFixed(2)"></span>
+                            <span class="text-gray-400" x-text="' × ' + lfEur(line.price_per_package)"></span>
                           </div>
                           <div>
                             <span class="text-gray-500">Base:</span>
-                            <span class="font-mono" x-text="'€' + parseFloat(line.base_amount).toFixed(2)"></span>
+                            <span class="font-mono" x-text="lfEur(parseFloat(line.base_amount))"></span>
                           </div>
                           <div>
                             <span class="text-gray-500">Bónus:</span>
-                            <span class="font-mono text-amber-600" x-text="'€' + parseFloat(line.bonus_amount).toFixed(2)"></span>
+                            <span class="font-mono text-amber-600" x-text="lfEur(parseFloat(line.bonus_amount))"></span>
                             <span class="text-[10px] text-gray-400" x-text="'(' + line.bonus_days_count + ' dias)'"></span>
                           </div>
                           <div>
                             <span class="text-gray-500">Reclamações:</span>
-                            <span class="font-mono text-rose-600" x-text="'-€' + parseFloat(line.claims_amount).toFixed(2)"></span>
+                            <span class="font-mono text-rose-600" x-text="'-' + lfEur(line.claims_amount)"></span>
                             <span class="text-[10px] text-gray-400" x-text="'(' + line.claims_count + ')'"></span>
                           </div>
                         </div>
@@ -802,7 +804,7 @@
                               <span class="px-1 py-0.5 rounded bg-amber-200 text-amber-800 font-semibold" x-text="bd.tipo"></span>
                               <span class="text-gray-400" x-text="bd.feriado_nome"></span>
                               <span class="text-gray-500" x-text="bd.deliveries + ' ent.'"></span>
-                              <span class="ml-auto font-mono font-bold" x-text="'€' + parseFloat(bd.bonus).toFixed(2)"></span>
+                              <span class="ml-auto font-mono font-bold" x-text="lfEur(parseFloat(bd.bonus))"></span>
                             </div>
                           </template>
                         </div>
@@ -813,7 +815,7 @@
                               <a x-show="c.waybill_number" :href="'/settlements/cainiao/waybill/' + encodeURIComponent(c.waybill_number) + '/'" target="_blank"
                                  class="font-mono text-blue-600 hover:underline" x-text="c.waybill_number"></a>
                               <span class="text-gray-400 truncate" x-text="c.descricao"></span>
-                              <span class="ml-auto font-mono text-rose-600" x-text="'-€' + parseFloat(c.valor).toFixed(2)"></span>
+                              <span class="ml-auto font-mono text-rose-600" x-text="'-' + lfEur(c.valor)"></span>
                             </div>
                           </template>
                         </div>
@@ -822,7 +824,7 @@
                   </div>
                   <div class="flex justify-end gap-2 mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
                     <a :href="'/settlements/fleet-invoices/' + fi.id + '/pdf/'" target="_blank"
-                       class="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs rounded font-semibold flex items-center gap-1">
+                       class="lf-btn lf-btn-danger">
                       <i data-lucide="file-down" class="w-3 h-3"></i> PDF
                     </a>
                   </div>
@@ -843,11 +845,11 @@
                 <strong x-text="pfBulkSelected.length"></strong> selecionada(s)
               </span>
               <button @click="bulkChangeStatus('APROVADO')"
-                      class="px-2.5 py-1 text-xs rounded-md bg-yellow-500 hover:bg-yellow-600 text-white font-semibold flex items-center gap-1">
+                      class="lf-btn lf-btn-ghost">
                 <i data-lucide="check-check" class="w-3 h-3"></i> Aprovar
               </button>
               <button @click="bulkChangeStatus('PAGO')"
-                      class="px-2.5 py-1 text-xs rounded-md bg-emerald-600 hover:bg-emerald-700 text-white font-semibold flex items-center gap-1">
+                      class="lf-btn lf-btn-ghost">
                 <i data-lucide="banknote" class="w-3 h-3"></i> Marcar Pago
               </button>
               <button @click="pfBulkSelected = []; pfBulkSelectAll = false;"
@@ -857,40 +859,40 @@
             </div>
           </div>
           <div class="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
-            <table class="w-full text-sm">
-              <thead class="bg-gray-50 dark:bg-gray-700/50">
+            <table class="lf-table">
+              <thead>
                 <tr>
-                  <th class="px-3 py-2 text-center w-8">
+                  <th class="text-center">
                     <input type="checkbox" x-model="pfBulkSelectAll" @change="togglePfBulkAll()" class="rounded">
                   </th>
-                  <th class="px-3 py-2 text-left font-semibold text-gray-500 text-xs">Motorista</th>
-                  <th class="px-3 py-2 text-left font-semibold text-gray-500 text-xs">Período</th>
-                  <th class="px-3 py-2 text-right font-semibold text-gray-500 text-xs">Base €</th>
-                  <th class="px-3 py-2 text-right font-semibold text-gray-500 text-xs">Bónus €</th>
-                  <th class="px-3 py-2 text-right font-semibold text-gray-500 text-xs">Total €</th>
-                  <th class="px-3 py-2 text-center font-semibold text-gray-500 text-xs">Estado</th>
-                  <th class="px-3 py-2 text-center font-semibold text-gray-500 text-xs">Ações</th>
+                  <th >Motorista</th>
+                  <th >Período</th>
+                  <th class="text-right">Base €</th>
+                  <th class="text-right">Bónus €</th>
+                  <th class="text-right">Total €</th>
+                  <th class="text-center">Estado</th>
+                  <th class="text-center">Ações</th>
                 </tr>
               </thead>
               <tbody>
                 <template x-for="pf in (pfData?.pre_invoices || [])" :key="pf.id">
                   <tr class="border-t border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/30"
                       :class="pfBulkSelected.includes(pf.id) ? 'bg-purple-50 dark:bg-purple-900/20' : ''">
-                    <td class="px-3 py-2 text-center">
+                    <td class="text-center">
                       <input type="checkbox"
                              :checked="pfBulkSelected.includes(pf.id)"
                              @change="togglePfBulk(pf.id)"
                              class="rounded">
                     </td>
-                    <td class="px-3 py-2">
+                    <td >
                       <div class="font-semibold text-gray-800 dark:text-white text-xs" x-text="pf.driver_nome"></div>
                       <div class="text-gray-400 font-mono text-xs" x-text="pf.driver_nif"></div>
                     </td>
-                    <td class="px-3 py-2 text-xs text-gray-600 dark:text-gray-300" x-text="pf.periodo"></td>
-                    <td class="px-3 py-2 text-right text-xs font-mono text-gray-700 dark:text-gray-300" x-text="'€' + parseFloat(pf.base_entregas).toFixed(2)"></td>
-                    <td class="px-3 py-2 text-right text-xs font-mono text-gray-700 dark:text-gray-300" x-text="'€' + parseFloat(pf.total_bonus).toFixed(2)"></td>
-                    <td class="px-3 py-2 text-right text-xs font-mono font-bold text-gray-900 dark:text-white" x-text="'€' + parseFloat(pf.total_a_receber).toFixed(2)"></td>
-                    <td class="px-3 py-2 text-center">
+                    <td class="text-xs text-gray-600 dark:text-gray-300" x-text="pf.periodo"></td>
+                    <td class="text-right text-xs font-mono text-gray-700 dark:text-gray-300" x-text="lfEur(parseFloat(pf.base_entregas))"></td>
+                    <td class="text-right text-xs font-mono text-gray-700 dark:text-gray-300" x-text="lfEur(parseFloat(pf.total_bonus))"></td>
+                    <td class="text-right text-xs font-mono font-bold text-gray-900 dark:text-white" x-text="lfEur(parseFloat(pf.total_a_receber))"></td>
+                    <td class="text-center">
                       <span :class="{
                         'bg-gray-100 text-gray-700': pf.status === 'RASCUNHO',
                         'bg-blue-100 text-blue-700': pf.status === 'CALCULADO',
@@ -899,7 +901,7 @@
                         'bg-rose-100 text-rose-700': pf.status === 'CANCELADO'
                       }" class="text-xs px-1.5 py-0.5 rounded-full font-semibold" x-text="pf.status_display"></span>
                     </td>
-                    <td class="px-3 py-2 text-center flex items-center justify-center gap-1">
+                    <td class="text-center flex items-center justify-center gap-1">
                       <a :href="'/settlements/pre-invoices/' + pf.id + '/pdf/'" target="_blank"
                          class="inline-flex items-center gap-1 text-xs px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-600 hover:bg-red-200 rounded-lg font-semibold transition-colors">
                         <i data-lucide="file-text" class="w-3 h-3"></i>
@@ -924,36 +926,36 @@
             <span class="text-indigo-600 dark:text-indigo-400">Lançamentos Manuais</span>
           </div>
           <div class="overflow-x-auto rounded-xl border border-indigo-200 dark:border-indigo-800">
-            <table class="w-full text-sm">
-              <thead class="bg-indigo-50 dark:bg-indigo-900/20">
+            <table class="lf-table">
+              <thead>
                 <tr>
-                  <th class="px-3 py-2 text-left font-semibold text-gray-500 text-xs">Descrição</th>
-                  <th class="px-3 py-2 text-left font-semibold text-gray-500 text-xs">Período</th>
-                  <th class="px-3 py-2 text-right font-semibold text-gray-500 text-xs">Qtd.</th>
-                  <th class="px-3 py-2 text-right font-semibold text-gray-500 text-xs">Base €</th>
-                  <th class="px-3 py-2 text-right font-semibold text-gray-500 text-xs">Bónus €</th>
-                  <th class="px-3 py-2 text-right font-semibold text-orange-500 text-xs">Perdidos €</th>
-                  <th class="px-3 py-2 text-right font-semibold text-orange-500 text-xs">Adiant. €</th>
-                  <th class="px-3 py-2 text-right font-semibold text-gray-500 text-xs">Total €</th>
-                  <th class="px-3 py-2 text-center font-semibold text-gray-500 text-xs">Estado</th>
-                  <th class="px-3 py-2 text-center font-semibold text-gray-500 text-xs">Ações</th>
+                  <th >Descrição</th>
+                  <th >Período</th>
+                  <th class="text-right">Qtd.</th>
+                  <th class="text-right">Base €</th>
+                  <th class="text-right">Bónus €</th>
+                  <th class="text-right">Perdidos €</th>
+                  <th class="text-right">Adiant. €</th>
+                  <th class="text-right">Total €</th>
+                  <th class="text-center">Estado</th>
+                  <th class="text-center">Ações</th>
                 </tr>
               </thead>
               <tbody>
                 <template x-for="lc in (pfData?.lancamentos || [])" :key="lc.id">
                   <tr class="border-t border-indigo-100 dark:border-indigo-800 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/10">
-                    <td class="px-3 py-2">
+                    <td >
                       <div class="font-semibold text-gray-800 dark:text-white text-xs" x-text="lc.descricao"></div>
                       <div x-show="lc.notas" class="text-gray-400 text-xs italic" x-text="lc.notas"></div>
                     </td>
-                    <td class="px-3 py-2 text-xs text-gray-600 dark:text-gray-300" x-text="lc.periodo"></td>
-                    <td class="px-3 py-2 text-right text-xs font-mono text-gray-500" x-text="lc.qtd_entregas > 0 ? lc.qtd_entregas : '—'"></td>
-                    <td class="px-3 py-2 text-right text-xs font-mono text-gray-700 dark:text-gray-300" x-text="'€' + parseFloat(lc.valor_base).toFixed(2)"></td>
-                    <td class="px-3 py-2 text-right text-xs font-mono text-gray-700 dark:text-gray-300" x-text="parseFloat(lc.valor_bonus) > 0 ? '€' + parseFloat(lc.valor_bonus).toFixed(2) : '—'"></td>
-                    <td class="px-3 py-2 text-right text-xs font-mono text-orange-600" x-text="parseFloat(lc.pacotes_perdidos) > 0 ? '-€' + parseFloat(lc.pacotes_perdidos).toFixed(2) : '—'"></td>
-                    <td class="px-3 py-2 text-right text-xs font-mono text-orange-600" x-text="parseFloat(lc.adiantamentos) > 0 ? '-€' + parseFloat(lc.adiantamentos).toFixed(2) : '—'"></td>
-                    <td class="px-3 py-2 text-right text-xs font-mono font-bold text-indigo-700 dark:text-indigo-300" x-text="'€' + parseFloat(lc.total_a_receber).toFixed(2)"></td>
-                    <td class="px-3 py-2 text-center">
+                    <td class="text-xs text-gray-600 dark:text-gray-300" x-text="lc.periodo"></td>
+                    <td class="text-right text-xs font-mono text-gray-500" x-text="lc.qtd_entregas > 0 ? lc.qtd_entregas : '—'"></td>
+                    <td class="text-right text-xs font-mono text-gray-700 dark:text-gray-300" x-text="lfEur(parseFloat(lc.valor_base))"></td>
+                    <td class="text-right text-xs font-mono text-gray-700 dark:text-gray-300" x-text="parseFloat(lc.valor_bonus) > 0 ? lfEur(parseFloat(lc.valor_bonus)) : '—'"></td>
+                    <td class="text-right text-xs font-mono text-orange-600" x-text="parseFloat(lc.pacotes_perdidos) > 0 ? '-' + lfEur(lc.pacotes_perdidos) : '—'"></td>
+                    <td class="text-right text-xs font-mono text-orange-600" x-text="parseFloat(lc.adiantamentos) > 0 ? '-' + lfEur(lc.adiantamentos) : '—'"></td>
+                    <td class="text-right text-xs font-mono font-bold text-indigo-700 dark:text-indigo-300" x-text="lfEur(parseFloat(lc.total_a_receber))"></td>
+                    <td class="text-center">
                       <span class="text-xs px-1.5 py-0.5 rounded-full"
                             :class="{
                               'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300': lc.status === 'RASCUNHO',
@@ -964,7 +966,7 @@
                             }"
                             x-text="lc.status_display"></span>
                     </td>
-                    <td class="px-3 py-2 text-center">
+                    <td class="text-center">
                       <div class="flex items-center justify-center gap-1">
                         <button @click="editLancamento(lc)"
                                 class="w-6 h-6 flex items-center justify-center rounded bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 hover:bg-indigo-200 transition-colors" title="Editar">
@@ -990,23 +992,23 @@
           <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
             <div class="text-center">
               <div class="text-xs text-gray-500">Base Faturável</div>
-              <div class="font-bold text-gray-900 dark:text-white text-sm" x-text="'€' + parseFloat(pfData?.totais?.base_faturavel || 0).toFixed(2)"></div>
+              <div class="font-bold text-gray-900 dark:text-white text-sm" x-text="lfEur(parseFloat(pfData?.totais?.base_faturavel || 0))"></div>
             </div>
             <div class="text-center">
               <div class="text-xs text-gray-500">IVA (<span x-text="pfData?.taxa_iva"></span>%) s/ bruto</div>
-              <div class="font-bold text-orange-600 text-sm" x-text="'+€' + parseFloat(pfData?.totais?.total_iva || 0).toFixed(2)"></div>
+              <div class="font-bold text-orange-600 text-sm" x-text="'+' + lfEur(pfData?.totais?.total_iva || 0)"></div>
             </div>
             <div class="text-center bg-emerald-50 dark:bg-emerald-900/30 rounded-lg p-2 border border-emerald-200 dark:border-emerald-700">
               <div class="text-xs text-emerald-700 dark:text-emerald-300">Fatura-Recibo (bruto)</div>
-              <div class="font-bold text-emerald-800 dark:text-emerald-200 text-sm" x-text="'€' + parseFloat(pfData?.totais?.total_fatura || 0).toFixed(2)"></div>
+              <div class="font-bold text-emerald-800 dark:text-emerald-200 text-sm" x-text="lfEur(parseFloat(pfData?.totais?.total_fatura || 0))"></div>
             </div>
             <div class="text-center">
               <div class="text-xs text-gray-500">Adiantamentos</div>
-              <div class="font-bold text-red-600 text-sm" x-text="'-€' + parseFloat(pfData?.totais?.total_adiantamentos || 0).toFixed(2)"></div>
+              <div class="font-bold text-red-600 text-sm" x-text="'-' + lfEur(pfData?.totais?.total_adiantamentos || 0)"></div>
             </div>
             <div class="text-center bg-emerald-600 rounded-lg p-2">
               <div class="text-xs text-emerald-100">TOTAL A PAGAR</div>
-              <div class="font-bold text-white text-base" x-text="'€' + parseFloat(pfData?.totais?.total_com_iva || 0).toFixed(2)"></div>
+              <div class="font-bold text-white text-base" x-text="lfEur(parseFloat(pfData?.totais?.total_com_iva || 0))"></div>
             </div>
           </div>
         </div>
@@ -1131,15 +1133,15 @@
           </div>
           <div class="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-3">
             <div class="text-xs text-gray-500">Bónus (∑)</div>
-            <div class="text-2xl font-bold text-amber-600" x-text="'€' + parseFloat(lotePreview?.totals?.bonus || 0).toFixed(2)"></div>
+            <div class="text-2xl font-bold text-amber-600" x-text="lfEur(parseFloat(lotePreview?.totals?.bonus || 0))"></div>
           </div>
           <div class="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-3">
             <div class="text-xs text-gray-500">Reclamações (∑)</div>
-            <div class="text-2xl font-bold text-rose-600" x-text="'-€' + parseFloat(lotePreview?.totals?.claims || 0).toFixed(2)"></div>
+            <div class="text-2xl font-bold text-rose-600" x-text="'-' + lfEur(lotePreview?.totals?.claims || 0)"></div>
           </div>
           <div class="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-3">
             <div class="text-xs text-gray-500">Total a pagar à frota</div>
-            <div class="text-2xl font-bold text-purple-600 dark:text-purple-400" x-text="'€' + parseFloat(lotePreview?.totals?.amount || 0).toFixed(2)"></div>
+            <div class="text-2xl font-bold text-purple-600 dark:text-purple-400" x-text="lfEur(parseFloat(lotePreview?.totals?.amount || 0))"></div>
           </div>
         </div>
 
@@ -1148,43 +1150,43 @@
              class="bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 rounded-lg p-3 text-xs text-amber-800 dark:text-amber-300 flex items-start gap-2">
           <i data-lucide="alert-triangle" class="w-4 h-4 mt-0.5 flex-shrink-0"></i>
           <div>
-            Alguns motoristas já têm PFs que sobrepõem este período. Por defeito serão <strong>ignorados</strong> na emissão (mantém o checkbox "Pular overlaps" abaixo).
+            Alguns motoristas já têm Pré-faturas que sobrepõem este período. Por defeito serão <strong>ignorados</strong> na emissão (mantém o checkbox "Pular overlaps" abaixo).
           </div>
         </div>
 
         <!-- Tabela drivers -->
         <div x-show="lotePreview?.rows?.length > 0" class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-x-auto">
-          <table class="w-full text-xs">
-            <thead class="bg-gray-50 dark:bg-gray-900/50">
-              <tr class="text-left text-[10px] uppercase text-gray-500 dark:text-gray-400">
-                <th class="px-2 py-1.5">
+          <table class="lf-table">
+            <thead>
+              <tr>
+                <th >
                   <input type="checkbox" x-model="loteSelectAll" @change="toggleSelectAll()" class="rounded">
                 </th>
-                <th class="px-2 py-1.5">Motorista</th>
-                <th class="px-2 py-1.5 text-right">Entregas</th>
-                <th class="px-2 py-1.5 text-right">€/pacote</th>
-                <th class="px-2 py-1.5 text-right">Base</th>
-                <th class="px-2 py-1.5 text-right">Bónus dias</th>
-                <th class="px-2 py-1.5 text-right">Bónus €</th>
-                <th class="px-2 py-1.5 text-right">Reclamações €</th>
-                <th class="px-2 py-1.5 text-right">Total</th>
-                <th class="px-2 py-1.5">Estado</th>
+                <th >Motorista</th>
+                <th class="text-right">Entregas</th>
+                <th class="text-right">€/pacote</th>
+                <th class="text-right">Base</th>
+                <th class="text-right">Bónus dias</th>
+                <th class="text-right">Bónus €</th>
+                <th class="text-right">Reclamações €</th>
+                <th class="text-right">Total</th>
+                <th >Estado</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+            <tbody>
               <template x-for="r in lotePreview?.rows || []" :key="r.driver_id">
                 <tr :class="r.deliveries === 0 ? 'opacity-50' : (r.has_overlap ? 'bg-amber-50/50 dark:bg-amber-900/10' : '')">
-                  <td class="px-2 py-1.5">
+                  <td >
                     <input type="checkbox"
                            :checked="loteSelected.includes(r.driver_id)"
                            @change="toggleDriver(r.driver_id)"
                            :disabled="r.deliveries === 0 || r.has_overlap"
                            class="rounded">
                   </td>
-                  <td class="px-2 py-1.5">
+                  <td >
                     <div class="font-semibold flex items-center gap-1.5">
                       <span x-text="r.name"></span>
-                      <span x-show="(r.n_logins || 0) > 1" class="px-1.5 py-0.5 text-[9px] bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 rounded font-bold" x-text="r.n_logins + ' logins'" :title="(r.login_breakdown || []).map(l => l.label + ' (' + l.deliveries + ' entregas, €' + parseFloat(l.bonus_amount).toFixed(2) + ' bónus)').join(' · ')"></span>
+                      <span x-show="(r.n_logins || 0) > 1" class="px-1.5 py-0.5 text-[9px] bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 rounded font-bold" x-text="r.n_logins + ' logins'" :title="(r.login_breakdown || []).map(l => l.label + ' (' + l.deliveries + ' entregas, ' + lfEur(l.bonus_amount) + ' bónus)').join(' · ')"></span>
                     </div>
                     <div class="text-[10px] text-gray-400" x-text="r.apelido || '—'"></div>
                     <!-- Breakdown inline dos logins quando >1 -->
@@ -1195,14 +1197,14 @@
                             <span>↳</span>
                             <span class="font-medium" x-text="ln.label"></span>
                             <span class="text-gray-500" x-text="'· ' + ln.deliveries + ' entregas'"></span>
-                            <span x-show="parseFloat(ln.bonus_amount) > 0" class="text-amber-600 font-semibold" x-text="'· bónus €' + parseFloat(ln.bonus_amount).toFixed(2) + ' (' + ln.bonus_days + 'd)'"></span>
+                            <span x-show="parseFloat(ln.bonus_amount) > 0" class="text-amber-600 font-semibold" x-text="'· bónus ' + lfEur(ln.bonus_amount) + ' (' + ln.bonus_days + 'd)'"></span>
                           </div>
                         </template>
                       </div>
                     </template>
                   </td>
-                  <td class="px-2 py-1.5 text-right font-mono" x-text="r.deliveries"></td>
-                  <td class="px-2 py-1.5 text-right">
+                  <td class="text-right font-mono" x-text="r.deliveries"></td>
+                  <td class="text-right">
                     <span x-text="'€' + parseFloat(r.price_per_package).toFixed(4)"></span>
                     <span :class="{
                       'bg-violet-100 text-violet-700': r.price_source === 'driver_override',
@@ -1211,16 +1213,16 @@
                       'bg-rose-100 text-rose-700': r.price_source === 'none'
                     }" class="ml-1 px-1 py-0.5 rounded text-[9px]" x-text="r.price_source"></span>
                   </td>
-                  <td class="px-2 py-1.5 text-right font-mono" x-text="'€' + parseFloat(r.base).toFixed(2)"></td>
-                  <td class="px-2 py-1.5 text-right" x-text="r.bonus_days"></td>
-                  <td class="px-2 py-1.5 text-right font-mono text-amber-600" x-text="'€' + parseFloat(r.bonus_amount).toFixed(2)"></td>
-                  <td class="px-2 py-1.5 text-right font-mono"
+                  <td class="text-right font-mono" x-text="lfEur(parseFloat(r.base))"></td>
+                  <td class="text-right" x-text="r.bonus_days"></td>
+                  <td class="text-right font-mono text-amber-600" x-text="lfEur(parseFloat(r.bonus_amount))"></td>
+                  <td class="text-right font-mono"
                       :class="parseFloat(r.claims_amount || 0) > 0 ? 'text-rose-600' : 'text-gray-400'">
                     <span x-text="(parseFloat(r.claims_amount || 0) > 0 ? '-€' : '€') + parseFloat(r.claims_amount || 0).toFixed(2)"></span>
                     <span x-show="(r.claims_count || 0) > 0" class="text-[9px] text-gray-400" x-text="'(' + r.claims_count + ')'"></span>
                   </td>
-                  <td class="px-2 py-1.5 text-right font-mono font-bold text-purple-600" x-text="'€' + parseFloat(r.subtotal).toFixed(2)"></td>
-                  <td class="px-2 py-1.5">
+                  <td class="text-right font-mono font-bold text-purple-600" x-text="lfEur(parseFloat(r.subtotal))"></td>
+                  <td >
                     <span x-show="r.has_overlap" class="px-1.5 py-0.5 text-[9px] bg-amber-100 text-amber-700 rounded">overlap</span>
                     <span x-show="r.skip_reason && !r.has_overlap" class="text-[10px] text-gray-400" x-text="r.skip_reason"></span>
                     <span x-show="!r.has_overlap && !r.skip_reason" class="px-1.5 py-0.5 text-[9px] bg-emerald-100 text-emerald-700 rounded">pronto</span>
@@ -1259,7 +1261,7 @@
                   class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-sm rounded-lg">Cancelar</button>
           <button @click="emitLote()"
                   :disabled="loteSelected.length === 0 || loteEmitting"
-                  class="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-40 text-white text-sm font-semibold rounded-lg flex items-center gap-2">
+                  class="lf-btn lf-btn-ghost disabled:opacity-40">
             <i :data-lucide="loteEmitting ? 'loader' : 'send'" :class="loteEmitting ? 'w-4 h-4 animate-spin' : 'w-4 h-4'"></i>
             <span x-text="loteEmitting ? 'A emitir...' : 'Emitir ' + loteSelected.length + ' Pré-fatura(s)'"></span>
           </button>
@@ -1729,7 +1731,7 @@ function empresasApp() {
           `Número: ${fi.numero}\n` +
           `Drivers: ${fi.n_drivers}\n` +
           `Total entregas: ${fi.total_deliveries}\n` +
-          `Total: €${parseFloat(fi.total_a_receber).toFixed(2)}\n\n` +
+          `Total: ${lfEur(parseFloat(fi.total_a_receber))}\n\n` +
           `Saltados: ${s.n_skipped}`
         );
         this.loteOpen = false;
@@ -1832,18 +1834,18 @@ function empresasApp() {
     },
 
     calcTotalStr() {
-      return '€' + this.calcTotal().toFixed(2);
+      return lfEur(this.calcTotal());
     },
 
     calcIvaStr() {
       const taxa = this._n(this.form.taxa_iva);
-      return '€' + (this.calcTotal() * taxa / 100).toFixed(2);
+      return lfEur((this.calcTotal() * taxa / 100));
     },
 
     calcTotalComIvaStr() {
       const taxa = this._n(this.form.taxa_iva);
       const t = this.calcTotal();
-      return '€' + (t + t * taxa / 100).toFixed(2);
+      return lfEur((t + t * taxa / 100));
     },
 
     closeLancamentoForm() {

@@ -607,3 +607,38 @@ class PortalPagesTests(TestCase):
         self.assertContains(r, "lf-tabs")
         self.assertNotContains(r, "cdn.tailwindcss.com")
 
+
+class AttentionViewTests(TestCase):
+    def setUp(self):
+        from django.core.cache import cache
+
+        cache.clear()
+
+    def test_empty_state_and_menu_entry(self):
+        self.client.force_login(User.objects.create_superuser("g", password="x"))
+        r = self.client.get("/atencao/")
+        self.assertContains(r, "Nada precisa de atenção")
+        self.assertContains(r, "Precisa de atenção")
+
+    def test_operator_can_open(self):
+        self.client.force_login(User.objects.create_user("op", password="x", is_staff=True))
+        self.assertEqual(self.client.get("/atencao/").status_code, 200)
+
+    def test_pending_registration_is_listed(self):
+        from drivers_app.models import DriverProfile
+
+        DriverProfile.objects.create(nif="500000002", nome_completo="Rui", apelido="rui", telefone="910000001", email="r@example.test", status="PENDENTE")
+        self.client.force_login(User.objects.create_superuser("g", password="x"))
+        self.assertContains(self.client.get("/atencao/"), "cadastros por aprovar")
+
+
+class PublicRegistrationTests(TestCase):
+    def test_forms_keep_visible_actions(self):
+        for url, action in (("/driversapp/cadastro/", "lf-btn-primary"), ("/driversapp/cadastro-completo/", "nextStep()")):
+            r = self.client.get(url)
+            self.assertEqual(r.status_code, 200, url)
+            self.assertContains(r, action)
+            self.assertNotContains(r, "gradient-bg")
+            self.assertNotContains(r, "cdn.tailwindcss.com")
+            self.assertContains(r, "registration-form")
+

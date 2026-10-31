@@ -5,14 +5,15 @@
 {% block content %}
 <div class="max-w-6xl mx-auto" x-data="{ openModal: null, modalAction: '' }">
 
-  <div class="flex items-center justify-between mb-6">
-    <div class="flex items-center gap-3">
-      <div>
-        <h1 class="text-xl font-bold text-gray-900 dark:text-white">Pedidos de Alteração de Perfil</h1>
-        <p class="text-xs text-gray-500 dark:text-gray-400">Aprovar / rejeitar pedidos enviados pelos motoristas</p>
+  <div class="lf-page-header">
+<div class="min-w-0">
+<div>
+        <h1 class="lf-page-title">Pedidos de Alteração de Perfil</h1>
+        <p class="lf-page-subtitle">Aprovar / rejeitar pedidos enviados pelos motoristas</p>
       </div>
-    </div>
-  </div>
+</div>
+
+</div>
 
   {% if messages %}
     {% for m in messages %}
@@ -95,11 +96,11 @@
           {% if r.status == 'pending' %}
           <div class="mt-3 flex gap-2">
             <button @click="openModal = {{ r.id }}; modalAction = 'approve'"
-                    class="px-3 py-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium inline-flex items-center gap-1.5">
+                    class="lf-btn lf-btn-ghost">
               <i data-lucide="check" class="w-3.5 h-3.5"></i> Aprovar
             </button>
             <button @click="openModal = {{ r.id }}; modalAction = 'reject'"
-                    class="px-3 py-1.5 text-xs bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-medium inline-flex items-center gap-1.5">
+                    class="lf-btn lf-btn-danger">
               <i data-lucide="x" class="w-3.5 h-3.5"></i> Rejeitar
             </button>
           </div>

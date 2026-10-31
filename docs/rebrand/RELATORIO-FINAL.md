@@ -30,7 +30,7 @@ O sistema passa a ter um shell, um cabeçalho, uma paleta e um formato de moeda.
 | Testes | Cumprido, mais testes novos de componentes |
 | 15 achados da secção 1.1 | Cumprido: ver tabela |
 | Faturas de frotas subcontratadas | Cumprido em produção |
-| Tailwind compilado, sem CDN | Parcial: restam 3 templates sem uso |
+| Tailwind compilado, sem CDN | Cumprido |
 | Um cabeçalho de página | Cumprido nas páginas de trabalho. Fora disso: mapas, ficha de envio, contrato gerado, conta-corrente, admin Django |
 | Moeda num formato | Parcial: restam 42 `toFixed`, parte deles fora de moeda |
 
@@ -75,9 +75,11 @@ O sistema passa a ter um shell, um cabeçalho, uma paleta e um formato de moeda.
 ## Decisões pendentes
 1. Autorizar o deploy.
 2. Autorizar a leitura das frotas em produção.
-3. Aprovar a remoção de 7 templates sem uso.
-4. Decidir o botão "Importar Pré-fatura Cainiao" em Faturas de clientes.
-5. Decidir a Etapa B: tabelas de módulos removidos.
+3. Decidir a Etapa B: tabelas de módulos removidos.
+
+## Decisões tomadas no fim
+- 7 templates sem uso removidos. Ficam no histórico do git.
+- O botão "Importar Pré-fatura Cainiao" fica até refazer a Faturação Cainiao.
 
 ## Não testado
 - Sessão real de motorista e de frota. App Léguas.

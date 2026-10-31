@@ -4,154 +4,87 @@
 {% block title %}Visão financeira{% endblock %}
 {% block content %}
 <style>
-  .pill { padding:0.125rem 0.5rem; border-radius:9999px; font-size:0.7rem; font-weight:600; }
-  .pill-in { background:#d1fae5; color:#065f46; }
-  .pill-out { background:#fee2e2; color:#991b1b; }
-  .pill-ap { background:#fef3c7; color:#92400e; }
-  .pill-tax { background:#e0e7ff; color:#3730a3; }
-  .pill-driver { background:#fce7f3; color:#9d174d; }
-  .pill-fleet { background:#ccfbf1; color:#115e59; }
-  .pill-overdue { background:#fecaca; color:#7f1d1d; }
   .hm-cell { display:inline-flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:6px; font-size:10px; font-weight:600; margin:1px; cursor:default; position:relative; }
-  .hm-cell.today { box-shadow:0 0 0 2px #6366f1 inset; }
+  .hm-cell.today { box-shadow:0 0 0 2px var(--brand-purple-wing) inset; }
   .hm-weekend { opacity:0.5; }
-  .hm-tooltip { position:absolute; bottom:38px; left:50%; transform:translateX(-50%); background:#111827; color:#fff; padding:4px 8px; border-radius:4px; font-size:11px; white-space:nowrap; display:none; z-index:50; }
+  .hm-tooltip { position:absolute; bottom:38px; left:50%; transform:translateX(-50%); background:var(--brand-purple-night); color:#fff; padding:4px 8px; border-radius:4px; font-size:11px; white-space:nowrap; display:none; z-index:50; }
   .hm-cell:hover .hm-tooltip { display:block; }
-  .hub-card { transition:transform 0.15s; }
-  .hub-card:hover { transform:translateY(-2px); }
 </style>
 
 <div class="max-w-screen-2xl mx-auto px-4 py-6 space-y-5">
 
   <!-- Header -->
-  <div class="flex items-center justify-between flex-wrap gap-3">
-    <div>
+  <div class="lf-page-header">
+    <div class="min-w-0">
       <h1 class="lf-page-title">Visão financeira</h1>
-      <p class="text-sm text-gray-500 dark:text-gray-400">
-        Visão unificada · {{ today|date:"d/m/Y" }} → {{ horizon|date:"d/m/Y" }} ({{ n_movs }} movimentações esperadas)
-      </p>
+      <p class="lf-page-subtitle">{{ today|date:"d/m/Y" }} a {{ horizon|date:"d/m/Y" }} · {{ n_movs|pt_int }} movimentaç{{ n_movs|pluralize:"ão esperada,ões esperadas" }}</p>
     </div>
-    <div class="flex flex-wrap gap-2 items-center text-xs">
-      <span class="text-gray-500">Saldo bancário:</span>
-      <span class="font-bold text-lg {% if snap.saldo_bancario < 0 %}text-red-600{% else %}text-emerald-600{% endif %}">
-        {{ snap.saldo_bancario|eur }}
-      </span>
-      {% if snap.saldo_data %}<span class="text-gray-400">@ {{ snap.saldo_data|date:"d/m/Y" }}</span>{% endif %}
-      <span class="text-gray-300">·</span>
-      <span class="text-gray-500">Projetado 30d:</span>
-      <span class="font-bold {% if snap.saldo_projectado_30d < 0 %}text-red-600{% else %}text-emerald-600{% endif %}">
-        {{ snap.saldo_projectado_30d|eur }}
-      </span>
-      <span class="text-gray-300">·</span>
-      <a href="{% url 'accounting:audit_timeline' %}" class="text-indigo-500 hover:underline inline-flex items-center gap-1">
-        <i data-lucide="history" class="w-3.5 h-3.5"></i> Auditoria
-      </a>
-      <span class="text-gray-300">·</span>
-      <a href="{% url 'accounting:executive_dashboard' %}" class="text-indigo-500 hover:underline inline-flex items-center gap-1">
-        <i data-lucide="file-text" class="w-3.5 h-3.5"></i> Resumo Executivo
-      </a>
-      <span class="text-gray-300">·</span>
-      <a href="{% url 'accounting:period_lock_list' %}" class="text-rose-500 hover:underline inline-flex items-center gap-1">
-        <i data-lucide="lock" class="w-3.5 h-3.5"></i> Fechos
-      </a>
+    <div class="lf-page-actions">
+      <a class="lf-btn lf-btn-ghost" href="{% url 'accounting:executive_dashboard' %}"><i data-lucide="file-text" class="w-4 h-4" aria-hidden="true"></i>Resumo executivo</a>
+      <a class="lf-btn lf-btn-ghost" href="{% url 'accounting:audit_timeline' %}"><i data-lucide="history" class="w-4 h-4" aria-hidden="true"></i>Auditoria</a>
+      <a class="lf-btn lf-btn-ghost" href="{% url 'accounting:period_lock_list' %}"><i data-lucide="lock" class="w-4 h-4" aria-hidden="true"></i>Fechos</a>
     </div>
   </div>
 
-  <!-- 6 Cards -->
-  <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3">
-
-    <a href="{% url 'invoice-list' %}" class="hub-card bg-white dark:bg-gray-800 rounded-xl border-l-4 border-emerald-500 border border-gray-200/50 dark:border-gray-700/50 p-4 block">
-      <div class="flex items-center justify-between">
-        <p class="text-xs uppercase tracking-wide text-emerald-600 font-semibold">A Receber</p>
-        <i data-lucide="trending-up" class="w-4 h-4 text-emerald-500"></i>
-      </div>
-      <p class="text-xl font-bold text-emerald-700 dark:text-emerald-300 mt-1">{{ snap.a_receber_breakdown.partner_invoices|eur }}</p>
-      <p class="text-[11px] text-gray-500">{{ snap.a_receber_breakdown.partner_count }} fatura(s) parceiro</p>
-      {% if snap.a_receber_breakdown.fleet_invoices %}<p class="text-[11px] text-gray-500">+ {{ snap.a_receber_breakdown.fleet_invoices|eur }} fleet ({{ snap.a_receber_breakdown.fleet_count }})</p>{% endif %}
-      {% if snap.a_receber_breakdown.driver_debt %}<p class="text-[11px] text-gray-500">+ {{ snap.a_receber_breakdown.driver_debt|eur }} dívida motoristas</p>{% endif %}
+  <div class="lf-kpi-grid">
+    <a class="lf-kpi lf-kpi-action" href="{% url 'accounting:treasury_dashboard' %}">
+      <span class="lf-kpi-label">Saldo bancário</span>
+      <span class="lf-kpi-value">{{ snap.saldo_bancario|eur }}</span>
+      <span class="lf-kpi-note">{% if snap.saldo_data %}Em {{ snap.saldo_data|date:"d/m/Y" }} · {% endif %}Projeção a 30 dias: {{ snap.saldo_projectado_30d|eur }}</span>
     </a>
-
-    <a href="{% url 'accounting:payables_inbox' %}" class="hub-card bg-white dark:bg-gray-800 rounded-xl border-l-4 border-amber-500 border border-gray-200/50 dark:border-gray-700/50 p-4 block">
-      <div class="flex items-center justify-between">
-        <p class="text-xs uppercase tracking-wide text-amber-600 font-semibold">A Pagar</p>
-        <i data-lucide="trending-down" class="w-4 h-4 text-amber-500"></i>
-      </div>
-      <p class="text-xl font-bold text-amber-700 dark:text-amber-300 mt-1">{{ snap.a_pagar_breakdown.bills|eur }}</p>
-      <p class="text-[11px] text-gray-500">{{ snap.a_pagar_breakdown.bills_count }} bills</p>
-      {% if snap.a_pagar_breakdown.bills_passthrough %}<p class="text-[11px] text-gray-500">+ {{ snap.a_pagar_breakdown.bills_passthrough|eur }} passthrough</p>{% endif %}
+    <a class="lf-kpi lf-kpi-action" href="{% url 'invoice-list' %}">
+      <span class="lf-kpi-label">A receber</span>
+      <span class="lf-kpi-value">{{ snap.a_receber_breakdown.partner_invoices|eur }}</span>
+      <span class="lf-kpi-note">{{ snap.a_receber_breakdown.partner_count|pt_int }} fatura{{ snap.a_receber_breakdown.partner_count|pluralize }} de cliente</span>
+      {% if snap.a_receber_breakdown.fleet_invoices %}<span class="lf-kpi-note">+ {{ snap.a_receber_breakdown.fleet_invoices|eur }} de frotas ({{ snap.a_receber_breakdown.fleet_count|pt_int }})</span>{% endif %}
+      {% if snap.a_receber_breakdown.driver_debt %}<span class="lf-kpi-note">+ {{ snap.a_receber_breakdown.driver_debt|eur }} em dívida de motoristas</span>{% endif %}
     </a>
-
-    <a href="{% url 'accounting:imposto_list' %}" class="hub-card bg-white dark:bg-gray-800 rounded-xl border-l-4 border-indigo-500 border border-gray-200/50 dark:border-gray-700/50 p-4 block">
-      <div class="flex items-center justify-between">
-        <p class="text-xs uppercase tracking-wide text-indigo-600 font-semibold">Impostos</p>
-        <i data-lucide="landmark" class="w-4 h-4 text-indigo-500"></i>
-      </div>
-      <p class="text-xl font-bold text-indigo-700 dark:text-indigo-300 mt-1">{{ snap.a_pagar_breakdown.impostos|eur }}</p>
-      <p class="text-[11px] text-gray-500">{{ snap.a_pagar_breakdown.impostos_count }} guia(s)</p>
+    <a class="lf-kpi lf-kpi-action" href="{% url 'accounting:payables_inbox' %}">
+      <span class="lf-kpi-label">A pagar</span>
+      <span class="lf-kpi-value">{{ snap.a_pagar_breakdown.bills|eur }}</span>
+      <span class="lf-kpi-note">{{ snap.a_pagar_breakdown.bills_count|pt_int }} conta{{ snap.a_pagar_breakdown.bills_count|pluralize }}</span>
+      {% if snap.a_pagar_breakdown.bills_passthrough %}<span class="lf-kpi-note">+ {{ snap.a_pagar_breakdown.bills_passthrough|eur }} a descontar ao motorista</span>{% endif %}
     </a>
-
-    <a href="{% url 'accounting:plano_list' %}" class="hub-card bg-white dark:bg-gray-800 rounded-xl border-l-4 border-purple-500 border border-gray-200/50 dark:border-gray-700/50 p-4 block">
-      <div class="flex items-center justify-between">
-        <p class="text-xs uppercase tracking-wide text-purple-600 font-semibold">Planos Prestacionais</p>
-        <i data-lucide="calendar-clock" class="w-4 h-4 text-purple-500"></i>
-      </div>
-      <p class="text-xl font-bold text-purple-700 dark:text-purple-300 mt-1">{{ n_planos_activos }} <span class="text-xs font-normal text-gray-500">plano(s)</span></p>
-      <p class="text-[11px] text-gray-500">{{ planos_total_mes|eur }} a pagar este mês</p>
-      <p class="text-[11px] text-gray-500">{{ planos_n_parcelas_mes }} prestação(ões) c/ vencim. no mês</p>
+    <a class="lf-kpi lf-kpi-action" href="{% url 'accounting:dre' %}">
+      <span class="lf-kpi-label">Margem do mês</span>
+      <span class="lf-kpi-value">{{ margem_mes|eur }}</span>
+      <span class="lf-kpi-note">{{ margem_pct|pct }} · receita {{ receita_mes|eur0 }} · custos {{ custos_mes|eur0 }}</span>
     </a>
-
-    <a href="{% url 'accounting:treasury_dashboard' %}" class="hub-card bg-white dark:bg-gray-800 rounded-xl border-l-4 border-sky-500 border border-gray-200/50 dark:border-gray-700/50 p-4 block">
-      <div class="flex items-center justify-between">
-        <p class="text-xs uppercase tracking-wide text-sky-600 font-semibold">Tesouraria</p>
-        <i data-lucide="banknote" class="w-4 h-4 text-sky-500"></i>
-      </div>
-      <p class="text-xl font-bold text-sky-700 dark:text-sky-300 mt-1">{{ snap.saldo_bancario|eur }}</p>
-      <p class="text-[11px] text-gray-500">IVA dedut: {{ snap.iva_dedutivel|eur }}</p>
-      <a href="{% url 'accounting:bank_reconciliation' %}" class="text-[11px] text-sky-500 hover:underline">Reconciliar →</a>
-    </a>
-
-    <a href="/accounting/dre/" class="hub-card bg-white dark:bg-gray-800 rounded-xl border-l-4 border-violet-500 border border-gray-200/50 dark:border-gray-700/50 p-4 block">
-      <div class="flex items-center justify-between">
-        <p class="text-xs uppercase tracking-wide text-violet-600 font-semibold">DRE · Mês</p>
-        <i data-lucide="bar-chart-3" class="w-4 h-4 text-violet-500"></i>
-      </div>
-      <p class="text-xl font-bold text-violet-700 dark:text-violet-300 mt-1">{{ margem_mes|eur }}</p>
-      <p class="text-[11px] text-gray-500">{{ margem_pct|floatformat:1 }}% margem</p>
-      <p class="text-[11px] text-gray-500">€{{ receita_mes|floatformat:0 }} rec · €{{ custos_mes|floatformat:0 }} cust</p>
-    </a>
-
-    <a href="/settlements/pre-invoices/" class="hub-card bg-white dark:bg-gray-800 rounded-xl border-l-4 border-pink-500 border border-gray-200/50 dark:border-gray-700/50 p-4 block">
-      <div class="flex items-center justify-between">
-        <p class="text-xs uppercase tracking-wide text-pink-600 font-semibold">Motoristas</p>
-        <i data-lucide="users" class="w-4 h-4 text-pink-500"></i>
-      </div>
-      <p class="text-xl font-bold text-pink-700 dark:text-pink-300 mt-1">{{ snap.a_pagar_breakdown.drivers|eur }}</p>
-      <p class="text-[11px] text-gray-500">{{ snap.a_pagar_breakdown.drivers_count }} PF(s) pendentes</p>
-      {% if snap.a_receber_breakdown.driver_debt_count %}<p class="text-[11px] text-gray-500">{{ snap.a_receber_breakdown.driver_debt_count }} adiantamento(s)</p>{% endif %}
-    </a>
-
   </div>
+  <details class="lf-more"><summary>Mais indicadores</summary>
+    <div class="lf-kpi-grid">
+      <a class="lf-kpi lf-kpi-action" href="{% url 'accounting:imposto_list' %}">
+        <span class="lf-kpi-label">Impostos</span>
+        <span class="lf-kpi-value">{{ snap.a_pagar_breakdown.impostos|eur }}</span>
+        <span class="lf-kpi-note">{{ snap.a_pagar_breakdown.impostos_count|pt_int }} guia{{ snap.a_pagar_breakdown.impostos_count|pluralize }}</span>
+      </a>
+      <a class="lf-kpi lf-kpi-action" href="{% url 'accounting:plano_list' %}">
+        <span class="lf-kpi-label">Planos prestacionais</span>
+        <span class="lf-kpi-value">{{ planos_total_mes|eur }}</span>
+        <span class="lf-kpi-note">{{ n_planos_activos|pt_int }} plano{{ n_planos_activos|pluralize }} · {{ planos_n_parcelas_mes|pt_int }} prestaç{{ planos_n_parcelas_mes|pluralize:"ão,ões" }} no mês</span>
+      </a>
+      <a class="lf-kpi lf-kpi-action" href="/settlements/pre-invoices/">
+        <span class="lf-kpi-label">Motoristas</span>
+        <span class="lf-kpi-value">{{ snap.a_pagar_breakdown.drivers|eur }}</span>
+        <span class="lf-kpi-note">{{ snap.a_pagar_breakdown.drivers_count|pt_int }} pré-fatura{{ snap.a_pagar_breakdown.drivers_count|pluralize }} pendente{{ snap.a_pagar_breakdown.drivers_count|pluralize }}</span>
+        {% if snap.a_receber_breakdown.driver_debt_count %}<span class="lf-kpi-note">{{ snap.a_receber_breakdown.driver_debt_count|pt_int }} adiantamento{{ snap.a_receber_breakdown.driver_debt_count|pluralize }}</span>{% endif %}
+      </a>
+      <a class="lf-kpi lf-kpi-action" href="{% url 'accounting:bank_reconciliation' %}">
+        <span class="lf-kpi-label">IVA dedutível</span>
+        <span class="lf-kpi-value">{{ snap.iva_dedutivel|eur }}</span>
+        <span class="lf-kpi-note">Reconciliação bancária</span>
+      </a>
+    </div>
+  </details>
 
   <!-- Alerta vencidos -->
   {% if vencidos_in or vencidos_out %}
   <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
     {% if vencidos_out %}
-    <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-xl p-4 flex items-center gap-3">
-      <i data-lucide="alert-triangle" class="w-6 h-6 text-red-500"></i>
-      <div>
-        <p class="font-semibold text-red-800 dark:text-red-300">Saídas vencidas: {{ vencidos_out|eur }}</p>
-        <p class="text-xs text-red-600 dark:text-red-400">Bills, impostos ou PFs com vencimento já ultrapassado</p>
-      </div>
-    </div>
+    <div class="lf-alert lf-tone-danger"><i data-lucide="alert-triangle" class="w-5 h-5 shrink-0" aria-hidden="true"></i><div><p class="font-semibold">Saídas vencidas: {{ vencidos_out|eur }}</p><p class="text-xs">Contas, impostos ou pré-faturas após a data de vencimento.</p></div></div>
     {% endif %}
     {% if vencidos_in %}
-    <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-xl p-4 flex items-center gap-3">
-      <i data-lucide="clock" class="w-6 h-6 text-amber-500"></i>
-      <div>
-        <p class="font-semibold text-amber-800 dark:text-amber-300">Entradas em atraso: {{ vencidos_in|eur }}</p>
-        <p class="text-xs text-amber-600 dark:text-amber-400">Faturas de parceiros não recebidas após o vencimento</p>
-      </div>
-    </div>
+    <div class="lf-alert lf-tone-warning"><i data-lucide="clock" class="w-5 h-5 shrink-0" aria-hidden="true"></i><div><p class="font-semibold">Entradas em atraso: {{ vencidos_in|eur }}</p><p class="text-xs">Faturas de clientes não recebidas após a data de vencimento.</p></div></div>
     {% endif %}
   </div>
   {% endif %}
@@ -159,14 +92,13 @@
   <!-- Heatmap 30d -->
   <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/50 dark:border-gray-700/50 p-5">
     <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
-      <h2 class="text-lg font-semibold flex items-center gap-2">
-        <i data-lucide="calendar-days" class="w-5 h-5 text-indigo-500"></i>
-        Heatmap · Próximos 30 dias
+      <h2 class="text-base font-semibold text-gray-900 dark:text-white">
+        Próximos 30 dias
       </h2>
       <div class="flex items-center gap-3 text-xs text-gray-500">
-        <span class="flex items-center gap-1"><span class="inline-block w-3 h-3 rounded bg-emerald-500"></span>Entrada</span>
-        <span class="flex items-center gap-1"><span class="inline-block w-3 h-3 rounded bg-red-500"></span>Saída</span>
-        <span class="flex items-center gap-1"><span class="inline-block w-3 h-3 rounded bg-gray-300 dark:bg-gray-600"></span>Vazio</span>
+        <span class="flex items-center gap-1"><span class="inline-block w-3 h-3 rounded" style="background: var(--success)"></span>Saldo positivo</span>
+        <span class="flex items-center gap-1"><span class="inline-block w-3 h-3 rounded" style="background: var(--danger)"></span>Saldo negativo</span>
+        <span class="flex items-center gap-1"><span class="inline-block w-3 h-3 rounded" style="background: var(--color-border)"></span>Sem movimentos</span>
       </div>
     </div>
     <div id="heatmap-container" class="flex flex-wrap" data-heatmap="{{ heatmap_json|escape }}"></div>
@@ -175,67 +107,66 @@
   <!-- Tabela de movimentos 30d -->
   <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200/50 dark:border-gray-700/50">
     <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between flex-wrap gap-2">
-      <h2 class="text-lg font-semibold flex items-center gap-2">
-        <i data-lucide="list" class="w-5 h-5 text-indigo-500"></i>
+      <h2 class="text-base font-semibold text-gray-900 dark:text-white">
         Movimentações esperadas
       </h2>
-      <div class="flex gap-2 text-xs">
-        <button data-filter="all" class="mov-filter px-2.5 py-1 bg-indigo-600 text-white rounded font-semibold">Todas</button>
-        <button data-filter="IN" class="mov-filter px-2.5 py-1 bg-gray-200 dark:bg-gray-700 rounded font-semibold">Entradas</button>
-        <button data-filter="OUT" class="mov-filter px-2.5 py-1 bg-gray-200 dark:bg-gray-700 rounded font-semibold">Saídas</button>
-        <button data-filter="overdue" class="mov-filter px-2.5 py-1 bg-gray-200 dark:bg-gray-700 rounded font-semibold">Vencidas</button>
+      <div class="flex flex-wrap gap-2">
+        <button data-filter="all" class="lf-btn lf-btn-primary mov-filter">Todas</button>
+        <button data-filter="IN" class="lf-btn lf-btn-ghost mov-filter">Entradas</button>
+        <button data-filter="OUT" class="lf-btn lf-btn-ghost mov-filter">Saídas</button>
+        <button data-filter="overdue" class="lf-btn lf-btn-ghost mov-filter">Vencidas</button>
       </div>
     </div>
     <div class="overflow-x-auto">
-      <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-sm">
-        <thead class="bg-gray-50 dark:bg-gray-900/50">
-          <tr class="text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-            <th class="px-4 py-2.5">Data</th>
-            <th class="px-4 py-2.5">Tipo</th>
-            <th class="px-4 py-2.5">Origem</th>
-            <th class="px-4 py-2.5">Descrição</th>
-            <th class="px-4 py-2.5 text-right">Valor</th>
-            <th class="px-4 py-2.5">Estado</th>
-            <th class="px-4 py-2.5"></th>
+      <table class="lf-table">
+        <thead>
+          <tr>
+            <th >Data</th>
+            <th >Tipo</th>
+            <th >Origem</th>
+            <th >Descrição</th>
+            <th class="text-right">Valor</th>
+            <th >Estado</th>
+            <th ></th>
           </tr>
         </thead>
-        <tbody id="movs-tbody" class="divide-y divide-gray-200 dark:divide-gray-700">
+        <tbody id="movs-tbody" >
           {% for m in movs %}
           <tr class="mov-row hover:bg-gray-50 dark:hover:bg-gray-900/30"
               data-type="{{ m.type }}"
               data-overdue="{% if m.date < today %}1{% else %}0{% endif %}">
-            <td class="px-4 py-2 whitespace-nowrap {% if m.date < today %}text-red-600 font-semibold{% endif %}">
+            <td class="px-4 py-2 whitespace-nowrap {% if m.date < today %}font-semibold{% endif %}">
               {{ m.date|date:"d/m/Y" }}
-              {% if m.date < today %}<span class="pill pill-overdue ml-1">vencida</span>{% endif %}
+              {% if m.date < today %}<span class="lf-badge lf-tone-danger ml-1">Vencida</span>{% endif %}
             </td>
-            <td class="px-4 py-2">
+            <td >
               {% if m.type == 'IN' %}
-                <span class="pill pill-in"><i data-lucide="arrow-down-left" class="inline w-3 h-3"></i> Entrada</span>
+                <span class="lf-badge lf-tone-success"><i data-lucide="arrow-down-left" class="inline w-3 h-3" aria-hidden="true"></i>Entrada</span>
               {% else %}
-                <span class="pill pill-out"><i data-lucide="arrow-up-right" class="inline w-3 h-3"></i> Saída</span>
+                <span class="lf-badge lf-tone-danger"><i data-lucide="arrow-up-right" class="inline w-3 h-3" aria-hidden="true"></i>Saída</span>
               {% endif %}
             </td>
-            <td class="px-4 py-2">
-              {% if m.source == 'AR' %}<span class="pill pill-in">AR</span>
-              {% elif m.source == 'FLEET' %}<span class="pill pill-fleet">Fleet</span>
-              {% elif m.source == 'AP' %}<span class="pill pill-ap">AP</span>
-              {% elif m.source == 'TAX' %}<span class="pill pill-tax">Imposto</span>
-              {% elif m.source == 'DRIVER' %}<span class="pill pill-driver">Motorista</span>
+            <td >
+              {% if m.source == 'AR' %}<span class="lf-badge lf-tone-neutral">Cliente</span>
+              {% elif m.source == 'FLEET' %}<span class="lf-badge lf-tone-neutral">Frota</span>
+              {% elif m.source == 'AP' %}<span class="lf-badge lf-tone-neutral">Conta</span>
+              {% elif m.source == 'TAX' %}<span class="lf-badge lf-tone-neutral">Imposto</span>
+              {% elif m.source == 'DRIVER' %}<span class="lf-badge lf-tone-neutral">Motorista</span>
               {% endif %}
             </td>
-            <td class="px-4 py-2 text-gray-700 dark:text-gray-300">{{ m.label }}</td>
-            <td class="px-4 py-2 text-right font-mono {% if m.type == 'IN' %}text-emerald-600{% else %}text-red-600{% endif %}">
+            <td class="text-gray-700 dark:text-gray-300">{{ m.label }}</td>
+            <td class="px-4 py-2 text-right font-mono {% if m.type == 'IN' %}text-emerald-600 dark:text-emerald-300{% else %}text-red-600{% endif %}">
               {% if m.type == 'IN' %}+{% else %}−{% endif %}{{ m.amount|eur }}
             </td>
-            <td class="px-4 py-2 text-xs text-gray-500">{{ m.status }}</td>
-            <td class="px-4 py-2 text-right">
-              <a href="{{ m.url }}" class="text-indigo-500 hover:text-indigo-700 inline-flex items-center gap-1">
-                <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+            <td class="text-xs text-gray-500">{{ m.status|fin_status }}</td>
+            <td class="text-right">
+              <a href="{{ m.url }}" aria-label="Abrir {{ m.label }}" class="p-2.5 inline-flex rounded-md text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">
+                <i data-lucide="external-link" class="w-4 h-4" aria-hidden="true"></i>
               </a>
             </td>
           </tr>
           {% empty %}
-          <tr><td colspan="7" class="px-4 py-10 text-center text-gray-500">
+          <tr><td colspan="7" class="text-center text-gray-500">
             <i data-lucide="inbox" class="w-10 h-10 mx-auto mb-2 opacity-40"></i>
             <p>Sem movimentações esperadas nos próximos 30 dias.</p>
           </td></tr>
@@ -267,18 +198,18 @@
       const day = dt.getDay(); // 0=Dom, 6=Sáb
       const weekendCls = (day === 0 || day === 6) ? ' hm-weekend' : '';
       const todayCls = d.date === todayStr ? ' today' : '';
-      let bg = '#e5e7eb';
+      let bg = 'var(--color-border)';
       const net = parseFloat(d.net) || 0;
       if (net > 0) {
         const a = 0.15 + 0.85 * intensity(net);
-        bg = `rgba(16, 185, 129, ${a})`;
+        bg = `color-mix(in srgb, var(--success) ${Math.round(a * 100)}%, transparent)`;
       } else if (net < 0) {
         const a = 0.15 + 0.85 * intensity(net);
-        bg = `rgba(239, 68, 68, ${a})`;
+        bg = `color-mix(in srgb, var(--danger) ${Math.round(a * 100)}%, transparent)`;
       }
       const label = dt.getDate();
-      const tip = `${dt.toLocaleDateString('pt-PT')}<br>+€${(+d.in||0).toFixed(0)} / −€${(+d.out||0).toFixed(0)}<br>Net: €${net.toFixed(0)}`;
-      return `<div class="hm-cell${weekendCls}${todayCls}" style="background:${bg}; color:${Math.abs(net)>maxAbs*0.4?'#fff':'#374151'};">
+      const tip = `${dt.toLocaleDateString('pt-PT')}<br>Entradas: ${lfEur(+d.in||0)}<br>Saídas: ${lfEur(+d.out||0)}<br>Saldo: ${lfEur(net)}`;
+      return `<div class="hm-cell${weekendCls}${todayCls}" style="background:${bg}; color:${Math.abs(net)>maxAbs*0.4?'#fff':'var(--color-text)'};">
         ${label}
         <span class="hm-tooltip">${tip}</span>
       </div>`;
@@ -291,11 +222,11 @@
     const rows = document.querySelectorAll('.mov-row');
     btns.forEach(b => b.addEventListener('click', () => {
       btns.forEach(x => {
-        x.classList.remove('bg-indigo-600', 'text-white');
-        x.classList.add('bg-gray-200', 'dark:bg-gray-700');
+        x.classList.remove('lf-btn-primary');
+        x.classList.add('lf-btn-ghost');
       });
-      b.classList.remove('bg-gray-200', 'dark:bg-gray-700');
-      b.classList.add('bg-indigo-600', 'text-white');
+      b.classList.remove('lf-btn-ghost');
+      b.classList.add('lf-btn-primary');
       const f = b.dataset.filter;
       rows.forEach(r => {
         let show = true;

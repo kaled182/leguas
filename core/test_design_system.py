@@ -476,3 +476,33 @@ class ReportPagesTests(TestCase):
         integration.refresh_from_db()
         self.assertEqual(integration.last_sync_status, "ERROR")
         self.assertEqual(SyncLog.objects.count(), 1)
+
+
+class FinanceFormatTests(SimpleTestCase):
+    def test_money_without_cents(self):
+        from core.templatetags.ui import eur0
+
+        self.assertEqual(eur0(1234.56), f"1{NBSP}235{NBSP}€")
+        self.assertEqual(eur0(None), "—")
+
+    def test_movement_status_in_portuguese(self):
+        from core.templatetags.ui import fin_status
+
+        self.assertEqual(fin_status("EM_ATRASO"), "Em atraso")
+        self.assertEqual(fin_status("OUTRO"), "OUTRO")
+
+
+class FinancePagesTests(TestCase):
+    def setUp(self):
+        self.client.force_login(User.objects.create_superuser("g", password="x"))
+
+    def test_overview_pages_open(self):
+        for url in ("/accounting/hub/", "/accounting/exec/", "/accounting/tesouraria/", "/accounting/dre/",
+                    "/accounting/fluxo-caixa/", "/accounting/break-even/", "/accounting/a-pagar/",
+                    "/accounting/contas-a-pagar/", "/accounting/impostos/", "/payroll/folhas/",
+                    "/driversapp/admin/pagamentos/", "/settlements/pre-invoices/"):
+            self.assertEqual(self.client.get(url, follow=True).status_code, 200, url)
+
+    def test_executive_month_in_portuguese(self):
+        r = self.client.get("/accounting/exec/?month=2026-09")
+        self.assertContains(r, "Setembro de 2026")

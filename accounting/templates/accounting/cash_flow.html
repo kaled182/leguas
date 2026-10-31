@@ -1,36 +1,36 @@
 {% extends 'settlements/base.html' %}
 {% load ui %}
 {% load static %}
-{% block title %}Projecção de Fluxo de Caixa{% endblock %}
+{% block title %}Projeção de Fluxo de caixa{% endblock %}
 {% block content %}
 {% include 'accounting/_analysis_tabs.html' with current='cash_flow' %}
 <style>
   .num { font-family:monospace; }
-  .pos { color:#059669; }
-  .neg { color:#dc2626; }
+  .pos { color:var(--tone-success-fg); }
+  .neg { color:var(--tone-danger-fg); }
   .neg-row { background:rgba(244,63,94,0.07); }
-  .weekend { color:#9ca3af; }
+  .weekend { color:var(--color-text-muted); }
 </style>
 <div class="max-w-screen-xl mx-auto px-4 py-6 space-y-4">
   <!-- Header -->
-  <div class="flex items-center justify-between flex-wrap gap-3">
-    <div>
-      <h1 class="lf-page-title">Projecção de Fluxo de Caixa</h1>
-      <p class="text-sm text-gray-500 dark:text-gray-400">
-        Híbrido: passado <span class="text-emerald-600 font-semibold">realizado</span> (Bills pagas + entregas Cainiao) ·
-        hoje/futuro <span class="text-amber-600 font-semibold">previsto</span> (Bills pendentes + Forecast).
+  <div class="lf-page-header">
+<div class="min-w-0">
+<h1 class="lf-page-title">Projeção de fluxo de caixa</h1>
+      <p class="lf-page-subtitle">
+        Híbrido: passado <span class="text-emerald-600 dark:text-emerald-300 font-semibold">realizado</span> (Contas pagas + entregas Cainiao) ·
+        hoje/futuro <span class="text-amber-600 dark:text-amber-300 font-semibold">previsto</span> (Contas pendentes + Previsão).
         Espelha o DRE Realizado para datas passadas.
       </p>
-    </div>
-    <div class="flex gap-2">
-      <a href="{% url 'accounting:dre' %}" class="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold flex items-center gap-1.5">
+</div>
+<div class="lf-page-actions">
+      <a href="{% url 'accounting:dre' %}" class="lf-btn lf-btn-ghost">
         <i data-lucide="bar-chart-3" class="w-4 h-4"></i> DRE Realizado
       </a>
-      <a href="{% url 'accounting:bill_list' %}" class="px-3 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-sm font-semibold flex items-center gap-1.5">
-        <i data-lucide="receipt" class="w-4 h-4"></i> Contas a Pagar
+      <a href="{% url 'accounting:bill_list' %}" class="lf-btn lf-btn-danger">
+        <i data-lucide="receipt" class="w-4 h-4"></i> Contas a pagar
       </a>
     </div>
-  </div>
+</div>
 
   <!-- Filtros -->
   <form method="get" class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
@@ -48,7 +48,7 @@
       </select>
       <span class="text-xs font-bold uppercase text-gray-500 ml-2">Saldo inicial €:</span>
       <input type="number" step="0.01" name="opening" value="{{ opening_balance }}" class="w-32 px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700">
-      <button type="submit" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-sm font-semibold">
+      <button type="submit" class="lf-btn lf-btn-ghost">
         Aplicar
       </button>
     </div>
@@ -58,13 +58,13 @@
   <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
     <div class="bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-700 p-3">
       <div class="text-[10px] uppercase text-emerald-700 dark:text-emerald-300">Entradas previstas</div>
-      <div class="text-2xl font-bold text-emerald-700 pos">{{ total_in|eur }}</div>
+      <div class="text-2xl font-bold text-emerald-700 dark:text-emerald-300 pos">{{ total_in|eur }}</div>
       <div class="text-[10px] text-emerald-600 dark:text-emerald-400">Entregas realizadas + forecast @{{ partner_price|eur }}/pacote</div>
     </div>
     <div class="bg-rose-50 dark:bg-rose-900/20 rounded-lg border border-rose-200 dark:border-rose-700 p-3">
       <div class="text-[10px] uppercase text-rose-700 dark:text-rose-300">Saídas previstas</div>
-      <div class="text-2xl font-bold text-rose-700 neg">{{ total_out|eur }}</div>
-      <div class="text-[10px] text-rose-600 dark:text-rose-400">Bills pagas (passado) + pendentes (futuro)</div>
+      <div class="text-2xl font-bold text-rose-700 dark:text-rose-300 neg">{{ total_out|eur }}</div>
+      <div class="text-[10px] text-rose-600 dark:text-rose-400">Contas pagas (passado) + pendentes (futuro)</div>
     </div>
     <div class="bg-{% if net_change < 0 %}rose{% else %}emerald{% endif %}-50 dark:bg-{% if net_change < 0 %}rose{% else %}emerald{% endif %}-900/20 rounded-lg border border-{% if net_change < 0 %}rose{% else %}emerald{% endif %}-300 p-3">
       <div class="text-[10px] uppercase">Variação líquida</div>
@@ -81,7 +81,7 @@
   <div class="bg-rose-50 dark:bg-rose-900/20 border border-rose-300 dark:border-rose-700 rounded-lg p-3">
     <div class="flex items-center gap-2 text-rose-700 dark:text-rose-300 font-semibold text-sm">
       <i data-lucide="alert-triangle" class="w-4 h-4"></i>
-      ⚠ {{ n_critical }} dia{{ n_critical|pluralize:"s" }} com saldo negativo no horizonte
+      {{ n_critical }} dia{{ n_critical|pluralize:"s" }} com saldo negativo no horizonte
     </div>
     <p class="text-xs text-rose-600 dark:text-rose-400 mt-1">
       Considera adiar pagamentos ou antecipar entradas. Primeiro dia crítico: <strong>{{ critical_days.0.date|date:"d/m/Y" }}</strong> ({{ critical_days.0.balance|eur }})
@@ -94,7 +94,7 @@
     <div class="px-4 py-3 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
       <h2 class="text-sm font-bold flex items-center gap-2">
         <i data-lucide="calendar" class="w-4 h-4 text-blue-500"></i>
-        Projecção dia-a-dia · {{ start|date:"d/m/Y" }} → {{ end|date:"d/m/Y" }}
+        Projeção dia-a-dia · {{ start|date:"d/m/Y" }} → {{ end|date:"d/m/Y" }}
       </h2>
     </div>
     <div class="overflow-x-auto max-h-[500px] overflow-y-auto">
@@ -137,7 +137,7 @@
     <div class="px-4 py-3 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
       <h2 class="text-sm font-bold flex items-center gap-2">
         <i data-lucide="list" class="w-4 h-4 text-rose-500"></i>
-        Bills no horizonte ({{ bills_detail|length }})
+        Contas no horizonte ({{ bills_detail|length }})
       </h2>
     </div>
     <table class="w-full text-sm">
@@ -163,7 +163,7 @@
           <td class="px-3 py-1.5 text-center text-xs">{{ b.get_status_display }}</td>
         </tr>
         {% empty %}
-        <tr><td colspan="5" class="px-3 py-8 text-center text-gray-400">Nenhuma bill no horizonte.</td></tr>
+        <tr><td colspan="5" class="px-3 py-8 text-center text-gray-400">Nenhuma conta no horizonte.</td></tr>
         {% endfor %}
       </tbody>
     </table>

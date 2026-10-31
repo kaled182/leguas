@@ -952,8 +952,8 @@ def _compute_break_even(date_from, date_to, include_awaiting=True):
         )
 
     sensitivity = [
-        {"label": "Partner price +5%", "be": _be_with(1.05, 1.0)},
-        {"label": "Partner price −5%", "be": _be_with(0.95, 1.0)},
+        {"label": "Preço do cliente +5%", "be": _be_with(1.05, 1.0)},
+        {"label": "Preço do cliente −5%", "be": _be_with(0.95, 1.0)},
         {"label": "Custo motorista −5%", "be": _be_with(1.0, 0.95)},
         {"label": "Custo motorista +5%", "be": _be_with(1.0, 1.05)},
     ]

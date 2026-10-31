@@ -11,6 +11,7 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Sum
 from django.shortcuts import render
 from django.utils import timezone
+from django.utils.formats import date_format
 
 from .models import Bill, Imposto
 from .views import _compute_cc_evolution, _compute_dre_metrics
@@ -129,7 +130,7 @@ def executive_dashboard(request):
     context = {
         "date_from": date_from,
         "date_to": date_to,
-        "month_label": f"{date_from:%B de %Y}".title(),
+        "month_label": date_format(date_from, r"F \d\e Y").capitalize(),
         "generated_at": timezone.now(),
         # KPIs
         "total_revenue": cur["total_revenue"],

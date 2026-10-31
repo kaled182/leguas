@@ -1,45 +1,45 @@
 {% extends 'settlements/base.html' %}
 {% load ui %}
 {% load static %}
-{% block title %}Demonstração de Resultados{% endblock %}
+{% block title %}Demonstração de resultados{% endblock %}
 {% block content %}
 {% include 'accounting/_analysis_tabs.html' with current='dre' %}
 <style>
   .row-line { display:flex; justify-content:space-between; padding:0.5rem 1rem; border-bottom:1px solid rgba(0,0,0,0.05); }
   .dark .row-line { border-color:rgba(255,255,255,0.05); }
-  .row-line.indent { padding-left:2.5rem; font-size:0.875rem; color:#6b7280; }
+  .row-line.indent { padding-left:2.5rem; font-size:0.875rem; color:var(--color-text-muted); }
   .row-line.subtotal { font-weight:600; background:rgba(99,102,241,0.05); }
-  .row-line.total { font-weight:bold; background:rgba(16,185,129,0.1); border-top:2px solid #10b981; font-size:1rem; }
-  .row-line.total.negative { background:rgba(244,63,94,0.1); border-color:#f43f5e; }
+  .row-line.total { font-weight:bold; background:rgba(16,185,129,0.1); border-top:2px solid var(--tone-success-fg); font-size:1rem; }
+  .row-line.total.negative { background:rgba(244,63,94,0.1); border-color:var(--tone-danger-fg); }
   .num { font-family:monospace; }
-  .pos { color:#059669; }
-  .neg { color:#dc2626; }
+  .pos { color:var(--tone-success-fg); }
+  .neg { color:var(--tone-danger-fg); }
 </style>
 <div class="max-w-screen-xl mx-auto px-4 py-6 space-y-4">
   <!-- Header -->
-  <div class="flex items-center justify-between flex-wrap gap-3">
-    <div>
-      <h1 class="lf-page-title">Demonstração de Resultados</h1>
-      <p class="text-sm text-gray-500 dark:text-gray-400">
-        Receitas, custos directos e fixos — análise de margem por período.
+  <div class="lf-page-header">
+<div class="min-w-0">
+<h1 class="lf-page-title">Demonstração de resultados</h1>
+      <p class="lf-page-subtitle">
+        Receitas, custos diretos e fixos — análise de margem por período.
       </p>
-    </div>
-    <div class="flex items-center gap-2 flex-wrap">
+</div>
+<div class="lf-page-actions">
       <a href="{% url 'accounting:dre_export' %}?format=csv&date_from={{ date_from|date:'Y-m-d' }}&date_to={{ date_to|date:'Y-m-d' }}"
-         class="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold flex items-center gap-1.5"
+         class="lf-btn lf-btn-ghost"
          title="Descarregar DRE em CSV (Excel-friendly)">
         <i data-lucide="file-text" class="w-4 h-4"></i> CSV
       </a>
       <a href="{% url 'accounting:dre_export' %}?format=xlsx&date_from={{ date_from|date:'Y-m-d' }}&date_to={{ date_to|date:'Y-m-d' }}"
-         class="px-3 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-semibold flex items-center gap-1.5"
+         class="lf-btn lf-btn-ghost"
          title="Descarregar DRE em XLSX com folhas separadas">
         <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> XLSX
       </a>
-      <a href="{% url 'accounting:bill_list' %}" class="px-3 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-sm font-semibold flex items-center gap-1.5">
-        <i data-lucide="receipt" class="w-4 h-4"></i> Contas a Pagar
+      <a href="{% url 'accounting:bill_list' %}" class="lf-btn lf-btn-danger">
+        <i data-lucide="receipt" class="w-4 h-4"></i> Contas a pagar
       </a>
     </div>
-  </div>
+</div>
 
   <!-- Filtros de Período -->
   <form method="get" class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
@@ -48,7 +48,7 @@
       <input type="date" name="date_from" value="{{ date_from|date:'Y-m-d' }}" class="px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700">
       <span class="text-gray-400">→</span>
       <input type="date" name="date_to" value="{{ date_to|date:'Y-m-d' }}" class="px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700">
-      <button type="submit" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-sm font-semibold">
+      <button type="submit" class="lf-btn lf-btn-ghost">
         Aplicar
       </button>
       <span class="ml-auto text-xs text-gray-500">
@@ -70,10 +70,10 @@
       <div class="mt-1 flex flex-wrap gap-1 text-[10px]">
         {% with d=deltas.total_revenue %}
           {% if d.vs_prev_pct is not None %}
-            <span class="px-1.5 py-0.5 rounded {% if d.vs_prev_pct >= 0 %}bg-emerald-100 text-emerald-700{% else %}bg-rose-100 text-rose-700{% endif %}" title="Período anterior: {{ d.prev|eur }}">MoM {{ d.vs_prev_pct|floatformat:1 }}%</span>
+            <span class="px-1.5 py-0.5 rounded {% if d.vs_prev_pct >= 0 %}bg-emerald-100 text-emerald-700 dark:text-emerald-300{% else %}bg-rose-100 text-rose-700{% endif %}" title="Período anterior: {{ d.prev|eur }}">MoM {{ d.vs_prev_pct|pct }}</span>
           {% endif %}
           {% if d.vs_yoy_pct is not None %}
-            <span class="px-1.5 py-0.5 rounded {% if d.vs_yoy_pct >= 0 %}bg-emerald-100 text-emerald-700{% else %}bg-rose-100 text-rose-700{% endif %}" title="Mesmo período ano anterior: {{ d.yoy|eur }}">YoY {{ d.vs_yoy_pct|floatformat:1 }}%</span>
+            <span class="px-1.5 py-0.5 rounded {% if d.vs_yoy_pct >= 0 %}bg-emerald-100 text-emerald-700 dark:text-emerald-300{% else %}bg-rose-100 text-rose-700{% endif %}" title="Mesmo período ano anterior: {{ d.yoy|eur }}">YoY {{ d.vs_yoy_pct|pct }}</span>
           {% endif %}
         {% endwith %}
       </div>
@@ -82,15 +82,15 @@
     {# Margem Bruta #}
     <div class="bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-700 p-3">
       <div class="text-[10px] uppercase text-emerald-700 dark:text-emerald-300">Margem Bruta</div>
-      <div class="text-2xl font-bold {% if margem_bruta < 0 %}text-rose-600{% else %}text-emerald-700{% endif %}">{{ margem_bruta|eur }}</div>
-      <div class="text-[10px] text-emerald-600 dark:text-emerald-400">{{ margem_bruta_pct|floatformat:1 }}% sobre receita</div>
+      <div class="text-2xl font-bold {% if margem_bruta < 0 %}text-rose-600 dark:text-rose-300{% else %}text-emerald-700{% endif %}">{{ margem_bruta|eur }}</div>
+      <div class="text-[10px] text-emerald-600 dark:text-emerald-400">{{ margem_bruta_pct|pct }} sobre receita</div>
       <div class="mt-1 flex flex-wrap gap-1 text-[10px]">
         {% with d=deltas.margem_bruta %}
           {% if d.vs_prev_pct is not None %}
-            <span class="px-1.5 py-0.5 rounded {% if d.vs_prev_pct >= 0 %}bg-emerald-100 text-emerald-700{% else %}bg-rose-100 text-rose-700{% endif %}" title="Período anterior: {{ d.prev|eur }}">MoM {{ d.vs_prev_pct|floatformat:1 }}%</span>
+            <span class="px-1.5 py-0.5 rounded {% if d.vs_prev_pct >= 0 %}bg-emerald-100 text-emerald-700 dark:text-emerald-300{% else %}bg-rose-100 text-rose-700{% endif %}" title="Período anterior: {{ d.prev|eur }}">MoM {{ d.vs_prev_pct|pct }}</span>
           {% endif %}
           {% if d.vs_yoy_pct is not None %}
-            <span class="px-1.5 py-0.5 rounded {% if d.vs_yoy_pct >= 0 %}bg-emerald-100 text-emerald-700{% else %}bg-rose-100 text-rose-700{% endif %}" title="Ano anterior: {{ d.yoy|eur }}">YoY {{ d.vs_yoy_pct|floatformat:1 }}%</span>
+            <span class="px-1.5 py-0.5 rounded {% if d.vs_yoy_pct >= 0 %}bg-emerald-100 text-emerald-700 dark:text-emerald-300{% else %}bg-rose-100 text-rose-700{% endif %}" title="Ano anterior: {{ d.yoy|eur }}">YoY {{ d.vs_yoy_pct|pct }}</span>
           {% endif %}
         {% endwith %}
       </div>
@@ -99,15 +99,15 @@
     {# EBITDA #}
     <div class="bg-violet-50 dark:bg-violet-900/20 rounded-lg border border-violet-200 dark:border-violet-700 p-3">
       <div class="text-[10px] uppercase text-violet-700 dark:text-violet-300">EBITDA</div>
-      <div class="text-2xl font-bold {% if ebitda < 0 %}text-rose-600{% else %}text-violet-700{% endif %}">{{ ebitda|eur }}</div>
-      <div class="text-[10px] text-violet-600 dark:text-violet-400">{{ ebitda_pct|floatformat:1 }}%</div>
+      <div class="text-2xl font-bold {% if ebitda < 0 %}text-rose-600 dark:text-rose-300{% else %}text-violet-700{% endif %}">{{ ebitda|eur }}</div>
+      <div class="text-[10px] text-violet-600 dark:text-violet-400">{{ ebitda_pct|pct }}</div>
       <div class="mt-1 flex flex-wrap gap-1 text-[10px]">
         {% with d=deltas.ebitda %}
           {% if d.vs_prev_pct is not None %}
-            <span class="px-1.5 py-0.5 rounded {% if d.vs_prev_pct >= 0 %}bg-emerald-100 text-emerald-700{% else %}bg-rose-100 text-rose-700{% endif %}" title="Período anterior: {{ d.prev|eur }}">MoM {{ d.vs_prev_pct|floatformat:1 }}%</span>
+            <span class="px-1.5 py-0.5 rounded {% if d.vs_prev_pct >= 0 %}bg-emerald-100 text-emerald-700 dark:text-emerald-300{% else %}bg-rose-100 text-rose-700{% endif %}" title="Período anterior: {{ d.prev|eur }}">MoM {{ d.vs_prev_pct|pct }}</span>
           {% endif %}
           {% if d.vs_yoy_pct is not None %}
-            <span class="px-1.5 py-0.5 rounded {% if d.vs_yoy_pct >= 0 %}bg-emerald-100 text-emerald-700{% else %}bg-rose-100 text-rose-700{% endif %}" title="Ano anterior: {{ d.yoy|eur }}">YoY {{ d.vs_yoy_pct|floatformat:1 }}%</span>
+            <span class="px-1.5 py-0.5 rounded {% if d.vs_yoy_pct >= 0 %}bg-emerald-100 text-emerald-700 dark:text-emerald-300{% else %}bg-rose-100 text-rose-700{% endif %}" title="Ano anterior: {{ d.yoy|eur }}">YoY {{ d.vs_yoy_pct|pct }}</span>
           {% endif %}
         {% endwith %}
       </div>
@@ -117,14 +117,14 @@
     <div class="bg-{% if resultado_liquido < 0 %}rose{% else %}gray{% endif %}-50 dark:bg-{% if resultado_liquido < 0 %}rose{% else %}gray{% endif %}-900/20 rounded-lg border border-{% if resultado_liquido < 0 %}rose{% else %}gray{% endif %}-300 p-3">
       <div class="text-[10px] uppercase text-{% if resultado_liquido < 0 %}rose{% else %}gray{% endif %}-700">Resultado Líquido</div>
       <div class="text-2xl font-bold {% if resultado_liquido < 0 %}text-rose-700{% else %}text-gray-900 dark:text-white{% endif %}">{{ resultado_liquido|eur }}</div>
-      <div class="text-[10px] text-gray-500">{{ resultado_pct|floatformat:1 }}% sobre receita</div>
+      <div class="text-[10px] text-gray-500">{{ resultado_pct|pct }} sobre receita</div>
       <div class="mt-1 flex flex-wrap gap-1 text-[10px]">
         {% with d=deltas.resultado_liquido %}
           {% if d.vs_prev_pct is not None %}
-            <span class="px-1.5 py-0.5 rounded {% if d.vs_prev_pct >= 0 %}bg-emerald-100 text-emerald-700{% else %}bg-rose-100 text-rose-700{% endif %}" title="Período anterior: {{ d.prev|eur }}">MoM {{ d.vs_prev_pct|floatformat:1 }}%</span>
+            <span class="px-1.5 py-0.5 rounded {% if d.vs_prev_pct >= 0 %}bg-emerald-100 text-emerald-700 dark:text-emerald-300{% else %}bg-rose-100 text-rose-700{% endif %}" title="Período anterior: {{ d.prev|eur }}">MoM {{ d.vs_prev_pct|pct }}</span>
           {% endif %}
           {% if d.vs_yoy_pct is not None %}
-            <span class="px-1.5 py-0.5 rounded {% if d.vs_yoy_pct >= 0 %}bg-emerald-100 text-emerald-700{% else %}bg-rose-100 text-rose-700{% endif %}" title="Ano anterior: {{ d.yoy|eur }}">YoY {{ d.vs_yoy_pct|floatformat:1 }}%</span>
+            <span class="px-1.5 py-0.5 rounded {% if d.vs_yoy_pct >= 0 %}bg-emerald-100 text-emerald-700 dark:text-emerald-300{% else %}bg-rose-100 text-rose-700{% endif %}" title="Ano anterior: {{ d.yoy|eur }}">YoY {{ d.vs_yoy_pct|pct }}</span>
           {% endif %}
         {% endwith %}
       </div>
@@ -162,7 +162,7 @@
       <span class="num font-bold neg">{{ total_direct_op|eur }}</span>
     </div>
     <div class="row-line indent">
-      <span>↳ Pagamentos a motoristas (PFs)</span>
+      <span>↳ Pagamentos a motoristas (Pré-faturas)</span>
       <span class="num neg">{{ total_driver_cost|eur }}</span>
     </div>
     {% if total_returns_cost %}
@@ -198,7 +198,7 @@
     {% endfor %}
     <div class="row-line subtotal">
       <span>= MARGEM DE CONTRIBUIÇÃO</span>
-      <span class="num">{{ margem_contribuicao|eur }} ({{ margem_contribuicao_pct|floatformat:1 }}%)</span>
+      <span class="num">{{ margem_contribuicao|eur }} ({{ margem_contribuicao_pct|pct }})</span>
     </div>
     {% endif %}
 
@@ -218,7 +218,7 @@
 
     <div class="row-line {% if ebitda < 0 %}total negative{% else %}total{% endif %}">
       <span>= EBITDA / Resultado Operacional</span>
-      <span class="num">{{ ebitda|eur }} ({{ ebitda_pct|floatformat:1 }}%)</span>
+      <span class="num">{{ ebitda|eur }} ({{ ebitda_pct|pct }})</span>
     </div>
 
     {% if total_financeiro %}
@@ -236,7 +236,7 @@
 
     <div class="row-line {% if resultado_liquido < 0 %}total negative{% else %}total{% endif %}">
       <span>= RESULTADO LÍQUIDO</span>
-      <span class="num">{{ resultado_liquido|eur }} ({{ resultado_pct|floatformat:1 }}%)</span>
+      <span class="num">{{ resultado_liquido|eur }} ({{ resultado_pct|pct }})</span>
     </div>
   </div>
 
@@ -246,15 +246,15 @@
     <h2 class="text-sm font-bold mb-3 flex items-center gap-2">
       <i data-lucide="map-pin" class="w-4 h-4 text-blue-500"></i>
       Despesas por Centro de Custo
-      <span class="text-[10px] font-normal text-gray-500">— Bills (despesa pr&oacute;pria) + Pr&eacute;-faturas de motoristas</span>
+      <span class="text-[10px] font-normal text-gray-500">— Contas (despesa pr&oacute;pria) + Pr&eacute;-faturas de motoristas</span>
     </h2>
     <table class="w-full text-sm">
       <thead class="text-xs text-gray-500 uppercase">
         <tr>
           <th class="text-left py-2">Centro</th>
           <th class="text-left">Tipo</th>
-          <th class="text-right" title="Bills da empresa imputadas a este centro">Bills</th>
-          <th class="text-right" title="Pr&eacute;-faturas de motoristas imputadas a este centro">PFs Motorista</th>
+          <th class="text-right" title="Bills da empresa imputadas a este centro">Contas</th>
+          <th class="text-right" title="Pr&eacute;-faturas de motoristas imputadas a este centro">Pré-faturas motorista</th>
           <th class="text-right">Total</th>
         </tr>
       </thead>
@@ -263,8 +263,8 @@
         <tr>
           <td class="py-1.5">{{ name }}</td>
           <td><span class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-xs">{{ info.type|default:"&mdash;" }}</span></td>
-          <td class="text-right font-mono {% if info.from_bills %}neg{% else %}text-gray-400{% endif %}">€{{ info.from_bills|default:0|floatformat:2 }}</td>
-          <td class="text-right font-mono {% if info.from_drivers %}neg{% else %}text-gray-400{% endif %}">€{{ info.from_drivers|default:0|floatformat:2 }}</td>
+          <td class="text-right font-mono {% if info.from_bills %}neg{% else %}text-gray-400{% endif %}">{{ info.from_bills|default:0|eur }}</td>
+          <td class="text-right font-mono {% if info.from_drivers %}neg{% else %}text-gray-400{% endif %}">{{ info.from_drivers|default:0|eur }}</td>
           <td class="text-right font-mono neg font-bold">{{ info.total|eur }}</td>
         </tr>
         {% endfor %}
@@ -279,7 +279,7 @@
     <h2 class="text-sm font-bold mb-3 flex items-center gap-2">
       <i data-lucide="trending-up" class="w-4 h-4 text-violet-500"></i>
       Evolu&ccedil;&atilde;o por Centro de Custo &mdash; &uacute;ltimos 6 meses
-      <span class="text-[10px] font-normal text-gray-500">Bills + PFs por m&ecirc;s, ordenado por total</span>
+      <span class="text-[10px] font-normal text-gray-500">Contas + Pré-faturas por m&ecirc;s, ordenado por total</span>
     </h2>
     <div class="overflow-x-auto">
       <table class="w-full text-sm">
@@ -298,18 +298,18 @@
           <tr>
             <td class="py-1.5 sticky left-0 bg-white dark:bg-gray-800">{{ row.cc }}</td>
             {% for v in row.values %}
-              <td class="text-right px-2 font-mono {% if v %}neg{% else %}text-gray-400{% endif %}">€{{ v|floatformat:0 }}</td>
+              <td class="text-right px-2 font-mono {% if v %}neg{% else %}text-gray-400{% endif %}">{{ v|eur0 }}</td>
             {% endfor %}
-            <td class="text-right px-2 font-mono neg font-bold">€{{ row.total|floatformat:0 }}</td>
+            <td class="text-right px-2 font-mono neg font-bold">{{ row.total|eur0 }}</td>
             <td class="text-right px-2 text-xs">
               {% if row.delta_pct is None %}
                 <span class="text-amber-500">novo</span>
               {% elif row.delta_pct > 5 %}
-                <span class="text-red-500">↑ {{ row.delta_pct|floatformat:0 }}%</span>
+                <span class="text-red-500">↑ {{ row.delta_pct|pct:0 }}</span>
               {% elif row.delta_pct < -5 %}
-                <span class="text-emerald-500">↓ {{ row.delta_pct|floatformat:0 }}%</span>
+                <span class="text-emerald-500">↓ {{ row.delta_pct|pct:0 }}</span>
               {% else %}
-                <span class="text-gray-400">{{ row.delta_pct|floatformat:0 }}%</span>
+                <span class="text-gray-400">{{ row.delta_pct|pct:0 }}</span>
               {% endif %}
             </td>
           </tr>
@@ -317,9 +317,9 @@
           <tr class="border-t-2 border-gray-300 dark:border-gray-600 font-bold">
             <td class="py-2 sticky left-0 bg-white dark:bg-gray-800">Total mensal</td>
             {% for t in cc_evolution.totals_by_month %}
-              <td class="text-right px-2 font-mono neg">€{{ t|floatformat:0 }}</td>
+              <td class="text-right px-2 font-mono neg">{{ t|eur0 }}</td>
             {% endfor %}
-            <td class="text-right px-2 font-mono neg">€{{ cc_evolution.grand_total|floatformat:0 }}</td>
+            <td class="text-right px-2 font-mono neg">{{ cc_evolution.grand_total|eur0 }}</td>
             <td></td>
           </tr>
         </tbody>

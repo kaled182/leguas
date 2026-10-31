@@ -47,6 +47,7 @@
   .lf-kpi-action { cursor: pointer; }
   .lf-kpi-action:hover { border-color: var(--color-primary); }
 
+  .lf-kpi-row { display: flex; justify-content: space-between; gap: var(--space-3); font-size: var(--text-xs); color: var(--color-text-muted); }
   .lf-more { margin-top: var(--space-3); }
   .lf-more > summary { padding: var(--space-2) 0; font-size: var(--text-sm); font-weight: var(--weight-subtitle); color: var(--color-text-muted); cursor: pointer; }
 

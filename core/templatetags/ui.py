@@ -37,6 +37,13 @@ SYNC_HEALTH = {
     "unknown": ("Sem dados", "neutral"),
 }
 
+# Estado das movimentações da Visão financeira (contas, impostos, pré-faturas).
+FIN_STATUS = {
+    "PENDING": "Pendente", "PENDENTE": "Pendente", "AWAITING": "A aguardar",
+    "OVERDUE": "Vencida", "EM_ATRASO": "Em atraso", "APPROVED": "Aprovada",
+    "APROVADO": "Aprovada", "CALCULADO": "Calculada",
+}
+
 
 def _decimal(value):
     try:
@@ -57,6 +64,12 @@ def _number(value, places):
 @register.filter
 def eur(value):
     text = _number(value, 2)
+    return EMPTY if text is None else f"{text}{NBSP}€"
+
+
+@register.filter
+def eur0(value):
+    text = _number(value, 0)
     return EMPTY if text is None else f"{text}{NBSP}€"
 
 
@@ -90,6 +103,11 @@ def epod_label(value):
 @register.filter
 def epod_tone(value):
     return EPOD_STATUS.get(value, (value, "neutral"))[1]
+
+
+@register.filter
+def fin_status(value):
+    return FIN_STATUS.get(value, value)
 
 
 @register.filter

@@ -1,117 +1,92 @@
 {% extends 'settlements/base.html' %}
 {% load ui %}
 {% load static %}
-{% block title %}Posição de Tesouraria{% endblock %}
+{% block title %}Posição de tesouraria{% endblock %}
 {% block content %}
 <style>
-  .tcard { background:#fff; border:1px solid #e5e7eb; border-radius:0.75rem; padding:1.25rem; }
+  .tcard { background:#fff; border:1px solid var(--color-border); border-radius:0.75rem; padding:1.25rem; }
   .dark .tcard { background:#1f2937; border-color:#374151; }
   .pill { padding:0.125rem 0.5rem; border-radius:9999px; font-size:0.7rem; font-weight:600; }
 </style>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <div class="max-w-screen-2xl mx-auto px-4 py-6 space-y-5">
 
   <!-- Header -->
-  <div class="flex items-center justify-between flex-wrap gap-3">
-    <div>
-      <h1 class="lf-page-title">Posição de Tesouraria</h1>
-      <p class="text-sm text-gray-500 dark:text-gray-400">
-        Snapshot do dia · Projecção 30 dias · Calendário fiscal PT
+  <div class="lf-page-header">
+<div class="min-w-0">
+<h1 class="lf-page-title">Posição de tesouraria</h1>
+      <p class="lf-page-subtitle">
+        Situação do dia · Projeção 30 dias · Calendário fiscal PT
       </p>
-    </div>
-    <div class="text-xs text-gray-500 dark:text-gray-400 text-right">
-      Hoje: <strong>{{ snap.today|date:"d/m/Y" }}</strong><br>
+</div>
+<div class="lf-page-actions">
       Horizonte: até {{ snap.horizon|date:"d/m/Y" }}
     </div>
-  </div>
+</div>
 
   <!-- 4 KPI cards principais -->
-  <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-
-    <!-- A Pagar -->
-    <a href="{% url 'accounting:payables_inbox' %}" class="tcard border-l-4 border-rose-400 hover:shadow-lg transition group">
-      <div class="flex items-center gap-2 mb-2">
-        <i data-lucide="banknote-arrow-down" class="w-4 h-4 text-rose-600"></i>
-        <span class="text-xs font-semibold uppercase tracking-wide text-rose-600 dark:text-rose-400">A Pagar (30d)</span>
-        <i data-lucide="chevron-right" class="w-4 h-4 text-rose-400/0 group-hover:text-rose-500 ml-auto transition"></i>
-      </div>
-      <p class="text-3xl font-bold text-rose-700 dark:text-rose-300">{{ snap.a_pagar_total|eur }}</p>
-      <div class="text-xs text-gray-500 dark:text-gray-400 mt-2 space-y-0.5">
-        <div class="flex justify-between"><span>Bills empresa</span><span class="font-mono">{{ snap.a_pagar_breakdown.bills|eur }}</span></div>
+  <div class="lf-kpi-grid">
+<a href="{% url 'accounting:payables_inbox' %}" class="lf-kpi">
+      <span class="lf-kpi-label">A pagar (30d)</span>
+      <p class="lf-kpi-value">{{ snap.a_pagar_total|eur }}</p>
+      <div>
+        <div class="lf-kpi-row"><span>Contas empresa</span><span class="tabular-nums">{{ snap.a_pagar_breakdown.bills|eur }}</span></div>
         {% if snap.a_pagar_breakdown.bills_passthrough %}
-        <div class="flex justify-between text-violet-600 dark:text-violet-400" title="Adiantamentos a motoristas (passthrough): empresa paga ao fornecedor mas o motorista paga à empresa via desconto na PF.">
-          <span>↻ Adiantam. motorista</span><span class="font-mono">{{ snap.a_pagar_breakdown.bills_passthrough|eur }}</span>
+        <div class="lf-kpi-row" title="Adiantamentos a motoristas (passthrough): empresa paga ao fornecedor mas o motorista paga à empresa via desconto na PF.">
+          <span>Adiantamento a motorista</span><span class="tabular-nums">{{ snap.a_pagar_breakdown.bills_passthrough|eur }}</span>
         </div>
         {% endif %}
-        <div class="flex justify-between"><span>Impostos</span><span class="font-mono">{{ snap.a_pagar_breakdown.impostos|eur }} ({{ snap.a_pagar_breakdown.impostos_count }})</span></div>
-        <div class="flex justify-between"><span>Motoristas (PFs)</span><span class="font-mono">{{ snap.a_pagar_breakdown.drivers|eur }} ({{ snap.a_pagar_breakdown.drivers_count }})</span></div>
+        <div class="lf-kpi-row"><span>Impostos</span><span class="tabular-nums">{{ snap.a_pagar_breakdown.impostos|eur }} ({{ snap.a_pagar_breakdown.impostos_count }})</span></div>
+        <div class="lf-kpi-row"><span>Motoristas (Pré-faturas)</span><span class="tabular-nums">{{ snap.a_pagar_breakdown.drivers|eur }} ({{ snap.a_pagar_breakdown.drivers_count }})</span></div>
       </div>
     </a>
-
-    <!-- A Receber -->
-    <a href="{% url 'invoice-list' %}" class="tcard border-l-4 border-emerald-400 hover:shadow-lg transition group">
-      <div class="flex items-center gap-2 mb-2">
-        <i data-lucide="banknote-arrow-up" class="w-4 h-4 text-emerald-600"></i>
-        <span class="text-xs font-semibold uppercase tracking-wide text-emerald-600 dark:text-emerald-400">A Receber</span>
-        <i data-lucide="chevron-right" class="w-4 h-4 text-emerald-400/0 group-hover:text-emerald-500 ml-auto transition"></i>
-      </div>
-      <p class="text-3xl font-bold text-emerald-700 dark:text-emerald-300">{{ snap.a_receber_total|eur }}</p>
-      <div class="text-xs text-gray-500 dark:text-gray-400 mt-2 space-y-0.5">
-        <div class="flex justify-between"><span>Faturas Parceiros</span><span class="font-mono">{{ snap.a_receber_breakdown.partner_invoices|eur }} ({{ snap.a_receber_breakdown.partner_count }})</span></div>
-        <div class="flex justify-between"><span>IVA Dedutível</span><span class="font-mono">{{ snap.a_receber_breakdown.iva_dedutivel|eur }}</span></div>
+<a href="{% url 'invoice-list' %}" class="lf-kpi">
+      <span class="lf-kpi-label">A receber</span>
+      <p class="lf-kpi-value">{{ snap.a_receber_total|eur }}</p>
+      <div>
+        <div class="lf-kpi-row"><span>Faturas Clientes</span><span class="tabular-nums">{{ snap.a_receber_breakdown.partner_invoices|eur }} ({{ snap.a_receber_breakdown.partner_count }})</span></div>
+        <div class="lf-kpi-row"><span>IVA Dedutível</span><span class="tabular-nums">{{ snap.a_receber_breakdown.iva_dedutivel|eur }}</span></div>
         {% if snap.a_receber_breakdown.driver_debt %}
-        <div class="flex justify-between text-violet-600 dark:text-violet-400" title="Adiantamentos a motoristas pendentes — virão descontados na próxima PF como redução do valor a pagar ao motorista.">
-          <span>↻ Devido p/ motoristas</span><span class="font-mono">{{ snap.a_receber_breakdown.driver_debt|eur }} ({{ snap.a_receber_breakdown.driver_debt_count }})</span>
+        <div class="lf-kpi-row" title="Adiantamentos a motoristas pendentes — virão descontados na próxima PF como redução do valor a pagar ao motorista.">
+          <span>Devido por motoristas</span><span class="tabular-nums">{{ snap.a_receber_breakdown.driver_debt|eur }} ({{ snap.a_receber_breakdown.driver_debt_count }})</span>
         </div>
         {% endif %}
       </div>
     </a>
-
-    <!-- Saldo Bancário -->
-    <div class="tcard border-l-4 border-indigo-400">
-      <div class="flex items-center gap-2 mb-2">
-        <i data-lucide="landmark" class="w-4 h-4 text-indigo-600"></i>
-        <span class="text-xs font-semibold uppercase tracking-wide text-indigo-600 dark:text-indigo-400">Saldo Bancário</span>
-      </div>
-      <p class="text-3xl font-bold text-indigo-700 dark:text-indigo-300">{{ snap.saldo_bancario|eur }}</p>
-      <div class="text-xs text-gray-500 dark:text-gray-400 mt-2">
+<div class="lf-kpi">
+      <span class="lf-kpi-label">Saldo bancário</span>
+      <p class="lf-kpi-value">{{ snap.saldo_bancario|eur }}</p>
+      <div class="lf-kpi-note">
         {% if snap.saldo_data %}
-          Última transacção: <strong>{{ snap.saldo_data|date:"d/m/Y" }}</strong>
+          Última transação: <strong>{{ snap.saldo_data|date:"d/m/Y" }}</strong>
         {% else %}
-          <span class="text-amber-600 dark:text-amber-400">⚠ Sem extractos importados</span>
+          <span class="lf-kpi-note">Sem extratos importados</span>
         {% endif %}
-        <div class="mt-1">
+        <div class="lf-kpi-note">
           <a href="{% url 'accounting:bank_statement_list' %}" class="text-indigo-600 dark:text-indigo-400 hover:underline">Conciliação Bancária →</a>
         </div>
       </div>
     </div>
-
-    <!-- Saldo Projectado 30d -->
-    <div class="tcard border-l-4 {% if snap.saldo_projectado_30d >= 0 %}border-violet-400{% else %}border-red-500{% endif %}">
-      <div class="flex items-center gap-2 mb-2">
-        <i data-lucide="line-chart" class="w-4 h-4 {% if snap.saldo_projectado_30d >= 0 %}text-violet-600{% else %}text-red-600{% endif %}"></i>
-        <span class="text-xs font-semibold uppercase tracking-wide {% if snap.saldo_projectado_30d >= 0 %}text-violet-600 dark:text-violet-400{% else %}text-red-600 dark:text-red-400{% endif %}">Saldo Projetado +30d</span>
-      </div>
-      <p class="text-3xl font-bold {% if snap.saldo_projectado_30d >= 0 %}text-violet-700 dark:text-violet-300{% else %}text-red-700 dark:text-red-300{% endif %}">
+<div class="lf-kpi">
+      <span class="lf-kpi-label">Saldo projetado +30d</span>
+      <p class="lf-kpi-value {% if snap.saldo_projectado_30d < 0 %}text-red-700 dark:text-red-300{% endif %}">
         {{ snap.saldo_projectado_30d|eur }}
       </p>
-      <div class="text-xs text-gray-500 dark:text-gray-400 mt-2">
+      <div class="lf-kpi-note">
         {% if proj.first_negative %}
-          <span class="text-red-600 dark:text-red-400 font-semibold">⚠ Saldo fica negativo em {{ proj.first_negative|date:"d/m/Y" }}</span>
+          <span class="lf-kpi-note">Saldo fica negativo em {{ proj.first_negative|date:"d/m/Y" }}</span>
         {% else %}
           ✓ Saldo permanece positivo nos próximos 30 dias
         {% endif %}
       </div>
     </div>
-
-  </div>
+</div>
 
   <!-- Gráfico de projecção -->
   <div class="tcard">
     <div class="flex items-center justify-between mb-3">
       <h2 class="text-sm font-bold flex items-center gap-1.5">
         <i data-lucide="activity" class="w-4 h-4 text-indigo-500"></i>
-        Projecção 30 dias
+        Projeção 30 dias
       </h2>
       <div class="text-xs text-gray-500 dark:text-gray-400 flex gap-3">
         <span><span class="inline-block w-2 h-2 bg-indigo-500 rounded-full mr-1"></span>Saldo</span>
@@ -136,40 +111,40 @@
       </span>
     </div>
     <div class="overflow-x-auto">
-      <table class="min-w-full text-sm">
-        <thead class="bg-gray-50 dark:bg-gray-900/50 text-xs uppercase text-gray-500 dark:text-gray-400">
+      <table class="lf-table">
+        <thead>
           <tr>
-            <th class="px-3 py-2 text-left">Data</th>
-            <th class="px-3 py-2 text-left">Eventos In</th>
-            <th class="px-3 py-2 text-left">Eventos Out</th>
-            <th class="px-3 py-2 text-right">+ Receber</th>
-            <th class="px-3 py-2 text-right">− Pagar</th>
-            <th class="px-3 py-2 text-right">Saldo</th>
+            <th >Data</th>
+            <th >Entradas</th>
+            <th >Saídas</th>
+            <th class="text-right">A receber</th>
+            <th class="text-right">A pagar</th>
+            <th class="text-right">Saldo</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-gray-100 dark:divide-gray-700/50">
+        <tbody>
           {% for d in proj.days %}
           <tr class="{% if d.events_in or d.events_out %}bg-amber-50/30 dark:bg-amber-900/10{% endif %} {% if d.balance < 0 %}bg-red-50/50 dark:bg-red-900/20{% endif %}">
-            <td class="px-3 py-2 whitespace-nowrap text-xs">
+            <td class="whitespace-nowrap text-xs">
               <span class="text-gray-400">{{ d.weekday }}</span>
               <span class="font-mono">{{ d.date|date:"d/m" }}</span>
             </td>
-            <td class="px-3 py-2 text-xs">
+            <td class="text-xs">
               {% for e in d.events_in %}
                 <a href="{{ e.url }}" class="block hover:underline text-emerald-700 dark:text-emerald-400">{{ e.label }}</a>
               {% empty %}<span class="text-gray-300">—</span>{% endfor %}
             </td>
-            <td class="px-3 py-2 text-xs">
+            <td class="text-xs">
               {% for e in d.events_out %}
                 <a href="{{ e.url }}" class="block hover:underline text-rose-700 dark:text-rose-400">
-                  <span class="pill {% if e.type == 'imposto' %}bg-amber-100 text-amber-700{% elif e.type == 'driver_pf' %}bg-violet-100 text-violet-700{% else %}bg-rose-100 text-rose-700{% endif %} mr-1">{{ e.type }}</span>{{ e.label }}
+                  <span class="pill {% if e.type == 'imposto' %}bg-amber-100 text-amber-700 dark:text-amber-300{% elif e.type == 'driver_pf' %}bg-violet-100 text-violet-700{% else %}bg-rose-100 text-rose-700{% endif %} mr-1">{{ e.type }}</span>{{ e.label }}
                 </a>
               {% empty %}<span class="text-gray-300">—</span>{% endfor %}
             </td>
-            <td class="px-3 py-2 text-right font-mono text-xs text-emerald-700 dark:text-emerald-400">
+            <td class="text-right font-mono text-xs text-emerald-700 dark:text-emerald-400">
               {% if d.in_amount %}{{ d.in_amount|eur }}{% else %}—{% endif %}
             </td>
-            <td class="px-3 py-2 text-right font-mono text-xs text-rose-700 dark:text-rose-400">
+            <td class="text-right font-mono text-xs text-rose-700 dark:text-rose-400">
               {% if d.out_amount %}−{{ d.out_amount|eur }}{% else %}—{% endif %}
             </td>
             <td class="px-3 py-2 text-right font-mono text-xs font-bold {% if d.balance < 0 %}text-red-600{% else %}text-gray-900 dark:text-white{% endif %}">
@@ -192,7 +167,7 @@
       </h3>
       <p class="text-2xl font-bold text-violet-700 dark:text-violet-300">{{ snap.iva_dedutivel|eur }}</p>
       <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-        Crédito sobre Bills com Fornecedor IVA-dedutível neste trimestre.
+        Crédito sobre Contas com Fornecedor IVA-dedutível neste trimestre.
         Reduz o IVA a entregar no próximo apuramento (regra dia 20 do M+2).
       </p>
     </div>
@@ -204,7 +179,7 @@
       </h3>
       <p class="text-2xl font-bold text-amber-700 dark:text-amber-300">{{ snap.fuel_iva_dedutivel|eur }}</p>
       <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-        Acumulado no trimestre — Bills com tag "combustível" e IVA dedutível.
+        Acumulado no trimestre — Contas com tag "combustível" e IVA dedutível.
       </p>
     </div>
     <!-- Peças/manutenção IVA dedutível -->
@@ -215,7 +190,7 @@
       </h3>
       <p class="text-2xl font-bold text-blue-700 dark:text-blue-300">{{ snap.parts_iva_dedutivel|eur }}</p>
       <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-        Acumulado no trimestre — Bills com tag "peças/mecânica/manutenção".
+        Acumulado no trimestre — Contas com tag "peças/mecânica/manutenção".
       </p>
     </div>
   </div>
@@ -227,22 +202,22 @@
       <i data-lucide="layers" class="w-4 h-4 text-violet-500"></i>
       Próximas Prestações de Impostos Parcelados
     </h3>
-    <table class="min-w-full text-sm">
-      <thead class="text-xs uppercase text-gray-500 dark:text-gray-400">
+    <table class="lf-table">
+      <thead>
         <tr>
-          <th class="text-left py-1.5">Plano</th>
-          <th class="text-left py-1.5">Prestação</th>
-          <th class="text-left py-1.5">Vencimento</th>
-          <th class="text-right py-1.5">Valor</th>
+          <th >Plano</th>
+          <th >Prestação</th>
+          <th >Vencimento</th>
+          <th class="text-right">Valor</th>
         </tr>
       </thead>
-      <tbody class="divide-y divide-gray-100 dark:divide-gray-700/50">
+      <tbody>
         {% for p in snap.proximas_parcelas %}
         <tr>
-          <td class="py-2"><a href="{% url 'accounting:imposto_edit' p.parent.pk %}" class="hover:underline">{{ p.parent.nome|truncatechars:50 }}</a></td>
-          <td class="py-2 text-xs">{{ p.parcela_numero }}/{{ p.parcela_total }}</td>
-          <td class="py-2 text-xs">{{ p.data_vencimento|date:"d/m/Y" }}</td>
-          <td class="py-2 text-right font-mono text-sm">{{ p.valor|eur }}</td>
+          <td ><a href="{% url 'accounting:imposto_edit' p.parent.pk %}" class="hover:underline">{{ p.parent.nome|truncatechars:50 }}</a></td>
+          <td class="text-xs">{{ p.parcela_numero }}/{{ p.parcela_total }}</td>
+          <td class="text-xs">{{ p.data_vencimento|date:"d/m/Y" }}</td>
+          <td class="text-right font-mono text-sm">{{ p.valor|eur }}</td>
         </tr>
         {% endfor %}
       </tbody>
@@ -336,21 +311,21 @@ document.addEventListener('DOMContentLoaded', () => {
       scales: {
         y: {
           position: 'left',
-          title: { display: true, text: 'Saldo (€)' },
-          ticks: { callback: (v) => '€' + v.toLocaleString('pt-PT') },
+          title: { display: true, text: 'Saldo' },
+          ticks: { callback: (v) => lfEur(v) },
         },
         y2: {
           position: 'right',
-          title: { display: true, text: 'Movimento diário (€)' },
+          title: { display: true, text: 'Movimento diário' },
           grid: { drawOnChartArea: false },
-          ticks: { callback: (v) => '€' + v.toLocaleString('pt-PT') },
+          ticks: { callback: (v) => lfEur(v) },
         },
       },
       plugins: {
         legend: { display: false },
         tooltip: {
           callbacks: {
-            label: (ctx) => `${ctx.dataset.label}: €${ctx.raw.toFixed(2)}`,
+            label: (ctx) => `${ctx.dataset.label}: ${lfEur(ctx.raw)}`,
           },
         },
       },

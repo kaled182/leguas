@@ -776,9 +776,10 @@ if ([...PF_TABS].some(tab => tab.dataset.pfTab === location.hash.slice(1))) {
   new Chart(document.getElementById('pf-chart-steps'), {
     type: 'bar',
     data: {
-      labels: data.steps.map(p => [p.label, eur(p.value)]),
+      labels: data.steps.map(p => [...(p.label.length > 12 ? p.label.split(/ |(?<=-)/) : [p.label]), eur(p.value)]),
       datasets: [{
-        data: data.steps.map(p => [p.from, p.to]),
+        // Todas as barras partem do zero; os descontos ficam abaixo do zero.
+        data: data.steps.map(p => p.value),
         backgroundColor: data.steps.map(corPasso),
         borderRadius: 3,
       }],
@@ -791,7 +792,13 @@ if ([...PF_TABS].some(tab => tab.dataset.pfTab === location.hash.slice(1))) {
       },
       scales: {
         x: { grid: { display: false }, ticks: { autoSkip: false } },
-        y: { ticks: { callback: v => eur(v) } },
+        y: {
+          ticks: { callback: v => eur(v) },
+          grid: {
+            color: c => c.tick.value === 0 ? cores.neutral : Chart.defaults.borderColor,
+            lineWidth: c => c.tick.value === 0 ? 2 : 1,
+          },
+        },
       },
     },
   });

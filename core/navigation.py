@@ -50,7 +50,7 @@ MENU = (
                item("Pré-faturas", "pre-invoice-admin-list")),
         parent("A receber", "arrow-down-left",
                item("Reconciliação bancária", "accounting:bank_reconciliation"),
-               item("Extratos OFX", "accounting:bank_statement_list")),
+               item("Extratos bancários", "accounting:bank_statement_list")),
         parent("A pagar", "arrow-up-right",
                item("Inbox", "accounting:payables_inbox"),
                item("Contas a pagar", "accounting:bill_list"),

@@ -1549,6 +1549,16 @@ class BankStatement(models.Model):
     )
     n_transactions = models.PositiveIntegerField(default=0)
     n_matched = models.PositiveIntegerField(default=0)
+    account_number = models.CharField("Conta", max_length=40, blank=True)
+    iban = models.CharField("IBAN", max_length=34, blank=True)
+    opening_balance = models.DecimalField(
+        "Saldo inicial", max_digits=12, decimal_places=2,
+        null=True, blank=True,
+    )
+    closing_balance = models.DecimalField(
+        "Saldo final", max_digits=12, decimal_places=2,
+        null=True, blank=True,
+    )
     uploaded_by = models.ForeignKey(
         User, on_delete=models.SET_NULL, null=True,
         related_name="bank_statements_uploaded",
@@ -1590,6 +1600,23 @@ class BankTransaction(models.Model):
         "ID externo", max_length=80, blank=True,
         help_text="Identificador único do banco (FITID OFX, ref…).",
     )
+    value_date = models.DateField("Data-valor", null=True, blank=True)
+    balance_after = models.DecimalField(
+        "Saldo após", max_digits=12, decimal_places=2,
+        null=True, blank=True,
+    )
+    counterparty_iban = models.CharField(
+        "IBAN do destinatário", max_length=34, blank=True,
+    )
+    is_internal = models.BooleanField(
+        "Transferência entre contas próprias", default=False,
+    )
+    matched_advance = models.ForeignKey(
+        "settlements.PreInvoiceAdvance", on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="bank_transactions",
+        verbose_name="Adiantamento conciliado",
+    )
     matched_bill = models.ForeignKey(
         "Bill", on_delete=models.SET_NULL,
         null=True, blank=True,
@@ -1620,6 +1647,7 @@ class BankTransaction(models.Model):
             self.matched_bill_id
             or self.matched_partner_invoice_id
             or self.matched_pf_id
+            or self.matched_advance_id
         )
 
     def suggest_partner_invoice_matches(self, tolerance_days=5):
@@ -1648,11 +1676,38 @@ class BankTransaction(models.Model):
         indexes = [
             models.Index(fields=["statement", "date"]),
             models.Index(fields=["matched_bill"]),
+            models.Index(fields=["external_id"]),
+            models.Index(fields=["counterparty_iban"]),
         ]
 
     def __str__(self):
         s = "+" if self.direction == self.DIRECTION_CREDIT else "-"
         return f"{self.date} · {s}€{self.amount} · {self.description[:40]}"
+
+
+class BankPayee(models.Model):
+    """IBAN de destino conhecido. O sistema aprende-o quando alguém
+    confirma uma transferência na reconciliação bancária."""
+    iban = models.CharField("IBAN", max_length=34, unique=True)
+    driver = models.ForeignKey(
+        "drivers_app.DriverProfile", on_delete=models.SET_NULL,
+        null=True, blank=True, related_name="bank_payees",
+        verbose_name="Motorista",
+    )
+    fornecedor = models.ForeignKey(
+        "Fornecedor", on_delete=models.SET_NULL,
+        null=True, blank=True, related_name="bank_payees",
+        verbose_name="Fornecedor",
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "IBAN de destino"
+        verbose_name_plural = "IBAN de destino"
+
+    def __str__(self):
+        who = self.driver or self.fornecedor or "?"
+        return f"{self.iban} · {who}"
 
     def suggest_bill_matches(self, tolerance_days=5):
         """Sugere Bills (PAID ou PENDING) compatíveis com esta transacção

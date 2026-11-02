@@ -31,6 +31,7 @@ openpyxl==3.1.5
 xlsxwriter==3.2.8
 et_xmlfile==2.0.0
 reportlab==4.4.3
+pdfplumber==0.11.4  # extractos do BPI em PDF
 pillow==11.3.0
 markdown2==2.5.0
 Unidecode==1.4.0

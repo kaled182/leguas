@@ -1,5 +1,6 @@
 {% extends 'settlements/base.html' %}
 {% load static %}
+{% load ui %}
 {% block title %}Conciliação Bancária{% endblock %}
 {% block content %}
 {% include 'accounting/_analysis_tabs.html' with current='conciliacao' %}
@@ -7,7 +8,7 @@
   <div class="lf-page-header">
 <div class="min-w-0">
 <h1 class="lf-page-title">Conciliação bancária</h1>
-      <p class="lf-page-subtitle">Importa extratos CSV/OFX e concilia com as Contas pagas.</p>
+      <p class="lf-page-subtitle">Importe os extratos do BPI (PDF) e ligue cada saída a uma conta, pré-fatura ou adiantamento.</p>
 </div>
 <div class="lf-page-actions">
 <a href="{% url 'accounting:bank_statement_upload' %}" class="lf-btn lf-btn-ghost">
@@ -21,8 +22,11 @@
       <thead class="bg-gray-50 dark:bg-gray-700/50">
         <tr class="text-xs text-gray-500 uppercase">
           <th class="px-3 py-2 text-left">Extrato</th>
+          <th class="px-3 py-2 text-left">Conta</th>
           <th class="px-3 py-2 text-left">Período</th>
-          <th class="px-3 py-2 text-right">Transações</th>
+          <th class="px-3 py-2 text-right">Saldo inicial</th>
+          <th class="px-3 py-2 text-right">Saldo final</th>
+          <th class="px-3 py-2 text-right">Movimentos</th>
           <th class="px-3 py-2 text-right">Conciliadas</th>
           <th class="px-3 py-2 text-left">Importado por</th>
           <th class="px-3 py-2 text-left">Quando</th>
@@ -32,17 +36,20 @@
         {% for s in statements %}
         <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
           <td class="px-3 py-2"><a href="{% url 'accounting:bank_statement_detail' s.pk %}" class="text-indigo-600 dark:text-indigo-400 hover:underline">{{ s.name }}</a></td>
+          <td class="px-3 py-2 text-xs font-mono">{% if s.account_number %}<a href="{% url 'accounting:bank_reconciliation' %}?account={{ s.account_number }}" class="hover:underline">{{ s.account_number }}</a>{% else %}—{% endif %}</td>
           <td class="px-3 py-2 text-xs">{{ s.period_from|date:"d/m/Y" }} → {{ s.period_to|date:"d/m/Y" }}</td>
+          <td class="px-3 py-2 text-right font-mono">{% if s.opening_balance is not None %}{{ s.opening_balance|eur }}{% else %}—{% endif %}</td>
+          <td class="px-3 py-2 text-right font-mono">{% if s.closing_balance is not None %}{{ s.closing_balance|eur }}{% else %}—{% endif %}</td>
           <td class="px-3 py-2 text-right">{{ s.n_transactions }}</td>
           <td class="px-3 py-2 text-right">
-            <span class="{% if s.n_matched == s.n_transactions %}text-emerald-600 dark:text-emerald-300 font-bold{% endif %}">{{ s.n_matched }}</span>
+            <span class="{% if s.n_done == s.n_transactions %}text-emerald-600 dark:text-emerald-300 font-bold{% endif %}">{{ s.n_done }}</span>
             <span class="text-gray-400">/ {{ s.n_transactions }}</span>
           </td>
           <td class="px-3 py-2 text-xs">{{ s.uploaded_by|default:"—" }}</td>
           <td class="px-3 py-2 text-xs text-gray-500">{{ s.uploaded_at|date:"d/m/Y H:i" }}</td>
         </tr>
         {% empty %}
-        <tr><td colspan="6" class="px-3 py-12 text-center text-gray-400">
+        <tr><td colspan="9" class="px-3 py-12 text-center text-gray-400">
           <i data-lucide="inbox" class="w-10 h-10 mx-auto mb-2"></i>
           <p>Nenhum extrato importado.</p>
           <a href="{% url 'accounting:bank_statement_upload' %}" class="text-indigo-600 dark:text-indigo-300 hover:underline">Importar primeiro extrato →</a>

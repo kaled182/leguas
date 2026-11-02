@@ -6,6 +6,7 @@ from django.core.paginator import Paginator
 from django.db.models import Q, Sum
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.views.decorators.http import require_http_methods
 
 
@@ -654,7 +655,17 @@ def _compute_cc_evolution(reference_date, n_months=6):
 @login_required
 def bank_statement_list(request):
     """Lista de extractos bancários importados."""
-    qs = BankStatement.objects.all().order_by("-uploaded_at")
+    from django.db.models import Count, Q
+    done = (
+        Q(transactions__matched_bill__isnull=False)
+        | Q(transactions__matched_partner_invoice__isnull=False)
+        | Q(transactions__matched_pf__isnull=False)
+        | Q(transactions__matched_advance__isnull=False)
+        | Q(transactions__is_internal=True)
+    )
+    qs = BankStatement.objects.annotate(
+        n_done=Count("transactions", filter=done, distinct=True),
+    ).order_by("account_number", "-period_to", "-uploaded_at")
     return render(request, "accounting/bank_statement_list.html", {
         "statements": qs,
     })
@@ -662,57 +673,47 @@ def bank_statement_list(request):
 
 @login_required
 def bank_statement_upload(request):
-    """Upload de CSV/OFX e parse para BankTransaction."""
+    """Upload de extractos (PDF BPI, CSV, OFX) para BankTransaction."""
     if request.method != "POST":
         return render(
             request, "accounting/bank_statement_upload.html",
         )
-    f = request.FILES.get("file")
-    if not f:
-        messages.error(request, "Anexa um ficheiro CSV ou OFX.")
+    files = request.FILES.getlist("file")
+    if not files:
+        messages.error(request, "Anexe um extracto em PDF do BPI, CSV ou OFX.")
         return redirect("accounting:bank_statement_upload")
 
-    from .bank_parser import parse_statement
-    try:
-        rows = parse_statement(f.name, f.read())
-    except Exception as e:
-        messages.error(request, f"Erro a parsear ficheiro: {e}")
+    from .services_bank_import import StatementImportError, import_statement
+    name = (request.POST.get("name") or "").strip()
+    last = None
+    n_files = n_rows = n_dups = 0
+    for f in files:
+        try:
+            statement, n_new, n_dup = import_statement(
+                f, request.user, name if len(files) == 1 else "",
+            )
+        except StatementImportError as e:
+            messages.error(request, f"{f.name}: {e}")
+            continue
+        except Exception as e:
+            messages.error(request, f"{f.name}: erro ao ler o ficheiro ({e}).")
+            continue
+        last = statement
+        n_files += 1
+        n_rows += n_new
+        n_dups += n_dup
+    if n_files:
+        msg = f"{n_files} extracto(s) importado(s): {n_rows} movimentos."
+        if n_dups:
+            msg += f" {n_dups} movimentos já existiam e foram ignorados."
+        messages.success(request, msg)
+    if last is None:
         return redirect("accounting:bank_statement_upload")
-    if not rows:
-        messages.error(
-            request,
-            "Não foi possível extrair transacções do ficheiro.",
-        )
-        return redirect("accounting:bank_statement_upload")
-
-    name = request.POST.get("name") or f.name
-    period_from = min(r["date"] for r in rows)
-    period_to = max(r["date"] for r in rows)
-    f.seek(0)  # reset para guardar de novo
-    statement = BankStatement.objects.create(
-        name=name,
-        period_from=period_from, period_to=period_to,
-        file=f,
-        n_transactions=len(rows),
-        uploaded_by=request.user,
-    )
-    BankTransaction.objects.bulk_create([
-        BankTransaction(
-            statement=statement,
-            date=r["date"],
-            description=r["description"],
-            direction=r["direction"],
-            amount=r["amount"],
-            external_id=r.get("external_id", ""),
-        )
-        for r in rows
-    ])
-    messages.success(
-        request,
-        f"{len(rows)} transacções importadas de '{name}'.",
-    )
+    if len(files) > 1 or not last.account_number:
+        return redirect("accounting:bank_statement_list")
     return redirect(
-        "accounting:bank_statement_detail", pk=statement.pk,
+        reverse("accounting:bank_reconciliation")
+        + f"?account={last.account_number}"
     )
 
 

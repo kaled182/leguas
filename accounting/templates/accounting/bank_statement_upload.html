@@ -12,14 +12,14 @@
     {% csrf_token %}
     <div>
       <label class="block text-xs font-semibold mb-1">Nome / Banco</label>
-      <input type="text" name="name" placeholder="ex: Millennium Setembro 2026" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700">
-      <p class="text-[10px] text-gray-500 mt-1">Opcional — se vazio, usa o nome do ficheiro.</p>
+      <input type="text" name="name" placeholder="ex: BPI conta 002 · 10/2026" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700">
+      <p class="text-[10px] text-gray-500 mt-1">Opcional. Sem nome, o PDF do BPI usa a conta e o mês.</p>
     </div>
     <div>
-      <label class="block text-xs font-semibold mb-1">Ficheiro (CSV ou OFX) *</label>
-      <input type="file" name="file" accept=".csv,.ofx,.qfx" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700">
+      <label class="block text-xs font-semibold mb-1">Ficheiros (PDF do BPI, CSV ou OFX) *</label>
+      <input type="file" name="file" accept=".pdf,.csv,.ofx,.qfx" multiple required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700">
       <p class="text-[10px] text-gray-500 mt-1">
-        CSV: tenta detectar colunas <em>data, descrição, valor</em> (ou débito/crédito separados). OFX: bloco <code>&lt;STMTTRN&gt;</code>.
+        PDF do BPI: o sistema confere o saldo de cada linha. Pode escolher vários meses e contas de uma vez. Os movimentos já importados são ignorados.
       </p>
     </div>
     <div class="flex justify-end gap-2">

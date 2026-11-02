@@ -1,0 +1,69 @@
+{% extends 'settlements/base.html' %}
+{% load ui %}
+{% block title %}Conferências · Pré-fatura Cainiao{% endblock %}
+{% block content %}
+{% include 'settlements/cainiao_subledger/_style.html' %}
+<div class="max-w-screen-2xl mx-auto px-4 py-6 space-y-4">
+  <div class="lf-page-header">
+    <div class="min-w-0">
+      <h1 class="lf-page-title">Conferências · {{ pre.period_from|date:"d/m/Y" }} → {{ pre.period_to|date:"d/m/Y" }}</h1>
+      <p class="lf-page-subtitle">Compara as entregas faturadas pela Cainiao com as entregas registadas no sistema, pelo número LP.</p>
+    </div>
+    <div class="lf-page-actions"><a class="lf-btn lf-btn-ghost" href="{% url 'cainiao-preinvoice-detail' pre.pk %}"><i data-lucide="arrow-left" class="w-4 h-4" aria-hidden="true"></i> Pré-fatura</a></div>
+  </div>
+
+  <div class="lf-kpi-grid">
+    <div class="lf-kpi"><p class="lf-kpi-label">Entregas faturadas</p><p class="lf-kpi-value">{{ c.n_billed }}</p><p class="lf-kpi-note">guias LP diferentes</p></div>
+    <div class="lf-kpi"><p class="lf-kpi-label">Entregues sem faturação</p><p class="lf-kpi-value">{{ c.unbilled_n }}</p><p class="lf-kpi-note">reclamar à Cainiao</p></div>
+    <div class="lf-kpi"><p class="lf-kpi-label">Faturadas sem entrega no sistema</p><p class="lf-kpi-value">{{ c.not_delivered_n }}</p><p class="lf-kpi-note">estado diferente de Delivered</p></div>
+    <div class="lf-kpi"><p class="lf-kpi-label">Motorista diferente</p><p class="lf-kpi-value">{{ c.mismatch_n }}</p><p class="lf-kpi-note">Employee ID ≠ ID no sistema</p></div>
+  </div>
+
+  <div class="cs-grid">
+    <section class="cs-card space-y-2">
+      <h2 class="cs-h2">Entregues no período sem linha em nenhuma fatura Cainiao</h2>
+      <p class="cs-help">Procura em todas as faturas importadas, não só nesta pré-fatura.</p>
+      {% if c.unbilled_n %}
+        <p class="cs-help">{% for day, n in c.unbilled_by_day %}{{ day|date:"d/m" }}: {{ n }}{% if not forloop.last %} · {% endif %}{% endfor %}</p>
+        <div class="lf-table-wrap"><table class="lf-table">
+          <thead><tr><th>Dia</th><th>LP</th><th>Guia</th><th>Motorista</th><th>CP</th></tr></thead>
+          <tbody>{% for u in c.unbilled_sample %}<tr><td>{{ u.task_date|date:"d/m" }}</td><td class="font-mono">{{ u.lp_number }}</td><td class="font-mono">{{ u.waybill_number }}</td><td>{{ u.courier_name }}</td><td>{{ u.zip_code }}</td></tr>{% endfor %}</tbody>
+        </table></div>
+        {% if c.unbilled_n > c.unbilled_sample|length %}<p class="cs-help">Mostra {{ c.unbilled_sample|length }} de {{ c.unbilled_n }}. O Excel da pré-fatura tem todas as linhas faturadas.</p>{% endif %}
+      {% else %}<div class="lf-empty"><p class="lf-empty-title">Todas as entregas do período estão faturadas.</p></div>{% endif %}
+    </section>
+
+    <section class="cs-card space-y-2">
+      <h2 class="cs-h2">Faturadas sem entrega no sistema</h2>
+      {% if c.not_delivered_n %}
+        <div class="lf-table-wrap"><table class="lf-table">
+          <thead><tr><th>Estado no sistema</th><th class="text-right">Guias</th></tr></thead>
+          <tbody>{% for s, n in c.not_delivered_status %}<tr><td>{{ s|default:"—" }}</td><td class="lf-num">{{ n }}</td></tr>{% endfor %}</tbody>
+        </table></div>
+        <p class="cs-help">Exemplos: {% for lp in c.not_delivered_sample %}<span class="font-mono">{{ lp }}</span>{% if not forloop.last %}, {% endif %}{% endfor %}</p>
+      {% else %}<div class="lf-empty"><p class="lf-empty-title">Todas as guias faturadas estão entregues no sistema.</p></div>{% endif %}
+    </section>
+  </div>
+
+  <section class="cs-card space-y-2">
+    <h2 class="cs-h2">Motorista na fatura diferente do sistema</h2>
+    <p class="cs-help">A mesma guia LP tem um Employee ID na fatura e outro ID de motorista no sistema. Não está confirmado qual está certo.</p>
+    {% if c.mismatch_rows %}
+    <div class="lf-table-wrap"><table class="lf-table">
+      <thead><tr><th>Login no sistema</th><th>ID no sistema</th><th>Ficha desse ID</th><th>ID na fatura</th><th>Ficha desse ID</th><th class="text-right">Guias</th></tr></thead>
+      <tbody>{% for m in c.mismatch_rows %}<tr><td>{{ m.courier_name }}</td><td class="font-mono">{{ m.our_id }}</td><td>{{ m.our_driver.nome_completo|default:"—" }}</td><td class="font-mono">{{ m.billed_id }}</td><td>{% if m.billed_driver %}{{ m.billed_driver.nome_completo }}{% else %}<span class="lf-badge lf-tone-danger">Sem ficha</span>{% endif %}</td><td class="lf-num">{{ m.n }}</td></tr>{% endfor %}</tbody>
+    </table></div>
+    {% else %}<div class="lf-empty"><p class="lf-empty-title">Os IDs dos motoristas conferem.</p></div>{% endif %}
+  </section>
+
+  {% if c.unknown_ids %}
+  <section class="cs-card space-y-2">
+    <h2 class="cs-h2">Employee ID sem ficha de motorista</h2>
+    <div class="lf-table-wrap"><table class="lf-table">
+      <thead><tr><th>Employee ID</th><th class="text-right">Guias faturadas</th></tr></thead>
+      <tbody>{% for u in c.unknown_ids %}<tr><td class="font-mono">{{ u.employee_id }}</td><td class="lf-num">{{ u.n }}</td></tr>{% endfor %}</tbody>
+    </table></div>
+  </section>
+  {% endif %}
+</div>
+{% endblock %}

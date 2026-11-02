@@ -1,0 +1,177 @@
+{% extends 'settlements/base.html' %}
+{% load ui %}
+{% block title %}Pré-fatura Cainiao {{ pre.period_from|date:"d/m" }}–{{ pre.period_to|date:"d/m/Y" }}{% endblock %}
+{% block content %}
+{% include 'settlements/cainiao_subledger/_style.html' %}
+<div class="max-w-screen-2xl mx-auto px-4 py-6 space-y-4">
+  <div class="lf-page-header">
+    <div class="min-w-0">
+      <h1 class="lf-page-title">Pré-fatura Cainiao · {{ pre.period_from|date:"d/m/Y" }} → {{ pre.period_to|date:"d/m/Y" }}</h1>
+      <p class="lf-page-subtitle">
+        <span class="lf-badge {% if pre.status == 'EMITIDA' %}lf-tone-success{% else %}lf-tone-warning{% endif %}">{{ pre.get_status_display }}</span>
+        {% if pre.toconline_invoice %} Fatura {{ pre.toconline_invoice }}{% if pre.toconline_credit_note %} · NC {{ pre.toconline_credit_note }}{% endif %}{% if pre.issued_at %} · {{ pre.issued_at|date:"d/m/Y" }}{% endif %}{% endif %}
+      </p>
+    </div>
+    <div class="lf-page-actions">
+      <a class="lf-btn lf-btn-ghost" href="{% url 'cainiao-subledger-list' %}"><i data-lucide="arrow-left" class="w-4 h-4" aria-hidden="true"></i> Voltar</a>
+      <a class="lf-btn lf-btn-secondary" href="{% url 'cainiao-preinvoice-checks' pre.pk %}"><i data-lucide="list-checks" class="w-4 h-4" aria-hidden="true"></i> Conferências</a>
+      <a class="lf-btn lf-btn-primary" href="{% url 'cainiao-preinvoice-export' pre.pk %}"><i data-lucide="file-spreadsheet" class="w-4 h-4" aria-hidden="true"></i> Excel</a>
+    </div>
+  </div>
+
+  {% if docs.control %}
+    <div class="lf-alert lf-tone-danger" role="alert">O líquido não confere com o total Cainiao: diferença de {{ docs.control|eur }}.</div>
+  {% endif %}
+  {% if docs.other_n %}
+    <div class="lf-alert lf-tone-warning" role="alert">{{ docs.other_n }} linhas com uma rubrica nova ({{ docs.other_total|eur }}). Não entram na fatura nem na nota de crédito. Peça a classificação.</div>
+  {% endif %}
+  {% for p in dyn.periods %}{% if p.label != 'No período' %}
+    <div class="lf-alert lf-tone-warning" role="alert">{{ p.label }}: {{ p.n }} linhas, {{ p.gross|eur }}. {{ p.note }}.</div>
+  {% endif %}{% endfor %}
+
+  <div class="lf-kpi-grid">
+    <div class="lf-kpi"><p class="lf-kpi-label">Líquido a receber</p><p class="lf-kpi-value">{{ docs.net.gross|eur }}</p><p class="lf-kpi-note">base {{ docs.net.base|eur }} · IVA {{ docs.net.vat|eur }}</p></div>
+    <div class="lf-kpi"><p class="lf-kpi-label">Fatura</p><p class="lf-kpi-value">{{ docs.invoice_total.gross|eur }}</p><p class="lf-kpi-note">{{ docs.invoice_total.qty }} entregas</p></div>
+    <div class="lf-kpi"><p class="lf-kpi-label">Nota de crédito</p><p class="lf-kpi-value">{{ docs.credit_total.gross|eur }}</p><p class="lf-kpi-note">{{ docs.credit_total.qty }} linhas</p></div>
+    <div class="lf-kpi"><p class="lf-kpi-label">Faturas Cainiao</p><p class="lf-kpi-value">{{ bills|length }}</p><p class="lf-kpi-note">total Cainiao {{ docs.cainiao_total|eur }}</p></div>
+  </div>
+
+  <div class="lf-tabs" role="tablist" aria-label="Detalhe da pré-fatura">
+    <button type="button" role="tab" class="lf-tab lf-tab-active" aria-selected="true" data-cs-tab="documentos">Documentos</button>
+    <button type="button" role="tab" class="lf-tab" aria-selected="false" data-cs-tab="dinamica">Dinâmica</button>
+    <button type="button" role="tab" class="lf-tab" aria-selected="false" data-cs-tab="compensacoes">Compensações ({{ dyn.compensations|length }})</button>
+    <button type="button" role="tab" class="lf-tab" aria-selected="false" data-cs-tab="faturas">Faturas Cainiao ({{ bills|length }})</button>
+    <button type="button" role="tab" class="lf-tab" aria-selected="false" data-cs-tab="toconline">TOConline</button>
+  </div>
+
+  <div data-cs-panel="documentos" class="space-y-4">
+    {% include 'settlements/cainiao_subledger/_doc.html' with title="Documento 1 — Fatura" lines=docs.invoice total=docs.invoice_total %}
+    {% include 'settlements/cainiao_subledger/_doc.html' with title="Documento 2 — Nota de crédito" lines=docs.credit total=docs.credit_total %}
+    <div class="cs-card">
+      <table class="lf-table">
+        <tbody>
+          <tr class="cs-total"><td>Líquido a receber</td><td class="lf-num">base {{ docs.net.base|eur }}</td><td class="lf-num">IVA {{ docs.net.vat|eur }}</td><td class="lf-num">{{ docs.net.gross|eur }}</td></tr>
+          <tr><td>Controlo vs. total Cainiao (deve ser 0,00 €)</td><td></td><td></td><td class="lf-num">{{ docs.control|eur }}</td></tr>
+        </tbody>
+      </table>
+      <p class="cs-help" style="margin-top:var(--space-2)">Os valores Cainiao já incluem IVA: base = valor ÷ 1,23. Compensações a 0 % de IVA.</p>
+    </div>
+  </div>
+
+  <div data-cs-panel="dinamica" class="cs-grid" hidden>
+    <section class="cs-card space-y-2">
+      <h2 class="cs-h2">Por dia de entrega</h2>
+      <div class="lf-table-wrap"><table class="lf-table">
+        <thead><tr><th>Dia</th><th class="text-right">Entregas</th><th class="text-right">Valor entregas</th><th class="text-right">Outras rubricas</th></tr></thead>
+        <tbody>{% for day, v in dyn.by_day %}<tr><td>{{ day|date:"D d/m" }}</td><td class="lf-num">{{ v.n }}</td><td class="lf-num">{{ v.deliveries|eur }}</td><td class="lf-num">{% if v.other %}{{ v.other|eur }}{% else %}—{% endif %}</td></tr>{% endfor %}</tbody>
+      </table></div>
+    </section>
+    <section class="cs-card space-y-2">
+      <h2 class="cs-h2">Por tarifa (entregas)</h2>
+      <div class="lf-table-wrap"><table class="lf-table">
+        <thead><tr><th class="text-right">Tarifa c/ IVA</th><th class="text-right">Base</th><th class="text-right">Registos</th><th class="text-right">Valor</th><th class="text-right">%</th></tr></thead>
+        <tbody>{% for t in dyn.by_tariff %}<tr><td class="lf-num">{{ t.amount|eur }}</td><td class="lf-num">{{ t.base|eur }}</td><td class="lf-num">{{ t.n }}</td><td class="lf-num">{{ t.total|eur }}</td><td class="lf-num">{{ t.share|floatformat:1 }} %</td></tr>{% endfor %}</tbody>
+      </table></div>
+    </section>
+    {% if dyn.periods %}
+    <section class="cs-card space-y-2">
+      <h2 class="cs-h2">Por período de entrega</h2>
+      <div class="lf-table-wrap"><table class="lf-table">
+        <thead><tr><th>Período</th><th class="text-right">Registos</th><th class="text-right">Valor c/ IVA</th><th class="text-right">Base</th><th>Observação</th></tr></thead>
+        <tbody>{% for p in dyn.periods %}<tr><td>{{ p.label }}</td><td class="lf-num">{{ p.n }}</td><td class="lf-num">{{ p.gross|eur }}</td><td class="lf-num">{{ p.base|eur }}</td><td>{{ p.note }}</td></tr>{% endfor %}</tbody>
+      </table></div>
+    </section>
+    {% endif %}
+  </div>
+
+  <div data-cs-panel="compensacoes" hidden>
+    <section class="cs-card space-y-2">
+      <h2 class="cs-h2">Detalhe das compensações (anexar à nota de crédito)</h2>
+      {% if dyn.compensations %}
+      <div class="lf-table-wrap"><table class="lf-table">
+        <thead><tr><th>Data</th><th>Encomenda (LP)</th><th class="text-right">Valor</th><th>Bill ID</th><th>Comentário Cainiao</th></tr></thead>
+        <tbody>{% for c in dyn.compensations %}<tr><td>{{ c.business_at|date:"d/m/Y H:i" }}</td><td class="font-mono">{{ c.lp_number }}</td><td class="lf-num">{{ c.amount|eur }}</td><td class="font-mono">{{ c.bill.bill_id }}</td><td>{{ c.claim_comment|default:"—" }}</td></tr>{% endfor %}</tbody>
+      </table></div>
+      {% else %}<div class="lf-empty"><p class="lf-empty-title">Sem compensações nesta pré-fatura.</p></div>{% endif %}
+    </section>
+  </div>
+
+  <div data-cs-panel="faturas" class="space-y-4" hidden>
+    <form method="post" action="{% url 'cainiao-preinvoice-update' pre.pk %}" class="cs-card space-y-3">
+      {% csrf_token %}<input type="hidden" name="action" value="bills">
+      <h2 class="cs-h2">Faturas Cainiao incluídas</h2>
+      <div class="lf-table-wrap"><table class="lf-table">
+        <thead><tr>{% if pre.status == 'RASCUNHO' %}<th>Retirar</th>{% endif %}<th>Bill ID</th><th>Rubrica principal</th><th>1.ª entrega</th><th>Última entrega</th><th>Faturado em</th><th class="text-right">Linhas</th><th class="text-right">Valor</th></tr></thead>
+        <tbody>
+          {% for b in dyn.by_bill %}
+          <tr>
+            {% if pre.status == 'RASCUNHO' %}<td><input type="checkbox" name="remove" value="{{ b.bill__bill_id }}" aria-label="Retirar {{ b.bill__bill_id }}"></td>{% endif %}
+            <td class="font-mono">{{ b.bill__bill_id }}</td>
+            <td>{% include 'settlements/cainiao_subledger/_item.html' with item=b.bill__main_item %}</td>
+            <td>{{ b.first|date:"d/m/Y H:i" }}</td><td>{{ b.last|date:"d/m/Y H:i" }}</td><td>{{ b.billed|date:"d/m/Y H:i" }}</td>
+            <td class="lf-num">{{ b.n }}</td><td class="lf-num">{{ b.total|eur }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table></div>
+      {% if pre.status == 'RASCUNHO' and free_bills %}
+        <h3 class="cs-h2" style="font-size:var(--text-sm)">Acrescentar faturas sem pré-fatura</h3>
+        <div class="lf-table-wrap"><table class="lf-table">
+          <thead><tr><th>Acrescentar</th><th>Bill ID</th><th>Rubrica principal</th><th>1.ª entrega</th><th>Última entrega</th><th class="text-right">Linhas</th><th class="text-right">Valor</th></tr></thead>
+          <tbody>{% for b in free_bills %}<tr><td><input type="checkbox" name="add" value="{{ b.bill_id }}" aria-label="Acrescentar {{ b.bill_id }}"></td><td class="font-mono">{{ b.bill_id }}</td><td>{% include 'settlements/cainiao_subledger/_item.html' with item=b.main_item %}</td><td>{{ b.first_business_at|date:"d/m/Y" }}</td><td>{{ b.last_business_at|date:"d/m/Y" }}</td><td class="lf-num">{{ b.n_lines }}</td><td class="lf-num">{{ b.total_amount|eur }}</td></tr>{% endfor %}</tbody>
+        </table></div>
+      {% endif %}
+      {% if pre.status == 'RASCUNHO' %}<button class="lf-btn lf-btn-secondary" type="submit">Guardar alterações</button>{% endif %}
+    </form>
+  </div>
+
+  <div data-cs-panel="toconline" class="cs-grid" hidden>
+    <form method="post" action="{% url 'cainiao-preinvoice-update' pre.pk %}" class="cs-card space-y-3">
+      {% csrf_token %}
+      {% if pre.status == 'RASCUNHO' %}
+        <input type="hidden" name="action" value="issue">
+        <h2 class="cs-h2">Registar a emissão no TOConline</h2>
+        <p class="cs-help">Emita a fatura e a nota de crédito no TOConline com os valores do separador Documentos. Depois escreva aqui os números.</p>
+        <div class="lf-field"><label class="lf-label" for="cs-inv">N.º da fatura</label><input id="cs-inv" class="lf-control" name="toconline_invoice" required></div>
+        <div class="lf-field"><label class="lf-label" for="cs-nc">N.º da nota de crédito</label><input id="cs-nc" class="lf-control" name="toconline_credit_note"></div>
+        <div class="lf-field"><label class="lf-label" for="cs-date">Data de emissão</label><input id="cs-date" class="lf-control" type="date" name="issued_at"></div>
+        <button class="lf-btn lf-btn-primary" type="submit">Marcar como emitida</button>
+      {% else %}
+        <input type="hidden" name="action" value="reopen">
+        <h2 class="cs-h2">Emitida no TOConline</h2>
+        <p>Fatura {{ pre.toconline_invoice }}{% if pre.toconline_credit_note %} · NC {{ pre.toconline_credit_note }}{% endif %} · {{ pre.issued_at|date:"d/m/Y" }}</p>
+        <button class="lf-btn lf-btn-ghost" type="submit" data-confirm="Reabrir a pré-fatura? Os números do TOConline ficam guardados.">Reabrir</button>
+      {% endif %}
+    </form>
+    <form method="post" action="{% url 'cainiao-preinvoice-update' pre.pk %}" class="cs-card space-y-3">
+      {% csrf_token %}<input type="hidden" name="action" value="notes">
+      <div class="lf-field"><label class="lf-label" for="cs-notes">Notas</label><textarea id="cs-notes" class="lf-control" name="notes" rows="5" style="padding-block:var(--space-2)">{{ pre.notes }}</textarea></div>
+      <button class="lf-btn lf-btn-secondary" type="submit">Guardar notas</button>
+    </form>
+    {% if pre.status == 'RASCUNHO' %}
+    <form method="post" action="{% url 'cainiao-preinvoice-delete' pre.pk %}" class="cs-card space-y-3" data-confirm="Eliminar esta pré-fatura? As faturas Cainiao voltam à lista.">
+      {% csrf_token %}
+      <h2 class="cs-h2">Eliminar</h2>
+      <p class="cs-help">As faturas Cainiao e as linhas importadas ficam no sistema.</p>
+      <button class="lf-btn lf-btn-danger" type="submit">Eliminar pré-fatura</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+<script>
+(function () {
+  const tabs = document.querySelectorAll('[data-cs-tab]');
+  function show(name) {
+    tabs.forEach((t) => {
+      const on = t.dataset.csTab === name;
+      t.classList.toggle('lf-tab-active', on);
+      t.setAttribute('aria-selected', String(on));
+    });
+    document.querySelectorAll('[data-cs-panel]').forEach((p) => { p.hidden = p.dataset.csPanel !== name; });
+  }
+  tabs.forEach((t) => t.addEventListener('click', () => { show(t.dataset.csTab); history.replaceState(null, '', '#' + t.dataset.csTab); }));
+  const start = location.hash.slice(1);
+  if (start && document.querySelector(`[data-cs-panel="${start}"]`)) show(start);
+})();
+</script>
+{% endblock %}

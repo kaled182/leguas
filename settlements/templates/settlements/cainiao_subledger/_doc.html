@@ -1,0 +1,13 @@
+{% load ui %}
+<section class="cs-card space-y-2">
+  <h2 class="cs-h2">{{ title }}</h2>
+  <div class="lf-table-wrap"><table class="lf-table">
+    <thead><tr><th>Código</th><th>Descrição</th><th class="text-right">Qtd.</th><th class="text-right">Base (s/ IVA)</th><th class="text-right">IVA %</th><th class="text-right">Valor IVA</th><th class="text-right">Valor c/ IVA</th><th>Rubrica Cainiao</th></tr></thead>
+    <tbody>
+      {% for l in lines %}
+      <tr><td class="font-mono">{{ l.code }}</td><td>{{ l.label }}</td><td class="lf-num">{{ l.qty }}</td><td class="lf-num">{{ l.base|eur }}</td><td class="lf-num">{% widthratio l.vat_rate 1 100 %} %</td><td class="lf-num">{{ l.vat|eur }}</td><td class="lf-num">{{ l.gross|eur }}</td><td>{{ l.raw }}</td></tr>
+      {% endfor %}
+      <tr class="cs-total"><td></td><td>Total</td><td class="lf-num">{{ total.qty }}</td><td class="lf-num">{{ total.base|eur }}</td><td></td><td class="lf-num">{{ total.vat|eur }}</td><td class="lf-num">{{ total.gross|eur }}</td><td></td></tr>
+    </tbody>
+  </table></div>
+</section>

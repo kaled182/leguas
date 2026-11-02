@@ -4791,3 +4791,142 @@ class CainiaoBillingLine(models.Model):
     @property
     def is_claim(self):
         return self.fee_type == "compensacion"
+
+
+# ─── Sub-ledger Cainiao (portal CES) ───────────────────────────────────────────
+
+class CainiaoSubledgerImport(models.Model):
+    """Um CSV de sub-ledger descarregado do portal CES."""
+    file_name = models.CharField("Ficheiro", max_length=255)
+    file_hash = models.CharField("SHA-256", max_length=64, db_index=True)
+    n_lines = models.PositiveIntegerField("Linhas no ficheiro", default=0)
+    n_new = models.PositiveIntegerField("Linhas novas", default=0)
+    total_amount = models.DecimalField(
+        "Total do ficheiro (€)", max_digits=12, decimal_places=2, default=Decimal("0"),
+    )
+    imported_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="+",
+    )
+    imported_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Sub-ledger Cainiao importado"
+        verbose_name_plural = "Sub-ledgers Cainiao importados"
+        ordering = ["-imported_at"]
+
+    def __str__(self):
+        return f"{self.file_name} · {self.n_lines} linhas"
+
+
+class CainiaoClientPreInvoice(models.Model):
+    """Pré-fatura à ESDP: as faturas Cainiao de uma quinzena.
+
+    O sistema prepara a fatura e a nota de crédito. A emissão é feita
+    à mão no TOConline; aqui só se guardam os números dos documentos.
+    """
+    STATUS_DRAFT = "RASCUNHO"
+    STATUS_ISSUED = "EMITIDA"
+    STATUS_CHOICES = [
+        (STATUS_DRAFT, "Rascunho"),
+        (STATUS_ISSUED, "Emitida no TOConline"),
+    ]
+
+    period_from = models.DateField("Entregas de")
+    period_to = models.DateField("Entregas até")
+    status = models.CharField(
+        "Estado", max_length=10, choices=STATUS_CHOICES, default=STATUS_DRAFT,
+    )
+    toconline_invoice = models.CharField("N.º da fatura (TOConline)", max_length=40, blank=True)
+    toconline_credit_note = models.CharField("N.º da nota de crédito (TOConline)", max_length=40, blank=True)
+    issued_at = models.DateField("Emitida em", null=True, blank=True)
+    notes = models.TextField("Notas", blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="+",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Pré-fatura Cainiao"
+        verbose_name_plural = "Pré-faturas Cainiao"
+        ordering = ["-period_to", "-id"]
+
+    def __str__(self):
+        return f"Pré-fatura Cainiao {self.period_from:%d/%m} a {self.period_to:%d/%m/%Y}"
+
+
+class CainiaoBill(models.Model):
+    """Fatura do portal CES (Bill ID), com os totais das suas linhas."""
+    bill_id = models.CharField("Bill ID", max_length=40, unique=True)
+    main_item = models.CharField("Tipo principal", max_length=20, blank=True)
+    n_lines = models.PositiveIntegerField("Linhas", default=0)
+    total_amount = models.DecimalField(
+        "Valor c/ IVA (€)", max_digits=12, decimal_places=2, default=Decimal("0"),
+    )
+    first_business_at = models.DateTimeField("1.ª entrega", null=True, blank=True)
+    last_business_at = models.DateTimeField("Última entrega", null=True, blank=True)
+    last_billing_at = models.DateTimeField("Faturado em", null=True, blank=True)
+    pre_invoice = models.ForeignKey(
+        CainiaoClientPreInvoice, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="bills", verbose_name="Pré-fatura",
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Fatura Cainiao (CES)"
+        verbose_name_plural = "Faturas Cainiao (CES)"
+        ordering = ["-last_business_at"]
+
+    def __str__(self):
+        return self.bill_id
+
+
+class CainiaoBillCharge(models.Model):
+    """Uma linha do sub-ledger: uma guia, uma rubrica, um valor."""
+    ITEM_LASTMILE = "LASTMILE"
+    ITEM_ENVIO = "ENVIO"
+    ITEM_REVERSE = "REVERSE"
+    ITEM_LINEHAUL = "LINEHAUL"
+    ITEM_COMPENSATION = "COMPENSATION"
+    ITEM_APP_FEE = "APP_FEE"
+    ITEM_OTHER = "OTHER"
+    ITEM_CHOICES = [
+        (ITEM_LASTMILE, "Entrega last-mile"),
+        (ITEM_ENVIO, "Envio fee (entregas)"),
+        (ITEM_REVERSE, "Recolha reversa"),
+        (ITEM_LINEHAUL, "Transporte de linha"),
+        (ITEM_COMPENSATION, "Compensação (reclamação)"),
+        (ITEM_APP_FEE, "App fee"),
+        (ITEM_OTHER, "Outra rubrica"),
+    ]
+    DELIVERY_ITEMS = (ITEM_LASTMILE, ITEM_ENVIO)
+
+    bill = models.ForeignKey(
+        CainiaoBill, on_delete=models.CASCADE, related_name="charges",
+    )
+    settlement_id = models.CharField("Settlement ID", max_length=40, unique=True)
+    item = models.CharField("Rubrica", max_length=20, choices=ITEM_CHOICES, db_index=True)
+    item_raw = models.CharField("Rubrica Cainiao", max_length=60)
+    business_at = models.DateTimeField("Data de negócio", db_index=True)
+    billing_at = models.DateTimeField("Faturado em", null=True, blank=True)
+    amount = models.DecimalField("Valor c/ IVA (€)", max_digits=10, decimal_places=2)
+    lp_number = models.CharField("Encomenda (LP)", max_length=60, db_index=True)
+    employee_id = models.CharField("Employee ID", max_length=40, blank=True, db_index=True)
+    weight_g = models.PositiveIntegerField("Peso (g)", null=True, blank=True)
+    first_order = models.CharField("1.ª encomenda na porta", max_length=1, blank=True)
+    postal_code = models.CharField("CP", max_length=10, blank=True, db_index=True)
+    formula = models.CharField("Fórmula", max_length=200, blank=True)
+    claim_comment = models.CharField("Comentário da compensação", max_length=300, blank=True)
+    source = models.ForeignKey(
+        CainiaoSubledgerImport, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="charges",
+    )
+
+    class Meta:
+        verbose_name = "Linha do sub-ledger Cainiao"
+        verbose_name_plural = "Linhas do sub-ledger Cainiao"
+        indexes = [models.Index(fields=["bill", "item"])]
+
+    def __str__(self):
+        return f"{self.lp_number} · {self.item} · {self.amount}"

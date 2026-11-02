@@ -1,0 +1,100 @@
+{% extends 'settlements/base.html' %}
+{% load ui %}
+{% block title %}Pré-faturas Cainiao{% endblock %}
+{% block content %}
+{% include 'settlements/cainiao_subledger/_style.html' %}
+<div class="max-w-screen-2xl mx-auto px-4 py-6 space-y-4">
+  <div class="lf-page-header">
+    <div class="min-w-0">
+      <h1 class="lf-page-title">Pré-faturas Cainiao</h1>
+      <p class="lf-page-subtitle">Importe o CSV de "Download Sub-Ledger" do portal CES. O sistema prepara a fatura e a nota de crédito para o TOConline.</p>
+    </div>
+    <div class="lf-page-actions">
+      <a class="lf-btn lf-btn-ghost" href="https://b.eu.cainiao.com/finance/bill/manageList" target="_blank" rel="noopener">
+        <i data-lucide="external-link" class="w-4 h-4" aria-hidden="true"></i> Portal CES
+      </a>
+    </div>
+  </div>
+
+  <form method="post" action="{% url 'cainiao-subledger-upload' %}" enctype="multipart/form-data" class="cs-card lf-filters">
+    {% csrf_token %}
+    <div class="lf-field">
+      <label class="lf-label" for="cs-file">CSV do sub-ledger (Consolidated_Bill_…csv)</label>
+      <input id="cs-file" class="lf-control" type="file" name="file" accept=".csv" multiple required>
+    </div>
+    <button class="lf-btn lf-btn-primary" type="submit"><i data-lucide="upload" class="w-4 h-4" aria-hidden="true"></i> Importar</button>
+  </form>
+
+  <section class="cs-card space-y-3">
+    <h2 class="cs-h2">Faturas Cainiao sem pré-fatura <span class="lf-badge lf-tone-neutral">{{ bills|length }}</span></h2>
+    {% if bills %}
+    <form method="post" action="{% url 'cainiao-preinvoice-create' %}" class="space-y-3">
+      {% csrf_token %}
+      <div class="lf-table-wrap">
+        <table class="lf-table">
+          <thead><tr>
+            <th></th><th>Bill ID</th><th>Rubrica principal</th><th>1.ª entrega</th><th>Última entrega</th><th>Faturado em</th><th class="text-right">Linhas</th><th class="text-right">Valor c/ IVA</th>
+          </tr></thead>
+          <tbody>
+          {% for b in bills %}
+            <tr>
+              <td><input type="checkbox" name="bill" value="{{ b.bill_id }}" aria-label="Escolher {{ b.bill_id }}"
+                {% if b.last_business_at and b.last_business_at.date >= period_from and b.first_business_at.date <= period_to %}checked{% endif %}></td>
+              <td class="font-mono">{{ b.bill_id }}</td>
+              <td>{% include 'settlements/cainiao_subledger/_item.html' with item=b.main_item %}</td>
+              <td>{{ b.first_business_at|date:"d/m/Y" }}</td>
+              <td>{{ b.last_business_at|date:"d/m/Y" }}</td>
+              <td>{{ b.last_billing_at|date:"d/m/Y H:i" }}</td>
+              <td class="lf-num">{{ b.n_lines }}</td>
+              <td class="lf-num">{{ b.total_amount|eur }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="lf-filters" style="margin-bottom:0">
+        <div class="lf-field"><label class="lf-label" for="cs-from">Entregas de</label><input id="cs-from" class="lf-control" type="date" name="period_from" value="{{ period_from|date:'Y-m-d' }}" required></div>
+        <div class="lf-field"><label class="lf-label" for="cs-to">Entregas até</label><input id="cs-to" class="lf-control" type="date" name="period_to" value="{{ period_to|date:'Y-m-d' }}" required></div>
+        <button class="lf-btn lf-btn-primary" type="submit"><i data-lucide="file-plus" class="w-4 h-4" aria-hidden="true"></i> Criar pré-fatura com as escolhidas</button>
+      </div>
+      <p class="cs-help">Ficam escolhidas as faturas com entregas na quinzena indicada. Pode mudar a escolha.</p>
+    </form>
+    {% else %}
+      <div class="lf-empty"><p class="lf-empty-title">Todas as faturas importadas já têm pré-fatura.</p><p>Importe um sub-ledger novo para continuar.</p></div>
+    {% endif %}
+  </section>
+
+  <section class="cs-card space-y-3">
+    <h2 class="cs-h2">Pré-faturas</h2>
+    {% if pre_invoices %}
+    <div class="lf-table-wrap">
+      <table class="lf-table">
+        <thead><tr><th>Período</th><th>Estado</th><th>TOConline</th><th class="text-right">Faturas Cainiao</th><th>Criada</th></tr></thead>
+        <tbody>
+        {% for p in pre_invoices %}
+          <tr>
+            <td><a class="cs-link" href="{% url 'cainiao-preinvoice-detail' p.pk %}">{{ p.period_from|date:"d/m/Y" }} → {{ p.period_to|date:"d/m/Y" }}</a></td>
+            <td><span class="lf-badge {% if p.status == 'EMITIDA' %}lf-tone-success{% else %}lf-tone-warning{% endif %}">{{ p.get_status_display }}</span></td>
+            <td>{{ p.toconline_invoice|default:"—" }}{% if p.toconline_credit_note %} · NC {{ p.toconline_credit_note }}{% endif %}</td>
+            <td class="lf-num">{{ p.bills.all|length }}</td>
+            <td>{{ p.created_at|date:"d/m/Y H:i" }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+      <div class="lf-empty"><p class="lf-empty-title">Ainda não há pré-faturas.</p></div>
+    {% endif %}
+  </section>
+
+  {% if imports %}
+  <section class="cs-card space-y-2">
+    <h2 class="cs-h2">Últimos ficheiros importados</h2>
+    <ul class="cs-list">
+      {% for i in imports %}<li>{{ i.imported_at|date:"d/m/Y H:i" }} · {{ i.file_name }} · {{ i.n_lines }} linhas ({{ i.n_new }} novas) · {{ i.total_amount|eur }}</li>{% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+</div>
+{% endblock %}

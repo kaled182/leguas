@@ -4,6 +4,7 @@ from . import (
     cainiao_views, holiday_views,
     views, views_cash_entries, views_fleet_portal, views_pudo,
     views_shareholder, views_cainiao_billing, views_reliable_sync,
+    views_cainiao_subledger,
     views_courier_onboarding, views_fleet_invoices,
 )
 
@@ -37,6 +38,15 @@ urlpatterns = [
         views.invoice_download_pdf,
         name="invoice-pdf",
     ),
+    # Pré-faturas Cainiao a partir do sub-ledger do portal CES
+    path("cainiao/pre-faturas/", views_cainiao_subledger.subledger_list, name="cainiao-subledger-list"),
+    path("cainiao/pre-faturas/importar/", views_cainiao_subledger.subledger_upload, name="cainiao-subledger-upload"),
+    path("cainiao/pre-faturas/nova/", views_cainiao_subledger.pre_invoice_create, name="cainiao-preinvoice-create"),
+    path("cainiao/pre-faturas/<int:pk>/", views_cainiao_subledger.pre_invoice_detail, name="cainiao-preinvoice-detail"),
+    path("cainiao/pre-faturas/<int:pk>/conferencias/", views_cainiao_subledger.pre_invoice_checks, name="cainiao-preinvoice-checks"),
+    path("cainiao/pre-faturas/<int:pk>/excel/", views_cainiao_subledger.pre_invoice_export, name="cainiao-preinvoice-export"),
+    path("cainiao/pre-faturas/<int:pk>/atualizar/", views_cainiao_subledger.pre_invoice_update, name="cainiao-preinvoice-update"),
+    path("cainiao/pre-faturas/<int:pk>/eliminar/", views_cainiao_subledger.pre_invoice_delete, name="cainiao-preinvoice-delete"),
     # Importação Cainiao Billing (XLSX)
     path(
         "invoices/cainiao/upload/",

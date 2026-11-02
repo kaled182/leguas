@@ -49,6 +49,7 @@ MENU = (
                item("Conta-corrente", "cash-entries-dashboard"),
                item("Pré-faturas", "pre-invoice-admin-list")),
         parent("A receber", "arrow-down-left",
+               item("Pré-faturas Cainiao", "cainiao-subledger-list"),
                item("Reconciliação bancária", "accounting:bank_reconciliation"),
                item("Extratos bancários", "accounting:bank_statement_list")),
         parent("A pagar", "arrow-up-right",

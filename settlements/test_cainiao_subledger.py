@@ -181,3 +181,41 @@ class ChecksTests(TestCase):
         self.assertEqual((row["our_id"], row["billed_id"], row["billed_driver"].nome_completo),
                          ("900777", "900001", "Ana Teste"))
         self.assertEqual(c["unknown_ids"], [])
+
+
+class CompensationOwnerTests(TestCase):
+    def setUp(self):
+        from .models import DriverClaim
+        self.user = User.objects.create_superuser("adm", "a@a.pt", "x")
+        self.ana = DriverProfile.objects.create(
+            nif="123456789", nome_completo="Ana Teste", telefone="9", email="a@t.pt",
+            apelido="Ana_LF", courier_id_cainiao="900001", status="ATIVO", is_active=True,
+        )
+        CainiaoOperationTask.objects.create(
+            task_date=date(2026, 10, 19), waybill_number="CNLP0005", lp_number="LP0005",
+            task_status="Delivered", courier_name="Ana_LF", courier_id_cainiao="900001",
+        )
+        DriverClaim.objects.create(
+            driver=self.ana, claim_type=DriverClaim.CLAIM_TYPES[0][0], amount=Decimal("50"),
+            description="teste", waybill_number="CNLP0005", status="APPROVED",
+        )
+        import_subledger(csv_file(LINES + [
+            line(8, "货值赔付", "2026-10-21 12:00:00", "-30.0", "AP0008", employee="",
+                 bill="'500000000003", formula=""),
+        ]), self.user)
+        self.pre = create_pre_invoice(["500000000003"], date(2026, 10, 16), date(2026, 10, 31), self.user)
+
+    def test_compensacao_mostra_dono_e_desconto(self):
+        dyn = dynamic(charges_for(self.pre), self.pre.period_from, self.pre.period_to)
+        comp = {c.lp_number: c for c in dyn["compensations"]}
+        self.assertEqual(comp["LP0005"].owner["driver"], self.ana)
+        self.assertEqual(comp["LP0005"].owner["waybill"], "CNLP0005")
+        self.assertEqual([cl.amount for cl in comp["LP0005"].claims], [Decimal("50.00")])
+        self.assertIsNone(comp["AP0008"].owner)
+        owners = dict(dyn["compensations_by_owner"])
+        self.assertEqual(owners["Ana Teste"]["claimed"], 1)
+        self.assertEqual(owners["Sem dono identificado"]["n"], 1)
+        self.client.force_login(self.user)
+        r = self.client.get(reverse("cainiao-preinvoice-detail", args=[self.pre.pk]))
+        self.assertContains(r, "Sem dono identificado")
+        self.assertContains(r, "CNLP0005")

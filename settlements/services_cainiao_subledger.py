@@ -252,13 +252,54 @@ def dynamic(charges, period_from=None, period_to=None):
         charges.filter(item=CainiaoBillCharge.ITEM_COMPENSATION)
         .select_related("bill").order_by("business_at")
     )
+    by_owner = attach_compensation_owners(compensations)
     return {
         "by_bill": by_bill,
         "by_day": sorted(by_day.items()),
         "by_tariff": by_tariff,
         "periods": periods,
         "compensations": compensations,
+        "compensations_by_owner": by_owner,
     }
+
+
+def attach_compensation_owners(compensations):
+    """Junta a cada compensação o dono da guia e os descontos já lançados.
+
+    A Cainiao não envia o Employee ID nas compensações. O dono vem da
+    entrega com o mesmo número LP: o login usado e a ficha desse ID.
+    """
+    from .models import CainiaoOperationTask, DriverClaim
+
+    lps = [c.lp_number for c in compensations]
+    tasks = {}
+    for lp, status, name, courier_id, day, waybill in (
+        CainiaoOperationTask.objects.filter(lp_number__in=lps)
+        .order_by("task_date")
+        .values_list("lp_number", "task_status", "courier_name", "courier_id_cainiao",
+                     "task_date", "waybill_number")
+    ):
+        if lp not in tasks or tasks[lp]["status"] != "Delivered" or status == "Delivered":
+            tasks[lp] = {"status": status, "login": name, "courier_id": courier_id,
+                         "day": day, "waybill": waybill}
+    claims = defaultdict(list)
+    waybills = [t["waybill"] for t in tasks.values()] + lps
+    for claim in DriverClaim.objects.filter(waybill_number__in=waybills).select_related("driver"):
+        claims[claim.waybill_number].append(claim)
+
+    index = _driver_index()
+    by_owner = defaultdict(lambda: {"n": 0, "total": Decimal("0"), "claimed": 0})
+    for c in compensations:
+        c.owner = tasks.get(c.lp_number)
+        if c.owner:
+            c.owner["driver"] = index.get(c.owner["courier_id"])
+        c.claims = claims.get(c.owner["waybill"] if c.owner else "", []) + claims.get(c.lp_number, [])
+        driver = c.owner and c.owner["driver"]
+        key = driver.nome_completo if driver else (c.owner["login"] if c.owner else "Sem dono identificado")
+        by_owner[key]["n"] += 1
+        by_owner[key]["total"] += c.amount
+        by_owner[key]["claimed"] += 1 if c.claims else 0
+    return sorted(by_owner.items(), key=lambda kv: kv[1]["total"])
 
 
 # ─── Conferências com os dados da operação ─────────────────────────────────────
@@ -403,10 +444,16 @@ def export_xlsx(pre_invoice):
         ws.append([p["label"], p["n"], float(p["gross"]), float(p["base"]), p["note"]])
 
     ws = wb.create_sheet("Compensacoes")
-    ws.append(["Data", "Nº encomenda (LP)", "Valor", "Bill ID", "Comentário Cainiao"])
+    ws.append(["Data", "Nº encomenda (LP)", "Valor", "Bill ID", "Comentário Cainiao",
+               "Motorista (ficha)", "Login", "Guia", "Dia da entrega", "Desconto ao motorista"])
     for c in dyn["compensations"]:
+        o = c.owner or {}
+        driver = o.get("driver")
         ws.append([timezone.localtime(c.business_at).replace(tzinfo=None), c.lp_number,
-                   float(c.amount), c.bill.bill_id, c.claim_comment])
+                   float(c.amount), c.bill.bill_id, c.claim_comment,
+                   driver.nome_completo if driver else "", o.get("login", ""), o.get("waybill", ""),
+                   o.get("day"),
+                   "; ".join(f"{cl.driver.nome_completo} · {cl.get_status_display()} · {cl.amount} €" for cl in c.claims)])
 
     ws = wb.create_sheet("Linhas")
     ws.append(["Settlement ID", "Bill ID", "Rubrica", "Rubrica Cainiao", "Data de negócio",

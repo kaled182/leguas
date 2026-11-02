@@ -88,9 +88,22 @@
     <section class="cs-card space-y-2">
       <h2 class="cs-h2">Detalhe das compensações (anexar à nota de crédito)</h2>
       {% if dyn.compensations %}
+      <p class="cs-help">A Cainiao não diz o motorista nas compensações. O dono vem da entrega com o mesmo número LP: o login usado e a ficha desse ID.</p>
       <div class="lf-table-wrap"><table class="lf-table">
-        <thead><tr><th>Data</th><th>Encomenda (LP)</th><th class="text-right">Valor</th><th>Bill ID</th><th>Comentário Cainiao</th></tr></thead>
-        <tbody>{% for c in dyn.compensations %}<tr><td>{{ c.business_at|date:"d/m/Y H:i" }}</td><td class="font-mono">{{ c.lp_number }}</td><td class="lf-num">{{ c.amount|eur }}</td><td class="font-mono">{{ c.bill.bill_id }}</td><td>{{ c.claim_comment|default:"—" }}</td></tr>{% endfor %}</tbody>
+        <thead><tr><th>Motorista</th><th class="text-right">Compensações</th><th class="text-right">Valor</th><th class="text-right">Com desconto lançado</th></tr></thead>
+        <tbody>{% for name, v in dyn.compensations_by_owner %}<tr><td>{% if name == 'Sem dono identificado' %}<span class="lf-badge lf-tone-danger">{{ name }}</span>{% else %}{{ name }}{% endif %}</td><td class="lf-num">{{ v.n }}</td><td class="lf-num">{{ v.total|eur }}</td><td class="lf-num">{{ v.claimed }} de {{ v.n }}</td></tr>{% endfor %}</tbody>
+      </table></div>
+      <div class="lf-table-wrap"><table class="lf-table">
+        <thead><tr><th>Data</th><th>Encomenda (LP)</th><th class="text-right">Valor</th><th>Motorista</th><th>Login · guia · entrega</th><th>Desconto ao motorista</th><th>Comentário Cainiao</th></tr></thead>
+        <tbody>{% for c in dyn.compensations %}<tr>
+          <td>{{ c.business_at|date:"d/m/Y H:i" }}</td>
+          <td class="font-mono">{{ c.lp_number }}</td>
+          <td class="lf-num">{{ c.amount|eur }}</td>
+          <td>{% if c.owner.driver %}{{ c.owner.driver.nome_completo }}{% elif c.owner %}<span class="lf-badge lf-tone-warning">ID {{ c.owner.courier_id|default:"—" }} sem ficha</span>{% else %}<span class="lf-badge lf-tone-danger">Sem dono identificado</span>{% endif %}</td>
+          <td>{% if c.owner %}{{ c.owner.login }}<br><span class="font-mono cs-help">{{ c.owner.waybill }} · {{ c.owner.day|date:"d/m" }}{% if c.owner.status != 'Delivered' %} · {{ c.owner.status }}{% endif %}</span>{% else %}<span class="cs-help">Guia não existe nas entregas do sistema</span>{% endif %}</td>
+          <td>{% for cl in c.claims %}<div>{{ cl.driver.nome_completo }} · <span class="lf-badge {% if cl.status == 'APPROVED' %}lf-tone-success{% else %}lf-tone-neutral{% endif %}">{{ cl.get_status_display }}</span> · {{ cl.amount|eur }}</div>{% empty %}<span class="lf-badge lf-tone-warning">Sem desconto</span>{% endfor %}</td>
+          <td>{{ c.claim_comment|default:"—" }}</td>
+        </tr>{% endfor %}</tbody>
       </table></div>
       {% else %}<div class="lf-empty"><p class="lf-empty-title">Sem compensações nesta pré-fatura.</p></div>{% endif %}
     </section>

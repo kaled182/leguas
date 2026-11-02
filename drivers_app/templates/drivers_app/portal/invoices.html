@@ -73,7 +73,7 @@
     {% for p in negative_pfs %}{{ p.numero }} ({{ p.total_a_receber|eur }}){% if not forloop.last %}, {% endif %}{% endfor %}.
     O motorista deve à empresa: adiantamentos/descontos maiores do que a produção.
   </div>
-  <form method="post" action="{% url 'drivers_app:payments_bulk' %}" onsubmit="return confirm('Transitar o saldo para a próxima PF? Os adiantamentos necessários voltam a pendente e entram na próxima PF.')">
+  <form method="post" action="{% url 'drivers_app:payments_bulk' %}" data-confirm="Transitar o saldo para a próxima PF? Os adiantamentos necessários voltam a pendente e entram na próxima PF.">
     {% csrf_token %}
     <input type="hidden" name="action" value="carry">
     <input type="hidden" name="next" value="{{ request.get_full_path }}">

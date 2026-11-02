@@ -267,7 +267,7 @@ function referralsPage() {
     },
 
     async del(referralId, name) {
-      if (!confirm(`Remover indicação de ${name}?`)) return;
+      if (!await lfConfirm(`Remover indicação de ${name}?`)) return;
       const csrf = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
       const r = await fetch(`/driversapp/api/referrals/item/${referralId}/delete/`, {
         method: 'POST', headers: { 'X-CSRFToken': csrf },

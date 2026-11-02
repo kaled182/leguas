@@ -101,7 +101,7 @@
                 {% csrf_token %}
                 <input type="hidden" name="action" value="delete">
                 <input type="hidden" name="mapping_id" value="{{ m.id }}">
-                <button type="submit" onclick="return confirm('Remover login {{ m.partner.name }} / {{ m.courier_id }}?')"
+                <button type="submit" data-confirm="Remover login {{ m.partner.name }} / {{ m.courier_id }}?"
                         class="px-2 py-1 text-xs text-rose-600 dark:text-rose-400 hover:underline">
                   Remover
                 </button>

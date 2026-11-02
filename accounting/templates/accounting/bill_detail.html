@@ -42,7 +42,7 @@
         <i data-lucide="repeat" class="w-4 h-4"></i> Gerar Próxima
       </button>
       {% endif %}
-      <form method="post" action="{% url 'accounting:bill_delete' bill.pk %}" onsubmit="return confirm('Apagar esta conta?')">
+      <form method="post" action="{% url 'accounting:bill_delete' bill.pk %}" data-confirm="Apagar esta conta?">
         {% csrf_token %}
         <button type="submit" class="lf-btn lf-btn-danger">
           <i data-lucide="trash-2" class="w-4 h-4"></i> Apagar
@@ -184,21 +184,21 @@ function getCsrf() {
     || document.cookie.split(';').find(c => c.trim().startsWith('csrftoken='))?.split('=')[1];
 }
 async function markPaid() {
-  if (!confirm('Marcar como paga (data de hoje)?')) return;
+  if (!await lfConfirm('Marcar como paga (data de hoje)?')) return;
   const r = await fetch(`/accounting/contas-a-pagar/{{ bill.pk }}/marcar-paga/`, {
     method: 'POST', headers: { 'X-CSRFToken': getCsrf() },
   });
   if ((await r.json()).success) location.reload();
 }
 async function deleteAttachment(pk) {
-  if (!confirm('Apagar este anexo?')) return;
+  if (!await lfConfirm('Apagar este anexo?')) return;
   const r = await fetch(`/accounting/contas-a-pagar/anexo/${pk}/apagar/`, {
     method: 'POST', headers: { 'X-CSRFToken': getCsrf() },
   });
   if ((await r.json()).success) location.reload();
 }
 async function approveBill() {
-  const c = prompt('Comentário (opcional) para a aprovação:') ?? null;
+  const c = await lfPrompt('Comentário (opcional) para a aprovação:') ?? null;
   if (c === null) return;
   const fd = new FormData();
   fd.append('comments', c);
@@ -210,7 +210,7 @@ async function approveBill() {
   if (d.success) location.reload(); else alert(d.error || 'Erro');
 }
 async function rejectBill() {
-  const c = prompt('Razão da rejeição:') ?? null;
+  const c = await lfPrompt('Razão da rejeição:') ?? null;
   if (c === null) return;
   const fd = new FormData();
   fd.append('comments', c);
@@ -222,13 +222,13 @@ async function rejectBill() {
   if (d.success) location.reload(); else alert(d.error || 'Erro');
 }
 async function generateNext() {
-  if (!confirm('Gerar a próxima instância desta conta recorrente?')) return;
+  if (!await lfConfirm('Gerar a próxima instância desta conta recorrente?')) return;
   const r = await fetch(`/accounting/contas-a-pagar/{{ bill.pk }}/gerar-proxima/`, {
     method: 'POST', headers: { 'X-CSRFToken': getCsrf() },
   });
   const d = await r.json();
   if (d.success) {
-    if (confirm(`Nova conta criada (vence em ${d.due_date}). Abrir?`)) {
+    if (await lfConfirm(`Nova conta criada (vence em ${d.due_date}). Abrir?`)) {
       location.href = d.redirect_url;
     } else {
       location.reload();

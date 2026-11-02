@@ -14,7 +14,7 @@
 </div>
 <div class="lf-page-actions">
         {% if claim.status == 'PENDING' %}
-        <form method="post" class="contents" onsubmit="return confirm('Confirmar aprovação desta reclamação?')">
+        <form method="post" class="contents" data-confirm="Confirmar aprovação desta reclamação?">
           {% csrf_token %}
           <input type="hidden" name="action" value="approve">
           <button type="submit" class="lf-btn lf-btn-ghost duration-200">
@@ -34,7 +34,7 @@
           Remover desconto
         </button>
         {% elif claim.status == 'APPEALED' %}
-        <form method="post" class="contents" onsubmit="return confirm('Aceitar o recurso do motorista e CANCELAR o desconto?')">
+        <form method="post" class="contents" data-confirm="Aceitar o recurso do motorista e CANCELAR o desconto?">
           {% csrf_token %}
           <input type="hidden" name="action" value="accept_appeal">
           <button type="submit" title="Dar razão ao motorista — o desconto é cancelado"
@@ -43,7 +43,7 @@
             Aceitar recurso (cancelar desconto)
           </button>
         </form>
-        <form method="post" class="contents" onsubmit="return confirm('Rejeitar o recurso do motorista e MANTER o desconto?')">
+        <form method="post" class="contents" data-confirm="Rejeitar o recurso do motorista e MANTER o desconto?">
           {% csrf_token %}
           <input type="hidden" name="action" value="reject_appeal">
           <button type="submit" title="Não dar razão ao motorista — o desconto mantém-se"
@@ -52,7 +52,7 @@
             Rejeitar recurso (manter desconto)
           </button>
         </form>
-        <form method="post" class="contents" onsubmit="return confirm('Enviar este recurso ao parceiro? Estorna o valor ao motorista (quarentena 60 dias).')">
+        <form method="post" class="contents" data-confirm="Enviar este recurso ao parceiro? Estorna o valor ao motorista (quarentena 60 dias).">
           {% csrf_token %}
           <input type="hidden" name="action" value="send_appeal">
           <button type="submit" class="lf-btn lf-btn-ghost duration-200">
@@ -65,7 +65,7 @@
           <i data-lucide="clock" class="w-4 h-4"></i>
           Em quarentena{% if claim.quarantine_until %} · até {{ claim.quarantine_until|date:"d/m/Y" }}{% endif %}
         </span>
-        <form method="post" class="contents" onsubmit="return confirm('Parceiro ACEITOU o recurso? O estorno fica permanente (motorista não paga).')">
+        <form method="post" class="contents" data-confirm="Parceiro ACEITOU o recurso? O estorno fica permanente (motorista não paga).">
           {% csrf_token %}
           <input type="hidden" name="action" value="partner_approved">
           <button type="submit" class="lf-btn lf-btn-ghost duration-200">
@@ -73,7 +73,7 @@
             Recurso aceite (cliente)
           </button>
         </form>
-        <form method="post" class="contents" onsubmit="return confirm('Parceiro NEGOU o recurso? O desconto será re-aplicado na pré-fatura.')">
+        <form method="post" class="contents" data-confirm="Parceiro NEGOU o recurso? O desconto será re-aplicado na pré-fatura.">
           {% csrf_token %}
           <input type="hidden" name="action" value="partner_denied">
           <button type="submit" class="lf-btn lf-btn-danger duration-200">

@@ -141,7 +141,7 @@
             <form method="post" action="{% url 'accounting:imposto_mark_paid' p.pk %}" class="inline">
               {% csrf_token %}
               <button type="submit"
-                      onclick="return confirm('Marcar prestação #{{ p.parcela_numero }} ({{ p.valor|eur }}) como PAGA?');"
+                      data-confirm="Marcar prestação #{{ p.parcela_numero }} ({{ p.valor|eur }}) como PAGA?"
                       class="lf-btn lf-btn-ghost">
                 <i data-lucide="check" class="w-3 h-3"></i> Marcar paga
               </button>

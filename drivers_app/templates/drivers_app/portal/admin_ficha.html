@@ -268,7 +268,7 @@
                     {% endif %}
                     {% if c.signed_file %}<a href="{{ c.signed_file.url }}" target="_blank" class="px-2 py-0.5 rounded text-[11px] font-semibold border border-emerald-300 text-emerald-700 dark:text-emerald-300">Ver assinado</a>{% endif %}
                     {% if c.status != 'ANULADO' %}
-                      <form method="post" action="{% url 'contracts:generated_contract_action' c.id %}" onsubmit="return confirm('Anular este documento?')">{% csrf_token %}<input type="hidden" name="action" value="cancel">
+                      <form method="post" action="{% url 'contracts:generated_contract_action' c.id %}" data-confirm="Anular este documento?">{% csrf_token %}<input type="hidden" name="action" value="cancel">
                         <button class="px-2 py-0.5 rounded text-[11px] font-semibold text-rose-600 dark:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-900/30">Anular</button></form>
                     {% endif %}
                   </div>

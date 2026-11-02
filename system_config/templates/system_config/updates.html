@@ -345,7 +345,7 @@ function updatesPage() {
             message: 'Vai puxar a versão mais recente do GitHub e reconstruir o container web. O sistema poderá ficar inacessível durante alguns segundos.',
             confirmText: 'Atualizar agora', icon: 'download-cloud',
           })
-        : confirm('Aplicar atualização? O sistema poderá ficar inacessível por alguns segundos.');
+        : await lfConfirm('Aplicar atualização? O sistema poderá ficar inacessível por alguns segundos.');
       if (!ok) return;
       this.applying = true;
       const csrf = document.cookie.split('csrftoken=')[1]?.split(';')[0] || '';

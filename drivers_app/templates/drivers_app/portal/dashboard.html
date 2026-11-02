@@ -545,7 +545,7 @@ function portalDayDrawer(driverId) {
       finally { this.transferModal.submitting = false; }
     },
     async undoTransfer(overrideId) {
-      if (!confirm('Desfazer transferência?')) return;
+      if (!await lfConfirm('Desfazer transferência?')) return;
       try {
         const r = await fetch(`/settlements/transfers/${overrideId}/delete/`, POST());
         const d = await r.json();
@@ -580,7 +580,7 @@ function portalDayDrawer(driverId) {
       finally { this.priceModal.submitting = false; }
     },
     async undoPriceOverride(overrideId) {
-      if (!confirm('Remover preço especial? Volta ao preço base.')) return;
+      if (!await lfConfirm('Remover preço especial? Volta ao preço base.')) return;
       try {
         const r = await fetch(`/settlements/price-overrides/${overrideId}/delete/`, POST());
         const d = await r.json();

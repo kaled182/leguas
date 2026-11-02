@@ -482,7 +482,7 @@ function cashEntriesDashboard() {
             const inPF = e.pre_invoice_numero
                 ? `\n(Vai recalcular ${e.pre_invoice_numero} sem este valor.)`
                 : '';
-            if (!confirm(`Cancelar este lançamento de €${e.valor}?${inPF}`)) return;
+            if (!await lfConfirm(`Cancelar este lançamento de €${e.valor}?${inPF}`)) return;
             const r = await fetch(`/settlements/cash-entries/${e.id}/cancel/`, POST_JSON({}));
             const d = await r.json();
             if (d.success) {
@@ -495,7 +495,7 @@ function cashEntriesDashboard() {
 
         async deleteEntry(e) {
             const msg = `Apagar DEFINITIVAMENTE este lançamento de €${e.valor}?\n\nEsta acção é IRREVERSÍVEL — usa só para limpar lançamentos cancelados antigos.`;
-            if (!confirm(msg)) return;
+            if (!await lfConfirm(msg)) return;
             const r = await fetch(`/settlements/cash-entries/${e.id}/delete/`, POST_JSON({}));
             const d = await r.json();
             if (d.success) {

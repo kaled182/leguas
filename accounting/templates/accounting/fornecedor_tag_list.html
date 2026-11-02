@@ -56,7 +56,7 @@
           <td class="text-right">
             {% if t.n_fornecedores == 0 %}
             <form method="post" action="{% url 'accounting:fornecedor_tag_delete' t.pk %}" class="inline"
-                  onsubmit="return confirm('Apagar tag {{ t.name }}?');">
+                  data-confirm="Apagar tag {{ t.name }}?">
               {% csrf_token %}
               <button type="submit" class="text-rose-600 dark:text-rose-300 hover:underline text-sm">Apagar</button>
             </form>

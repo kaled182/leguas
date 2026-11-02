@@ -72,7 +72,7 @@
                 <button type="button" class="lf-btn lf-btn-ghost" @click="open = !open" :aria-expanded="open" aria-haspopup="menu" aria-label="Mais ações de {{ partner.name }}"><i data-lucide="more-horizontal" class="w-4 h-4" aria-hidden="true"></i></button>
                 <div x-show="open" x-cloak role="menu" class="lf-menu">
                   <a role="menuitem" class="lf-menu-item" href="{% url 'core:partner-edit' partner.pk %}"><i data-lucide="pencil" class="w-4 h-4" aria-hidden="true"></i>Editar</a>
-                  <form method="post" action="{% url 'core:partner-toggle-status' partner.pk %}" onsubmit="return confirm('{% if partner.is_active %}Desativar{% else %}Ativar{% endif %} este cliente?');">
+                  <form method="post" action="{% url 'core:partner-toggle-status' partner.pk %}" data-confirm="{% if partner.is_active %}Desativar{% else %}Ativar{% endif %} este cliente?">
                     {% csrf_token %}
                     <button role="menuitem" type="submit" class="lf-menu-item"><i data-lucide="{% if partner.is_active %}pause{% else %}play{% endif %}" class="w-4 h-4" aria-hidden="true"></i>{% if partner.is_active %}Desativar{% else %}Ativar{% endif %}</button>
                   </form>

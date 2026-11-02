@@ -120,7 +120,7 @@
             <form method="post" action="{% url 'accounting:bank_match_clear' r.tx.id %}" class="inline ml-2">
               {% csrf_token %}
               <input type="hidden" name="next" value="{{ request.get_full_path }}">
-              <button type="submit" onclick="return confirm('Remover match?');"
+              <button type="submit" data-confirm="Remover match?"
                       class="text-xs text-red-500 hover:underline">
                 <i data-lucide="x" class="inline w-3 h-3"></i> Limpar
               </button>

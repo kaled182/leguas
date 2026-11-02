@@ -210,7 +210,7 @@ function getCsrf() {
     || document.cookie.split(';').find(c => c.trim().startsWith('csrftoken='))?.split('=')[1];
 }
 async function markPaid(pk) {
-  if (!confirm('Marcar conta como paga (data de hoje)?')) return;
+  if (!await lfConfirm('Marcar conta como paga (data de hoje)?')) return;
   const r = await fetch(`/accounting/contas-a-pagar/${pk}/marcar-paga/`, {
     method: 'POST',
     headers: { 'X-CSRFToken': getCsrf() },
@@ -219,8 +219,8 @@ async function markPaid(pk) {
   if (d.success) location.reload();
 }
 
-function deleteBill(pk, desc) {
-  const reason = prompt(
+async function deleteBill(pk, desc) {
+  const reason = await lfPrompt(
     `Apagar a conta «${desc}»?\n\n` +
     'A conta vai para a lixeira (não é eliminada — fica auditável e ' +
     'pode ser restaurada).\n\nMotivo (opcional):',

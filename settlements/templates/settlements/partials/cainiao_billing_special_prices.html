@@ -26,7 +26,7 @@
         Exportar XLSX
       </a>
       <form method="post" action="{% url 'cainiao-billing-create-overrides' session.id %}"
-            onsubmit="return confirm('Criar PackagePriceOverride para TODAS as linhas com preço ≠ €1,60 que ainda não tenham override?');">
+            data-confirm="Criar PackagePriceOverride para TODAS as linhas com preço ≠ €1,60 que ainda não tenham override?">
         {% csrf_token %}
         <input type="hidden" name="mode" value="all">
         <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold text-sm inline-flex items-center gap-2">
@@ -63,7 +63,7 @@
               :disabled="!selectedIds.length"
               :class="selectedIds.length ? 'bg-violet-600 hover:bg-violet-700 text-white' : 'bg-gray-200 text-gray-400 cursor-not-allowed'"
               class="px-3 py-1.5 rounded text-xs font-semibold inline-flex items-center gap-1"
-              onclick="return confirm('Criar overrides para as linhas seleccionadas?');">
+              data-confirm="Criar overrides para as linhas seleccionadas?">
         <i data-lucide="check-square" class="w-3.5 h-3.5"></i>
         Criar Override (<span x-text="selectedIds.length">0</span> seleccionadas)
       </button>

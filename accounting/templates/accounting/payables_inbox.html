@@ -559,7 +559,7 @@ function payablesInbox() {
         // Documento de suporte em falta (recibo da PF ou fatura da Bill)
         if (d.needs_recibo_confirmation || d.needs_invoice_confirmation) {
           this.modal.submitting = false;
-          const ok = confirm(
+          const ok = await lfConfirm(
             (d.message || 'Documento de suporte em falta.') +
             '\n\nMarcar como paga mesmo assim?'
           );
@@ -572,7 +572,7 @@ function payablesInbox() {
         // Acareação OCR: valor não confere ou não legível → confirmar
         if (d.needs_confirmation) {
           this.modal.submitting = false;
-          const ok = confirm(
+          const ok = await lfConfirm(
             (d.message || 'O comprovativo não confere com o valor a pagar.') +
             '\n\nConfirmar o pagamento mesmo assim?'
           );

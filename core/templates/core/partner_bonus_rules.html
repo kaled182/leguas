@@ -103,7 +103,7 @@ async function _brSave() {
 }
 
 async function _brDelete(id) {
-  if (!confirm('Remover esta regra?')) return;
+  if (!await lfConfirm('Remover esta regra?')) return;
   await fetch(`/partners/${_PK}/bonus-rules/${id}/delete/`, {
     method: 'POST', headers: {'X-CSRFToken': _CSRF},
   });

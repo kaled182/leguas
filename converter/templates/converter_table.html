@@ -386,9 +386,9 @@
             }, 10);
         }
 
-        function removerLinha(id) {
+        async function removerLinha(id) {
             const linha = document.querySelector(`tr[data-id="${id}"]`);
-            if (linha && confirm('Tem certeza que deseja remover esta linha?')) {
+            if (linha && await lfConfirm('Tem certeza que deseja remover esta linha?')) {
                 // Animação de saída
                 linha.style.transition = 'all 0.3s ease';
                 linha.style.opacity = '0';
@@ -475,8 +475,8 @@
             }, 1000);
         }
 
-        function voltarInicio() {
-            if (confirm('Tem certeza que deseja voltar? Os dados editados serão perdidos.')) {
+        async function voltarInicio() {
+            if (await lfConfirm('Tem certeza que deseja voltar? Os dados editados serão perdidos.')) {
                 window.location.href = '/converter/';
             }
         }

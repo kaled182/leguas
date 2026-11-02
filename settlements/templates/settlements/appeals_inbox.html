@@ -81,7 +81,7 @@
             <i data-lucide="file-down" class="w-4 h-4"></i> PDF provas
           </button>
           <button type="submit" name="action" value="send_partner" :disabled="sel.length===0"
-                  onclick="return confirm('Marcar os recursos selecionados como ENVIADOS ao parceiro? Isto estorna o valor ao motorista e arranca a quarentena de 60 dias.');"
+                  data-confirm="Marcar os recursos selecionados como ENVIADOS ao parceiro? Isto estorna o valor ao motorista e arranca a quarentena de 60 dias."
                   class="px-3 py-1.5 text-sm rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white inline-flex items-center gap-1.5">
             <i data-lucide="send" class="w-4 h-4"></i> Marcar como enviado
           </button>
@@ -321,7 +321,7 @@
             <td class="px-4 py-2 text-right">
               <a href="{% url 'claim-detail' c.id %}" class="text-xs text-indigo-600 hover:underline">abrir</a>
               <form method="post" action="{% url 'appeals-inbox' %}" class="inline ml-2"
-                    onsubmit="return confirm('Reabrir este recurso? Volta para Aguardando envio.');">
+                    data-confirm="Reabrir este recurso? Volta para Aguardando envio.">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="reopen">
                 <input type="hidden" name="claim_ids" value="{{ c.id }}">

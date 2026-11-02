@@ -509,7 +509,7 @@ function invoicePortal() {
     openStatus() { this.statusOpen = true; this._icons(); },
 
     async changeStatus(novo) {
-      if (!confirm(`Mudar estado para "${novo}"?`)) return;
+      if (!await lfConfirm(`Mudar estado para "${novo}"?`)) return;
       try {
         const r = await fetch(`/settlements/fleet-invoices/${DETAIL_ID}/status/`, {
           method: 'POST',
@@ -537,7 +537,7 @@ function invoicePortal() {
     },
 
     async deleteInvoice() {
-      if (!confirm('Eliminar esta pré-fatura? Esta acção não pode ser desfeita.')) return;
+      if (!await lfConfirm('Eliminar esta pré-fatura? Esta acção não pode ser desfeita.')) return;
       try {
         const r = await fetch(`/settlements/fleet-invoices/${DETAIL_ID}/delete/`, {
           method: 'POST',
@@ -579,7 +579,7 @@ function invoicePortal() {
     },
 
     async deleteAttachment(id, name) {
-      if (!confirm(`Remover anexo "${name}"?`)) return;
+      if (!await lfConfirm(`Remover anexo "${name}"?`)) return;
       const r = await fetch(`/settlements/empresas/${EMPRESA_ID}/portal/anexos/${id}/delete/`, {
         method: 'POST', headers: { 'X-CSRFToken': csrf() },
       });

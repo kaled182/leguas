@@ -120,7 +120,7 @@
                 
                 <!-- Actions -->
                 <div class="flex flex-wrap gap-2 sm:ml-6">
-                    <form method="POST" action="{% url 'drivers_app:admin_approve_driver_action' driver.id %}" onsubmit="return confirm('Aprovar este motorista?')">
+                    <form method="POST" action="{% url 'drivers_app:admin_approve_driver_action' driver.id %}" data-confirm="Aprovar este motorista?">
                         {% csrf_token %}
                         <input type="hidden" name="action" value="approve">
                         <button type="submit" class="lf-btn lf-btn-ghost">
@@ -129,7 +129,7 @@
                         </button>
                     </form>
                     
-                    <form method="POST" action="{% url 'drivers_app:admin_approve_driver_action' driver.id %}" onsubmit="return confirm('Rejeitar este motorista?')">
+                    <form method="POST" action="{% url 'drivers_app:admin_approve_driver_action' driver.id %}" data-confirm="Rejeitar este motorista?">
                         {% csrf_token %}
                         <input type="hidden" name="action" value="reject">
                         <input type="hidden" name="observacao" value="Cadastro rejeitado pela equipe">

@@ -657,7 +657,7 @@
     </div>
     {% if is_gestao %}
     <div class="px-6 py-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 flex justify-between items-center flex-wrap gap-2">
-      <form method="post" action="{% url 'core:partner-toggle-status' partner.pk %}" onsubmit="return confirm('{% if partner.is_active %}Desativar{% else %}Ativar{% endif %} este cliente?');">
+      <form method="post" action="{% url 'core:partner-toggle-status' partner.pk %}" data-confirm="{% if partner.is_active %}Desativar{% else %}Ativar{% endif %} este cliente?">
         {% csrf_token %}
         <input type="hidden" name="next" value="{{ request.path }}">
         <button type="submit" class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg border transition-colors
@@ -699,7 +699,7 @@
     </div>
     <div class="lf-page-actions">
       <a class="lf-btn lf-btn-ghost" href="{% url 'core:partner-list' %}"><i data-lucide="arrow-left" class="w-4 h-4" aria-hidden="true"></i>Clientes e plataformas</a>
-      <form method="post" action="{% url 'core:partner-toggle-status' partner.pk %}" onsubmit="return confirm('{% if partner.is_active %}Desativar{% else %}Ativar{% endif %} este cliente?');">
+      <form method="post" action="{% url 'core:partner-toggle-status' partner.pk %}" data-confirm="{% if partner.is_active %}Desativar{% else %}Ativar{% endif %} este cliente?">
         {% csrf_token %}
         <input type="hidden" name="next" value="{{ request.path }}">
         <button type="submit" class="lf-btn lf-btn-ghost"><i data-lucide="{% if partner.is_active %}pause-circle{% else %}play-circle{% endif %}" class="w-4 h-4" aria-hidden="true"></i>{% if partner.is_active %}Desativar{% else %}Ativar{% endif %}</button>
@@ -756,7 +756,7 @@
               <div class="flex gap-2">
                 <a href="{% url 'core:integration-edit' integration.pk %}" class="text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"><i data-lucide="edit" class="w-4 h-4"></i></a>
                 <form method="post" action="{% url 'core:integration-toggle-status' integration.pk %}" class="inline"
-                      onsubmit="return confirm('{% if integration.is_active %}Desativar{% else %}Ativar{% endif %} esta integração?');">
+                      data-confirm="{% if integration.is_active %}Desativar{% else %}Ativar{% endif %} esta integração?">
                   {% csrf_token %}
                   <button type="submit" class="text-gray-400 hover:text-red-600 dark:hover:text-red-400">
                     <i data-lucide="{% if integration.is_active %}toggle-right{% else %}toggle-left{% endif %}" class="w-4 h-4"></i>
@@ -3634,7 +3634,7 @@ async function _runRollForward() {
     .map(x => `  • ${x.task_date}  ${x.courier}  →  ${x.count}`)
     .join('\n');
 
-  const ok = confirm(
+  const ok = await lfConfirm(
     `Mover ${n.toLocaleString()} pacotes Driver_received para HOJE (${dry.today})?\n\n` +
     `Threshold: até ${dry.threshold_days} dias atrás\n` +
     `Pacotes mais antigos vão para Stale_Armazem (botão separado).\n\n` +
@@ -3709,7 +3709,7 @@ async function _runStaleArmazem() {
     .map(x => `  • ${x.task_date}  ${x.courier}  →  ${x.count}`)
     .join('\n');
 
-  const ok = confirm(
+  const ok = await lfConfirm(
     `Marcar ${n.toLocaleString()} pacotes 'esquecidos' no armazém como Stale_Armazem?\n\n` +
     `Threshold: ${dry.threshold_days} dias\nCutoff: até ${dry.cutoff}\n\n` +
     `Top distribuição:\n${sample}\n\n` +
@@ -4235,7 +4235,7 @@ async function saveEditHub(id) {
 }
 
 async function deleteHub(id, name) {
-  if (!confirm(`Apagar HUB "${name}"? Esta acção remove também todos os CP4s associados.`)) return;
+  if (!await lfConfirm(`Apagar HUB "${name}"? Esta acção remove também todos os CP4s associados.`)) return;
   const r = await fetch(`/settlements/cainiao/hubs/${id}/delete/`, {
     method: 'POST',
     headers: {'X-CSRFToken': getCsrf()},

@@ -193,7 +193,7 @@ function contractsManager() {
     },
 
     async deleteContract(id, titulo) {
-      if (!confirm(`Remover contrato "${titulo}"?`)) return;
+      if (!await lfConfirm(`Remover contrato "${titulo}"?`)) return;
       const csrf = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
       const r = await fetch(`/settlements/empresas/{{ empresa.id }}/portal/contratos/${id}/delete/`, {
         method: 'POST', headers: { 'X-CSRFToken': csrf },

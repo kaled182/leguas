@@ -164,7 +164,7 @@ function docsManager() {
     },
 
     async deleteDoc(id, name) {
-      if (!confirm(`Remover "${name}"?`)) return;
+      if (!await lfConfirm(`Remover "${name}"?`)) return;
       const csrf = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
       const r = await fetch(`/settlements/empresas/{{ empresa.id }}/portal/documentos/${id}/delete/`, {
         method: 'POST', headers: { 'X-CSRFToken': csrf },

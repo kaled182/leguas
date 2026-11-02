@@ -1685,8 +1685,8 @@ function backupManager() {
                 .finally(function() { self.restoring = false; });
         },
 
-        deleteBackup(filename) {
-            if (!confirm('Apagar o backup "' + filename + '"? Esta acção é irreversível.')) return;
+        async deleteBackup(filename) {
+            if (!await lfConfirm('Apagar o backup "' + filename + '"? Esta acção é irreversível.')) return;
             const self = this;
             const fd = new FormData();
             fd.append('filename', filename);

@@ -473,7 +473,7 @@ function shareholderDashboard() {
             }
         },
         async deleteShareholder(s) {
-            if (!confirm(`Remover sócio "${s.nome}"?\n(Se tiver reembolsos, será apenas desactivado.)`)) return;
+            if (!await lfConfirm(`Remover sócio "${s.nome}"?\n(Se tiver reembolsos, será apenas desactivado.)`)) return;
             const r = await fetch(`/settlements/socios/${s.id}/delete/`, POST_JSON({}));
             const d = await r.json();
             if (d.success) {
@@ -515,7 +515,7 @@ function shareholderDashboard() {
             }
         },
         async cancelReimb(id) {
-            if (!confirm('Cancelar este reembolso?')) return;
+            if (!await lfConfirm('Cancelar este reembolso?')) return;
             await fetch(`/settlements/reembolsos/${id}/cancel/`, POST_JSON({}));
             await this.load();
             await this.loadShareholders();
@@ -555,7 +555,7 @@ function shareholderDashboard() {
         },
         async deleteReimb(r) {
             const label = r.descricao || `#${r.id}`;
-            if (!confirm(`Apagar reembolso ${label} (${lfEur(parseFloat(r.valor))})?\n\nEsta acção não pode ser desfeita.`)) return;
+            if (!await lfConfirm(`Apagar reembolso ${label} (${lfEur(parseFloat(r.valor))})?\n\nEsta acção não pode ser desfeita.`)) return;
             const resp = await fetch(
                 `/settlements/reembolsos/${r.id}/delete/`,
                 POST_JSON({}),

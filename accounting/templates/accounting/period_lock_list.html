@@ -61,15 +61,15 @@
           <input type="hidden" name="month" value="{{ r.month }}">
           {% if r.is_locked %}
             <input type="hidden" name="action" value="unlock">
-            <button type="submit"
-                    onclick="const r=prompt('Motivo para reabrir {{ r.label }}?'); if(r === null) return false; this.form.notes.value = r; return true;"
+            <button type="button"
+                    onclick="(async (b) => { const r = await lfPrompt('Motivo para reabrir {{ r.label }}?'); if (r === null) return; b.form.notes.value = r; b.form.submit(); })(this)"
                     class="lf-btn lf-btn-ghost w-full">
               <i data-lucide="unlock" class="w-3 h-3"></i> Reabrir
             </button>
           {% else %}
             <input type="hidden" name="action" value="lock">
             <button type="submit"
-                    onclick="return confirm('Fechar per&iacute;odo {{ r.label }}? Edi&ccedil;&atilde;o ser&aacute; bloqueada.');"
+                    data-confirm="Fechar per&iacute;odo {{ r.label }}? Edi&ccedil;&atilde;o ser&aacute; bloqueada."
                     class="lf-btn lf-btn-danger w-full">
               <i data-lucide="lock" class="w-3 h-3"></i> Fechar
             </button>

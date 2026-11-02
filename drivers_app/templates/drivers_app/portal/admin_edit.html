@@ -442,7 +442,7 @@ function unifyManager() {
             message: `Vais apagar "${this.preview.source.nome}" e mover tudo para "${this.preview.target.nome}". Operação irreversível.`,
             confirmText: 'Unificar agora', icon: 'merge',
           })
-        : confirm('Unificar agora? Operação irreversível.');
+        : await lfConfirm('Unificar agora? Operação irreversível.');
       if (!ok) return;
       this.executing = true;
       const csrf = document.cookie.split('csrftoken=')[1]?.split(';')[0] || '';

@@ -1343,7 +1343,7 @@ function complaintsPanel() {
     },
 
     async deleteAttachment(att) {
-      if (!confirm('Apagar este anexo? Esta acção não pode ser desfeita.')) return;
+      if (!await lfConfirm('Apagar este anexo? Esta acção não pode ser desfeita.')) return;
       const resp = await fetch('/driversapp/api/complaints/attachment/' + att.id + '/delete/', POST());
       const data = await resp.json();
       if (data.success) {
@@ -1437,7 +1437,7 @@ function complaintsPanel() {
     },
 
     async deleteComplaint(c) {
-      if (!confirm('Eliminar Reclamação #' + c.id + ' permanentemente?')) return;
+      if (!await lfConfirm('Eliminar Reclamação #' + c.id + ' permanentemente?')) return;
       const resp = await fetch('/driversapp/api/complaints/item/' + c.id + '/delete/', POST());
       const data = await resp.json();
       if (data.success) {
@@ -1450,7 +1450,7 @@ function complaintsPanel() {
 
     async markLost(c) {
       if (!c) return;
-      if (!confirm('Marcar Reclamação #' + c.id + ' como PERDIDO? Cria o desconto de perda ao motorista e fecha o ticket.')) return;
+      if (!await lfConfirm('Marcar Reclamação #' + c.id + ' como PERDIDO? Cria o desconto de perda ao motorista e fecha o ticket.')) return;
       const resp = await fetch('/driversapp/api/complaints/item/' + c.id + '/mark-lost/', POST_JSON({}));
       const data = await resp.json();
       if (data.success) {
@@ -1548,7 +1548,7 @@ function complaintsPanel() {
     },
 
     async deleteRespAttachment(att) {
-      if (!confirm('Remover este anexo?')) return;
+      if (!await lfConfirm('Remover este anexo?')) return;
       const resp = await fetch('/driversapp/api/complaints/attachment/' + att.id + '/delete/', POST());
       const data = await resp.json();
       if (data.success) {

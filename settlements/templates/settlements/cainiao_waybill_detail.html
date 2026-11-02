@@ -999,7 +999,7 @@ function waybillSidebar(waybill, isWatching) {
 }
 
 window._delTag = async function(tagId) {
-  if (!confirm('Apagar tag?')) return;
+  if (!await lfConfirm('Apagar tag?')) return;
   await fetch('/settlements/waybill/tags/' + tagId + '/delete/', {
     method: 'POST',
     headers: { 'X-CSRFToken': _csrf() },

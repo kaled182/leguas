@@ -560,7 +560,7 @@ function complaintsManager() {
     },
 
     async changeStatus(id, status) {
-      if (!confirm(`Mudar reclamação #${id} para ${status}?`)) return;
+      if (!await lfConfirm(`Mudar reclamação #${id} para ${status}?`)) return;
       const fd = new FormData();
       fd.append('status', status);
       try {
@@ -588,7 +588,7 @@ function complaintsManager() {
     },
 
     async deleteComplaint(id) {
-      if (!confirm(`Apagar reclamação #${id}? Esta acção não pode ser desfeita.`)) return;
+      if (!await lfConfirm(`Apagar reclamação #${id}? Esta acção não pode ser desfeita.`)) return;
       try {
         const resp = await fetch(`/driversapp/api/complaints/item/${id}/delete/`, {
           method: 'POST', credentials: 'same-origin',
@@ -614,7 +614,7 @@ function complaintsManager() {
     },
 
     async deleteAttachment(attId) {
-      if (!confirm('Apagar este anexo? Esta acção não pode ser desfeita.')) return;
+      if (!await lfConfirm('Apagar este anexo? Esta acção não pode ser desfeita.')) return;
       try {
         const resp = await fetch(`/driversapp/api/complaints/attachment/${attId}/delete/`, {
           method: 'POST', credentials: 'same-origin',

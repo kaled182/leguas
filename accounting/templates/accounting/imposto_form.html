@@ -298,36 +298,38 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   if (form) {
-    form.addEventListener('submit', function(e) {
+    form.addEventListener('submit', async function(e) {
+      if (form.dataset.confirmed === '1') { delete form.dataset.confirmed; return; }
+      let msg;
       // Se o regen foi forçado pelo botão Recalcular, salta o diff
       if (forceFlag && forceFlag.value === '1') {
         const n = nInput ? nInput.value : '?';
         const val = valorInput ? fmtEuro(valorInput.value) : '?';
         const first = firstInput ? firstInput.value : '?';
-        if (!confirm(
+        msg = (
           `Recalcular as ${n} prestações com base em:\n` +
           `  • Valor total: €${val}\n` +
           `  • Nº prestações: ${n}\n` +
           `  • 1ª prestação: ${first}\n\n` +
           `Todas as prestações pendentes serão apagadas e regeneradas. Continuar?`
-        )) {
-          e.preventDefault();
-          forceFlag.value = '0';
-          return false;
-        }
+        );
+      } else {
+        const changes = detectChanges();
+        if (changes.length === 0) return;
+        msg = (
+          `Vais regenerar TODAS as prestações deste plano com os novos parâmetros:\n\n` +
+          changes.map(c => `  • ${c}`).join('\n') +
+          `\n\nAs prestações actuais (todas pendentes) serão APAGADAS e recalculadas.\nContinuar?`
+        );
+      }
+      e.preventDefault();
+      const submitter = e.submitter;
+      if (!await lfConfirm(msg)) {
+        if (forceFlag) forceFlag.value = '0';
         return;
       }
-      const changes = detectChanges();
-      if (changes.length === 0) return;
-      const msg = (
-        `Vais regenerar TODAS as prestações deste plano com os novos parâmetros:\n\n` +
-        changes.map(c => `  • ${c}`).join('\n') +
-        `\n\nAs prestações actuais (todas pendentes) serão APAGADAS e recalculadas.\nContinuar?`
-      );
-      if (!confirm(msg)) {
-        e.preventDefault();
-        return false;
-      }
+      form.dataset.confirmed = '1';
+      form.requestSubmit(submitter || undefined);
     });
   }
 

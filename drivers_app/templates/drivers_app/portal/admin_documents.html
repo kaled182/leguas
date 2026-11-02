@@ -98,7 +98,7 @@
         {% csrf_token %}
         <input type="hidden" name="action" value="delete">
         <input type="hidden" name="doc_id" value="{{ doc.id }}">
-        <button type="submit" onclick="return confirm('Eliminar este documento?')"
+        <button type="submit" data-confirm="Eliminar este documento?"
                 class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md text-gray-600 dark:text-gray-400 hover:text-rose-600">
           <i data-lucide="trash-2" class="w-4 h-4"></i>
         </button>

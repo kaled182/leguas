@@ -436,7 +436,7 @@ function holidayCalendar() {
     },
 
     async del(id, name) {
-      if (!confirm(`Remover feriado "${name}"?`)) return;
+      if (!await lfConfirm(`Remover feriado "${name}"?`)) return;
       const csrf = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
       const r = await fetch(`/settlements/calendar/${id}/delete/`, {
         method: 'POST', headers: { 'X-CSRFToken': csrf },
@@ -479,7 +479,7 @@ function holidayCalendar() {
     },
 
     async delBlackout(id, dateDisplay) {
-      if (!confirm(`Remover bloqueio de bonificação de ${dateDisplay}?`)) return;
+      if (!await lfConfirm(`Remover bloqueio de bonificação de ${dateDisplay}?`)) return;
       const csrf = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
       const r = await fetch(`/settlements/calendar/blackout/${id}/delete/`, {
         method: 'POST', headers: { 'X-CSRFToken': csrf },

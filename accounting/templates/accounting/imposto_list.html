@@ -144,14 +144,14 @@
               <a href="{% url 'accounting:imposto_edit' i.pk %}" class="text-indigo-600 dark:text-indigo-400 hover:underline text-xs">Editar</a>
               {% if i.status != 'PAGO' and not i.is_parent %}
               <form method="post" action="{% url 'accounting:imposto_mark_paid' i.pk %}" class="inline ml-2"
-                    onsubmit="return confirm('Marcar imposto {{ i.nome }} como pago?\n\nValor: €{{ i.valor }}\nIsto cria também uma Bill espelho no fluxo de caixa.');">
+                    data-confirm="Marcar imposto {{ i.nome }} como pago?\n\nValor: €{{ i.valor }}\nIsto cria também uma Bill espelho no fluxo de caixa.">
                 {% csrf_token %}
                 <button type="submit" class="text-emerald-600 dark:text-emerald-300 hover:underline text-xs">Marcar Pago</button>
               </form>
               {% endif %}
               {% if i.status not in 'PAGO,ANULADO' %}
               <form method="post" action="{% url 'accounting:imposto_anular' i.pk %}" class="inline ml-2"
-                    onsubmit="return confirm('Anular {{ i.nome }}?');">
+                    data-confirm="Anular {{ i.nome }}?">
                 {% csrf_token %}
                 <button type="submit" class="text-rose-600 dark:text-rose-300 hover:underline text-xs">Anular</button>
               </form>

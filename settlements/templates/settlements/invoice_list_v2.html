@@ -294,7 +294,7 @@
     };
     let body = { status: novo };
     if (novo === 'PAID') {
-      const ref = prompt(
+      const ref = await lfPrompt(
         `Marcar fatura ${numero} como Recebida.\n` +
         'Referência de pagamento (opcional):', ''
       );
@@ -302,7 +302,7 @@
       body.payment_reference = ref;
       body.paid_date = new Date().toISOString().slice(0, 10);
     } else {
-      if (!confirm(`${labels[novo] || novo} — ${numero}?`)) return;
+      if (!await lfConfirm(`${labels[novo] || novo} — ${numero}?`)) return;
     }
     try {
       const r = await fetch(`/settlements/invoices/${id}/status/`, {

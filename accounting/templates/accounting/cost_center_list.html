@@ -25,7 +25,7 @@
 <div class="lf-page-actions">
       {% if hubs_sem_cc %}
       <form method="post" action="{% url 'accounting:cost_center_sync_hubs' %}" class="inline"
-            onsubmit="return confirm('Criar Centro de Custo para {{ hubs_sem_cc|length }} HUB(s) ainda não vinculado(s)?');">
+            data-confirm="Criar Centro de Custo para {{ hubs_sem_cc|length }} HUB(s) ainda não vinculado(s)?">
         {% csrf_token %}
         <button type="submit" class="lf-btn lf-btn-ghost">
           <i data-lucide="refresh-cw" class="w-4 h-4"></i> Sincronizar HUBs ({{ hubs_sem_cc|length }})

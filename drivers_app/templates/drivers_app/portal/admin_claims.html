@@ -304,7 +304,7 @@ function _csrf() {
 }
 
 async function aplicarDesconto(btn, driverId, claimId) {
-  if (!confirm('Aplicar este desconto na pré-fatura aberta mais recente?')) return;
+  if (!await lfConfirm('Aplicar este desconto na pré-fatura aberta mais recente?')) return;
   btn.disabled = true;
   const original = btn.innerHTML;
   btn.innerHTML = 'A aplicar…';
@@ -331,7 +331,7 @@ async function aplicarDesconto(btn, driverId, claimId) {
 }
 
 async function aplicarTodos(btn) {
-  if (!confirm('Aplicar TODOS os descontos aprovados ainda sem fatura?')) return;
+  if (!await lfConfirm('Aplicar TODOS os descontos aprovados ainda sem fatura?')) return;
   btn.disabled = true;
   btn.innerHTML = 'A aplicar…';
   try {

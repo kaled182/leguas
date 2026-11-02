@@ -938,7 +938,7 @@ function packagesApp() {
     },
 
     async deleteFilter(id) {
-      if (!confirm('Apagar este filtro?')) return;
+      if (!await lfConfirm('Apagar este filtro?')) return;
       await fetch('/settlements/cainiao/saved-filters/?id=' + id, {
         method: 'DELETE',
         headers: { 'X-CSRFToken': this._csrf() },

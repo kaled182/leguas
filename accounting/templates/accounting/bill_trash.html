@@ -88,12 +88,12 @@ function _postForm(action) {
   document.body.appendChild(f);
   f.submit();
 }
-function restoreBill(pk, desc) {
-  if (!confirm(`Restaurar a conta «${desc}»? Volta a aparecer em Contas a Pagar.`)) return;
+async function restoreBill(pk, desc) {
+  if (!await lfConfirm(`Restaurar a conta «${desc}»? Volta a aparecer em Contas a Pagar.`)) return;
   _postForm(`/accounting/contas-a-pagar/${pk}/restaurar/`);
 }
-function hardDeleteBill(pk, desc) {
-  if (!confirm(`ELIMINAR DEFINITIVAMENTE a conta «${desc}»?\n\nEsta acção é IRREVERSÍVEL — a conta é removida da base de dados.`)) return;
+async function hardDeleteBill(pk, desc) {
+  if (!await lfConfirm(`ELIMINAR DEFINITIVAMENTE a conta «${desc}»?\n\nEsta acção é IRREVERSÍVEL — a conta é removida da base de dados.`)) return;
   _postForm(`/accounting/contas-a-pagar/${pk}/eliminar-definitivo/`);
 }
 document.addEventListener('DOMContentLoaded', () => {

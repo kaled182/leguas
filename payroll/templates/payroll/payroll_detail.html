@@ -72,7 +72,7 @@
             <td class="py-1.5 text-right w-10">
               <form method="post" action="{% url 'payroll:component_delete' pf.pk c.pk %}" class="inline">
                 {% csrf_token %}
-                <button class="text-red-500 hover:text-red-700" onclick="return confirm('Remover?')">
+                <button class="text-red-500 hover:text-red-700" data-confirm="Remover?">
                   <i data-lucide="x" class="w-3.5 h-3.5"></i>
                 </button>
               </form>
@@ -104,7 +104,7 @@
             <td class="py-1.5 text-right w-10">
               <form method="post" action="{% url 'payroll:component_delete' pf.pk c.pk %}" class="inline">
                 {% csrf_token %}
-                <button class="text-red-500 hover:text-red-700" onclick="return confirm('Remover?')">
+                <button class="text-red-500 hover:text-red-700" data-confirm="Remover?">
                   <i data-lucide="x" class="w-3.5 h-3.5"></i>
                 </button>
               </form>
@@ -138,14 +138,14 @@
     {% if pf.status == 'RASCUNHO' %}
       <form method="post" action="{% url 'payroll:payroll_recalc' pf.pk %}" class="inline">
         {% csrf_token %}
-        <button class="px-3 py-2 border rounded-lg text-sm" onclick="return confirm('Regenerar componentes a partir do cadastro?')">
+        <button class="px-3 py-2 border rounded-lg text-sm" data-confirm="Regenerar componentes a partir do cadastro?">
           <i data-lucide="refresh-cw" class="w-4 h-4 inline"></i> Recalcular
         </button>
       </form>
       <form method="post" action="{% url 'payroll:payroll_approve' pf.pk %}" class="inline">
         {% csrf_token %}
         <button class="lf-btn lf-btn-ghost"
-          onclick="return confirm('Aprovar folha? Vai criar Imposto SS (TSU) e IRS.')">
+          data-confirm="Aprovar folha? Vai criar Imposto SS (TSU) e IRS.">
           <i data-lucide="check" class="w-4 h-4 inline"></i> Aprovar
         </button>
       </form>
@@ -156,7 +156,7 @@
         {% csrf_token %}
         <input type="date" name="paid_date" value="{{ today|date:'Y-m-d' }}" class="fld" style="width:auto">
         <button class="lf-btn lf-btn-ghost"
-          onclick="return confirm('Marcar como paga? Vai criar Bill no DRE.')">
+          data-confirm="Marcar como paga? Vai criar Bill no DRE.">
           <i data-lucide="credit-card" class="w-4 h-4 inline"></i> Marcar Paga
         </button>
       </form>
@@ -166,7 +166,7 @@
       <form method="post" action="{% url 'payroll:payroll_cancel' pf.pk %}" class="inline">
         {% csrf_token %}
         <button class="px-3 py-2 border border-red-300 text-red-600 dark:text-red-300 hover:bg-red-50 rounded-lg text-sm"
-          onclick="return confirm('Cancelar folha? Vai anular Impostos e Bill em cascata.')">
+          data-confirm="Cancelar folha? Vai anular Impostos e Bill em cascata.">
           <i data-lucide="x-circle" class="w-4 h-4 inline"></i> Cancelar
         </button>
       </form>

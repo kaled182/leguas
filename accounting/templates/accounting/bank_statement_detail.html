@@ -97,7 +97,7 @@ function getCsrf() {
   return document.cookie.split(';').find(c => c.trim().startsWith('csrftoken='))?.split('=')[1];
 }
 async function match(txId, billId) {
-  if (!confirm('Conciliar esta transacção com a Bill seleccionada? A Bill ficará marcada como paga.')) return;
+  if (!await lfConfirm('Conciliar esta transacção com a Bill seleccionada? A Bill ficará marcada como paga.')) return;
   const fd = new FormData();
   fd.append('bill_id', billId);
   const r = await fetch(`/accounting/extractos/transacao/${txId}/conciliar/`, {
@@ -106,7 +106,7 @@ async function match(txId, billId) {
   if ((await r.json()).success) location.reload();
 }
 async function unmatch(txId) {
-  if (!confirm('Desfazer esta conciliação?')) return;
+  if (!await lfConfirm('Desfazer esta conciliação?')) return;
   const r = await fetch(`/accounting/extractos/transacao/${txId}/desconciliar/`, {
     method: 'POST', headers: { 'X-CSRFToken': getCsrf() },
   });

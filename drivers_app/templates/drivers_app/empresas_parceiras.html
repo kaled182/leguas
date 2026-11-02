@@ -1462,7 +1462,7 @@ function empresasApp() {
     },
 
     async removeDriverFromFrota(d) {
-      if (!confirm(`Remover ${d.nome} desta frota?`)) return;
+      if (!await lfConfirm(`Remover ${d.nome} desta frota?`)) return;
       const resp = await fetch(`/driversapp/api/empresas-parceiras/${this.editId}/motoristas/${d.id}/remove/`, {
         method: 'POST', headers: { 'X-CSRFToken': csrf() }
       });
@@ -1617,7 +1617,7 @@ function empresasApp() {
     },
 
     async runAutoEmitNow() {
-      if (!confirm('Disparar emissão automática agora?\n(Só emite se hoje for o dia configurado e o período ainda não foi emitido)')) return;
+      if (!await lfConfirm('Disparar emissão automática agora?\n(Só emite se hoje for o dia configurado e o período ainda não foi emitido)')) return;
       try {
         const r = await fetch(`/driversapp/api/empresas-parceiras/${this.editId}/auto-emit/run-now/`, { method: 'POST', headers: { 'X-CSRFToken': csrf() } });
         const j = await r.json();
@@ -1667,7 +1667,7 @@ function empresasApp() {
       if (!this.pfBulkSelected.length) return;
       const labels = {APROVADO: 'aprovar', PAGO: 'marcar como pago'};
       const action = labels[novoStatus] || `mudar para ${novoStatus}`;
-      if (!confirm(`${action.charAt(0).toUpperCase() + action.slice(1)} ${this.pfBulkSelected.length} pré-fatura(s)?`)) return;
+      if (!await lfConfirm(`${action.charAt(0).toUpperCase() + action.slice(1)} ${this.pfBulkSelected.length} pré-fatura(s)?`)) return;
       try {
         const r = await fetch('/settlements/pre-invoices/bulk-status/', POST_JSON({
           ids: this.pfBulkSelected,
@@ -1682,7 +1682,7 @@ function empresasApp() {
     },
 
     async sendPFWhatsApp(pf) {
-      if (!confirm(`Enviar pré-fatura ${pf.numero || '#' + pf.id} por WhatsApp?`)) return;
+      if (!await lfConfirm(`Enviar pré-fatura ${pf.numero || '#' + pf.id} por WhatsApp?`)) return;
       try {
         const r = await fetch(`/settlements/pre-invoices/${pf.id}/whatsapp/`, { method: 'POST', headers: { 'X-CSRFToken': csrf() } });
         const j = await r.json();
@@ -1697,7 +1697,7 @@ function empresasApp() {
       const lastDay = new Date(y, this.pfMes, 0).getDate();
       const from = `${y}-${m}-01`;
       const to = `${y}-${m}-${String(lastDay).padStart(2, '0')}`;
-      if (!confirm(`Enviar resumo das PFs (${from} → ${to}) por WhatsApp aos motoristas da frota?`)) return;
+      if (!await lfConfirm(`Enviar resumo das PFs (${from} → ${to}) por WhatsApp aos motoristas da frota?`)) return;
       try {
         const r = await fetch(`/settlements/empresas/${this.editId}/whatsapp-lote/`, POST_JSON({ from, to }));
         const j = await r.json();
@@ -1710,7 +1710,7 @@ function empresasApp() {
     async emitLote() {
       if (!this.loteSelected.length) return;
       const msg = `Vou criar UMA pré-fatura global da frota com ${this.loteSelected.length} motoristas. Confirmar?`;
-      if (!confirm(msg)) return;
+      if (!await lfConfirm(msg)) return;
       this.loteEmitting = true;
       try {
         const r = await fetch(`/settlements/empresas/${this.editId}/lote-emit/`, POST_JSON({
@@ -1777,7 +1777,7 @@ function empresasApp() {
     },
 
     async changeFIStatus(fi, novoStatus) {
-      if (!confirm(`Mudar ${fi.numero} para ${novoStatus}?`)) return;
+      if (!await lfConfirm(`Mudar ${fi.numero} para ${novoStatus}?`)) return;
       try {
         const r = await fetch(`/settlements/fleet-invoices/${fi.id}/status/`, POST_JSON({status: novoStatus}));
         const j = await r.json();
@@ -1787,7 +1787,7 @@ function empresasApp() {
     },
 
     async deleteFI(fi) {
-      if (!confirm(`Apagar FleetInvoice ${fi.numero}? (apenas se cancelada/rascunho)`)) return;
+      if (!await lfConfirm(`Apagar FleetInvoice ${fi.numero}? (apenas se cancelada/rascunho)`)) return;
       try {
         const r = await fetch(`/settlements/fleet-invoices/${fi.id}/delete/`, { method: 'POST', headers: { 'X-CSRFToken': csrf() } });
         const j = await r.json();
@@ -1882,7 +1882,7 @@ function empresasApp() {
     },
 
     async deleteLancamento(lc) {
-      if (!confirm(`Eliminar lançamento "${lc.descricao}"?`)) return;
+      if (!await lfConfirm(`Eliminar lançamento "${lc.descricao}"?`)) return;
       const resp = await fetch(`/driversapp/api/empresas-parceiras/lancamentos/${lc.id}/delete/`, {
         method: 'POST', headers: { 'X-CSRFToken': csrf() }
       });
@@ -1923,7 +1923,7 @@ function empresasApp() {
     },
 
     async deleteEmpresa(e) {
-      if (!confirm(`Eliminar "${e.nome}"?`)) return;
+      if (!await lfConfirm(`Eliminar "${e.nome}"?`)) return;
       const resp = await fetch(`/driversapp/api/empresas-parceiras/${e.id}/delete/`, {
         method: 'POST', headers: { 'X-CSRFToken': csrf() }
       });

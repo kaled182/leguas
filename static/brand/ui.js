@@ -118,4 +118,136 @@
   };
   window.lfStatus = (value) => STATUS_LABELS[value] || value;
   window.lfToast = toast;
+
+  // ─── Avisos: modal da marca no lugar de alert/confirm/prompt ───
+  const DANGER = /\b(apagar|eliminar|remover|rejeitar|irrevers|definitiv|desfazer|cancelar est|desconectar|desactivar|desativar)/i;
+  const ERROR = /^[\s❌⚠️]*(erro|falh)|^[\s]*[❌⚠]/i;
+  const SUCCESS = /^[\s]*[✅✓]|^[\s]*(sucesso|guardad|criad|enviad|importad|conclu)/i;
+
+  function cleanText(text) {
+    return String(text ?? '').replace(/\\n/g, '\n').replace(/^[\s✅❌⚠️✓✔ℹ]+/u, '');
+  }
+
+  function openDialog({ title, message, input, confirmLabel, cancelLabel, variant }) {
+    return new Promise((resolve) => {
+      const dialog = document.createElement('dialog');
+      dialog.className = 'lf-modal';
+      dialog.setAttribute('aria-labelledby', 'lf-dialog-title');
+      dialog.innerHTML = `
+        <div class="lf-modal-head"><span id="lf-dialog-title"></span></div>
+        <div class="lf-modal-body"><p style="margin:0;white-space:pre-line;overflow-wrap:anywhere"></p></div>
+        <div class="lf-modal-foot"></div>`;
+      dialog.querySelector('#lf-dialog-title').textContent = title;
+      dialog.querySelector('.lf-modal-body p').textContent = message;
+      const asks = input !== undefined;
+      let field = null;
+      if (asks) {
+        field = document.createElement('input');
+        field.type = 'text';
+        field.value = input ?? '';
+        field.style.cssText = 'width:100%;margin-top:var(--space-3);padding:var(--space-2) var(--space-3);border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-bg);color:var(--color-text);font:inherit';
+        dialog.querySelector('.lf-modal-body').appendChild(field);
+      }
+      const foot = dialog.querySelector('.lf-modal-foot');
+      let result = asks ? null : false;
+      if (cancelLabel) {
+        const cancel = document.createElement('button');
+        cancel.type = 'button';
+        cancel.className = 'lf-btn lf-btn-ghost';
+        cancel.textContent = cancelLabel;
+        cancel.addEventListener('click', () => dialog.close());
+        foot.appendChild(cancel);
+      }
+      const ok = document.createElement('button');
+      ok.type = 'button';
+      ok.className = `lf-btn lf-btn-${variant}`;
+      ok.textContent = confirmLabel;
+      ok.addEventListener('click', () => { result = field ? field.value : true; dialog.close(); });
+      foot.appendChild(ok);
+      if (field) field.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); ok.click(); } });
+      dialog.addEventListener('click', (e) => { if (e.target === dialog && cancelLabel) dialog.close(); });
+      dialog.addEventListener('close', () => { dialog.remove(); resolve(result); });
+      document.body.appendChild(dialog);
+      dialog.showModal();
+      (field || ok).focus();
+    });
+  }
+
+  // Devolve true ou false. Substitui confirm().
+  window.lfConfirm = (message, opts = {}) => {
+    const text = cleanText(message);
+    const danger = opts.danger ?? DANGER.test(text);
+    return openDialog({
+      title: opts.title || (danger ? 'Confirmar ação' : 'Confirmar'),
+      message: text,
+      confirmLabel: opts.confirmLabel || 'Confirmar',
+      cancelLabel: 'Cancelar',
+      variant: danger ? 'danger' : 'primary',
+    });
+  };
+
+  // Devolve o texto escrito, ou null se cancelar. Substitui prompt().
+  window.lfPrompt = (message, value = '', opts = {}) => openDialog({
+    title: opts.title || 'Preencher',
+    message: cleanText(message),
+    input: value ?? '',
+    confirmLabel: opts.confirmLabel || 'OK',
+    cancelLabel: 'Cancelar',
+    variant: 'primary',
+  });
+
+  // Aviso com um só botão. Substitui alert(), que deixa de bloquear a página.
+  const PENDING_KEY = 'lf-pending-alert';
+  const openAlerts = new Set();
+  window.lfAlert = (message, opts = {}) => {
+    const raw = String(message ?? '');
+    const text = cleanText(raw);
+    const item = { text, title: opts.title || (ERROR.test(raw) ? 'Erro' : SUCCESS.test(raw) ? 'Concluído' : 'Aviso') };
+    openAlerts.add(item);
+    return openDialog({ title: item.title, message: text, confirmLabel: 'OK', variant: 'primary' })
+      .then(() => { openAlerts.delete(item); });
+  };
+  window.alert = (message) => { window.lfAlert(message); };
+
+  // Se a página mudar com um aviso aberto, o aviso aparece na página seguinte.
+  window.addEventListener('pagehide', () => {
+    const [item] = openAlerts;
+    if (!item) return;
+    try { sessionStorage.setItem(PENDING_KEY, JSON.stringify({ ...item, at: Date.now() })); } catch (e) { /* sem armazenamento */ }
+  });
+
+  document.addEventListener('DOMContentLoaded', () => {
+    let pending = null;
+    try { pending = JSON.parse(sessionStorage.getItem(PENDING_KEY) || 'null'); } catch (e) { /* sem armazenamento */ }
+    try { sessionStorage.removeItem(PENDING_KEY); } catch (e) { /* sem armazenamento */ }
+    if (pending && Date.now() - pending.at < 15000) window.lfAlert(pending.text, { title: pending.title });
+  });
+
+  // Botões, ligações e formulários com data-confirm="Texto".
+  document.addEventListener('click', (event) => {
+    const el = event.target.closest('[data-confirm]:not(form)');
+    if (!el) return;
+    if (el.dataset.confirmed === '1') { delete el.dataset.confirmed; return; }
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    window.lfConfirm(el.dataset.confirm).then((ok) => {
+      if (!ok) return;
+      if (el.form && el.type === 'submit') { el.form.dataset.confirmed = '1'; el.form.requestSubmit(el); return; }
+      el.dataset.confirmed = '1';
+      el.click();
+    });
+  }, true);
+  document.addEventListener('submit', (event) => {
+    const form = event.target;
+    if (!form.matches('form[data-confirm]')) return;
+    if (form.dataset.confirmed === '1') { delete form.dataset.confirmed; return; }
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    const submitter = event.submitter;
+    window.lfConfirm(form.dataset.confirm).then((ok) => {
+      if (!ok) return;
+      form.dataset.confirmed = '1';
+      form.requestSubmit(submitter && submitter.form === form ? submitter : undefined);
+    });
+  }, true);
 })();

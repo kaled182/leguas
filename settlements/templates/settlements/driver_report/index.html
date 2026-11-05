@@ -5,6 +5,8 @@
 {% include 'settlements/cainiao_subledger/_style.html' %}
 <style>
   .dr-group td { background: var(--color-surface-alt); font-weight: var(--weight-subtitle); }
+  .dr-kpis { grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); }
+  .dr-kpis .lf-kpi-value { font-size: clamp(1.5rem, 2vw, 2.1rem); white-space: nowrap; }
   .dr-muted { color: var(--color-text-muted); font-size: var(--text-xs); }
 </style>
 <div class="max-w-screen-2xl mx-auto px-4 py-6 space-y-4">
@@ -52,7 +54,7 @@
   </form>
 
   {% with t=report.total a=report.alerts %}
-  <div class="lf-kpi-grid">
+  <div class="lf-kpi-grid dr-kpis">
     <div class="lf-kpi"><p class="lf-kpi-label">Motoristas</p><p class="lf-kpi-value">{{ t.drivers|pt_int }}</p></div>
     <div class="lf-kpi"><p class="lf-kpi-label">Entregues</p><p class="lf-kpi-value">{{ t.delivered|pt_int }}</p>
       <p class="lf-kpi-note">{{ t.door_normal|pt_int }} porta · {{ t.same_door|pt_int }} mesma porta · {{ t.pudo|pt_int }} PUDO</p></div>

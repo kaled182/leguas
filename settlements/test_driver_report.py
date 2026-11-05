@@ -12,7 +12,7 @@ from openpyxl import load_workbook
 from core.models import Partner
 from drivers_app.models import DriverProfile, EmpresaParceira
 
-from .models import CainiaoHub, CainiaoHubCP4, CainiaoOperationTask, DriverPreInvoice
+from .models import CainiaoHub, CainiaoHubCP4, CainiaoOperationTask, DriverClaim, DriverPreInvoice
 from .services_driver_breakdown import driver_breakdown
 from .services_driver_report import build, collect, driver_detail
 
@@ -107,7 +107,7 @@ class DriverReportTests(TestCase):
         self.assertEqual(one.content[:4], b"%PDF")
         self.assertEqual(self.client.get(reverse("driver-report-driver-pdf", args=[999]) + q).status_code, 404)
         wb = load_workbook(io.BytesIO(self.client.get(reverse("driver-report-xlsx") + q).content), read_only=True)
-        self.assertEqual(wb.sheetnames, ["Resumo", "Entregas"])
+        self.assertEqual(wb.sheetnames, ["Resumo", "Entregas", "Claims"])
         self.assertEqual(len(list(wb["Entregas"].iter_rows())), 4)   # cabeçalho + R1, R2, R4
         z = zipfile.ZipFile(io.BytesIO(self.client.get(reverse("driver-report-zip") + q).content))
         self.assertEqual(len([n for n in z.namelist() if n.startswith("motoristas/")]), 1)
@@ -123,3 +123,32 @@ class DriverReportTests(TestCase):
         self.client.force_login(op)
         r = self.client.get(reverse("driver-report"))
         self.assertNotEqual(r.status_code, 200)
+
+    def test_claims_aprovados_descontam_antes_do_iva(self):
+        def claim(wb, amount, status, **kw):
+            return DriverClaim.objects.create(
+                driver=self.rui, claim_type="ORDER_LOSS", amount=Decimal(amount), description="teste",
+                waybill_number=wb, status=status, operation_task_date=D1, **kw)
+        claim("R1", "0.40", "APPROVED")
+        claim("R3", "5.00", "APPROVED")                                  # hub Sul
+        claim("R2", "9.00", "PENDING")                                   # por decidir
+        claim("R1", "7.00", "APPROVED", billing_after=D2)                # fatura seguinte
+        DriverClaim.objects.create(driver=self.rui, claim_type="OTHER", amount=Decimal("3"),
+                                   description="fora", status="APPROVED", operation_task_date=date(2026, 9, 1))
+        north = build(D1, D2, hub="Norte")["rows"][0]
+        self.assertEqual((north["claims_n"], north["claims_open_n"]), (3, 1))
+        self.assertEqual((north["amount"], north["claims_amount"], north["billable"]),
+                         (Decimal("1.40"), Decimal("0.40"), Decimal("1.00")))
+        self.assertEqual((north["vat"], north["with_vat"]), (Decimal("0.23"), Decimal("1.23")))
+        all_hubs = next(r for r in build(D1, D2)["rows"] if r["driver"] == self.rui)
+        self.assertEqual(all_hubs["claims_amount"], Decimal("5.40"))
+        dd = next(dd for dd in collect(D1, D2)[0] if dd.driver == self.rui)
+        detail = driver_detail(dd, D1, D2)
+        self.assertEqual([c["deducted"] for c in detail["claims"]], [True, True, False, False])
+        self.client.force_login(self.user)
+        q = "?hub=Norte&from=2026-10-16&to=2026-10-31"
+        self.assertContains(self.client.get(reverse("driver-report") + q), "1 por decidir")
+        self.assertEqual(self.client.get(reverse("driver-report-driver-pdf", args=[self.rui.id]) + q).content[:4],
+                         b"%PDF")
+        wb = load_workbook(io.BytesIO(self.client.get(reverse("driver-report-xlsx") + q).content), read_only=True)
+        self.assertEqual(len(list(wb["Claims"].iter_rows())), 4)        # cabeçalho + 3 do hub Norte

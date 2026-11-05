@@ -38,6 +38,10 @@ def eur(v):
     return "-" if v is None else f"{_num(v, 2)} €"
 
 
+def _minus(v):
+    return f"- {eur(v)}" if v else eur(v)
+
+
 def _d(day):
     return day.strftime("%d/%m/%Y") if day else "-"
 
@@ -118,11 +122,12 @@ def hub_pdf(report, hub_label, date_from, date_to, user=None):
         f"Relatório de motoristas · {hub_label}",
         f"Período {_period(date_from, date_to)} · {tot['drivers']} motoristas · {_emitted(user)}",
     )
-    kpi = [["Entregues", "Porta", "Mesma porta", "PUDO", "Falhas", "Sem IVA", "IVA", "Com IVA"],
+    kpi = [["Entregues", "Porta", "Mesma porta", "PUDO", "Falhas", "Produção", "Claims",
+            "Sem IVA", "IVA", "Com IVA"],
            [_num(tot["delivered"]), _num(tot["door_normal"]), _num(tot["same_door"]),
-            _num(tot["pudo"]), _num(tot["failures"]), eur(tot["amount"]), eur(tot["vat"]),
-            eur(tot["with_vat"])]]
-    k = Table(kpi, colWidths=[width / 8] * 8)
+            _num(tot["pudo"]), _num(tot["failures"]), eur(tot["amount"]), _minus(tot["claims_amount"]),
+            eur(tot["billable"]), eur(tot["vat"]), eur(tot["with_vat"])]]
+    k = Table(kpi, colWidths=[width / 10] * 10)
     k.setStyle(TableStyle([
         ("FONT", (0, 0), (-1, 0), "Helvetica", 7), ("TEXTCOLOR", (0, 0), (-1, 0), MUTED),
         ("FONT", (0, 1), (-1, 1), "Helvetica-Bold", 11), ("TEXTCOLOR", (0, 1), (-1, 1), PURPLE),
@@ -130,14 +135,15 @@ def hub_pdf(report, hub_label, date_from, date_to, user=None):
     ]))
     story += [k, Spacer(1, 10)]
 
-    head = ["Motorista", "Regime IVA", "Dias", "Entregues", "Porta", "Mesma\nporta", "PUDO",
-            "Falhas", "% suc.", "Sem IVA", "IVA", "Com IVA", "PF", "OK"]
-    widths = [0.20, 0.07, 0.04, 0.065, 0.06, 0.06, 0.045, 0.05, 0.05, 0.085, 0.07, 0.085, 0.09, 0.03]
+    head = ["Motorista", "IVA", "Dias", "Entregues", "Porta", "Mesma\nporta", "PUDO",
+            "Falhas", "% suc.", "Produção", "Claims", "Sem IVA", "IVA", "Com IVA", "PF", "OK"]
+    widths = [0.17, 0.05, 0.035, 0.055, 0.05, 0.05, 0.04, 0.045, 0.045, 0.075, 0.065, 0.075,
+              0.06, 0.075, 0.08, 0.03]
     widths = [w * width for w in widths]
     rows, totals = [head], []
     for g in report["groups"]:
         fleet = g["fleet"].nome if g["fleet"] else "Motoristas diretos"
-        rows.append([Paragraph(f"<b>{fleet}</b>", CELL)] + [""] * 13)
+        rows.append([Paragraph(f"<b>{fleet}</b>", CELL)] + [""] * 15)
         for r in g["rows"]:
             d = r["driver"]
             name = d.nome_completo
@@ -150,17 +156,20 @@ def hub_pdf(report, hub_label, date_from, date_to, user=None):
                 _num(r["delivered"]), _num(r["door_normal"]), _num(r["same_door"]),
                 _num(r["pudo"]), _num(r["failures"]),
                 f'{_num(r["success_pct"], 0)} %' if r["success_pct"] is not None else "-",
-                eur(r["amount"]), eur(r["vat"]), eur(r["with_vat"]),
+                eur(r["amount"]), _minus(r["claims_amount"]) if r["claims_n"] else "-",
+                eur(r["billable"]), eur(r["vat"]), eur(r["with_vat"]),
                 Paragraph(pf_txt, CELL), "",
             ])
         t = g["total"]
         rows.append([f"Subtotal {fleet}", "", "", _num(t["delivered"]), _num(t["door_normal"]),
                      _num(t["same_door"]), _num(t["pudo"]), _num(t["failures"]), "",
-                     eur(t["amount"]), eur(t["vat"]), eur(t["with_vat"]), "", ""])
+                     eur(t["amount"]), _minus(t["claims_amount"]), eur(t["billable"]),
+                     eur(t["vat"]), eur(t["with_vat"]), "", ""])
         totals.append(len(rows) - 1)
     rows.append(["Total", "", "", _num(tot["delivered"]), _num(tot["door_normal"]),
                  _num(tot["same_door"]), _num(tot["pudo"]), _num(tot["failures"]), "",
-                 eur(tot["amount"]), eur(tot["vat"]), eur(tot["with_vat"]), "", ""])
+                 eur(tot["amount"]), _minus(tot["claims_amount"]), eur(tot["billable"]),
+                 eur(tot["vat"]), eur(tot["with_vat"]), "", ""])
     totals.append(len(rows) - 1)
     table = _table(rows, widths, total_rows=totals, right_from=2, zebra=False)
     st = []
@@ -175,8 +184,14 @@ def hub_pdf(report, hub_label, date_from, date_to, user=None):
     story.append(table)
 
     alerts = report["alerts"]
-    notes = ["Valor sem IVA: entregas à porta (preço por CP ou preço do motorista), mesma porta e PUDO. "
-             "IVA 23 % só no regime normal. Bónus, extras, descontos e adiantamentos estão na PF."]
+    notes = ["Produção: entregas à porta (preço por CP ou preço do motorista), mesma porta e PUDO. "
+             "Sem IVA = produção menos claims aprovados com data no período (regra da PF). "
+             "IVA 23 % só no regime normal, sobre o valor sem IVA. Bónus, extras e adiantamentos estão na PF."]
+    if tot["claims_open_n"]:
+        notes.append(f"{tot['claims_open_n']} claims ainda por decidir. Não descontam.")
+    if alerts["claims_without_tasks"]:
+        notes.append(f"{len(alerts['claims_without_tasks'])} claims de motoristas sem entregas no período "
+                     "não estão nesta tabela.")
     if alerts["orphans_n"]:
         notes.append(f"{alerts['orphans_n']} entregas do período não pertencem a nenhum motorista com ficha.")
     if alerts["shared_n"]:
@@ -214,23 +229,40 @@ def driver_pdf(detail, user=None):
     ]))
     story += [t, Paragraph("Entregas por hub", H2)]
 
-    rows = [["Hub", "Dias", "Entregues", "Porta", "Mesma porta", "PUDO", "Falhas", "Sem IVA"]]
+    rows = [["Hub", "Dias", "Entregues", "Porta", "Mesma porta", "PUDO", "Falhas", "Produção", "Claims"]]
     for h in detail["hubs"]:
         rows.append([h["hub"], h["days"], _num(h["delivered"]), _num(h["door_normal"]),
-                     _num(h["same_door"]), _num(h["pudo"]), _num(h["failures"]), eur(h["amount"])])
+                     _num(h["same_door"]), _num(h["pudo"]), _num(h["failures"]), eur(h["amount"]),
+                     _minus(h["claims_amount"])])
     rows.append(["Total", tot["days"], _num(tot["delivered"]), _num(tot["door_normal"]),
-                 _num(tot["same_door"]), _num(tot["pudo"]), _num(tot["failures"]), eur(tot["amount"])])
-    story.append(_table(rows, [width * w for w in (0.22, 0.08, 0.12, 0.11, 0.13, 0.09, 0.1, 0.15)],
+                 _num(tot["same_door"]), _num(tot["pudo"]), _num(tot["failures"]), eur(tot["amount"]),
+                 _minus(detail["claims_amount"])])
+    story.append(_table(rows, [width * w for w in (0.17, 0.07, 0.11, 0.1, 0.12, 0.08, 0.09, 0.14, 0.12)],
                         total_rows=[len(rows) - 1]))
 
     story.append(Paragraph("Valores", H2))
-    vals = [["Produção (sem IVA)", eur(tot["amount"])],
+    vals = [["Produção", eur(tot["amount"])],
+            ["Claims aprovados", _minus(detail["claims_amount"])],
+            ["Valor sem IVA", eur(detail["billable"])],
             ["IVA (23 % no regime normal)", eur(detail["vat"])],
             ["Valor com IVA", eur(detail["with_vat"])]]
     if detail["irs"]:
         vals.append(["Retenção IRS", f"- {eur(detail['irs'])}"])
-    v = _table([["Item", "Valor"]] + vals, [width * 0.7, width * 0.3], total_rows=[3])
+    v = _table([["Item", "Valor"]] + vals, [width * 0.7, width * 0.3], total_rows=[3, 5])
     story.append(v)
+
+    story.append(Paragraph(f"Claims ({len(detail['claims'])})", H2))
+    if detail["claims"]:
+        rows = [["Data", "Guia", "Tipo", "Estado", "Hub", "Valor", "Desconta"]]
+        for c in detail["claims"]:
+            rows.append([_d(c["date"]), Paragraph(c["waybill"] or "-", CELL), Paragraph(c["type"], CELL),
+                         c["status_label"], c["hub"], eur(c["amount"]),
+                         "Sim" if c["deducted"] else ("Fatura seguinte" if c["deferred"] else "Não")])
+        story.append(_table(rows, [width * w for w in (0.11, 0.25, 0.17, 0.13, 0.12, 0.1, 0.12)], right_from=5))
+        story.append(Paragraph("Só os claims aprovados descontam. Os pendentes, em recurso ou em quarentena "
+                               "esperam decisão.", NOTE))
+    else:
+        story.append(Paragraph("Não há claims com data neste período.", NOTE))
 
     pf = detail["pf"]
     story.append(Paragraph("Pré-fatura", H2))

@@ -109,14 +109,15 @@ def _xlsx(report, p):
     wb = Workbook(write_only=True)
     ws = wb.create_sheet("Resumo")
     ws.append(["Frota", "Motorista", "NIF", "Regime IVA", "Hubs", "Dias", "Entregues", "Porta",
-               "Mesma porta", "PUDO", "Falhas", "Sem IVA", "IVA", "Com IVA", "Retencao IRS",
+               "Mesma porta", "PUDO", "Falhas", "Producao", "Claims aprovados", "Claims por decidir",
+               "Sem IVA", "IVA", "Com IVA", "Retencao IRS",
                "PF", "Estado PF", "Diferenca vs PF"])
     for r in report["rows"]:
         d, pf = r["driver"], r["pf"]
         ws.append([r["fleet"].nome if r["fleet"] else "Direto", d.nome_completo, d.nif,
                    d.get_vat_regime_display(), ", ".join(r["hubs"]), r["days"], r["delivered"],
                    r["door_normal"], r["same_door"], r["pudo"], r["failures"], float(r["amount"]),
-                   float(r["vat"]), float(r["with_vat"]), float(r["irs"]),
+                   float(r["claims_amount"]), r["claims_open_n"], float(r["billable"]), float(r["vat"]), float(r["with_vat"]), float(r["irs"]),
                    pf.numero if pf else "", pf.get_status_display() if pf else "",
                    float(r["pf_diff"]) if r["pf_diff"] is not None else None])
     ws = wb.create_sheet("Entregas")
@@ -133,6 +134,18 @@ def _xlsx(report, p):
             ws.append([l["hub"], dd.driver.nome_completo, fleet, l["login"], l["date"], l["waybill"],
                        l["lp"], l["status"], l["kind"], l["cp4"], l["zip"], l["address"],
                        l["source"], float(l["amount"])])
+    ws = wb.create_sheet("Claims")
+    ws.append(["Hub", "Motorista", "Data", "Guia", "Tipo", "Estado", "Valor", "Desconta", "Descricao"])
+    for dd in report["data"]:
+        if dd.driver.id not in wanted:
+            continue
+        for c in dd.claims:
+            if p["hub"] and c["hub"] != p["hub"]:
+                continue
+            ws.append([c["hub"], dd.driver.nome_completo, c["date"], c["waybill"], c["type"],
+                       c["status_label"], float(c["amount"]),
+                       "Sim" if c["deducted"] else ("Fatura seguinte" if c["deferred"] else "Nao"),
+                       c["description"][:300]])
     out = io.BytesIO()
     wb.save(out)
     return out.getvalue()

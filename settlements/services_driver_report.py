@@ -181,6 +181,7 @@ class DriverData:
     base_price: Decimal
     by_hub: dict = field(default_factory=dict)
     pf: object = None
+    claims: list = field(default_factory=list)
 
     @property
     def total(self):
@@ -195,6 +196,49 @@ def _pf_for(driver_ids, date_from, date_to):
         driver_id__in=driver_ids, periodo_inicio__lte=date_to, periodo_fim__gte=date_from,
     ).exclude(status="REPROVADO").order_by("periodo_inicio", "id"):
         out[pf.driver_id] = pf
+    return out
+
+
+CLAIM_OPEN = ("PENDING", "APPEALED", "QUARANTINE")
+
+
+def _claims_for(driver_ids, date_from, date_to, hubs):
+    """Claims de cada motorista com data no período (regra da PF).
+
+    A data é a da entrega (`operation_task_date`) ou, sem ela, a da
+    ocorrência. Só os aprovados descontam; um claim passado para uma fatura
+    seguinte (`billing_after` >= início do período) não desconta aqui.
+    """
+    from django.db.models import Q
+
+    from .models import CainiaoOperationTask, DriverClaim
+
+    claims = list(
+        DriverClaim.objects.filter(
+            **({"driver_id__in": driver_ids} if driver_ids is not None else {})
+        ).filter(
+            Q(operation_task_date__range=(date_from, date_to))
+            | Q(operation_task_date__isnull=True, occurred_at__date__range=(date_from, date_to))
+        ).order_by("operation_task_date", "occurred_at", "id")
+    )
+    zips = dict(
+        CainiaoOperationTask.objects.filter(
+            waybill_number__in={c.waybill_number for c in claims if c.waybill_number},
+        ).values_list("waybill_number", "zip_code")
+    )
+    out = defaultdict(list)
+    for c in claims:
+        deferred = bool(c.billing_after and c.billing_after >= date_from)
+        out[c.driver_id].append({
+            "id": c.id, "waybill": c.waybill_number or "",
+            "date": c.operation_task_date or (c.occurred_at.date() if c.occurred_at else None),
+            "type": c.get_claim_type_display(), "status": c.status,
+            "status_label": c.get_status_display(), "amount": c.amount or Decimal("0"),
+            "hub": hubs.get((zips.get(c.waybill_number) or "")[:4], NO_HUB) if c.waybill_number in zips else None,
+            "deducted": c.status == "APPROVED" and not deferred,
+            "deferred": c.status == "APPROVED" and deferred,
+            "description": (c.description or "").strip(),
+        })
     return out
 
 
@@ -216,8 +260,16 @@ def collect(date_from, date_to):
             owners[l["task_id"]] += 1
         data.append(dd)
     pfs = _pf_for([dd.driver.id for dd in data], date_from, date_to)
+    claims = _claims_for(None, date_from, date_to, hubs)
     for dd in data:
         dd.pf = pfs.get(dd.driver.id)
+        dd.claims = claims.get(dd.driver.id, [])
+        # Guia do claim sem tarefa conhecida: fica no hub com mais entregas do motorista.
+        main_hub = max(dd.by_hub, key=lambda h: len(dd.by_hub[h]))
+        for c in dd.claims:
+            c["hub"] = c["hub"] or main_hub
+    known = {dd.driver.id for dd in data}
+    lost_claims = [c for d_id, cs in claims.items() if d_id not in known for c in cs]
 
     orphans = Counter()
     for tid, login, zip_code in CainiaoOperationTask.objects.filter(
@@ -230,17 +282,31 @@ def collect(date_from, date_to):
         "orphans_n": sum(orphans.values()),
         "shared_n": sum(1 for n in owners.values() if n > 1),
         "no_price": [dd.driver for dd in data if not dd.base_price],
+        "claims_without_tasks": lost_claims,
     }
     return data, alerts
 
 
+def values(driver, amount, claims):
+    """Produção menos claims aprovados = base sem IVA (como na PF); IVA e IRS sobre a base."""
+    claims_amount = sum((c["amount"] for c in claims if c["deducted"]), Decimal("0"))
+    billable = amount - claims_amount
+    vat = vat_for(driver, billable)
+    return {
+        "claims_n": len(claims),
+        "claims_open_n": sum(1 for c in claims if c["status"] in CLAIM_OPEN),
+        "claims_amount": claims_amount,
+        "billable": billable, "vat": vat, "with_vat": billable + vat,
+        "irs": irs_for(driver, billable),
+    }
+
+
 def row_for(dd, hub, date_from, date_to):
-    """Linha do relatório: as entregas do motorista no hub (ou em todos)."""
+    """Linha do relatório: as entregas e os claims do motorista no hub (ou em todos)."""
     lines = dd.lines if hub is None else dd.by_hub.get(hub, [])
+    claims = dd.claims if hub is None else [c for c in dd.claims if c["hub"] == hub]
     s = summarize(lines)
-    s["vat"] = vat_for(dd.driver, s["amount"])
-    s["with_vat"] = s["amount"] + s["vat"]
-    s["irs"] = irs_for(dd.driver, s["amount"])
+    s.update(values(dd.driver, s["amount"], claims))
     pf = dd.pf
     pf_prod = (pf.base_entregas + pf.total_pudo) if pf else None
     same_period = bool(pf and pf.periodo_inicio == date_from and pf.periodo_fim == date_to)
@@ -263,7 +329,7 @@ def build(date_from, date_to, hub=None, fleet_id=None, vat=None, pf_status=None,
     data, alerts = collected or collect(date_from, date_to)
     rows = []
     for dd in data:
-        if hub and hub not in dd.by_hub:
+        if hub and hub not in dd.by_hub and not any(c["hub"] == hub for c in dd.claims):
             continue
         d = dd.driver
         if fleet_id == "none" and d.empresa_parceira_id:
@@ -279,7 +345,7 @@ def build(date_from, date_to, hub=None, fleet_id=None, vat=None, pf_status=None,
         if q and q.lower() not in f"{d.nome_completo} {d.apelido}".lower():
             continue
         row = row_for(dd, hub, date_from, date_to)
-        if row["delivered"] or row["failures"]:  # só canceladas: fora do relatório
+        if row["delivered"] or row["failures"] or row["claims_n"]:  # só canceladas: fora
             rows.append(row)
 
     groups = defaultdict(list)
@@ -295,13 +361,14 @@ def build(date_from, date_to, hub=None, fleet_id=None, vat=None, pf_status=None,
     }
 
 
-_SUM_KEYS = ("tasks", "delivered", "door_normal", "same_door", "pudo", "failures",
-             "amount", "vat", "with_vat", "irs")
+_SUM_INT = ("tasks", "delivered", "door_normal", "same_door", "pudo", "failures",
+            "claims_n", "claims_open_n")
+_SUM_EUR = ("amount", "claims_amount", "billable", "vat", "with_vat", "irs")
 
 
 def _sum(rows):
-    t = {k: sum((r[k] for r in rows), Decimal("0") if k in ("amount", "vat", "with_vat", "irs") else 0)
-         for k in _SUM_KEYS}
+    t = {k: sum((r[k] for r in rows), 0) for k in _SUM_INT}
+    t.update({k: sum((r[k] for r in rows), Decimal("0")) for k in _SUM_EUR})
     t["drivers"] = len(rows)
     return t
 
@@ -336,12 +403,14 @@ def driver_detail(dd, date_from, date_to):
                   "waybills": [x["waybill"] for x in g]}
                  for g in sorted(sd.values(), key=lambda g: (g[0]["date"], g[0]["address"]))]
     total = summarize(dd.lines)
-    vat = vat_for(dd.driver, total["amount"])
-    irs = irs_for(dd.driver, total["amount"])
+    for h in hubs:
+        h["claims_amount"] = sum((c["amount"] for c in dd.claims if c["deducted"] and c["hub"] == h["hub"]),
+                                 Decimal("0"))
     return {
         "driver": dd.driver, "hubs": hubs, "by_day": by_day, "by_cp": by_cp,
-        "same_door": same_door, "total": total, "vat": vat, "irs": irs,
-        "with_vat": total["amount"] + vat, "base_price": dd.base_price, "pf": dd.pf,
+        "same_door": same_door, "total": total, "claims": dd.claims,
+        **values(dd.driver, total["amount"], dd.claims),
+        "base_price": dd.base_price, "pf": dd.pf,
         "logins": sorted({l["login"] for l in dd.lines if l["login"]}),
         "period": (date_from, date_to),
     }

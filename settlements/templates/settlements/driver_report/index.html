@@ -59,17 +59,21 @@
     <div class="lf-kpi"><p class="lf-kpi-label">Entregues</p><p class="lf-kpi-value">{{ t.delivered|pt_int }}</p>
       <p class="lf-kpi-note">{{ t.door_normal|pt_int }} porta · {{ t.same_door|pt_int }} mesma porta · {{ t.pudo|pt_int }} PUDO</p></div>
     <div class="lf-kpi"><p class="lf-kpi-label">Falhas</p><p class="lf-kpi-value">{{ t.failures|pt_int }}</p></div>
-    <div class="lf-kpi"><p class="lf-kpi-label">Sem IVA</p><p class="lf-kpi-value">{{ t.amount|eur }}</p></div>
+    <div class="lf-kpi"><p class="lf-kpi-label">Sem IVA</p><p class="lf-kpi-value">{{ t.billable|eur }}</p>
+      <p class="lf-kpi-note">Produção {{ t.amount|eur }} · claims −{{ t.claims_amount|eur }}</p></div>
     <div class="lf-kpi"><p class="lf-kpi-label">IVA</p><p class="lf-kpi-value">{{ t.vat|eur }}</p></div>
     <div class="lf-kpi"><p class="lf-kpi-label">Com IVA</p><p class="lf-kpi-value">{{ t.with_vat|eur }}</p></div>
   </div>
 
-  {% if a.orphans_n or a.shared_n or a.no_price %}
+  {% if a.orphans_n or a.shared_n or a.no_price or a.claims_without_tasks or t.claims_open_n %}
   <div class="lf-alert lf-tone-warning" role="status">
     <ul class="cs-list" style="color:inherit">
       {% if a.orphans_n %}<li>{{ a.orphans_n|pt_int }} entregas não pertencem a nenhum motorista com ficha:
         {% for k, n in a.orphans|slice:":6" %}{{ k.0 }} ({{ k.1 }}, {{ n }}){% if not forloop.last %}, {% endif %}{% endfor %}.</li>{% endif %}
       {% if a.shared_n %}<li>{{ a.shared_n|pt_int }} entregas pertencem a mais de um motorista.</li>{% endif %}
+      {% if t.claims_open_n %}<li>{{ t.claims_open_n }} claims ainda por decidir (pendentes, em recurso ou em quarentena). Não descontam.</li>{% endif %}
+      {% if a.claims_without_tasks %}<li>{{ a.claims_without_tasks|length }} claims de motoristas sem entregas no período (não estão na tabela):
+        {% for c in a.claims_without_tasks|slice:":6" %}{{ c.waybill|default:"sem guia" }} ({{ c.amount|eur }}, {{ c.status_label }}){% if not forloop.last %}, {% endif %}{% endfor %}.</li>{% endif %}
       {% if a.no_price %}<li>Sem preço na ficha: {% for d in a.no_price %}{{ d.nome_completo }}{% if not forloop.last %}, {% endif %}{% endfor %}.</li>{% endif %}
     </ul>
   </div>
@@ -81,11 +85,11 @@
     <div class="lf-table-wrap">
       <table class="lf-table">
         <thead><tr>
-          <th>Motorista</th><th>IVA</th><th class="text-right">Dias</th><th class="text-right">Entregues</th><th class="text-right">Porta</th><th class="text-right">Mesma porta</th><th class="text-right">PUDO</th><th class="text-right">Falhas</th><th class="text-right">% sucesso</th><th class="text-right">Sem IVA</th><th class="text-right">IVA</th><th class="text-right">Com IVA</th><th>Pré-fatura</th><th class="text-right">Dif. vs PF</th>
+          <th>Motorista</th><th>IVA</th><th class="text-right">Dias</th><th class="text-right">Entregues</th><th class="text-right">Porta</th><th class="text-right">Mesma porta</th><th class="text-right">PUDO</th><th class="text-right">Falhas</th><th class="text-right">% sucesso</th><th class="text-right">Produção</th><th class="text-right">Claims</th><th class="text-right">Sem IVA</th><th class="text-right">IVA</th><th class="text-right">Com IVA</th><th>Pré-fatura</th><th class="text-right">Dif. vs PF</th>
         </tr></thead>
         <tbody>
         {% for g in report.groups %}
-          <tr class="dr-group"><td colspan="14">{{ g.fleet.nome|default:"Motoristas diretos" }} <span class="dr-muted">· {{ g.rows|length }} motoristas</span></td></tr>
+          <tr class="dr-group"><td colspan="16">{{ g.fleet.nome|default:"Motoristas diretos" }} <span class="dr-muted">· {{ g.rows|length }} motoristas</span></td></tr>
           {% for r in g.rows %}
           <tr>
             <td><a class="cs-link" href="{% url 'driver-report-driver-pdf' r.driver.id %}?{{ query }}" title="PDF do motorista">{{ r.driver.nome_completo }}</a>
@@ -99,6 +103,8 @@
             <td class="lf-num">{{ r.failures|pt_int }}</td>
             <td class="lf-num">{% if r.success_pct is not None %}{{ r.success_pct|floatformat:1 }} %{% else %}—{% endif %}</td>
             <td class="lf-num">{{ r.amount|eur }}</td>
+            <td class="lf-num">{% if r.claims_n %}{% if r.claims_amount %}−{{ r.claims_amount|eur }}{% else %}0,00 €{% endif %}<div class="dr-muted">{{ r.claims_n }} claim{{ r.claims_n|pluralize }}{% if r.claims_open_n %} · {{ r.claims_open_n }} por decidir{% endif %}</div>{% else %}—{% endif %}</td>
+            <td class="lf-num">{{ r.billable|eur }}</td>
             <td class="lf-num">{{ r.vat|eur }}</td>
             <td class="lf-num">{{ r.with_vat|eur }}</td>
             <td>{% if r.pf %}<span class="lf-badge {% if r.pf.status == 'PAGO' %}lf-tone-success{% elif r.pf.status == 'CONTESTADO' %}lf-tone-danger{% else %}lf-tone-warning{% endif %}">{{ r.pf.numero }} · {{ r.pf.get_status_display }}</span>{% else %}<span class="lf-badge lf-tone-neutral">Sem PF</span>{% endif %}</td>
@@ -108,13 +114,13 @@
           <tr class="cs-total">
             <td colspan="3">Subtotal {{ g.fleet.nome|default:"motoristas diretos" }}</td>
             <td class="lf-num">{{ g.total.delivered|pt_int }}</td><td class="lf-num">{{ g.total.door_normal|pt_int }}</td><td class="lf-num">{{ g.total.same_door|pt_int }}</td><td class="lf-num">{{ g.total.pudo|pt_int }}</td><td class="lf-num">{{ g.total.failures|pt_int }}</td><td></td>
-            <td class="lf-num">{{ g.total.amount|eur }}</td><td class="lf-num">{{ g.total.vat|eur }}</td><td class="lf-num">{{ g.total.with_vat|eur }}</td><td colspan="2"></td>
+            <td class="lf-num">{{ g.total.amount|eur }}</td><td class="lf-num">{% if g.total.claims_amount %}−{{ g.total.claims_amount|eur }}{% else %}—{% endif %}</td><td class="lf-num">{{ g.total.billable|eur }}</td><td class="lf-num">{{ g.total.vat|eur }}</td><td class="lf-num">{{ g.total.with_vat|eur }}</td><td colspan="2"></td>
           </tr>
         {% endfor %}
         </tbody>
       </table>
     </div>
-    <p class="cs-help">Clique no nome para o PDF do motorista. "Dif. vs PF" aparece quando a PF tem o mesmo período: relatório (todos os hubs) menos entregas e PUDO da PF. Bónus, extras, descontos e adiantamentos estão na PF.</p>
+    <p class="cs-help">Clique no nome para o PDF do motorista. "Dif. vs PF" aparece quando a PF tem o mesmo período: relatório (todos os hubs) menos entregas e PUDO da PF. Sem IVA = produção menos claims aprovados com data no período (regra da PF); o IVA incide sobre este valor. Bónus, extras e adiantamentos estão na PF.</p>
     {% else %}
       <div class="lf-empty"><p class="lf-empty-title">Não há entregas com estes filtros.</p><p>Mude o hub ou o período.</p></div>
     {% endif %}

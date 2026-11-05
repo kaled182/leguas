@@ -1,0 +1,121 @@
+{% extends 'settlements/base.html' %}
+{% load ui %}
+{% block title %}Relatório de motoristas{% endblock %}
+{% block content %}
+{% include 'settlements/cainiao_subledger/_style.html' %}
+<style>
+  .dr-group td { background: var(--color-surface-alt); font-weight: var(--weight-subtitle); }
+  .dr-muted { color: var(--color-text-muted); font-size: var(--text-xs); }
+</style>
+<div class="max-w-screen-2xl mx-auto px-4 py-6 space-y-4">
+  <div class="lf-page-header">
+    <div class="min-w-0">
+      <h1 class="lf-page-title">Relatório de motoristas</h1>
+      <p class="lf-page-subtitle">{{ hub|default:"Todos os hubs" }} · {{ date_from|date:"d/m/Y" }} a {{ date_to|date:"d/m/Y" }}. O valor usa as regras da pré-fatura. O hub de cada entrega é o hub do CP4.</p>
+    </div>
+    <div class="lf-page-actions">
+      <a class="lf-btn lf-btn-primary" href="{% url 'driver-report-hub-pdf' %}?{{ query }}"><i data-lucide="file-text" class="w-4 h-4" aria-hidden="true"></i> PDF do hub</a>
+      <a class="lf-btn lf-btn-secondary" href="{% url 'driver-report-xlsx' %}?{{ query }}"><i data-lucide="sheet" class="w-4 h-4" aria-hidden="true"></i> Excel</a>
+      <a class="lf-btn lf-btn-secondary" href="{% url 'driver-report-zip' %}?{{ query }}"><i data-lucide="folder-archive" class="w-4 h-4" aria-hidden="true"></i> Lote ZIP</a>
+    </div>
+  </div>
+
+  <form method="get" class="cs-card lf-filters">
+    <div class="lf-field"><label class="lf-label" for="dr-hub">Hub</label>
+      <select id="dr-hub" class="lf-control" name="hub">
+        <option value="">Todos os hubs</option>
+        {% for h in hub_names %}<option value="{{ h }}" {% if h == hub %}selected{% endif %}>{{ h }}</option>{% endfor %}
+        <option value="{{ no_hub }}" {% if hub == no_hub %}selected{% endif %}>{{ no_hub }}</option>
+      </select></div>
+    <div class="lf-field"><label class="lf-label" for="dr-from">De</label><input id="dr-from" class="lf-control" type="date" name="from" value="{{ date_from|date:'Y-m-d' }}"></div>
+    <div class="lf-field"><label class="lf-label" for="dr-to">Até</label><input id="dr-to" class="lf-control" type="date" name="to" value="{{ date_to|date:'Y-m-d' }}"></div>
+    <div class="lf-field"><label class="lf-label" for="dr-fleet">Frota</label>
+      <select id="dr-fleet" class="lf-control" name="fleet">
+        <option value="">Todas</option>
+        <option value="none" {% if fleet == 'none' %}selected{% endif %}>Motoristas diretos</option>
+        {% for f in fleets %}<option value="{{ f.id }}" {% if fleet == f.id|stringformat:'s' %}selected{% endif %}>{{ f.nome }}</option>{% endfor %}
+      </select></div>
+    <div class="lf-field"><label class="lf-label" for="dr-vat">Regime IVA</label>
+      <select id="dr-vat" class="lf-control" name="vat">
+        <option value="">Todos</option>
+        {% for v, l in vat_choices %}<option value="{{ v }}" {% if v == vat %}selected{% endif %}>{{ l }}</option>{% endfor %}
+      </select></div>
+    <div class="lf-field"><label class="lf-label" for="dr-pf">Pré-fatura</label>
+      <select id="dr-pf" class="lf-control" name="pf">
+        <option value="">Todas</option>
+        <option value="none" {% if pf == 'none' %}selected{% endif %}>Sem PF</option>
+        {% for v, l in pf_choices %}<option value="{{ v }}" {% if v == pf %}selected{% endif %}>{{ l }}</option>{% endfor %}
+      </select></div>
+    <div class="lf-field"><label class="lf-label" for="dr-q">Motorista</label><input id="dr-q" class="lf-control" type="search" name="q" value="{{ q }}" placeholder="Nome ou login"></div>
+    <button class="lf-btn lf-btn-primary" type="submit"><i data-lucide="filter" class="w-4 h-4" aria-hidden="true"></i> Aplicar</button>
+    <button class="lf-btn lf-btn-ghost" type="submit" name="refresh" value="1" title="Os dados ficam 10 minutos em memória"><i data-lucide="refresh-cw" class="w-4 h-4" aria-hidden="true"></i> Recalcular</button>
+  </form>
+
+  {% with t=report.total a=report.alerts %}
+  <div class="lf-kpi-grid">
+    <div class="lf-kpi"><p class="lf-kpi-label">Motoristas</p><p class="lf-kpi-value">{{ t.drivers|pt_int }}</p></div>
+    <div class="lf-kpi"><p class="lf-kpi-label">Entregues</p><p class="lf-kpi-value">{{ t.delivered|pt_int }}</p>
+      <p class="lf-kpi-note">{{ t.door_normal|pt_int }} porta · {{ t.same_door|pt_int }} mesma porta · {{ t.pudo|pt_int }} PUDO</p></div>
+    <div class="lf-kpi"><p class="lf-kpi-label">Falhas</p><p class="lf-kpi-value">{{ t.failures|pt_int }}</p></div>
+    <div class="lf-kpi"><p class="lf-kpi-label">Sem IVA</p><p class="lf-kpi-value">{{ t.amount|eur }}</p></div>
+    <div class="lf-kpi"><p class="lf-kpi-label">IVA</p><p class="lf-kpi-value">{{ t.vat|eur }}</p></div>
+    <div class="lf-kpi"><p class="lf-kpi-label">Com IVA</p><p class="lf-kpi-value">{{ t.with_vat|eur }}</p></div>
+  </div>
+
+  {% if a.orphans_n or a.shared_n or a.no_price %}
+  <div class="lf-alert lf-tone-warning" role="status">
+    <ul class="cs-list" style="color:inherit">
+      {% if a.orphans_n %}<li>{{ a.orphans_n|pt_int }} entregas não pertencem a nenhum motorista com ficha:
+        {% for k, n in a.orphans|slice:":6" %}{{ k.0 }} ({{ k.1 }}, {{ n }}){% if not forloop.last %}, {% endif %}{% endfor %}.</li>{% endif %}
+      {% if a.shared_n %}<li>{{ a.shared_n|pt_int }} entregas pertencem a mais de um motorista.</li>{% endif %}
+      {% if a.no_price %}<li>Sem preço na ficha: {% for d in a.no_price %}{{ d.nome_completo }}{% if not forloop.last %}, {% endif %}{% endfor %}.</li>{% endif %}
+    </ul>
+  </div>
+  {% endif %}
+  {% endwith %}
+
+  <section class="cs-card space-y-3">
+    {% if report.rows %}
+    <div class="lf-table-wrap">
+      <table class="lf-table">
+        <thead><tr>
+          <th>Motorista</th><th>IVA</th><th class="text-right">Dias</th><th class="text-right">Entregues</th><th class="text-right">Porta</th><th class="text-right">Mesma porta</th><th class="text-right">PUDO</th><th class="text-right">Falhas</th><th class="text-right">% sucesso</th><th class="text-right">Sem IVA</th><th class="text-right">IVA</th><th class="text-right">Com IVA</th><th>Pré-fatura</th><th class="text-right">Dif. vs PF</th>
+        </tr></thead>
+        <tbody>
+        {% for g in report.groups %}
+          <tr class="dr-group"><td colspan="14">{{ g.fleet.nome|default:"Motoristas diretos" }} <span class="dr-muted">· {{ g.rows|length }} motoristas</span></td></tr>
+          {% for r in g.rows %}
+          <tr>
+            <td><a class="cs-link" href="{% url 'driver-report-driver-pdf' r.driver.id %}?{{ query }}" title="PDF do motorista">{{ r.driver.nome_completo }}</a>
+              {% if r.other_hubs %}<div class="dr-muted">Também em {{ r.other_hubs|join:", " }}</div>{% elif not hub and r.hubs|length > 1 %}<div class="dr-muted">{{ r.hubs|join:", " }}</div>{% endif %}</td>
+            <td>{% if r.driver.vat_regime == 'normal' %}<span class="lf-badge lf-tone-brand">Normal</span>{% else %}<span class="lf-badge lf-tone-neutral">{{ r.driver.get_vat_regime_display|cut:" (art. 53º)" }}</span>{% endif %}</td>
+            <td class="lf-num">{{ r.days }}</td>
+            <td class="lf-num">{{ r.delivered|pt_int }}</td>
+            <td class="lf-num">{{ r.door_normal|pt_int }}</td>
+            <td class="lf-num">{{ r.same_door|pt_int }}</td>
+            <td class="lf-num">{{ r.pudo|pt_int }}</td>
+            <td class="lf-num">{{ r.failures|pt_int }}</td>
+            <td class="lf-num">{% if r.success_pct is not None %}{{ r.success_pct|floatformat:1 }} %{% else %}—{% endif %}</td>
+            <td class="lf-num">{{ r.amount|eur }}</td>
+            <td class="lf-num">{{ r.vat|eur }}</td>
+            <td class="lf-num">{{ r.with_vat|eur }}</td>
+            <td>{% if r.pf %}<span class="lf-badge {% if r.pf.status == 'PAGO' %}lf-tone-success{% elif r.pf.status == 'CONTESTADO' %}lf-tone-danger{% else %}lf-tone-warning{% endif %}">{{ r.pf.numero }} · {{ r.pf.get_status_display }}</span>{% else %}<span class="lf-badge lf-tone-neutral">Sem PF</span>{% endif %}</td>
+            <td class="lf-num">{% if r.pf_diff is None %}—{% elif r.pf_diff %}<span class="lf-badge lf-tone-danger">{{ r.pf_diff|eur }}</span>{% else %}0{% endif %}</td>
+          </tr>
+          {% endfor %}
+          <tr class="cs-total">
+            <td colspan="3">Subtotal {{ g.fleet.nome|default:"motoristas diretos" }}</td>
+            <td class="lf-num">{{ g.total.delivered|pt_int }}</td><td class="lf-num">{{ g.total.door_normal|pt_int }}</td><td class="lf-num">{{ g.total.same_door|pt_int }}</td><td class="lf-num">{{ g.total.pudo|pt_int }}</td><td class="lf-num">{{ g.total.failures|pt_int }}</td><td></td>
+            <td class="lf-num">{{ g.total.amount|eur }}</td><td class="lf-num">{{ g.total.vat|eur }}</td><td class="lf-num">{{ g.total.with_vat|eur }}</td><td colspan="2"></td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p class="cs-help">Clique no nome para o PDF do motorista. "Dif. vs PF" aparece quando a PF tem o mesmo período: relatório (todos os hubs) menos entregas e PUDO da PF. Bónus, extras, descontos e adiantamentos estão na PF.</p>
+    {% else %}
+      <div class="lf-empty"><p class="lf-empty-title">Não há entregas com estes filtros.</p><p>Mude o hub ou o período.</p></div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

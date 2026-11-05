@@ -75,6 +75,7 @@ MENU = (
                item("Sócios e reembolsos", "shareholder-dashboard")),
     )),
     ("Relatórios", (
+        item("Relatório de motoristas", "driver-report", "file-text"),
         item("Estado das APIs", "analytics:api_status_dashboard", "activity"),
         item("Registos de sincronização", "analytics:sync_logs_list", "list-checks"),
     )),

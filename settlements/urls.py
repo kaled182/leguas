@@ -5,6 +5,7 @@ from . import (
     views, views_cash_entries, views_fleet_portal, views_pudo,
     views_shareholder, views_cainiao_billing, views_reliable_sync,
     views_cainiao_subledger,
+    views_driver_report,
     views_courier_onboarding, views_fleet_invoices,
 )
 
@@ -39,6 +40,11 @@ urlpatterns = [
         name="invoice-pdf",
     ),
     # Pré-faturas Cainiao a partir do sub-ledger do portal CES
+    path("relatorios/motoristas/", views_driver_report.driver_report, name="driver-report"),
+    path("relatorios/motoristas/hub.pdf", views_driver_report.driver_report_hub_pdf, name="driver-report-hub-pdf"),
+    path("relatorios/motoristas/<int:driver_id>.pdf", views_driver_report.driver_report_driver_pdf, name="driver-report-driver-pdf"),
+    path("relatorios/motoristas/entregas.xlsx", views_driver_report.driver_report_xlsx, name="driver-report-xlsx"),
+    path("relatorios/motoristas/lote.zip", views_driver_report.driver_report_zip, name="driver-report-zip"),
     path("cainiao/pre-faturas/", views_cainiao_subledger.subledger_list, name="cainiao-subledger-list"),
     path("cainiao/pre-faturas/importar/", views_cainiao_subledger.subledger_upload, name="cainiao-subledger-upload"),
     path("cainiao/pre-faturas/nova/", views_cainiao_subledger.pre_invoice_create, name="cainiao-preinvoice-create"),

@@ -122,12 +122,12 @@ def hub_pdf(report, hub_label, date_from, date_to, user=None):
         f"Relatório de motoristas · {hub_label}",
         f"Período {_period(date_from, date_to)} · {tot['drivers']} motoristas · {_emitted(user)}",
     )
-    kpi = [["Entregues", "Porta", "Mesma porta", "PUDO", "Falhas", "Produção", "Claims",
-            "Sem IVA", "IVA", "Com IVA"],
-           [_num(tot["delivered"]), _num(tot["door_normal"]), _num(tot["same_door"]),
-            _num(tot["pudo"]), _num(tot["failures"]), eur(tot["amount"]), _minus(tot["claims_amount"]),
-            eur(tot["billable"]), eur(tot["vat"]), eur(tot["with_vat"])]]
-    k = Table(kpi, colWidths=[width / 10] * 10)
+    kpi = [["Entregues", "Falhas", "Produção", "Claims", "Sem IVA", "IVA", "Com IVA",
+            "Adiantamentos", "A pagar"],
+           [_num(tot["delivered"]), _num(tot["failures"]), eur(tot["amount"]), _minus(tot["claims_amount"]),
+            eur(tot["billable"]), eur(tot["vat"]), eur(tot["with_vat"]),
+            _minus(tot["advances_amount"]), eur(tot["to_pay"])]]
+    k = Table(kpi, colWidths=[width / 9] * 9)
     k.setStyle(TableStyle([
         ("FONT", (0, 0), (-1, 0), "Helvetica", 7), ("TEXTCOLOR", (0, 0), (-1, 0), MUTED),
         ("FONT", (0, 1), (-1, 1), "Helvetica-Bold", 11), ("TEXTCOLOR", (0, 1), (-1, 1), PURPLE),
@@ -135,15 +135,16 @@ def hub_pdf(report, hub_label, date_from, date_to, user=None):
     ]))
     story += [k, Spacer(1, 10)]
 
-    head = ["Motorista", "IVA", "Dias", "Entregues", "Porta", "Mesma\nporta", "PUDO",
-            "Falhas", "% suc.", "Produção", "Claims", "Sem IVA", "IVA", "Com IVA", "PF", "OK"]
-    widths = [0.17, 0.05, 0.035, 0.055, 0.05, 0.05, 0.04, 0.045, 0.045, 0.075, 0.065, 0.075,
-              0.06, 0.075, 0.08, 0.03]
+    head = ["Motorista", "IVA", "Dias", "Entreg.", "Porta", "Mesma\nporta", "PUDO",
+            "Falhas", "% suc.", "Produção", "Claims", "Sem IVA", "IVA", "Com IVA", "Adiant.",
+            "A pagar", "PF", "OK"]
+    widths = [0.13, 0.04, 0.03, 0.045, 0.04, 0.04, 0.035, 0.035, 0.04, 0.07, 0.06, 0.07,
+              0.06, 0.07, 0.06, 0.075, 0.07, 0.03]
     widths = [w * width for w in widths]
     rows, totals = [head], []
     for g in report["groups"]:
         fleet = g["fleet"].nome if g["fleet"] else "Motoristas diretos"
-        rows.append([Paragraph(f"<b>{fleet}</b>", CELL)] + [""] * 15)
+        rows.append([Paragraph(f"<b>{fleet}</b>", CELL)] + [""] * 17)
         for r in g["rows"]:
             d = r["driver"]
             name = d.nome_completo
@@ -158,21 +159,24 @@ def hub_pdf(report, hub_label, date_from, date_to, user=None):
                 f'{_num(r["success_pct"], 0)} %' if r["success_pct"] is not None else "-",
                 eur(r["amount"]), _minus(r["claims_amount"]) if r["claims_n"] else "-",
                 eur(r["billable"]), eur(r["vat"]), eur(r["with_vat"]),
+                _minus(r["advances_amount"]) if r["advances_n"] else "-", eur(r["to_pay"]),
                 Paragraph(pf_txt, CELL), "",
             ])
         t = g["total"]
         rows.append([f"Subtotal {fleet}", "", "", _num(t["delivered"]), _num(t["door_normal"]),
                      _num(t["same_door"]), _num(t["pudo"]), _num(t["failures"]), "",
                      eur(t["amount"]), _minus(t["claims_amount"]), eur(t["billable"]),
-                     eur(t["vat"]), eur(t["with_vat"]), "", ""])
+                     eur(t["vat"]), eur(t["with_vat"]), _minus(t["advances_amount"]), eur(t["to_pay"]),
+                     "", ""])
         totals.append(len(rows) - 1)
     rows.append(["Total", "", "", _num(tot["delivered"]), _num(tot["door_normal"]),
                  _num(tot["same_door"]), _num(tot["pudo"]), _num(tot["failures"]), "",
                  eur(tot["amount"]), _minus(tot["claims_amount"]), eur(tot["billable"]),
-                 eur(tot["vat"]), eur(tot["with_vat"]), "", ""])
+                 eur(tot["vat"]), eur(tot["with_vat"]), _minus(tot["advances_amount"]),
+                 eur(tot["to_pay"]), "", ""])
     totals.append(len(rows) - 1)
     table = _table(rows, widths, total_rows=totals, right_from=2, zebra=False)
-    st = []
+    st = [("LEFTPADDING", (0, 0), (-1, -1), 2.5), ("RIGHTPADDING", (0, 0), (-1, -1), 2.5)]
     for i, row in enumerate(rows[1:], start=1):
         if i in totals:
             continue
@@ -186,7 +190,12 @@ def hub_pdf(report, hub_label, date_from, date_to, user=None):
     alerts = report["alerts"]
     notes = ["Produção: entregas à porta (preço por CP ou preço do motorista), mesma porta e PUDO. "
              "Sem IVA = produção menos claims aprovados com data no período (regra da PF). "
-             "IVA 23 % só no regime normal, sobre o valor sem IVA. Bónus, extras e adiantamentos estão na PF."]
+             "IVA 23 % só no regime normal, sobre o valor sem IVA. A pagar = com IVA menos adiantamentos "
+             "(os da PF do período ou, sem PF, os pendentes até ao fim do período). O IRS não está descontado. "
+             "Bónus e extras estão na PF."]
+    if tot["advances_pending_n"]:
+        notes.append(f"{tot['advances_pending_n']} adiantamentos pendentes de motoristas com PF deste período "
+                     "ficam para a próxima PF.")
     if tot["claims_open_n"]:
         notes.append(f"{tot['claims_open_n']} claims ainda por decidir. Não descontam.")
     if alerts["claims_without_tasks"]:
@@ -245,11 +254,25 @@ def driver_pdf(detail, user=None):
             ["Claims aprovados", _minus(detail["claims_amount"])],
             ["Valor sem IVA", eur(detail["billable"])],
             ["IVA (23 % no regime normal)", eur(detail["vat"])],
-            ["Valor com IVA", eur(detail["with_vat"])]]
+            ["Valor com IVA", eur(detail["with_vat"])],
+            ["Adiantamentos (depois do IVA)", _minus(detail["advances_amount"])],
+            ["A pagar", eur(detail["to_pay"])]]
     if detail["irs"]:
-        vals.append(["Retenção IRS", f"- {eur(detail['irs'])}"])
-    v = _table([["Item", "Valor"]] + vals, [width * 0.7, width * 0.3], total_rows=[3, 5])
+        vals.append(["Retenção IRS (não descontada acima)", f"- {eur(detail['irs'])}"])
+    v = _table([["Item", "Valor"]] + vals, [width * 0.7, width * 0.3], total_rows=[3, 5, 7])
     story.append(v)
+
+    story.append(Paragraph(f"Adiantamentos ({len(detail['advances'])})", H2))
+    if detail["advances"]:
+        rows = [["Data", "Tipo", "Descrição", "Estado", "Valor", "Desconta"]]
+        for a in detail["advances"]:
+            rows.append([_d(a["date"]), a["type"], Paragraph(a["description"] or "-", CELL),
+                         a["status_label"], eur(a["amount"]), "Sim" if a["deducted"] else "Próxima PF"])
+        story.append(_table(rows, [width * w for w in (0.11, 0.14, 0.38, 0.13, 0.12, 0.12)], right_from=4))
+        story.append(Paragraph("Com PF do período descontam os adiantamentos dessa PF. Sem PF descontam os "
+                               "pendentes com data até ao fim do período.", NOTE))
+    else:
+        story.append(Paragraph("Não há adiantamentos para descontar.", NOTE))
 
     story.append(Paragraph(f"Claims ({len(detail['claims'])})", H2))
     if detail["claims"]:

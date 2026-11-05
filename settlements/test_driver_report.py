@@ -5,6 +5,7 @@ from datetime import date, datetime, timezone
 from decimal import Decimal
 
 from django.contrib.auth.models import Group, User
+from django.core.cache import cache
 from django.test import TestCase, override_settings
 from django.urls import reverse
 from openpyxl import load_workbook
@@ -12,7 +13,9 @@ from openpyxl import load_workbook
 from core.models import Partner
 from drivers_app.models import DriverProfile, EmpresaParceira
 
-from .models import CainiaoHub, CainiaoHubCP4, CainiaoOperationTask, DriverClaim, DriverPreInvoice
+from .models import (
+    CainiaoHub, CainiaoHubCP4, CainiaoOperationTask, DriverClaim, DriverPreInvoice, PreInvoiceAdvance,
+)
 from .services_driver_breakdown import driver_breakdown
 from .services_driver_report import build, collect, driver_detail
 
@@ -32,6 +35,7 @@ def _task(wb, courier, zc, addr, status="Delivered", dtype="TO_DOOR", day=D1, la
 @override_settings(CACHES=LOCMEM)
 class DriverReportTests(TestCase):
     def setUp(self):
+        cache.clear()
         self.partner = Partner.objects.create(
             name="CAINIAO", nif="514154411", contact_email="c@x.pt",
             same_door_enabled=True, same_door_additional_price=Decimal("0.30"), pudo_enabled=True,
@@ -107,7 +111,7 @@ class DriverReportTests(TestCase):
         self.assertEqual(one.content[:4], b"%PDF")
         self.assertEqual(self.client.get(reverse("driver-report-driver-pdf", args=[999]) + q).status_code, 404)
         wb = load_workbook(io.BytesIO(self.client.get(reverse("driver-report-xlsx") + q).content), read_only=True)
-        self.assertEqual(wb.sheetnames, ["Resumo", "Entregas", "Claims"])
+        self.assertEqual(wb.sheetnames, ["Resumo", "Entregas", "Claims", "Adiantamentos"])
         self.assertEqual(len(list(wb["Entregas"].iter_rows())), 4)   # cabeçalho + R1, R2, R4
         z = zipfile.ZipFile(io.BytesIO(self.client.get(reverse("driver-report-zip") + q).content))
         self.assertEqual(len([n for n in z.namelist() if n.startswith("motoristas/")]), 1)
@@ -152,3 +156,34 @@ class DriverReportTests(TestCase):
                          b"%PDF")
         wb = load_workbook(io.BytesIO(self.client.get(reverse("driver-report-xlsx") + q).content), read_only=True)
         self.assertEqual(len(list(wb["Claims"].iter_rows())), 4)        # cabeçalho + 3 do hub Norte
+
+    def test_adiantamentos_descontam_depois_do_iva(self):
+        def adv(driver, valor, day, **kw):
+            return PreInvoiceAdvance.objects.create(driver=driver, valor=Decimal(valor), data=day, **kw)
+        adv(self.rui, "0.50", D1)                                       # pendente, sem PF: desconta
+        adv(self.rui, "0.20", date(2026, 6, 1))                         # pendente antigo: desconta
+        adv(self.rui, "9.00", date(2026, 11, 2))                        # depois do período: fora
+        adv(self.rui, "4.00", D1, status="CANCELADO")                   # cancelado: fora
+        north = build(D1, D2, hub="Norte")["rows"][0]                   # Norte = hub com mais entregas
+        self.assertEqual((north["billable"], north["vat"], north["with_vat"]),
+                         (Decimal("1.40"), Decimal("0.32"), Decimal("1.72")))
+        self.assertEqual((north["advances_n"], north["advances_amount"], north["to_pay"]),
+                         (2, Decimal("0.70"), Decimal("1.02")))
+        self.assertEqual(next(r for r in build(D1, D2, hub="Sul")["rows"] if r["driver"] == self.rui)
+                         ["advances_amount"], Decimal("0"))
+
+        pf = DriverPreInvoice.objects.create(driver=self.ana, periodo_inicio=D1, periodo_fim=D2)
+        adv(self.ana, "0.30", D1, status="INCLUIDO_PF", pre_invoice=pf)  # na PF: desconta
+        adv(self.ana, "0.25", D2)                                       # pendente com PF: próxima PF
+        ana = next(r for r in build(D1, D2)["rows"] if r["driver"] == self.ana)
+        self.assertEqual((ana["advances_amount"], ana["advances_pending_n"]), (Decimal("0.30"), 1))
+        self.assertEqual(ana["to_pay"], ana["with_vat"] - Decimal("0.30"))
+
+        self.client.force_login(self.user)
+        q = "?from=2026-10-16&to=2026-10-31"
+        self.assertContains(self.client.get(reverse("driver-report") + q), "para a próxima PF")
+        self.assertEqual(self.client.get(reverse("driver-report-hub-pdf") + q).content[:4], b"%PDF")
+        self.assertEqual(self.client.get(reverse("driver-report-driver-pdf", args=[self.ana.id]) + q).content[:4],
+                         b"%PDF")
+        wb = load_workbook(io.BytesIO(self.client.get(reverse("driver-report-xlsx") + q).content), read_only=True)
+        self.assertEqual(len(list(wb["Adiantamentos"].iter_rows())), 5)  # cabeçalho + 2 do Rui + 2 da Ana

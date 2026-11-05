@@ -182,6 +182,7 @@ class DriverData:
     by_hub: dict = field(default_factory=dict)
     pf: object = None
     claims: list = field(default_factory=list)
+    advances: list = field(default_factory=list)
 
     @property
     def total(self):
@@ -242,6 +243,34 @@ def _claims_for(driver_ids, date_from, date_to, hubs):
     return out
 
 
+def _advances_for(pfs, driver_ids, date_to):
+    """Adiantamentos de cada motorista (conta-corrente, descontam depois do IVA).
+
+    Com PF do período: os lançamentos incluídos nessa PF. Sem PF: os pendentes
+    com data até ao fim do período (a PF nova inclui os pendentes ao ser criada).
+    Os pendentes de um motorista com PF aparecem, mas não descontam.
+    """
+    from django.db.models import Q
+
+    from .models import PreInvoiceAdvance
+
+    qs = PreInvoiceAdvance.objects.filter(driver_id__in=driver_ids).filter(
+        Q(pre_invoice_id__in=[pf.id for pf in pfs.values()], status="INCLUIDO_PF")
+        | Q(status="PENDENTE") & (Q(data__lte=date_to) | Q(data__isnull=True))
+    ).select_related("pre_invoice").order_by("data", "id")
+    out = defaultdict(list)
+    for a in qs:
+        pf = pfs.get(a.driver_id)
+        in_pf = a.status == "INCLUIDO_PF"
+        out[a.driver_id].append({
+            "id": a.id, "date": a.data, "type": a.get_tipo_display(),
+            "description": (a.descricao or "").strip(), "amount": a.valor,
+            "status_label": f"Na {pf.numero}" if in_pf and pf else a.get_status_display(),
+            "deducted": in_pf or pf is None, "hub": None,
+        })
+    return out
+
+
 def collect(date_from, date_to):
     """Linhas de todos os motoristas do período. Devolve (dados, alertas)."""
     from .models import CainiaoOperationTask
@@ -261,12 +290,14 @@ def collect(date_from, date_to):
         data.append(dd)
     pfs = _pf_for([dd.driver.id for dd in data], date_from, date_to)
     claims = _claims_for(None, date_from, date_to, hubs)
+    advances = _advances_for(pfs, [dd.driver.id for dd in data], date_to)
     for dd in data:
         dd.pf = pfs.get(dd.driver.id)
         dd.claims = claims.get(dd.driver.id, [])
-        # Guia do claim sem tarefa conhecida: fica no hub com mais entregas do motorista.
+        dd.advances = advances.get(dd.driver.id, [])
+        # Claim sem tarefa conhecida e adiantamentos: ficam no hub com mais entregas do motorista.
         main_hub = max(dd.by_hub, key=lambda h: len(dd.by_hub[h]))
-        for c in dd.claims:
+        for c in dd.claims + dd.advances:
             c["hub"] = c["hub"] or main_hub
     known = {dd.driver.id for dd in data}
     lost_claims = [c for d_id, cs in claims.items() if d_id not in known for c in cs]
@@ -287,9 +318,11 @@ def collect(date_from, date_to):
     return data, alerts
 
 
-def values(driver, amount, claims):
-    """Produção menos claims aprovados = base sem IVA (como na PF); IVA e IRS sobre a base."""
+def values(driver, amount, claims, advances=()):
+    """Como na PF: produção menos claims aprovados = base sem IVA; IVA e IRS sobre a base;
+    os adiantamentos descontam depois do IVA."""
     claims_amount = sum((c["amount"] for c in claims if c["deducted"]), Decimal("0"))
+    advances_amount = sum((a["amount"] for a in advances if a["deducted"]), Decimal("0"))
     billable = amount - claims_amount
     vat = vat_for(driver, billable)
     return {
@@ -297,6 +330,10 @@ def values(driver, amount, claims):
         "claims_open_n": sum(1 for c in claims if c["status"] in CLAIM_OPEN),
         "claims_amount": claims_amount,
         "billable": billable, "vat": vat, "with_vat": billable + vat,
+        "advances_n": sum(1 for a in advances if a["deducted"]),
+        "advances_amount": advances_amount,
+        "advances_pending_n": sum(1 for a in advances if not a["deducted"]),
+        "to_pay": billable + vat - advances_amount,
         "irs": irs_for(driver, billable),
     }
 
@@ -305,8 +342,9 @@ def row_for(dd, hub, date_from, date_to):
     """Linha do relatório: as entregas e os claims do motorista no hub (ou em todos)."""
     lines = dd.lines if hub is None else dd.by_hub.get(hub, [])
     claims = dd.claims if hub is None else [c for c in dd.claims if c["hub"] == hub]
+    advances = dd.advances if hub is None else [a for a in dd.advances if a["hub"] == hub]
     s = summarize(lines)
-    s.update(values(dd.driver, s["amount"], claims))
+    s.update(values(dd.driver, s["amount"], claims, advances))
     pf = dd.pf
     pf_prod = (pf.base_entregas + pf.total_pudo) if pf else None
     same_period = bool(pf and pf.periodo_inicio == date_from and pf.periodo_fim == date_to)
@@ -362,8 +400,8 @@ def build(date_from, date_to, hub=None, fleet_id=None, vat=None, pf_status=None,
 
 
 _SUM_INT = ("tasks", "delivered", "door_normal", "same_door", "pudo", "failures",
-            "claims_n", "claims_open_n")
-_SUM_EUR = ("amount", "claims_amount", "billable", "vat", "with_vat", "irs")
+            "claims_n", "claims_open_n", "advances_n", "advances_pending_n")
+_SUM_EUR = ("amount", "claims_amount", "billable", "vat", "with_vat", "advances_amount", "to_pay", "irs")
 
 
 def _sum(rows):
@@ -408,8 +446,8 @@ def driver_detail(dd, date_from, date_to):
                                  Decimal("0"))
     return {
         "driver": dd.driver, "hubs": hubs, "by_day": by_day, "by_cp": by_cp,
-        "same_door": same_door, "total": total, "claims": dd.claims,
-        **values(dd.driver, total["amount"], dd.claims),
+        "same_door": same_door, "total": total, "claims": dd.claims, "advances": dd.advances,
+        **values(dd.driver, total["amount"], dd.claims, dd.advances),
         "base_price": dd.base_price, "pf": dd.pf,
         "logins": sorted({l["login"] for l in dd.lines if l["login"]}),
         "period": (date_from, date_to),
@@ -420,7 +458,7 @@ def collect_cached(date_from, date_to, refresh=False):
     """`collect` com cache de 10 min: a página, os PDF e o Excel usam os mesmos dados."""
     from django.core.cache import cache
 
-    key = f"driver-report:{date_from:%Y%m%d}:{date_to:%Y%m%d}"
+    key = f"driver-report:v2:{date_from:%Y%m%d}:{date_to:%Y%m%d}"
     hit = None if refresh else cache.get(key)
     if hit is None:
         hit = collect(date_from, date_to)

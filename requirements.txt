@@ -20,6 +20,8 @@ django-tailwind==3.8.0
 redis==5.0.0
 django-redis==6.0.0
 celery==5.4.0
+# kombu 5.7 exige redis-py >= 6.1; com redis 5.0.0 o worker não arranca.
+kombu==5.6.2
 django-celery-beat==2.8.1
 django-celery-results==2.6.0
 

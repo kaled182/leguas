@@ -265,6 +265,27 @@ class PreInvoicePdfTests(TestCase):
         fin.assert_called_once()
         self.assertEqual(fin.call_args.kwargs["n_delivered"], 2)
         self.assertIsNotNone(pf_pdf_sections.fallback_logo_path())
+        # A fonte vai dentro do PDF: sem ela, o macOS põe o "€" por cima dos números.
+        self.assertIn(b"LiberationSans", pdf)
+        self.assertNotIn(b"/BaseFont /Helvetica", pdf)
+
+    def test_grafico_com_muitos_dias_roda_os_valores(self):
+        from datetime import timedelta
+
+        from reportlab.graphics.shapes import Group, String
+
+        from .reports.pf_pdf_sections import _days_chart
+
+        days = [{"date": D1 + timedelta(days=i), "door_normal": 140, "same_door": 10, "pudo": 1,
+                 "delivered": 151, "failures": 0} for i in range(24)]
+        values = {x["date"]: Decimal("145.44") for x in days}
+        d = _days_chart(days, values)
+        rotated = [g for g in d.contents if isinstance(g, Group) and g.transform[:4] == (0, 1, -1, 0)]
+        self.assertEqual(len(rotated), 24)
+        # 24 dias do mesmo mês: o eixo mostra só o dia.
+        self.assertTrue(any(isinstance(s, String) and s.text.startswith("Dias de ") for s in d.contents))
+        few = _days_chart(days[:8], values)
+        self.assertFalse(any(isinstance(g, Group) and g.transform[:4] == (0, 1, -1, 0) for g in few.contents))
 
 
 @override_settings(CACHES=LOCMEM, SECURE_SSL_REDIRECT=False)
@@ -351,7 +372,7 @@ class PdfIdeasTests(TestCase):
         sd = s.same_door_section(self.pf, lambda t, c=None: Spacer(1, 1), bd)
         tbl = next(x for x in sd if isinstance(x, Table))
         self.assertEqual(tbl._cellvalues[1][2], "1 + 1")
-        self.assertEqual(tbl._cellvalues[1][3], "€ 1,50")  # 1,20 + 0,30
+        self.assertEqual(tbl._cellvalues[1][3], "€\u00a01,50")  # 1,20 + 0,30
 
     def test_pdf_completo_gera(self):
         from .reports.pdf_generator import PDFGenerator

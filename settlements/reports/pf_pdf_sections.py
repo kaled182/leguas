@@ -17,11 +17,12 @@ import os
 from decimal import Decimal
 
 from reportlab.graphics.charts.barcharts import VerticalBarChart
-from reportlab.graphics.shapes import Drawing, Rect, String
+from reportlab.graphics.shapes import Drawing, Group, Rect, String
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import cm
+from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.platypus import KeepTogether, Paragraph, Spacer, Table, TableStyle
 
 PURPLE = colors.HexColor("#5B21B6")
@@ -37,14 +38,15 @@ LIGHT = colors.HexColor("#F3F4F6")
 LIGHT_PURPLE = colors.HexColor("#EDE9FE")
 
 FULL_W = 17 * cm
+NBSP = "\u00a0"
 WEEKDAYS = ("Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom")
 
 
 def eur(v):
-    """€ 1 234,56 — formato português."""
+    """€ 1 234,56 — formato português. Os espaços não quebram a linha."""
     v = Decimal(v or 0).quantize(Decimal("0.01"))
-    s = f"{abs(v):,.2f}".replace(",", " ").replace(".", ",")
-    return f"{'-' if v < 0 else ''}€ {s}"
+    s = f"{abs(v):,.2f}".replace(",", NBSP).replace(".", ",")
+    return f"{'-' if v < 0 else ''}€{NBSP}{s}"
 
 
 def fallback_logo_path():
@@ -114,11 +116,15 @@ def _style(name, **kw):
     return ParagraphStyle(name, **base)
 
 
-def _kpi_cell(label, value, sub, color):
+def _kpi_cell(label, value, sub, color, width=FULL_W / 6):
+    # O valor tem de caber numa linha: reduz a letra se for preciso.
+    size = 16
+    while size > 10 and stringWidth(str(value), "Helvetica-Bold", size) > width - 22:
+        size -= 1
     t = Table(
         [
             [Paragraph(label, _style("kl", fontSize=7, textColor=MUTED, fontName="Helvetica-Bold"))],
-            [Paragraph(str(value), _style("kv", fontSize=16, leading=19, textColor=color, fontName="Helvetica-Bold"))],
+            [Paragraph(str(value), _style("kv", fontSize=size, leading=19, textColor=color, fontName="Helvetica-Bold"))],
             [Paragraph(sub, _style("ks", fontSize=7, textColor=MUTED))],
         ],
         colWidths=[None],
@@ -134,27 +140,49 @@ def _kpi_cell(label, value, sub, color):
 
 def _days_chart(days, values=None):
     """Barras empilhadas por dia: porta, mesma porta, PUDO. Por cima de
-    cada barra: pacotes entregues e, se houver, o valor produzido."""
-    width, height = FULL_W, 5.2 * cm
+    cada barra: pacotes entregues e, se houver, o valor produzido.
+
+    Com muitos dias, o valor em € fica na vertical e a data mostra só o
+    dia, para os textos não se sobreporem.
+    """
+    n = len(days) or 1
+    plot_w = FULL_W - 1.4 * cm
+    slot = plot_w / n
+    count_size = 7 if slot >= 16 else 6
+    labels = {x["date"]: eur(values[x["date"]]) for x in days if values and values.get(x["date"])}
+    widest = max((stringWidth(v, "Helvetica-Bold", 6.5) for v in labels.values()), default=0)
+    vertical = widest > slot - 3
+    # Espaço por cima da barra mais alta: contagem + valor (deitado ou em pé)
+    headroom = count_size + 4 + ((widest + 3) if vertical else (9 if labels else 0))
+
+    months = {(x["date"].year, x["date"].month) for x in days}
+    long_dates = max((stringWidth(x["date"].strftime("%d/%m"), "Helvetica", 7) for x in days), default=0)
+    day_only = long_dates > slot - 3 and len(months) == 1
+
+    width, height = FULL_W, (6.0 if vertical else 5.2) * cm
     d = Drawing(width, height)
     bc = VerticalBarChart()
     bc.x, bc.y = 1.0 * cm, 0.9 * cm
-    bc.width, bc.height = width - 1.4 * cm, height - 1.7 * cm
+    bc.width, bc.height = plot_w, height - 1.3 * cm
     bc.categoryAxis.style = "stacked"
     bc.data = [
         [x["door_normal"] for x in days],
         [x["same_door"] for x in days],
         [x["pudo"] for x in days],
     ]
-    bc.categoryAxis.categoryNames = [x["date"].strftime("%d/%m") for x in days]
+    bc.categoryAxis.categoryNames = [x["date"].strftime("%d" if day_only else "%d/%m") for x in days]
     bc.categoryAxis.labels.fontSize = 7
     bc.categoryAxis.labels.fontName = "Helvetica"
     bc.categoryAxis.labels.fillColor = MUTED
+    if not day_only and long_dates > slot - 3:
+        bc.categoryAxis.labels.angle = 45
+        bc.categoryAxis.labels.boxAnchor = "ne"
     bc.categoryAxis.strokeColor = GRID
     vmax = max((x["delivered"] for x in days), default=0) or 1
+    # A barra mais alta deixa `headroom` pontos livres no topo
+    bc.valueAxis.valueMax = vmax * bc.height / max(bc.height - headroom, bc.height * 0.4)
     step = max(1, round(vmax / 4 / 10) * 10) if vmax > 20 else max(1, vmax // 4 or 1)
     bc.valueAxis.valueMin = 0
-    bc.valueAxis.valueMax = vmax * (1.32 if values else 1.18)
     bc.valueAxis.valueStep = step
     bc.valueAxis.labels.fontSize = 7
     bc.valueAxis.labels.fontName = "Helvetica"
@@ -163,29 +191,40 @@ def _days_chart(days, values=None):
     bc.valueAxis.gridStrokeColor = GRID
     bc.valueAxis.visibleGrid = True
     bc.barSpacing = 1
-    bc.groupSpacing = 6
+    bc.groupSpacing = 6 if slot >= 16 else 4
     for i, c in enumerate((DOOR, SAME_DOOR, PUDO)):
         bc.bars[i].fillColor = c
         bc.bars[i].strokeColor = None
     d.add(bc)
-    # Total entregue por cima de cada barra
-    n = len(days)
     for i, x in enumerate(days):
         if not x["delivered"]:
             continue
-        cx = bc.x + (i + 0.5) * bc.width / n
+        cx = bc.x + (i + 0.5) * slot
         cy = bc.y + x["delivered"] / bc.valueAxis.valueMax * bc.height + 2
-        d.add(String(cx, cy, str(x["delivered"]), fontSize=7, fontName="Helvetica-Bold",
+        d.add(String(cx, cy, str(x["delivered"]), fontSize=count_size, fontName="Helvetica-Bold",
                      fillColor=INK, textAnchor="middle"))
-        if values and values.get(x["date"]):
-            d.add(String(cx, cy + 9, eur(values[x["date"]]), fontSize=6.5,
+        label = labels.get(x["date"])
+        if not label:
+            continue
+        if vertical:
+            g = Group(String(0, 0, label, fontSize=6.5, fontName="Helvetica-Bold", fillColor=GREEN))
+            # Rodado 90°: o texto sobe a partir de cima da contagem
+            g.transform = (0, 1, -1, 0, cx + 2.3, cy + count_size + 2)
+            d.add(g)
+        else:
+            d.add(String(cx, cy + count_size + 2, label, fontSize=6.5,
                          fontName="Helvetica-Bold", fillColor=GREEN, textAnchor="middle"))
     # Legenda
     lx = bc.x
-    for label, c in (("Porta", DOOR), ("Mesma porta", SAME_DOOR), ("PUDO", PUDO)):
+    legend = [("Porta", DOOR), ("Mesma porta", SAME_DOOR), ("PUDO", PUDO)]
+    for label, c in legend:
         d.add(Rect(lx, 0.15 * cm, 7, 7, fillColor=c, strokeColor=None))
         d.add(String(lx + 10, 0.15 * cm + 1, label, fontSize=7, fontName="Helvetica", fillColor=MUTED))
         lx += 2.6 * cm
+    if day_only:
+        y, m = next(iter(months))
+        d.add(String(bc.x + bc.width, 0.15 * cm + 1, f"Dias de {m:02d}/{y}", fontSize=7,
+                     fontName="Helvetica", fillColor=MUTED, textAnchor="end"))
     return d
 
 
@@ -219,7 +258,7 @@ def operation_summary(pre_invoice, section_header, bd):
         _kpi_cell("PUDO", t["pudo"], "1ª + adicionais", colors.HexColor("#7C3AED")),
         _kpi_cell("FALHAS", t["failures"],
                   f"aprox. {eur(fail_value)} não ganhos" if fail_value else f"sucesso {rate:.0f}%", FAIL),
-        _kpi_cell("€ POR DIA", eur(avg_value).replace("€ ", "€"),
+        _kpi_cell("€ POR DIA", eur(avg_value),
                   f"melhor {best['date'].strftime('%d/%m')}" if best else "—", GREEN),
     ]], colWidths=[FULL_W / 6] * 6)
     kpis.setStyle(TableStyle([

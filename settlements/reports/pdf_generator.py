@@ -513,7 +513,7 @@ class PDFGenerator:
 
         # Logótipo configurado em falta no disco → logótipo Léguas do código
         from .pf_pdf_sections import (
-            fallback_logo_path, financial_summary, operation_summary,
+            eur, fallback_logo_path, financial_summary, operation_summary,
             same_door_section,
         )
         if not empresa_logo_path:
@@ -769,29 +769,29 @@ class PDFGenerator:
             op_rows.append([
                 Paragraph(desc, row_label),
                 qtd_cell,
-                Paragraph(f"€{float(l.taxa_por_entrega):.2f}", row_val),
-                Paragraph(f"€{float(l.base_entregas):.2f}", row_val),
+                Paragraph(eur(l.taxa_por_entrega), row_val),
+                Paragraph(eur(l.base_entregas), row_val),
             ])
         if pre_invoice.ajuste_manual:
             op_rows.append([
                 Paragraph("Ajuste Manual", row_label),
                 Paragraph("—", row_val),
-                Paragraph(f"€{float(pre_invoice.ajuste_manual):.2f}", row_val),
-                Paragraph(f"€{float(pre_invoice.ajuste_manual):.2f}", row_val),
+                Paragraph(eur(pre_invoice.ajuste_manual), row_val),
+                Paragraph(eur(pre_invoice.ajuste_manual), row_val),
             ])
         if pre_invoice.penalizacoes_gerais:
             op_rows.append([
                 Paragraph("Penalizações Gerais", row_label),
                 Paragraph("—", row_val),
-                Paragraph(f"-€{float(pre_invoice.penalizacoes_gerais):.2f}", row_val),
-                Paragraph(f"-€{float(pre_invoice.penalizacoes_gerais):.2f}", row_val),
+                Paragraph(eur(-(pre_invoice.penalizacoes_gerais)), row_val),
+                Paragraph(eur(-(pre_invoice.penalizacoes_gerais)), row_val),
             ])
         if not op_rows:
             op_rows = [[
                 Paragraph("Sem linhas de trabalho", row_label),
                 Paragraph("—", row_val),
                 Paragraph("—", row_val),
-                Paragraph("€0.00", row_val),
+                Paragraph(eur(0), row_val),
             ]]
         op_table = Table(
             op_rows,
@@ -958,24 +958,24 @@ class PDFGenerator:
                         b.get_tipo_display(),
                         _login_label(b) or "—",
                         str(b.qtd_entregas_elegiveis),
-                        f"€{float(b.bonus_calculado):.2f}",
+                        eur(b.bonus_calculado),
                     ])
                 else:
                     bon_rows.append([
                         b.data.strftime("%d/%m/%Y"),
                         b.get_tipo_display(),
                         str(b.qtd_entregas_elegiveis),
-                        f"€{float(b.bonus_calculado):.2f}",
+                        eur(b.bonus_calculado),
                     ])
             if show_login_col:
                 bon_rows.append([
                     "", "", "", "Total",
-                    f"€{float(pre_invoice.total_bonus):.2f}",
+                    eur(pre_invoice.total_bonus),
                 ])
             else:
                 bon_rows.append([
                     "", "", "Total",
-                    f"€{float(pre_invoice.total_bonus):.2f}",
+                    eur(pre_invoice.total_bonus),
                 ])
             bon_table = Table(bon_rows, colWidths=col_widths)
             bon_table.setStyle(TableStyle([
@@ -1033,11 +1033,11 @@ class PDFGenerator:
                     p.data.strftime("%d/%m/%Y") if p.data else "—",
                     Paragraph(_esc_pudo(morada), pudo_addr_style),
                     str(p.n_pacotes),
-                    f"€{float(p.valor):.2f}",
+                    eur(p.valor),
                 ])
             pudo_rows.append([
                 "", "", "Total",
-                f"€{float(pre_invoice.total_pudo):.2f}",
+                eur(pre_invoice.total_pudo),
             ])
             pudo_table = Table(pudo_rows, colWidths=pudo_col_widths)
             pudo_table.setStyle(TableStyle([
@@ -1100,11 +1100,11 @@ class PDFGenerator:
                 [e.data.strftime("%d/%m/%Y") if e.data else "—",
                  Paragraph(_esc_ex(e.get_tipo_display()), ex_desc_style),
                  Paragraph(_esc_ex(e.descricao), ex_desc_style),
-                 f"+€{float(e.valor):.2f}"]
+                 "+" + eur(e.valor)]
                 for e in extras
             ]
             ex_rows.append([
-                "", "", "Total", f"+€{float(pre_invoice.total_extras):.2f}",
+                "", "", "Total", "+" + eur(pre_invoice.total_extras),
             ])
             ex_table = Table(ex_rows, colWidths=ex_col_widths)
             ex_table.setStyle(TableStyle([
@@ -1168,17 +1168,17 @@ class PDFGenerator:
                 valor_base = float(p.valor)
                 valor_iva = float(p.valor_iva)
                 valor_total = float(p.valor_com_iva)
-                iva_str = f"{iva_pct:.0f}% (€{valor_iva:.2f})" if iva_pct > 0 else "—"
+                iva_str = f"{iva_pct:.0f}% ({eur(valor_iva)})" if iva_pct > 0 else "—"
                 wb = (p.numero_pacote or "—").replace("&", "&amp;").replace("<", "&lt;")
                 pp_rows.append([
                     p.data.strftime("%d/%m/%Y") if p.data else "—",
                     Paragraph(wb, pp_wb_style),
-                    f"€{valor_base:.2f}",
+                    eur(valor_base),
                     iva_str,
-                    f"-€{valor_total:.2f}",
+                    eur(-(valor_total)),
                 ])
             pp_rows.append(["", "", "", "Total",
-                             f"-€{float(pre_invoice.total_pacotes_perdidos):.2f}"])
+                             eur(-(pre_invoice.total_pacotes_perdidos))])
             pp_table = Table(pp_rows, colWidths=pp_col_widths)
             pp_table.setStyle(TableStyle([
                 ("ROWBACKGROUNDS", (0, 0), (-2, -1), [colors.white, light_gray]),
@@ -1239,11 +1239,11 @@ class PDFGenerator:
                 [a.data.strftime("%d/%m/%Y") if a.data else "—",
                  Paragraph(_esc(a.get_tipo_display()), adv_desc_style),
                  Paragraph(_esc(a.descricao), adv_desc_style),
-                 f"-€{float(a.valor):.2f}"]
+                 eur(-(a.valor))]
                 for a in adiantamentos
             ]
             adv_rows.append(["", "", "Total",
-                              f"-€{float(pre_invoice.total_adiantamentos):.2f}"])
+                              eur(-(pre_invoice.total_adiantamentos))])
             adv_table = Table(adv_rows, colWidths=adv_col_widths)
             adv_table.setStyle(TableStyle([
                 ("ROWBACKGROUNDS", (0, 0), (-2, -1), [colors.white, light_gray]),
@@ -1321,8 +1321,8 @@ class PDFGenerator:
                 [
                     Paragraph(c["nome"], row_val),
                     Paragraph(str(c["pacotes"]), row_val),
-                    Paragraph(f"€{float(c['comissao']):.4f}", row_val),
-                    Paragraph(f"+€{float(c['valor']):.2f}", row_val),
+                    Paragraph(f"€ {float(c['comissao']):.4f}".replace(".", ","), row_val),
+                    Paragraph("+" + eur(c['valor']), row_val),
                 ]
                 for c in comissoes_detail
             ]
@@ -1334,7 +1334,7 @@ class PDFGenerator:
                     fontSize=8, fontName="Helvetica-Bold",
                     textColor=teal_color,
                 )),
-                Paragraph(f"+€{float(total_comissoes):.2f}", ParagraphStyle(
+                Paragraph("+" + eur(total_comissoes), ParagraphStyle(
                     "ComTotalVal", parent=self.styles["Normal"],
                     fontSize=9, fontName="Helvetica-Bold",
                     textColor=teal_color,

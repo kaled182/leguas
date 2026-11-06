@@ -15,6 +15,7 @@ from drivers_app.models import DriverProfile, EmpresaParceira
 
 from .models import (
     CainiaoHub, CainiaoHubCP4, CainiaoOperationTask, DriverClaim, DriverPreInvoice, PreInvoiceAdvance,
+    PreInvoiceLostPackage,
 )
 from .services_driver_breakdown import driver_breakdown
 from .services_driver_report import build, collect, driver_detail
@@ -138,7 +139,7 @@ class DriverReportTests(TestCase):
         claim("R2", "9.00", "PENDING")                                   # por decidir
         claim("R1", "7.00", "APPROVED", billing_after=D2)                # fatura seguinte
         DriverClaim.objects.create(driver=self.rui, claim_type="OTHER", amount=Decimal("3"),
-                                   description="fora", status="APPROVED", operation_task_date=date(2026, 9, 1))
+                                   description="fora", status="PENDING", operation_task_date=date(2026, 9, 1))
         north = build(D1, D2, hub="Norte")["rows"][0]
         self.assertEqual((north["claims_n"], north["claims_open_n"]), (3, 1))
         self.assertEqual((north["amount"], north["claims_amount"], north["billable"]),
@@ -187,3 +188,32 @@ class DriverReportTests(TestCase):
                          b"%PDF")
         wb = load_workbook(io.BytesIO(self.client.get(reverse("driver-report-xlsx") + q).content), read_only=True)
         self.assertEqual(len(list(wb["Adiantamentos"].iter_rows())), 5)  # cabeçalho + 2 do Rui + 2 da Ana
+
+    def test_claims_seguem_as_linhas_da_pf(self):
+        def claim(driver, wb, amount, day, **kw):
+            return DriverClaim.objects.create(driver=driver, claim_type="ORDER_LOSS", amount=Decimal(amount),
+                                              description="teste", waybill_number=wb, status="APPROVED",
+                                              operation_task_date=day, **kw)
+        def line(pf, c, valor):
+            PreInvoiceLostPackage.objects.create(pre_invoice=pf, data=c.operation_task_date, valor=Decimal(valor),
+                                                 numero_pacote=c.waybill_number, api_source=f"auto:driver_claim:{c.id}")
+        sept = date(2026, 9, 20)
+        # Rui, sem PF: claim de setembro passado para depois de 30/09 e ainda por descontar -> desconta.
+        claim(self.rui, "R1", "0.40", sept, billing_after=date(2026, 9, 30))
+        # Rui: claim de setembro já descontado na PF de setembro -> não aparece.
+        old_pf = DriverPreInvoice.objects.create(driver=self.rui, periodo_inicio=date(2026, 9, 1),
+                                                 periodo_fim=date(2026, 9, 30), numero="PF-T1")
+        line(old_pf, claim(self.rui, "R2", "8.00", sept), "8.00")
+        north = build(D1, D2, hub="Norte")["rows"][0]
+        self.assertEqual((north["claims_n"], north["claims_amount"], north["billable"]),
+                         (1, Decimal("0.40"), Decimal("1.00")))
+
+        # Ana, com PF do período: conta a linha da PF (também de um claim antigo), com o valor da linha.
+        pf = DriverPreInvoice.objects.create(driver=self.ana, periodo_inicio=D1, periodo_fim=D2, numero="PF-T2")
+        line(pf, claim(self.ana, "A1", "50.00", sept, billing_after=date(2026, 9, 30)), "0.25")
+        claim(self.ana, "A2", "9.00", D1)                               # aprovado sem linha: próxima PF
+        ana = next(dd for dd in collect(D1, D2)[0] if dd.driver == self.ana)
+        self.assertEqual([(c["amount"], c["deducted"], c["status_label"]) for c in ana.claims],
+                         [(Decimal("0.25"), True, f"Na {pf.numero}"), (Decimal("9.00"), False, "Próxima PF")])
+        row = next(r for r in build(D1, D2)["rows"] if r["driver"] == self.ana)
+        self.assertEqual(row["claims_amount"], Decimal("0.25"))

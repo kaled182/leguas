@@ -7,6 +7,7 @@ aparece nos 2 relatórios, cada um com as suas entregas.
 """
 from __future__ import annotations
 
+import re
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from decimal import ROUND_HALF_UP, Decimal
@@ -203,25 +204,44 @@ def _pf_for(driver_ids, date_from, date_to):
 CLAIM_OPEN = ("PENDING", "APPEALED", "QUARANTINE")
 
 
-def _claims_for(driver_ids, date_from, date_to, hubs):
-    """Claims de cada motorista com data no período (regra da PF).
+CLAIM_MARKER = re.compile(r"^auto:driver_claim(?:_adjust|_credit)?:(\d+)$")
 
-    A data é a da entrega (`operation_task_date`) ou, sem ela, a da
-    ocorrência. Só os aprovados descontam; um claim passado para uma fatura
-    seguinte (`billing_after` >= início do período) não desconta aqui.
+
+def _claims_for(pfs, date_from, date_to, hubs):
+    """Claims de cada motorista, com a regra da PF.
+
+    A data do claim é a da entrega (`operation_task_date`) ou, sem ela, a da
+    ocorrência. Só os aprovados descontam:
+    - já lançado numa PF: desconta só se essa PF é a do período, com o valor
+      das linhas dessa PF (pode vir de um período anterior);
+    - ainda sem PF: desconta se a data é até ao fim do período e não foi
+      passado para depois (`billing_after` >= início). Se o motorista já tem
+      PF do período, fica para a próxima PF.
     """
     from django.db.models import Q
 
-    from .models import CainiaoOperationTask, DriverClaim
+    from .models import CainiaoOperationTask, DriverClaim, PreInvoiceLostPackage
+    from .services_claims_in_pf import APPLIED_PF_STATES
 
     claims = list(
         DriverClaim.objects.filter(
-            **({"driver_id__in": driver_ids} if driver_ids is not None else {})
-        ).filter(
             Q(operation_task_date__range=(date_from, date_to))
             | Q(operation_task_date__isnull=True, occurred_at__date__range=(date_from, date_to))
+            | Q(status="APPROVED") & (
+                Q(operation_task_date__lt=date_from)
+                | Q(operation_task_date__isnull=True, occurred_at__date__lt=date_from))
         ).order_by("operation_task_date", "occurred_at", "id")
     )
+    # Linhas de claims nas PF (fonte de verdade de "já descontado").
+    in_pf = defaultdict(dict)        # claim id -> {pf: soma das linhas}
+    for marker, pf, valor in PreInvoiceLostPackage.objects.filter(
+        api_source__startswith="auto:driver_claim", pre_invoice__status__in=APPLIED_PF_STATES,
+    ).values_list("api_source", "pre_invoice", "valor"):
+        m = CLAIM_MARKER.match(marker or "")
+        if m:
+            cid = int(m.group(1))
+            in_pf[cid][pf] = in_pf[cid].get(pf, Decimal("0")) + (valor or Decimal("0"))
+    pf_numbers = dict(_pf_numbers(in_pf))
     zips = dict(
         CainiaoOperationTask.objects.filter(
             waybill_number__in={c.waybill_number for c in claims if c.waybill_number},
@@ -229,18 +249,45 @@ def _claims_for(driver_ids, date_from, date_to, hubs):
     )
     out = defaultdict(list)
     for c in claims:
-        deferred = bool(c.billing_after and c.billing_after >= date_from)
+        day = c.operation_task_date or (c.occurred_at.date() if c.occurred_at else None)
+        in_period = day is not None and date_from <= day <= date_to
+        pf = pfs.get(c.driver_id)
+        lines = in_pf.get(c.id, {})
+        amount = c.amount or Decimal("0")
+        label = c.get_status_display()
+        deducted = deferred = False
+        if c.status == "APPROVED" and lines:
+            if pf and pf.id in lines:
+                deducted, amount, label = True, lines[pf.id], f"Na {pf.numero}"
+            elif not in_period:
+                continue                       # descontado noutra PF
+            else:
+                label = "Na " + ", ".join(pf_numbers.get(p, "PF") for p in lines)
+        elif c.status == "APPROVED":
+            if c.billing_after and c.billing_after >= date_from:
+                deferred = True
+            elif pf:
+                deferred, label = True, "Próxima PF"
+            else:
+                deducted = True
+        elif not in_period:
+            continue
         out[c.driver_id].append({
-            "id": c.id, "waybill": c.waybill_number or "",
-            "date": c.operation_task_date or (c.occurred_at.date() if c.occurred_at else None),
+            "id": c.id, "waybill": c.waybill_number or "", "date": day,
             "type": c.get_claim_type_display(), "status": c.status,
-            "status_label": c.get_status_display(), "amount": c.amount or Decimal("0"),
+            "status_label": label, "amount": amount,
             "hub": hubs.get((zips.get(c.waybill_number) or "")[:4], NO_HUB) if c.waybill_number in zips else None,
-            "deducted": c.status == "APPROVED" and not deferred,
-            "deferred": c.status == "APPROVED" and deferred,
+            "deducted": deducted, "deferred": deferred,
             "description": (c.description or "").strip(),
         })
     return out
+
+
+def _pf_numbers(in_pf):
+    from .models import DriverPreInvoice
+
+    ids = {p for lines in in_pf.values() for p in lines}
+    return DriverPreInvoice.objects.filter(id__in=ids).values_list("id", "numero")
 
 
 def _advances_for(pfs, driver_ids, date_to):
@@ -289,7 +336,7 @@ def collect(date_from, date_to):
             owners[l["task_id"]] += 1
         data.append(dd)
     pfs = _pf_for([dd.driver.id for dd in data], date_from, date_to)
-    claims = _claims_for(None, date_from, date_to, hubs)
+    claims = _claims_for(pfs, date_from, date_to, hubs)
     advances = _advances_for(pfs, [dd.driver.id for dd in data], date_to)
     for dd in data:
         dd.pf = pfs.get(dd.driver.id)
@@ -300,7 +347,8 @@ def collect(date_from, date_to):
         for c in dd.claims + dd.advances:
             c["hub"] = c["hub"] or main_hub
     known = {dd.driver.id for dd in data}
-    lost_claims = [c for d_id, cs in claims.items() if d_id not in known for c in cs]
+    lost_claims = [c for d_id, cs in claims.items() if d_id not in known for c in cs
+                   if c["date"] and date_from <= c["date"] <= date_to]
 
     orphans = Counter()
     for tid, login, zip_code in CainiaoOperationTask.objects.filter(
@@ -458,7 +506,7 @@ def collect_cached(date_from, date_to, refresh=False):
     """`collect` com cache de 10 min: a página, os PDF e o Excel usam os mesmos dados."""
     from django.core.cache import cache
 
-    key = f"driver-report:v2:{date_from:%Y%m%d}:{date_to:%Y%m%d}"
+    key = f"driver-report:v3:{date_from:%Y%m%d}:{date_to:%Y%m%d}"
     hit = None if refresh else cache.get(key)
     if hit is None:
         hit = collect(date_from, date_to)

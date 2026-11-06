@@ -189,7 +189,8 @@ def hub_pdf(report, hub_label, date_from, date_to, user=None):
 
     alerts = report["alerts"]
     notes = ["Produção: entregas à porta (preço por CP ou preço do motorista), mesma porta e PUDO. "
-             "Sem IVA = produção menos claims aprovados com data no período (regra da PF). "
+             "Sem IVA = produção menos claims aprovados: os da PF do período (também os passados de períodos "
+             "anteriores) ou, sem PF, os ainda por descontar até ao fim do período. "
              "IVA 23 % só no regime normal, sobre o valor sem IVA. A pagar = com IVA menos adiantamentos "
              "(os da PF do período ou, sem PF, os pendentes até ao fim do período). O IRS não está descontado. "
              "Bónus e extras estão na PF."]
@@ -282,10 +283,11 @@ def driver_pdf(detail, user=None):
                          c["status_label"], c["hub"], eur(c["amount"]),
                          "Sim" if c["deducted"] else ("Fatura seguinte" if c["deferred"] else "Não")])
         story.append(_table(rows, [width * w for w in (0.11, 0.25, 0.17, 0.13, 0.12, 0.1, 0.12)], right_from=5))
-        story.append(Paragraph("Só os claims aprovados descontam. Os pendentes, em recurso ou em quarentena "
+        story.append(Paragraph("Só os claims aprovados descontam: os da PF do período ou, sem PF, os ainda por descontar. "
+                               "Os pendentes, em recurso ou em quarentena "
                                "esperam decisão.", NOTE))
     else:
-        story.append(Paragraph("Não há claims com data neste período.", NOTE))
+        story.append(Paragraph("Não há claims para este período.", NOTE))
 
     pf = detail["pf"]
     story.append(Paragraph("Pré-fatura", H2))

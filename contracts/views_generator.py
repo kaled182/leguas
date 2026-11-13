@@ -89,7 +89,7 @@ def _multi_payload():
 
     p = Partner.objects.filter(name__iexact="CAINIAO").first()
     if not p:
-        return {"pudo_on": False, "porta_on": False, "found": False}
+        return {"pudo_on": False, "porta_on": False, "rec_on": False, "found": False}
     return {
         "found": True,
         "edit_url": reverse("core:partner-edit", args=[p.pk]),
@@ -99,6 +99,9 @@ def _multi_payload():
         "fake_on": bool(p.pudo_enabled and p.pudo_fake_delivery_enabled),
         "fake": float(p.pudo_fake_delivery_penalty),
         "geo_m": p.pudo_geo_tolerance_meters,
+        "rec_on": bool(p.pickup_enabled),
+        "rec1": float(p.pickup_first_price),
+        "recadd": float(p.pickup_additional_price),
         "porta_on": bool(p.same_door_enabled),
         "porta": float(p.same_door_additional_price),
     }

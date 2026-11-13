@@ -240,6 +240,38 @@
         </div>
       </div>
 
+      <!-- Recolhas -->
+      <div class="space-y-4 bg-sky-50 dark:bg-sky-900/10 rounded-xl p-4 border border-sky-200 dark:border-sky-700/40">
+        <h2 class="text-lg font-semibold text-sky-700 dark:text-sky-300 flex items-center gap-2 pb-2 border-b border-sky-200 dark:border-sky-700/40">
+          <i data-lucide="package-open" class="w-5 h-5"></i>
+          Recolhas
+        </h2>
+        <p class="text-xs text-sky-700/80 dark:text-sky-300/70">
+          Volumes que o motorista levanta num local indicado (ex.: devoluções) e leva ao hub. No mesmo local e no mesmo dia, o 1.º volume é pago ao primeiro valor e cada volume adicional ao segundo. A regra entra no contrato e na proposta. A pré-fatura só paga recolhas quando houver a fonte de dados das recolhas.
+        </p>
+
+        <label class="flex items-center gap-2 cursor-pointer pt-1">
+          {{ form.pickup_enabled }}
+          <span class="text-sm font-semibold text-gray-900 dark:text-white">Ativar regra das recolhas</span>
+        </label>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+          <div>
+            <label for="{{ form.pickup_first_price.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              1.º volume no mesmo local e dia (€)
+            </label>
+            {{ form.pickup_first_price }}
+          </div>
+          <div>
+            <label for="{{ form.pickup_additional_price.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Cada volume adicional (€)
+            </label>
+            {{ form.pickup_additional_price }}
+            <p class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">{{ form.pickup_additional_price.help_text }}</p>
+          </div>
+        </div>
+      </div>
+
       <!-- Vários pacotes na mesma porta (Cainiao "Modelo AA") -->
       <div class="space-y-4 bg-teal-50 dark:bg-teal-900/10 rounded-xl p-4 border border-teal-200 dark:border-teal-700/40">
         <h2 class="text-lg font-semibold text-teal-700 dark:text-teal-300 flex items-center gap-2 pb-2 border-b border-teal-200 dark:border-teal-700/40">

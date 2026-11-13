@@ -67,7 +67,7 @@
       </select></div>
     <label class="tgl"><input type="checkbox" id="t_sim" checked> Exemplo ilustrativo de faturação (dia/semana)</label>
     <label class="tgl"><input type="checkbox" id="t_min"> Tarifa mínima por rota completa (só Escalão C)</label>
-    <label class="tgl"><input type="checkbox" id="t_multi" checked> Entregas em ponto de recolha (PUDO) e na mesma morada</label>
+    <label class="tgl"><input type="checkbox" id="t_multi" checked> Ponto de recolha (PUDO), mesma morada e recolhas</label>
     <label class="tgl"><input type="checkbox" id="t_resp" checked> Regras claras: responsabilidade pelos volumes e saída</label>
     <div class="note">A tarifa mínima segue as condições do hub. Se o hub não a tiver ativa, a proposta avisa: o contrato não a inclui por omissão.</div>
   </div>
@@ -95,7 +95,7 @@
     <h3>De onde vêm os valores</h3>
     {% if standalone %}
     <div class="ro">
-      Valores do sistema em <b>{{ snapshot }}</b>: tarifas por CP, condições por hub, parâmetros do contrato e regras PUDO / mesma porta — os mesmos do contrato e da PF.<br>
+      Valores do sistema em <b>{{ snapshot }}</b>: tarifas por CP, condições por hub, parâmetros do contrato e regras PUDO / mesma porta / recolhas — os mesmos do contrato e da PF.<br>
       Quando algum valor mudar, descarregue o gerador de novo em <b>gestao.leguasfranzinas.pt › Contratos › Proposta a motorista</b>. Não altere os valores à mão neste ficheiro.
     </div>
     {% else %}
@@ -104,7 +104,7 @@
       • <a href="{{ gen.links.tariffs }}" target="_blank" style="color:#ffb27a">Tarifas por CP</a> — valores por entrega<br>
       • <a href="{{ gen.links.terms }}" target="_blank" style="color:#ffb27a">Condições por hub</a> — pagamento, regimes, tarifa mínima<br>
       • <a href="{{ gen.links.settings }}" target="_blank" style="color:#ffb27a">Parâmetros do contrato</a> — prazos, caução, valores de responsabilidade<br>
-      {% if gen.multi.edit_url %}• <a href="{{ gen.multi.edit_url }}" target="_blank" style="color:#ffb27a">Ficha do parceiro CAINIAO</a> — PUDO e mesma porta{% endif %}
+      {% if gen.multi.edit_url %}• <a href="{{ gen.multi.edit_url }}" target="_blank" style="color:#ffb27a">Ficha do parceiro CAINIAO</a> — PUDO, mesma porta e recolhas{% endif %}
     </div>
     {% endif %}
   </div>
@@ -116,6 +116,6 @@
 <div id="measure" aria-hidden="true"></div>
 
 {{ gen|json_script:"gen-data" }}
-{% if standalone %}<script>{{ js|safe }}</script>{% else %}<script src="{% static 'contracts/proposal.js' %}?v=2"></script>{% endif %}
+{% if standalone %}<script>{{ js|safe }}</script>{% else %}<script src="{% static 'contracts/proposal.js' %}?v=3"></script>{% endif %}
 </body>
 </html>

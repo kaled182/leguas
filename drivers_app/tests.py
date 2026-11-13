@@ -565,7 +565,7 @@ class ContractGeneratorTests(TestCase):
 
         url = reverse("contracts:contract_generator", args=[self.d.id])
         r = self.client.get(url)
-        self.assertEqual(r.context["gen"]["multi"], {"pudo_on": False, "porta_on": False, "found": False})
+        self.assertEqual(r.context["gen"]["multi"], {"pudo_on": False, "porta_on": False, "rec_on": False, "found": False})
 
         p = Partner.objects.create(
             name="CAINIAO", nif="500000001", contact_email="c@example.com",
@@ -581,6 +581,8 @@ class ContractGeneratorTests(TestCase):
                 (True, 1.10, 0.25, 5.0, True, 0.30),
             )
             self.assertEqual(m["edit_url"], reverse("core:partner-edit", args=[p.pk]))
+            # Recolhas: valores por omissão 1,00 € + 0,20 €, ativos.
+            self.assertEqual((m["rec_on"], m["rec1"], m["recadd"]), (True, 1.0, 0.2))
         self.assertContains(self.client.get(url), 'id="multi_box"')
 
     def test_save_and_lifecycle(self):

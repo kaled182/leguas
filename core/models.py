@@ -133,6 +133,25 @@ class Partner(models.Model):
             "PUDO é entregue em mãos do cliente em vez do PUDO."
         ),
     )
+    # ── Recolhas (levantamento de volumes, ex.: devoluções) ─────────
+    pickup_enabled = models.BooleanField(
+        "Recolhas — regra activa",
+        default=True,
+        help_text=(
+            "Volumes recolhidos no mesmo local, no mesmo dia: 1.º ao valor "
+            "da 1.ª recolha e cada adicional ao valor adicional. Entra no "
+            "contrato e na proposta."
+        ),
+    )
+    pickup_first_price = models.DecimalField(
+        "Recolhas — 1.º volume no mesmo local e dia (€)",
+        max_digits=6, decimal_places=4, default=Decimal("1.0000"),
+    )
+    pickup_additional_price = models.DecimalField(
+        "Recolhas — cada volume adicional no mesmo local e dia (€)",
+        max_digits=6, decimal_places=4, default=Decimal("0.2000"),
+        help_text="Fórmula: 1.º + (N-1) × adicional, por local e por dia.",
+    )
     # ── Vários pacotes na mesma porta (Cainiao "Modelo AA") ─────────
     same_door_enabled = models.BooleanField(
         "Vários pacotes na mesma porta — activo",

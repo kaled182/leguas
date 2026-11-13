@@ -149,7 +149,7 @@ function collect() {
     nome, trat, tel: $("c_tel").value.trim(), sel, reg,
     area: $("a_nome").value.trim() || "—", vol: num($("a_vol").value), dias: $("a_dias").value.trim(),
     dData, dVal, dIni, ref,
-    sim: $("t_sim").checked, min: $("t_min").checked, multi: $("t_multi").checked && (M.pudo_on || M.porta_on), resp: $("t_resp").checked,
+    sim: $("t_sim").checked, min: $("t_min").checked, multi: $("t_multi").checked && (M.pudo_on || M.porta_on || M.rec_on), resp: $("t_resp").checked,
     kNome: $("k_nome").value.trim(), kTel: $("k_tel").value.trim(), kMail: $("k_mail").value.trim(),
     showS: weekly && reg !== "mensal", showP: monthly && reg !== "semanal",
   };
@@ -243,7 +243,7 @@ function render() {
       '<div class="sim">' +
       '<div class="c"><div class="k">Um dia</div><div class="f">' + D.vol + ' entregas × ' + eur(t) + '</div><div class="v">' + eur(dia) + '</div></div>' +
       '<div class="c"><div class="k">Uma semana (' + nd + ' dias)</div><div class="f">' + nd + ' × ' + eur(dia) + '</div><div class="v">' + eur(dia * nd) + '</div></div>' +
-      '</div><div class="small">Valores antes de IVA e das tuas despesas, calculados sobre o volume médio da área e a ' + (mainR.mn !== mainR.mx ? 'tarifa mais baixa' : 'tarifa') + ' do ' + (D.showS ? 'Regime Semanal' : 'Regime Mensal') + '. O volume real varia de dia para dia: é um exemplo, não um valor garantido.' + (D.multi ? ' Entregas em ponto de recolha e volumes adicionais na mesma morada têm valores próprios (secção 2).' : '') + '</div></div>';
+      '</div><div class="small">Valores antes de IVA e das tuas despesas, calculados sobre o volume médio da área e a ' + (mainR.mn !== mainR.mx ? 'tarifa mais baixa' : 'tarifa') + ' do ' + (D.showS ? 'Regime Semanal' : 'Regime Mensal') + '. O volume real varia de dia para dia: é um exemplo, não um valor garantido.' + (D.multi ? ' Entregas em ponto de recolha, volumes adicionais na mesma morada e recolhas têm valores próprios (secção 2).' : '') + '</div></div>';
   }
 
   /* Secção: regras do contrato (Anexo I, secção 2) — mesmo texto e valores. */
@@ -252,23 +252,24 @@ function render() {
     const li = [];
     if (M.pudo_on) li.push('<tr><td><b>Ponto de recolha (PUDO)</b> — volumes entregues no mesmo ponto, no mesmo dia</td><td class="v">1.º volume ' + eur(M.pudo1) + ' · cada adicional ' + eur(M.pudoadd) + '</td></tr>');
     if (M.porta_on) li.push('<tr><td><b>Mesma morada</b> — mais do que um volume na mesma morada, no mesmo dia (fora de ponto de recolha)</td><td class="v">1.º volume pela tabela · cada adicional ' + eur(M.porta) + '</td></tr>');
+    if (M.rec_on) li.push('<tr><td><b>Recolhas</b> — volumes que levantas num local indicado (ex.: devoluções) e levas ao hub; no mesmo local, no mesmo dia</td><td class="v">1.º volume ' + eur(M.rec1) + ' · cada adicional ' + eur(M.recadd) + '</td></tr>');
     multiBox = '<table class="rt"><tbody>' + li.join("") + '</tbody></table>' +
-      '<div class="small">Estas regras substituem o valor por entrega da tabela nesses casos. Mesma morada: a mesma morada e código postal, ou a mesma paragem da rota na aplicação.</div>';
+      '<div class="small">Estas regras substituem o valor por entrega da tabela nesses casos.' + (M.porta_on ? ' Mesma morada: a mesma morada e código postal, ou a mesma paragem da rota na aplicação.' : '') + '</div>';
   }
 
   const B = [];
   let n = 0;
   B.push("<div>" + '<div class="hero"><div class="kk">Proposta personalizada · Distribuição last-mile</div>' +
     '<h1>Olá, ' + trat + '.</h1>' +
-    '<p>Preparámos esta proposta para ti: distribuição de encomendas de pequeno volume na zona de <b>' + esc(D.area) + '</b>' + (cpList ? (sel.length > 6 ? ' (' + sel.length + ' códigos postais)' : ' (CP4 ' + cpList + ')') : '') + ', como prestador de serviços independente, com recolha no <b>Hub ' + esc(H.name || "") + '</b>.</p>' +
+    '<p>Preparámos esta proposta para ti: distribuição de encomendas de pequeno volume na zona de <b>' + esc(D.area) + '</b>' + (cpList ? (sel.length > 6 ? ' (' + sel.length + ' códigos postais)' : ' (CP4 ' + cpList + ')') : '') + ', como prestador de serviços independente, com levantamento no <b>Hub ' + esc(H.name || "") + '</b>.</p>' +
     '<div class="for"><div><div class="k">Preparada para</div><div class="v">' + nome + '</div></div>' +
     '<div><div class="k">Zona</div><div class="v">' + esc(D.area) + '</div></div>' +
     (D.dIni ? '<div><div class="k">Início previsto</div><div class="v">' + esc(fs(D.dIni)) + '</div></div>' : '') + '</div></div>' + tiles + "</div>");
   B.push('<div class="sh"><span class="n">' + (++n) + '</span><h2>A tua zona e quanto recebes por entrega</h2></div>' + ztab +
-    '<div class="small">Valores por entrega concluída, sem IVA (acresce à taxa legal ou isenção, conforme o teu enquadramento). Combustível, portagens, manutenção e comunicações ficam por tua conta. Recolha dos volumes: ' + esc(hubAddr(H)) + '.</div>');
+    '<div class="small">Valores por entrega concluída, sem IVA (acresce à taxa legal ou isenção, conforme o teu enquadramento). Combustível, portagens, manutenção e comunicações ficam por tua conta. Levantamento dos volumes: ' + esc(hubAddr(H)) + '.</div>');
   if (minBox) B.push(minBox);
   if (simBox) B.push(simBox);
-  if (multiBox) B.push('<div class="sh"><span class="n">' + (++n) + '</span><h2>Ponto de recolha e mesma morada</h2></div>' + multiBox);
+  if (multiBox) B.push('<div class="sh"><span class="n">' + (++n) + '</span><h2>Ponto de recolha, mesma morada e recolhas</h2></div>' + multiBox);
   B.push('<div class="sh"><span class="n">' + (++n) + '</span><h2>O que precisas</h2></div>' + REQS);
 
   /* ── página 2: pagamento (Cl. 7.ª e Anexo I do contrato) ── */
@@ -297,7 +298,7 @@ function render() {
 
   const steps = '<div class="steps">' +
     '<div class="step"><div class="w">Na véspera</div><div class="t">Recebes a rota</div><div class="d">A rota do dia seguinte é oferecida na véspera e confirmas até às <b>' + esc(S.conf) + '</b>. Recusar não tem penalização nem afeta as ofertas seguintes.</div></div>' +
-    '<div class="step"><div class="w">Até às ' + esc(S.saida) + '</div><div class="t">Recolha no hub</div><div class="d">Levantas os volumes no hub até às ' + esc(S.saida) + ' (SLA de recolha). A partir daí, organizas a rota como entenderes.</div></div>' +
+    '<div class="step"><div class="w">Até às ' + esc(S.saida) + '</div><div class="t">Levantamento no hub</div><div class="d">Levantas os volumes no hub até às ' + esc(S.saida) + ' (SLA de levantamento). A partir daí, organizas a rota como entenderes.</div></div>' +
     '<div class="step"><div class="w">Durante o dia</div><div class="t">Entregas com autonomia</div><div class="d">Registas cada entrega na aplicação, com prova de entrega e a menos de 200 m do local, e devolves ao hub no próprio dia o que não for entregue.</div></div>' +
     '</div>';
 
@@ -356,7 +357,7 @@ function render() {
     (tarifa ? "• " + tarifa + " por entrega (" + (D.showS ? "Regime Semanal, pago todas as " + paydayPl : "Regime Mensal") + ")\n" : "") +
     (D.vol ? "• cerca de " + D.vol + " volumes por dia, em média\n" : "") +
     (D.dias ? "• operação de " + D.dias + "\n" : "") +
-    "• recolha no hub " + (H.name || "") + " até às " + S.saida + "\n\n" +
+    "• levantamento no hub " + (H.name || "") + " até às " + S.saida + "\n\n" +
     (D.dVal ? "A proposta é válida até " + fl(D.dVal) + ". " : "") + "Se tiveres dúvidas, responde por aqui.\n\n" +
     (D.kNome ? D.kNome + " — " : "") + "Léguas Franzinas";
   $("w_msg").value = msg;

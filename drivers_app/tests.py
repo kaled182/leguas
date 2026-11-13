@@ -523,6 +523,26 @@ class ContractGeneratorTests(TestCase):
         r = self.client.get(reverse("contracts:contract_generator", args=[self.d.id]), {"kind": "ADITIVO"})
         self.assertContains(r, 'id="g_dorig"')
 
+    def test_proposal_uses_contract_data(self):
+        """A proposta lê as mesmas tarifas, condições e parâmetros do contrato."""
+        url = reverse("contracts:proposal_generator")
+        r = self.client.get(url)
+        self.assertEqual(r.status_code, 200)
+        gen = r.context["gen"]
+        fao = next(h for h in gen["hubs"] if h["id"] == self.fao.id)
+        ave = next(h for h in gen["hubs"] if h["id"] == self.ave.id)
+        self.assertEqual(
+            [(c["cp"], c["p"], c["s"]) for c in fao["cps"]],
+            [("4740", 0.95, 0.90), ("4920", 1.15, 1.10)],
+        )
+        self.assertEqual((ave["allows_weekly"], ave["monthly_mode"], ave["monthly_value"]), (False, "DAY_OF_NEXT_MONTH", 15))
+        self.assertEqual(ave["cps"][0]["s"], 0.95)  # mensal − desconto semanal
+        self.assertEqual(gen["settings"]["perda"], 50)
+        self.assertIn("multi", gen)
+        self.assertContains(r, 'id="gen-data"')
+        self.client.logout()
+        self.assertEqual(self.client.get(url).status_code, 302)
+
     def test_generator_multi_rules_follow_partner(self):
         """PUDO e mesma porta vêm dos mesmos campos que a PF usa."""
         from decimal import Decimal

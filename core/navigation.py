@@ -37,7 +37,8 @@ MENU = (
         parent("Contratos", "file-signature",
                item("Assinados", "contracts:admin_signed_contracts"),
                item("Por assinar", "contracts:admin_missing_contracts", count="drivers_missing_contracts"),
-               item("Modelos", "contracts:admin_templates_list")),
+               item("Modelos", "contracts:admin_templates_list"),
+               item("Proposta a motorista", "contracts:proposal_generator")),
     )),
     ("Finanças", (
         parent("Visão geral", "wallet",

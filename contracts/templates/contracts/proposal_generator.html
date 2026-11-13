@@ -1,0 +1,113 @@
+{% load static %}<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Proposta para motoristas · Léguas Franzinas</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link rel="stylesheet" href="{% static 'contracts/proposal.css' %}?v=1">
+</head>
+<body>
+<div class="topbar">
+  <img src="{% static 'contracts/proposal-logo.png' %}" alt="">
+  <div class="t">Gerador — Proposta para Motoristas<small>Léguas Franzinas · uso interno</small></div>
+  <div class="sp"></div>
+  <div class="status" id="status">Preencha o nome, escolha o hub e os CP4 e gere o PDF para enviar ao candidato.</div>
+  <a class="btn ghost" href="/">Voltar</a>
+  <button class="btn ghost" id="b_print" type="button">Imprimir</button>
+  <button class="btn" id="b_pdf" type="button">Gerar PDF</button>
+</div>
+
+<div class="layout">
+<aside class="panel">
+  <div class="warn" id="warn"></div>
+
+  <div class="sec">
+    <h3>Candidato</h3>
+    <div class="fld"><label for="c_nome">Nome completo</label><input id="c_nome" class="big" placeholder="Ex.: João Pedro Ferreira"></div>
+    <div class="g2">
+      <div class="fld"><label for="c_trat">Tratamento na saudação</label><input id="c_trat" placeholder="automático: 1.º nome"></div>
+      <div class="fld"><label for="c_tel">Telemóvel (WhatsApp)</label><input id="c_tel" placeholder="+351 9__ ___ ___"></div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <h3>Hub e zona</h3>
+    <div class="fld"><label for="a_hubsel">Hub</label><select id="a_hubsel"></select></div>
+    <div class="ro" id="hub_terms"></div>
+    <div class="fld" style="margin-top:8px"><label for="a_nome">Nome da zona (como aparece na proposta)</label><input id="a_nome"></div>
+    <div class="zhead"><span style="width:16px"></span><span class="s">Código postal (CP4)</span><span>Esc.</span><span class="c" id="zh_s">Semanal</span><span class="c">Mensal</span></div>
+    <div id="zlist"></div>
+    <div class="note">Valores por entrega, sem IVA, da tabela de tarifas por CP (os mesmos do contrato). O Semanal é o Mensal menos <span id="n_desc"></span>. Pode alterar um valor à mão: a proposta avisa que diverge da tabela.</div>
+    <div class="g2" style="margin-top:10px">
+      <div class="fld"><label for="a_vol">Volume médio por rota/dia</label><input id="a_vol" type="number" min="0" placeholder="—"></div>
+      <div class="fld"><label for="a_dias">Dias de operação</label><input id="a_dias" value="segunda a sábado"></div>
+    </div>
+    <div class="note">Referência interna (não usar sem confirmar): mediana ≈ 60 entregas/dia em CP4 costeiros, ≈ 39 no interior.</div>
+  </div>
+
+  <div class="sec">
+    <h3>Proposta</h3>
+    <div class="g2">
+      <div class="fld"><label for="p_data">Data da proposta</label><input id="p_data" type="date"></div>
+      <div class="fld"><label for="p_val">Válida até</label><input id="p_val" type="date"></div>
+    </div>
+    <div class="g2">
+      <div class="fld"><label for="p_ini">Início previsto (segunda-feira)</label><input id="p_ini" type="date"></div>
+      <div class="fld"><label for="p_ref">Referência</label><input id="p_ref" placeholder="automática"></div>
+    </div>
+    <div class="fld"><label for="p_reg">Regimes de pagamento a apresentar</label>
+      <select id="p_reg">
+        <option value="ambos" selected>Ambos — Semanal e Mensal</option>
+        <option value="semanal">Só Regime Semanal</option>
+        <option value="mensal">Só Regime Mensal</option>
+      </select></div>
+    <label class="tgl"><input type="checkbox" id="t_sim" checked> Exemplo ilustrativo de faturação (dia/semana)</label>
+    <label class="tgl"><input type="checkbox" id="t_min"> Tarifa mínima por rota completa (só Escalão C)</label>
+    <label class="tgl"><input type="checkbox" id="t_multi" checked> Entregas em ponto de recolha (PUDO) e na mesma morada</label>
+    <label class="tgl"><input type="checkbox" id="t_resp" checked> Regras claras: responsabilidade pelos volumes e saída</label>
+    <div class="note">A tarifa mínima segue as condições do hub. Se o hub não a tiver ativa, a proposta avisa: o contrato não a inclui por omissão.</div>
+  </div>
+
+  <div class="sec">
+    <h3>Contacto na proposta</h3>
+    <div class="fld"><label for="k_nome">Responsável</label><input id="k_nome" value="Paulo Marcelino"></div>
+    <div class="g2">
+      <div class="fld"><label for="k_tel">Telefone / WhatsApp</label><input id="k_tel" value="+351 916 987 740"></div>
+      <div class="fld"><label for="k_mail">E-mail</label><input id="k_mail" value="partners@leguasfranzinas.pt"></div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <h3>Mensagem para acompanhar o PDF</h3>
+    <div class="fld"><textarea id="w_msg" aria-label="Mensagem WhatsApp"></textarea></div>
+    <div class="row-btns">
+      <button class="btn" id="b_copy" type="button">Copiar mensagem</button>
+      <a class="btn ghost" id="b_wa" href="#" target="_blank" rel="noopener" style="text-decoration:none;display:none">Abrir WhatsApp</a>
+    </div>
+    <div class="note">Anexe o PDF à mão na conversa. A mensagem é gerada de novo quando muda os dados (as edições manuais perdem-se).</div>
+  </div>
+
+  <div class="sec">
+    <h3>De onde vêm os valores</h3>
+    <div class="ro">
+      Os mesmos dados do contrato e da PF. Para alterar, edite a origem e abra o gerador de novo:<br>
+      • <a href="{{ gen.links.tariffs }}" target="_blank" style="color:#ffb27a">Tarifas por CP</a> — valores por entrega<br>
+      • <a href="{{ gen.links.terms }}" target="_blank" style="color:#ffb27a">Condições por hub</a> — pagamento, regimes, tarifa mínima<br>
+      • <a href="{{ gen.links.settings }}" target="_blank" style="color:#ffb27a">Parâmetros do contrato</a> — prazos, caução, valores de responsabilidade<br>
+      {% if gen.multi.edit_url %}• <a href="{{ gen.multi.edit_url }}" target="_blank" style="color:#ffb27a">Ficha do parceiro CAINIAO</a> — PUDO e mesma porta{% endif %}
+    </div>
+  </div>
+</aside>
+
+<main class="preview" id="preview"></main>
+</div>
+<div id="render-root" aria-hidden="true"></div>
+<div id="measure" aria-hidden="true"></div>
+
+{{ gen|json_script:"gen-data" }}
+<script src="{% static 'contracts/proposal.js' %}?v=1"></script>
+</body>
+</html>

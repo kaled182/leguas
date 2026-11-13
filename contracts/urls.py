@@ -1,6 +1,7 @@
 from django.urls import path
 from . import views
 from . import views_generator as vg
+from . import views_proposal as vp
 
 app_name = "contracts"
 
@@ -29,4 +30,7 @@ urlpatterns = [
     path("admin/gerar/<int:driver_id>/registar/", vg.contract_generator_save, name="contract_generator_save"),
     path("admin/gerado/<int:pk>/", vg.generated_contract_view, name="generated_contract_view"),
     path("admin/gerado/<int:pk>/acao/", vg.generated_contract_action, name="generated_contract_action"),
+
+    # ─── Proposta para motoristas (candidatos) ───
+    path("admin/proposta/", vp.proposal_generator, name="proposal_generator"),
 ]

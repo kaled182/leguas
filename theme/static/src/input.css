@@ -125,7 +125,7 @@
   .lf-tv .lf-kpi-value { font-size: 3.5rem; }
 
   /* Sidebar e Topbar */
-  .lf-sidebar { display: flex; flex-direction: column; gap: var(--space-4); width: var(--sidebar-width); min-height: 100%; padding: var(--space-4) var(--space-3); background: var(--color-sidebar); color: var(--color-on-sidebar); transition: width var(--duration-base) var(--ease-standard); }
+  .lf-sidebar { display: flex; flex-direction: column; gap: var(--space-4); width: var(--sidebar-width); min-height: 100%; padding: var(--space-4) var(--space-3); background: var(--color-sidebar); color: var(--color-on-sidebar); border-right: 1px solid var(--color-sidebar-border); transition: width var(--duration-base) var(--ease-standard); }
   .lf-sidebar[data-collapsed="true"] { width: var(--sidebar-width-collapsed); }
   .lf-sidebar[data-collapsed="true"] .lf-nav-text, .lf-sidebar[data-collapsed="true"] .lf-nav-group { display: none; }
   .lf-auth { display: grid; place-items: center; min-height: 100vh; padding: var(--space-4); background: var(--brand-purple-night); }
@@ -152,10 +152,10 @@
   .lf-logo-symbol { flex: none; width: 40px; height: 40px; }
   .lf-logo-word { width: 100px; height: 30px; object-fit: contain; object-position: left; }
   .lf-sidebar[data-collapsed="true"] .lf-logo-word { display: none; }
-  .lf-nav-group { padding: var(--space-2) var(--space-3) var(--space-1); font-size: var(--text-xs); font-weight: var(--weight-subtitle); letter-spacing: .08em; color: rgb(255 255 255 / 70%); text-transform: uppercase; }
+  .lf-nav-group { padding: var(--space-2) var(--space-3) var(--space-1); font-size: var(--text-xs); font-weight: var(--weight-subtitle); letter-spacing: .08em; color: var(--color-on-sidebar-muted); text-transform: uppercase; }
   .lf-nav-item { display: flex; align-items: center; gap: var(--space-3); min-height: var(--touch-target); padding: 0 var(--space-3); border-left: 3px solid transparent; border-radius: var(--radius-sm); color: var(--color-on-sidebar); font-size: var(--text-sm); text-decoration: none; }
-  .lf-nav-item:hover { background: rgb(255 255 255 / 10%); }
-  .lf-nav-item[aria-current="page"] { border-left-color: var(--brand-orange); background: rgb(255 255 255 / 12%); font-weight: var(--weight-subtitle); }
+  .lf-nav-item:hover { background: var(--color-sidebar-hover); }
+  .lf-nav-item[aria-current="page"] { border-left-color: var(--brand-orange); background: var(--color-sidebar-active); font-weight: var(--weight-subtitle); }
   .lf-nav-count { margin-left: auto; padding: 0 var(--space-2); border-radius: var(--radius-full); background: var(--brand-orange); color: var(--brand-purple); font-size: var(--text-xs); font-weight: var(--weight-subtitle); }
   .lf-shell { display: flex; min-height: 100vh; background: var(--color-bg); }
   .lf-main-col { display: flex; flex: 1 1 0; flex-direction: column; min-width: 0; }

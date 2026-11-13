@@ -31,8 +31,12 @@
   --color-accent-text: #A65A05;
   --color-focus: var(--brand-orange-dark);
   --color-highlight: var(--brand-cream);
-  --color-sidebar: var(--brand-purple);
-  --color-on-sidebar: #FFFFFF;
+  --color-sidebar: var(--brand-lilac);
+  --color-on-sidebar: var(--ink);
+  --color-on-sidebar-muted: var(--muted);
+  --color-sidebar-hover: rgb(46 10 62 / 8%);
+  --color-sidebar-active: rgb(46 10 62 / 12%);
+  --color-sidebar-border: var(--line);
   --color-overlay: rgb(28 6 39 / 60%);
   --tone-success-bg: #E3F4EA;
   --tone-success-fg: #176E3C;
@@ -116,6 +120,11 @@
   --color-focus: var(--brand-orange);
   --color-highlight: #3D2230;
   --color-sidebar: #240A32;
+  --color-on-sidebar: #FFFFFF;
+  --color-on-sidebar-muted: rgb(255 255 255 / 70%);
+  --color-sidebar-hover: rgb(255 255 255 / 10%);
+  --color-sidebar-active: rgb(255 255 255 / 12%);
+  --color-sidebar-border: transparent;
   --tone-success-bg: #123A25;
   --tone-success-fg: #7ADBA6;
   --tone-danger-bg: #4A1A1E;

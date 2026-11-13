@@ -1,6 +1,9 @@
 {# groups: grupos com items. Cada item tem label, url, icon, active, count ou children. Máximo 2 níveis. #}
 <aside id="lf-sidebar" class="lf-sidebar" aria-label="Menu principal">
-  <a href="/" aria-label="Painel do dia">{% include "components/logo.html" with tone="negativo" %}</a>
+  <a href="/" aria-label="Painel do dia">
+    <span class="block dark:hidden">{% include "components/logo.html" with tone="cor" %}</span>
+    <span class="hidden dark:block">{% include "components/logo.html" with tone="negativo" %}</span>
+  </a>
   <nav class="lf-sidebar-nav">
     {% for group in groups %}
       {% if group.label %}<p class="lf-nav-group">{{ group.label }}</p>{% endif %}

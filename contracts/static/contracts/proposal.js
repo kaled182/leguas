@@ -377,7 +377,15 @@ $("b_copy").addEventListener("click", async () => {
   catch (e) { ta.focus(); ta.select(); try { document.execCommand("copy"); flash("Mensagem copiada."); } catch (_) { flash("Selecione o texto e copie com Ctrl+C."); } }
 });
 function flash(t) { $("status").textContent = t; }
-$("b_print").addEventListener("click", () => window.print());
+/* Também corre como ficheiro isolado ou Artifact: num frame não há impressão
+ * e o PDF é guardado pela capacidade "downloads", quando existe. */
+const inFrame = (() => { try { return window.self !== window.top; } catch (e) { return true; } })();
+if (inFrame) $("b_print").style.display = "none";
+$("b_print").addEventListener("click", () => { try { window.print(); } catch (e) { } });
+let downloads = null;
+if (window.claude && typeof window.claude.use === "function") {
+  window.claude.use("downloads").then(d => { downloads = d; }).catch(() => { });
+}
 
 function fileName(D) {
   const clean = s => (s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^A-Za-z0-9]+/g, "_").replace(/^_|_$/g, "");
@@ -399,7 +407,14 @@ $("b_pdf").addEventListener("click", async () => {
     }
     root.innerHTML = "";
     const name = fileName(lastData);
-    pdf.save(name); flash("PDF guardado: " + name);
+    if (downloads) {
+      try { await downloads.save({ filename: name, data: pdf.output("blob") }); flash("PDF guardado: " + name); }
+      catch (err) { flash(err && err.code === "declined" ? "Download cancelado." : "Não foi possível guardar o PDF aqui (" + (err && err.code || "erro") + ")."); }
+    } else if (inFrame) {
+      flash("A gravação de ficheiros não está disponível nesta vista. Abra o gerador numa janela própria.");
+    } else {
+      pdf.save(name); flash("PDF guardado: " + name);
+    }
   } catch (e) { flash("Erro ao gerar PDF: " + e.message); }
   finally { btn.disabled = false; }
 });

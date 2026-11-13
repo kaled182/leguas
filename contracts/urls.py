@@ -33,4 +33,5 @@ urlpatterns = [
 
     # ─── Proposta para motoristas (candidatos) ───
     path("admin/proposta/", vp.proposal_generator, name="proposal_generator"),
+    path("admin/proposta/descarregar/", vp.proposal_download, name="proposal_download"),
 ]

@@ -6,7 +6,11 @@ A proposta usa as mesmas fontes que o contrato e a PF, para não divergir:
 - prazos e valores de responsabilidade: ContractSettings;
 - PUDO e mesma porta: ficha do parceiro CAINIAO (_multi_payload).
 """
+import base64
+
+from django.contrib.staticfiles import finders
 from django.shortcuts import render
+from django.utils import timezone
 from django.templatetags.static import static
 from django.urls import reverse
 
@@ -68,3 +72,30 @@ def proposal_payload():
 @admin_required
 def proposal_generator(request):
     return render(request, "contracts/proposal_generator.html", {"gen": proposal_payload()})
+
+
+def _static_text(path):
+    with open(finders.find(path), encoding="utf-8") as f:
+        return f.read()
+
+
+@admin_required
+def proposal_download(request):
+    """O mesmo gerador num só ficheiro HTML (CSS, JS, logótipo e valores
+    embutidos), para a equipa usar fora do sistema. Os valores ficam
+    congelados na data do download."""
+    gen = proposal_payload()
+    with open(finders.find("contracts/proposal-logo.png"), "rb") as f:
+        gen["logo"] = "data:image/png;base64," + base64.b64encode(f.read()).decode()
+    gen["multi"].pop("edit_url", None)
+    gen.pop("links", None)
+    now = timezone.localtime()
+    resp = render(request, "contracts/proposal_generator.html", {
+        "gen": gen, "standalone": True, "snapshot": now.strftime("%d/%m/%Y %H:%M"),
+        "css": _static_text("contracts/proposal.css"),
+        "js": _static_text("contracts/proposal.js"),
+    })
+    resp["Content-Disposition"] = (
+        f'attachment; filename="Gerador_Proposta_Motoristas_LeguasFranzinas_{now:%Y-%m-%d}.html"'
+    )
+    return resp

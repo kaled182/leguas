@@ -540,8 +540,22 @@ class ContractGeneratorTests(TestCase):
         self.assertEqual(gen["settings"]["perda"], 50)
         self.assertIn("multi", gen)
         self.assertContains(r, 'id="gen-data"')
+
+        # Ficheiro isolado: tudo embutido, nada pedido ao servidor.
+        d = self.client.get(reverse("contracts:proposal_download"))
+        self.assertEqual(d.status_code, 200)
+        self.assertIn("attachment;", d["Content-Disposition"])
+        html = d.content.decode()
+        self.assertIn("data:image/png;base64,", html)
+        self.assertIn("function applyHub", html)
+        self.assertIn(".topbar{", html)
+        self.assertNotIn("/static/", html)
+        self.assertNotIn("/admin/", html)
+        self.assertIn('"4920"', html)
+
         self.client.logout()
         self.assertEqual(self.client.get(url).status_code, 302)
+        self.assertEqual(self.client.get(reverse("contracts:proposal_download")).status_code, 302)
 
     def test_generator_multi_rules_follow_partner(self):
         """PUDO e mesma porta vêm dos mesmos campos que a PF usa."""

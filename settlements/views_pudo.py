@@ -75,6 +75,7 @@ def fake_delivery_suspects(request):
     context = {
         "partner": partner,
         "pudo_enabled": bool(partner and partner.pudo_enabled),
+        "fake_enabled": bool(partner and partner.pudo_fake_delivery_enabled),
         "tolerance_m": (
             partner.pudo_geo_tolerance_meters
             if partner else 200
@@ -110,6 +111,13 @@ def confirm_fake_delivery(request, task_id):
 
     if not partner or not getattr(partner, "pudo_enabled", False):
         messages.error(request, "PUDO não está activo no parceiro CAINIAO.")
+        return redirect("pudo-fake-delivery-suspects")
+    if not partner.pudo_fake_delivery_enabled:
+        messages.error(
+            request,
+            "A penalização por entrega falsa está desligada no parceiro "
+            "CAINIAO. Nenhum desconto foi criado.",
+        )
         return redirect("pudo-fake-delivery-suspects")
 
     driver = _resolve_driver_for_task(task)

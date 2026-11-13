@@ -58,12 +58,12 @@ function multiPanel() {
   box.innerHTML =
     row(M.pudo_on, 'PUDO: 1.º volume por ponto e dia ' + eur(M.pudo1) + ' · adicional ' + eur(M.pudoadd)) +
     row(M.porta_on, 'Mesma porta: volume adicional ' + eur(M.porta)) +
-    (M.pudo_on ? '<div class="ht">Fake Delivery PUDO (a mais de ' + M.geo_m + ' m): ' + eur(M.fake) + '</div>' : '') +
+    (M.pudo_on ? row(M.fake_on, 'Penalização entrega falsa PUDO (a mais de ' + M.geo_m + ' m): ' + eur(M.fake)) : '') +
     '<div class="ht"><a href="' + M.edit_url + '" target="_blank" style="color:#ffb27a">Editar na ficha do parceiro CAINIAO ›</a></div>';
 }
 function multiWarns() {
   const w = [];
-  if (M.found && M.pudo_on && num("v_local", 5) !== M.fake) {
+  if (M.found && M.fake_on && num("v_local", 5) !== M.fake) {
     w.push("A PF cobra " + eur(M.fake) + " por Fake Delivery PUDO (ficha CAINIAO), mas o contrato tem " + eur(num("v_local", 5)) + " em «Entrega em local diferente, recebida». Iguale os valores.");
   }
   return w;

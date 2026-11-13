@@ -9,7 +9,7 @@
   <div class="lf-page-header">
     <div class="min-w-0">
       <h1 class="lf-page-title">Suspeitas de entrega falsa (PUDO)</h1>
-      <p class="lf-page-subtitle">Pacotes PUDO entregues a mais de {{ tolerance_m }} m do destino. Confirmar gera um desconto de {{ penalty|eur }} ao motorista.</p>
+      <p class="lf-page-subtitle">Pacotes PUDO entregues a mais de {{ tolerance_m }} m do destino. {% if fake_enabled %}Confirmar gera um desconto de {{ penalty|eur }} ao motorista.{% else %}A penalização está desligada: a lista é só informativa.{% endif %}</p>
     </div>
     <div class="lf-page-actions">
       {% include "components/status_badge.html" with label=n_pending|stringformat:"d"|add:" pendentes" tone="warning" %}
@@ -29,6 +29,15 @@
       {{ message }}
     </div>
     {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if pudo_enabled and not fake_enabled %}
+  <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl p-4 mb-4">
+    <p class="text-sm text-amber-800 dark:text-amber-300">
+      <b>Penalização por entrega falsa desligada.</b> As suspeitas continuam listadas, mas não se cria desconto ao motorista.
+      Para ligar, edite o parceiro CAINIAO › "Ativar penalização por entrega falsa".
+    </p>
   </div>
   {% endif %}
 
@@ -191,6 +200,8 @@
                    class="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                   Ver claim
                 </a>
+              {% elif not fake_enabled %}
+                <span class="text-xs text-gray-400">penalização desligada</span>
               {% elif s.driver %}
                 <form method="post" action="{% url 'pudo-fake-delivery-confirm' s.id %}" class="inline"
                       data-confirm="Confirmar Fake Delivery para {{ s.driver.nome_completo }}?\n\nWaybill: {{ s.waybill_number }}\nDistância: {{ s.distance_m }}m\nDesconto: {{ penalty|eur }}\n\nIsto criará uma DriverClaim PENDENTE.">

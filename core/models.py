@@ -116,6 +116,14 @@ class Partner(models.Model):
             "primeira. Fórmula total: 1ª + (N-1) × adicional."
         ),
     )
+    pudo_fake_delivery_enabled = models.BooleanField(
+        "PUDO — penalização Fake Delivery activa",
+        default=True,
+        help_text=(
+            "Se desligada, as suspeitas continuam listadas, mas não se "
+            "cria desconto ao motorista. O contrato segue esta opção."
+        ),
+    )
     pudo_fake_delivery_penalty = models.DecimalField(
         "PUDO — penalização Fake Delivery (€)",
         max_digits=6, decimal_places=4,

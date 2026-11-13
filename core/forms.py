@@ -26,6 +26,7 @@ class PartnerForm(forms.ModelForm):
             "pudo_enabled",
             "pudo_first_delivery_price",
             "pudo_additional_delivery_price",
+            "pudo_fake_delivery_enabled",
             "pudo_fake_delivery_penalty",
             "pudo_geo_tolerance_meters",
             "verdict_claim_amount",
@@ -114,6 +115,9 @@ class PartnerForm(forms.ModelForm):
             ),
             "pudo_enabled": forms.CheckboxInput(
                 attrs={"class": "w-4 h-4 text-violet-600 rounded focus:ring-2 dark:bg-gray-700 dark:border-gray-600"}
+            ),
+            "pudo_fake_delivery_enabled": forms.CheckboxInput(
+                attrs={"class": "w-4 h-4 text-rose-600 rounded focus:ring-2 dark:bg-gray-700 dark:border-gray-600"}
             ),
             "pudo_first_delivery_price": forms.NumberInput(
                 attrs={

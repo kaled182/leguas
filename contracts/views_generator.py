@@ -96,6 +96,7 @@ def _multi_payload():
         "pudo_on": bool(p.pudo_enabled),
         "pudo1": float(p.pudo_first_delivery_price),
         "pudoadd": float(p.pudo_additional_delivery_price),
+        "fake_on": bool(p.pudo_enabled and p.pudo_fake_delivery_enabled),
         "fake": float(p.pudo_fake_delivery_penalty),
         "geo_m": p.pudo_geo_tolerance_meters,
         "porta_on": bool(p.same_door_enabled),

@@ -135,6 +135,12 @@
     {% endif %}
 
     <div class="sec">
+      <h3>Entregas PUDO e mesma porta</h3>
+      <div id="multi_box"></div>
+      <div class="internal-note">Valores e regras da ficha do parceiro CAINIAO, os mesmos que a PF usa. Para alterar, edite a ficha do parceiro e abra o gerador de novo: o contrato e a PF mudam juntos.</div>
+    </div>
+
+    <div class="sec">
       <h3>{% if kind == 'ADITIVO' %}Valores de responsabilidade{% else %}Parâmetros operacionais{% endif %}</h3>
       {% if kind != 'ADITIVO' %}
       <div class="grid2">
@@ -186,6 +192,6 @@
 </div>
 
 {{ gen|json_script:"gen-data" }}
-<script src="{% static 'contracts/generator.js' %}?v=2"></script>
+<script src="{% static 'contracts/generator.js' %}?v=3"></script>
 </body>
 </html>

@@ -523,6 +523,32 @@ class ContractGeneratorTests(TestCase):
         r = self.client.get(reverse("contracts:contract_generator", args=[self.d.id]), {"kind": "ADITIVO"})
         self.assertContains(r, 'id="g_dorig"')
 
+    def test_generator_multi_rules_follow_partner(self):
+        """PUDO e mesma porta vêm dos mesmos campos que a PF usa."""
+        from decimal import Decimal
+
+        from core.models import Partner
+
+        url = reverse("contracts:contract_generator", args=[self.d.id])
+        r = self.client.get(url)
+        self.assertEqual(r.context["gen"]["multi"], {"pudo_on": False, "porta_on": False, "found": False})
+
+        p = Partner.objects.create(
+            name="CAINIAO", nif="500000001", contact_email="c@example.com",
+            pudo_enabled=True, pudo_first_delivery_price=Decimal("1.10"),
+            pudo_additional_delivery_price=Decimal("0.25"),
+            pudo_fake_delivery_penalty=Decimal("5.00"),
+            same_door_enabled=True, same_door_additional_price=Decimal("0.30"),
+        )
+        for kind in ("CONTRATO", "ADITIVO"):
+            m = self.client.get(url, {"kind": kind}).context["gen"]["multi"]
+            self.assertEqual(
+                (m["pudo_on"], m["pudo1"], m["pudoadd"], m["fake"], m["porta_on"], m["porta"]),
+                (True, 1.10, 0.25, 5.0, True, 0.30),
+            )
+            self.assertEqual(m["edit_url"], reverse("core:partner-edit", args=[p.pk]))
+        self.assertContains(self.client.get(url), 'id="multi_box"')
+
     def test_save_and_lifecycle(self):
         from django.core.files.uploadedfile import SimpleUploadedFile
 

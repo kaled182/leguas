@@ -82,6 +82,27 @@ def _cp_payload(cp, chosen, negotiated):
     }
 
 
+def _multi_payload():
+    """Regras PUDO e mesma porta, lidas dos mesmos campos que a PF usa
+    (ficha do parceiro CAINIAO). O contrato não pode divergir da PF."""
+    from core.models import Partner
+
+    p = Partner.objects.filter(name__iexact="CAINIAO").first()
+    if not p:
+        return {"pudo_on": False, "porta_on": False, "found": False}
+    return {
+        "found": True,
+        "edit_url": reverse("core:partner-edit", args=[p.pk]),
+        "pudo_on": bool(p.pudo_enabled),
+        "pudo1": float(p.pudo_first_delivery_price),
+        "pudoadd": float(p.pudo_additional_delivery_price),
+        "fake": float(p.pudo_fake_delivery_penalty),
+        "geo_m": p.pudo_geo_tolerance_meters,
+        "porta_on": bool(p.same_door_enabled),
+        "porta": float(p.same_door_additional_price),
+    }
+
+
 @admin_required
 def contract_generator(request, driver_id):
     driver = get_object_or_404(DriverProfile, pk=driver_id)
@@ -103,6 +124,7 @@ def contract_generator(request, driver_id):
         "hubs": hubs,
         "primary_hub_id": primary,
         "driver": {"regime": driver.payment_regime},
+        "multi": _multi_payload(),
     }
     return render(request, "contracts/generator.html", {
         "driver": driver,

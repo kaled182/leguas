@@ -30,6 +30,53 @@ function bl(v, w) {
 function val(id) { const el = $(id); return el ? el.value : ""; }
 function num(id, dflt) { const v = +val(id); return isNaN(v) || val(id) === "" ? dflt : v; }
 
+/* ── Entregas agrupadas (PUDO e mesma porta) ──
+ * Valores e regras da ficha do parceiro CAINIAO: os mesmos campos que a
+ * PF usa (settlements/views.py). Não são editáveis aqui para o contrato
+ * não divergir da PF. */
+const M = GEN.multi || {};
+function multiOn() { return !!(M.pudo_on || M.porta_on); }
+function multiItems() {
+  const it = [];
+  if (M.pudo_on) it.push('<b>Entregas em ponto de recolha (PUDO):</b> os volumes entregues no mesmo ponto de recolha, no mesmo dia, são pagos em conjunto, em substituição do valor por volume da tabela de zonas: o primeiro volume a <b>' + eur(M.pudo1) + '</b> e cada volume adicional a <b>' + eur(M.pudoadd) + '</b>');
+  if (M.porta_on) it.push('<b>Vários volumes na mesma morada:</b> quando o Prestador entrega, no mesmo dia, mais do que um volume na mesma morada, fora de ponto de recolha, o primeiro volume é pago pelo valor da tabela de zonas e cada volume adicional a <b>' + eur(M.porta) + '</b>; considera-se a mesma morada a que tem a mesma morada e o mesmo código postal, ou a mesma paragem da rota na aplicação');
+  return it;
+}
+function multiParas() {
+  const al = ["a", "b"];
+  const it = multiItems();
+  return it.map((t, i) => '<p class="par"><b>' + al[i] + ')</b> ' + t + (i === it.length - 1 ? '.' : ';') + '</p>').join("");
+}
+function multiPanel() {
+  const box = $("multi_box");
+  if (!box) return;
+  if (!M.found) {
+    box.innerHTML = '<div class="warn">Parceiro CAINIAO não encontrado. O contrato sai sem regras de PUDO e mesma porta.</div>';
+    return;
+  }
+  const row = (on, txt) => '<div class="ht">' + (on ? '✔ ' : '✖ ') + txt + (on ? '' : ' — <span style="color:#ffb27a">inativa, fora do contrato</span>') + '</div>';
+  box.innerHTML =
+    row(M.pudo_on, 'PUDO: 1.º volume por ponto e dia ' + eur(M.pudo1) + ' · adicional ' + eur(M.pudoadd)) +
+    row(M.porta_on, 'Mesma porta: volume adicional ' + eur(M.porta)) +
+    (M.pudo_on ? '<div class="ht">Fake Delivery PUDO (a mais de ' + M.geo_m + ' m): ' + eur(M.fake) + '</div>' : '') +
+    '<div class="ht"><a href="' + M.edit_url + '" target="_blank" style="color:#ffb27a">Editar na ficha do parceiro CAINIAO ›</a></div>';
+}
+function multiWarns() {
+  const w = [];
+  if (M.found && M.pudo_on && num("v_local", 5) !== M.fake) {
+    w.push("A PF cobra " + eur(M.fake) + " por Fake Delivery PUDO (ficha CAINIAO), mas o contrato tem " + eur(num("v_local", 5)) + " em «Entrega em local diferente, recebida». Iguale os valores.");
+  }
+  return w;
+}
+/* Avisa quando o texto passa do fim da folha A4 (a folha corta o excesso). */
+function overflowWarns() {
+  const w = [];
+  document.querySelectorAll("#preview .pagepad").forEach((p, i) => {
+    if (p.scrollHeight > p.clientHeight + 2) w.push("A página " + (i + 1) + " tem texto a mais e fica cortada no PDF.");
+  });
+  return w;
+}
+
 function mhead(sec) {
   return '<div class="mhead"><div class="l"><img src="' + LOGO + '">' +
     '<div class="brand">LÉGUAS<span class="b2"><br>FRANZINAS</span></div></div>' +
@@ -129,6 +176,7 @@ function renderContrato() {
   if (!allowed.length) warns.push("Os hubs selecionados não têm um regime em comum.");
   if (GEN.driver.regime && GEN.driver.regime !== regime) warns.push("A ficha tem o regime " + GEN.driver.regime.toLowerCase() + "; o contrato está em " + regime.toLowerCase() + ".");
   sel.hubs.forEach(x => { if (!x.hub.has_terms) warns.push("O hub " + x.hub.name + " não tem condições de contrato configuradas."); });
+  warns.push(...multiWarns());
   $("warns").innerHTML = warns.map(w => '<div class="warn">' + esc(w) + '</div>').join("");
 
   const V = {
@@ -146,7 +194,8 @@ function renderContrato() {
   const rep = val("g_rep");
   const temC = sel.hubs.some(x => x.cps.some(c => c.esc === "C"));
   const nRows = sel.hubs.reduce((a, x) => a + x.cps.length + 1, 0);
-  const SPLIT = nRows >= 5 || $("c_minimo").checked;
+  const MS = multiOn() ? 1 : 0;
+  const SPLIT = nRows >= 5 || $("c_minimo").checked || MS === 1;
   const TOTAL = SPLIT ? 7 : 6;
   const LABEL = "Contrato de Prestação de Serviços";
 
@@ -204,7 +253,7 @@ function renderContrato() {
     '<div class="cl">Cláusula 5.ª — Substituição</div>' +
     '<p class="par">O Prestador pode fazer-se substituir, ou recorrer a colaboradores próprios, na execução dos serviços, desde que os substitutos sejam titulares de carta de condução válida e cumpram os requisitos técnicos, de segurança e de registo aplicáveis, mantendo o Prestador responsabilidade integral pelos atos e omissões destes.</p>' +
     '<div class="cl">Cláusula 6.ª — Retribuição e faturação</div>' +
-    '<p class="par"><b>1.</b> Como contrapartida, o Prestador recebe um valor por volume entregue/recolhido, conforme a tabela de zona(s) constante do Anexo I. Regime aplicável: ' + regDesc + '</p>' +
+    '<p class="par"><b>1.</b> Como contrapartida, o Prestador recebe um valor por volume entregue/recolhido, conforme a tabela de zona(s) constante do Anexo I' + (MS ? ', com as regras de entregas em ponto de recolha e na mesma morada da secção 2 do Anexo I' : '') + '. Regime aplicável: ' + regDesc + '</p>' +
     '<p class="par"><b>2.</b> Os pagamentos são efetuados contra a emissão de fatura ou fatura-recibo pelo Prestador. Os valores indicados não incluem IVA, que acresce à taxa legal, ou beneficia de isenção, conforme o enquadramento fiscal do Prestador.</p>' +
     '<p class="par"><b>3.</b> Todos os impostos, contribuições e despesas necessárias à execução (combustível, portagens, manutenção, alimentação, comunicações) são da responsabilidade do Prestador.</p>' +
     cl7 +
@@ -286,7 +335,7 @@ function renderContrato() {
 
   let minBlock = "";
   if ($("c_minimo").checked) {
-    minBlock = '<div class="dsec"><div class="dk">3 · Tarifa mínima por rota completa' + (temC ? '' : ' <span style="color:#b23a30">(atenção: nenhuma zona C selecionada)</span>') + '</div>' +
+    minBlock = '<div class="dsec"><div class="dk">' + (3 + MS) + ' · Tarifa mínima por rota completa' + (temC ? '' : ' <span style="color:#b23a30">(atenção: nenhuma zona C selecionada)</span>') + '</div>' +
       '<p class="ct par">Nas rotas da(s) zona(s) do escalão C com volume diário inferior a <b>' + V.minlim + ' volumes</b>, é devida uma tarifa mínima de <b>' + V.min + ',00 € por rota integralmente executada</b>. A tarifa mínima só é devida quando a rota for integralmente concluída: <b>' + esc(V.minpct) + ' dos volumes que saíram para distribuição entregues no próprio dia</b>; prevalece o maior dos valores entre a tarifa mínima e o apuramento por volume.</p></div>';
   }
   const tipo = val("g_tipo");
@@ -301,12 +350,16 @@ function renderContrato() {
     '</div></div>';
   const secZonas = '<div class="dsec"><div class="dk">1 · Zona(s) contratada(s) e valores por volume (s/ IVA)</div>' + ztab +
     '<p class="note">Valores por volume entregue/recolhido. A tabela pode ser revista com pré-aviso escrito de ' + V.aviso + ' dias, aplicando-se a nova tabela ao ciclo seguinte.</p></div>';
+  const secMulti = MS
+    ? '<div class="dsec"><div class="dk">2 · Entregas em ponto de recolha e na mesma morada (s/ IVA)</div><div class="ct">' + multiParas() +
+      '<p class="note">Estes valores podem ser revistos nos mesmos termos da tabela da secção 1.</p></div></div>'
+    : '';
   const garantia = regime === "SEMANAL"
     ? '<tr><td>Retenção de garantia (reg. semanal)</td><td class="num strong">' + V.cauc + ' semanas rotativas</td><td>Maturação do 1.º pagamento</td><td class="num strong">' + V.matur + ' dias</td></tr>'
     : '<tr><td>Caução</td><td class="num strong">' + V.caucfix + ',00 €</td><td>Pagamento</td><td class="num strong">' + (V.mmode === "DAY_OF_NEXT_MONTH" ? 'dia ' + V.mval + ' do mês seguinte' : V.mval + ' dias após a fatura') + '</td></tr>';
-  const secResto = '<div class="dsec"><div class="dk">2 · Regime de pagamento escolhido</div><p class="ct par">' + regTxt + '</p></div>' +
+  const secResto = '<div class="dsec"><div class="dk">' + (2 + MS) + ' · Regime de pagamento escolhido</div><p class="ct par">' + regTxt + '</p></div>' +
     minBlock +
-    '<div class="dsec"><div class="dk">' + ($("c_minimo").checked ? '4' : '3') + ' · Parâmetros operacionais e valores de responsabilidade</div>' +
+    '<div class="dsec"><div class="dk">' + (($("c_minimo").checked ? 4 : 3) + MS) + ' · Parâmetros operacionais e valores de responsabilidade</div>' +
     '<table><tbody>' +
     '<tr><td>Confirmação de rota (véspera)</td><td class="num strong">até às ' + esc(V.conf) + '</td><td>Recolha no hub</td><td class="num strong">até às ' + esc(V.saida) + '</td></tr>' +
     '<tr><td>Perda / entrega falsa (mínimo)</td><td class="num strong">' + V.perda + ',00 € / volume</td><td>Valor declarado superior</td><td class="num strong">' + (V.teto > 0 ? 'até ' + V.teto + ',00 €' : 'valor integral') + '</td></tr>' +
@@ -325,7 +378,7 @@ function renderContrato() {
   const anexoTitle = '<div class="doctitle"><div class="kk">Parte integrante do contrato de prestação de serviços</div><h1>Anexo I — Condições Particulares</h1></div>';
   let a1, a1b = "";
   if (SPLIT) {
-    a1 = '<div class="a4"><div class="pagepad">' + mhead("Anexo I · Condições Particulares") + anexoTitle + idgridAnexo + secZonas + dfoot(LABEL, 5, TOTAL) + '</div></div>';
+    a1 = '<div class="a4"><div class="pagepad">' + mhead("Anexo I · Condições Particulares") + anexoTitle + idgridAnexo + secZonas + secMulti + dfoot(LABEL, 5, TOTAL) + '</div></div>';
     a1b = '<div class="a4"><div class="pagepad">' + mhead("Anexo I · Condições Particulares") +
       '<div class="doctitle"><div class="kk">Anexo I — continuação</div><h1>Condições Particulares (cont.)</h1></div>' +
       secResto + dfoot(LABEL, 6, TOTAL) + '</div></div>';
@@ -338,11 +391,12 @@ function renderContrato() {
     protocolo() + dfoot(LABEL, TOTAL, TOTAL) + '</div></div>';
 
   $("preview").innerHTML = p1 + p2 + p3 + p4 + a1 + a1b + a2;
+  $("warns").insertAdjacentHTML("beforeend", overflowWarns().map(w => '<div class="warn">' + esc(w) + '</div>').join(""));
 
   return {
     regime,
     hubs: sel.hubs.map(x => ({ hub_id: x.hub.id, name: x.hub.name, cp4s: x.cps.map(c => c.cp), primary: sel.primary && x.hub.id === sel.primary.id })),
-    params: Object.assign({}, V, { local, dass: val("g_dass"), dini: val("g_dini"), dur, rep, minimo: $("c_minimo").checked }),
+    params: Object.assign({}, V, { local, dass: val("g_dass"), dini: val("g_dini"), dur, rep, minimo: $("c_minimo").checked, multi: M }),
     ok: sel.hubs.length > 0 && allowed.length > 0,
   };
 }
@@ -392,9 +446,12 @@ function renderAditivo() {
   const dass = fdate(val("g_dass")), dorig = fdate(val("g_dorig"));
   const local = val("g_local") || hub.signing_place || "Esposende";
   const rep = val("g_rep");
-  const TOTAL = 3;
+  const MS = multiOn() ? 1 : 0;
+  const TOTAL = 3 + MS;
   const LABEL = "Aditivo ao Contrato";
-  $("warns").innerHTML = val("g_dorig") ? "" : '<div class="warn">Indique a data de assinatura do contrato original.</div>';
+  const aw = val("g_dorig") ? [] : ["Indique a data de assinatura do contrato original."];
+  aw.push(...multiWarns());
+  $("warns").innerHTML = aw.map(w => '<div class="warn">' + esc(w) + '</div>').join("");
 
   const al = ['a', 'b', 'c', 'd', 'e']; const items = [];
   items.push('perda, extravio ou furto de volume, e entrega falsa sem prova de entrega válida (incluindo entrega fora do ponto de recolha ou cacifo designado sem receção pelo destinatário) — <b>' + V.perda + ',00 € por volume</b> ou, sendo superior, o valor declarado da mercadoria' + (V.teto > 0 ? ', até ao limite de <b>' + V.teto + ',00 €</b>' : ''));
@@ -419,7 +476,10 @@ function renderAditivo() {
     '<p class="par"><b>C)</b> O Contrato prevê que as suas alterações constem de documento escrito assinado por ambas as partes;</p>' +
     '<p>é livremente e de boa-fé celebrado o presente <b>Aditivo</b>, que se rege pelas cláusulas seguintes:</p>' +
     '<div class="cl">Cláusula 1.ª — Objeto</div>' +
-    '<p class="par">O presente Aditivo altera o Contrato <b>exclusivamente</b> quanto à execução das entregas e à responsabilidade pelos volumes, mantendo-se inalteradas todas as demais cláusulas e anexos, designadamente as relativas à retribuição, pagamento, caução ou retenção de garantia, seguros, vigência, cessação e liquidação de saldos.</p>' +
+    (MS
+      ? '<p class="par">O presente Aditivo altera o Contrato <b>exclusivamente</b> quanto à execução das entregas, à responsabilidade pelos volumes e à retribuição das entregas em ponto de recolha e na mesma morada (Cláusula 5.ª), mantendo-se inalteradas todas as demais cláusulas e anexos, designadamente as relativas aos valores por volume da tabela de zonas, pagamento,'
+      : '<p class="par">O presente Aditivo altera o Contrato <b>exclusivamente</b> quanto à execução das entregas e à responsabilidade pelos volumes, mantendo-se inalteradas todas as demais cláusulas e anexos, designadamente as relativas à retribuição, pagamento,') +
+    ' caução ou retenção de garantia, seguros, vigência, cessação e liquidação de saldos.</p>' +
     '<div class="cl">Cláusula 2.ª — Protocolo de entrega</div>' +
     '<p class="par">À cláusula do Contrato relativa à execução do serviço é aditado o seguinte: «As entregas cumprem o Protocolo de Entrega anexo ao Aditivo, enquanto requisito técnico do cliente final, designadamente: registo do nome completo e do número do documento de identificação de quem recebe; fotografias obrigatórias nas entregas em caixa de correio, ponto de recolha, cacifo e porteiro; registo geolocalizado a menos de 200 metros do local de entrega; contacto prévio com o destinatário antes de registar ausência; proibição de entrega a menores e de deixar volumes em zonas comuns ou com terceiros sem autorização do destinatário.»</p>' +
     '<div class="cl">Cláusula 3.ª — Guarda e responsabilidade pelos volumes</div>' +
@@ -441,27 +501,35 @@ function renderAditivo() {
     '<p class="par"><b>3.</b> As deduções são aplicadas no fecho de apuramento imediatamente seguinte à confirmação, nos termos e com a periodicidade previstos no Contrato, e refletidas no extrato desse ciclo; sendo o valor a pagar insuficiente, o remanescente é deduzido à caução ou garantia prevista no Contrato.</p>' +
     '<p class="par"><b>4.</b> Nenhuma dedução é efetuada sem notificação prévia ao Prestador, acompanhada da evidência disponível (reclamação, prova de entrega, registo GPS, valor declarado), dispondo o Prestador de <b>' + esc(V.resp) + ' horas</b> para responder com os seus elementos de prova. Nas reclamações de não receção, é prova de entrega válida o registo de nome e documento de identificação, fotografia conforme o Protocolo de Entrega, ou registo de chamada, e-mail ou SMS do destinatário a confirmar a entrega.</p>' +
     '<p class="par"><b>5.</b> As quantias previstas nesta cláusula têm natureza indemnizatória e não constituem contrapartida de qualquer prestação de serviços.' + exTxt + '</p>' +
-    '<div class="cl">Cláusula 5.ª — Produção de efeitos</div>' +
+    (MS
+      ? '<div class="cl">Cláusula 5.ª — Entregas em ponto de recolha e na mesma morada</div>' +
+        '<p class="par">À cláusula do Contrato relativa à retribuição é aditado o seguinte: «Em derrogação do valor por volume da tabela de zonas do Anexo I, aplicam-se as seguintes regras (valores sem IVA):</p>' +
+        multiParas().replace(/\.<\/p>$/, '.»</p>') +
+        '</div>' + dfoot(LABEL, 2, TOTAL) + '</div></div>' +
+        '<div class="a4"><div class="pagepad">' + mhead("Aditivo · Entregas e responsabilidade") + '<div class="ct">'
+      : '') +
+    '<div class="cl">Cláusula ' + (5 + MS) + '.ª — Produção de efeitos</div>' +
     '<p class="par">O presente Aditivo produz efeitos na data da sua assinatura e aplica-se às ocorrências relativas a volumes que saiam para distribuição a partir dessa data. As ocorrências anteriores continuam reguladas pelo Contrato na redação então em vigor.</p>' +
-    '<div class="cl">Cláusula 6.ª — Disposições finais</div>' +
+    '<div class="cl">Cláusula ' + (6 + MS) + '.ª — Disposições finais</div>' +
     '<p class="par">O presente Aditivo e o Protocolo de Entrega anexo fazem parte integrante do Contrato, prevalecendo sobre este nas matérias neles reguladas. Em tudo o mais, mantém-se integralmente em vigor o Contrato. Feito em dois exemplares, ficando um na posse de cada parte.</p>' +
     '<p style="margin-top:4mm">' + esc(local) + ', ' + bl(dass, 44) + '</p>' +
     '<div class="sign">' +
     '<div class="box"><div class="line"></div><b>1.º Outorgante</b><br>Léguas Franzinas — Unipessoal, Lda.<br>' + esc(rep) + '</div>' +
     '<div class="box"><div class="line"></div><b>2.º Outorgante</b><br>' + (val("g_nome").trim() ? esc(val("g_nome")) : "&nbsp;") + '</div>' +
     '</div>' +
-    '</div>' + dfoot(LABEL, 2, TOTAL) + '</div></div>';
+    '</div>' + dfoot(LABEL, 2 + MS, TOTAL) + '</div></div>';
 
-  const p3 = '<div class="a4"><div class="pagepad">' + mhead("Anexo ao Aditivo · Protocolo de Entrega") +
+  const p3 ='<div class="a4"><div class="pagepad">' + mhead("Anexo ao Aditivo · Protocolo de Entrega") +
     '<div class="doctitle"><div class="kk">Parte integrante do aditivo ao contrato de prestação de serviços</div><h1>Protocolo de Entrega</h1></div>' +
     '<p class="ct par">Requisitos técnicos exigidos pelo cliente final para a rastreabilidade e prova de entrega (Cláusula 2.ª do Aditivo). Em todos os tipos de entrega, o registo na aplicação é feito a <b>menos de 200 metros</b> do local de entrega.</p>' +
-    protocolo() + dfoot(LABEL, 3, TOTAL) + '</div></div>';
+    protocolo() + dfoot(LABEL, TOTAL, TOTAL) + '</div></div>';
 
   $("preview").innerHTML = p1 + p2 + p3;
+  $("warns").insertAdjacentHTML("beforeend", overflowWarns().map(w => '<div class="warn">' + esc(w) + '</div>').join(""));
   return {
     regime: GEN.driver.regime || "",
     hubs: [{ hub_id: hub.id, name: hub.name, cp4s: [], primary: true }],
-    params: Object.assign({}, V, { local, dass: val("g_dass"), dorig: val("g_dorig"), rep }),
+    params: Object.assign({}, V, { local, dass: val("g_dass"), dorig: val("g_dorig"), rep, multi: M }),
     ok: !!val("g_dorig"),
   };
 }
@@ -471,6 +539,7 @@ function renderAditivo() {
 const render = GEN.kind === "ADITIVO" ? renderAditivo : renderContrato;
 let last = null;
 if (GEN.kind !== "ADITIVO") buildZoneList();
+multiPanel();
 function rerender() { last = render(); }
 document.querySelectorAll(".panel input, .panel select").forEach(el => {
   el.addEventListener("input", rerender);

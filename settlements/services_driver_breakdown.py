@@ -25,7 +25,9 @@ def split_counts(tasks, partner):
     """Conta as tasks por tipo. `tasks` são objectos com task_status,
     delivery_type, task_date, etc. Devolve (counts, extra_ids, pudo_tasks,
     door_delivered, same_door_groups)."""
-    from .services_same_door import is_same_door_active, sorted_same_door_groups
+    from .services_same_door import (
+        is_same_door_active, same_door_review_groups, sorted_same_door_groups,
+    )
 
     pudo_active = bool(partner and getattr(partner, "pudo_enabled", False))
     counts = _empty_counts()
@@ -48,6 +50,7 @@ def split_counts(tasks, partner):
         eligible = [t for t in door_delivered if not start or t.task_date >= start]
         groups = sorted_same_door_groups(eligible)
         extra_ids = {t.id for g in groups for t in g[1:]}
+        counts["same_door_review"] = same_door_review_groups(eligible)
 
     counts["pudo"] = len(pudo_tasks)
     counts["door"] = len(door_delivered)
@@ -64,6 +67,7 @@ def driver_breakdown(driver, date_from, date_to, partner=None):
 
     from .models import PackagePriceOverride
     from .services_pudo import compute_pudo_payment, pudo_key
+    from .services_same_door import max_spread_m
 
     if partner is None:
         partner = Partner.objects.filter(name__iexact="CAINIAO").first()
@@ -157,6 +161,19 @@ def driver_breakdown(driver, date_from, date_to, partner=None):
         for g in sd_groups
     ]
 
+    # Mesma morada mas pacotes a mais de 300 m: não juntam, para revisão.
+    same_door_review = [
+        {
+            "date": g[0].task_date,
+            "address": (g[0].detailed_address or "").strip(),
+            "zip_code": g[0].zip_code or "",
+            "n": len(g),
+            "spread_m": round(max_spread_m(g)),
+            "waybills": [t.waybill_number for t in g],
+        }
+        for g in counts.pop("same_door_review", [])
+    ]
+
     amount_total = amount_door_normal + amount_same_door + amount_pudo
     return {
         "totals": counts,
@@ -172,6 +189,7 @@ def driver_breakdown(driver, date_from, date_to, partner=None):
         "same_door_price": sd_price,
         "same_door_active": bool(partner and partner.same_door_enabled),
         "same_door_groups": same_door_groups,
+        "same_door_review": same_door_review,
         "amounts": {
             "door_normal": amount_door_normal,
             "same_door": amount_same_door,

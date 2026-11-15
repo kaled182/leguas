@@ -13,7 +13,9 @@ from drivers_app.models import DriverProfile
 
 from .models import CainiaoOperationTask
 from .services_driver_breakdown import driver_breakdown
-from .services_same_door import normalize_address, same_door_extra_ids
+from .services_same_door import (
+    address_key, normalize_address, same_door_extra_ids, same_door_review_groups, task_cp7,
+)
 
 LOCMEM = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}}
 D1 = date(2026, 10, 2)
@@ -37,9 +39,38 @@ class NormalizeAddressTests(TestCase):
                          normalize_address("Rua Pereira Azurara, 58"))
         self.assertEqual(normalize_address("Rua de cassufas nº670 Rua de cassufas nº670"),
                          normalize_address("Rua de Cassufas 670"))
+        self.assertEqual(normalize_address("R. Bouca Longa N 29"),
+                         normalize_address("Rua Bouca Longa 29"))
 
-    def test_andares_diferentes_nao_juntam(self):
-        self.assertNotEqual(normalize_address("Rua X 10 1 esq"), normalize_address("Rua X 10 2 esq"))
+    def test_andares_do_mesmo_predio_sao_a_mesma_porta(self):
+        self.assertEqual(normalize_address("Rua X 10 1 esq"), normalize_address("Rua X 10 2 esq"))
+        self.assertEqual(normalize_address("Rua X, 2º Dto, 10"), "x|10")
+        self.assertEqual(normalize_address("Avenida da Praia 77 R/C"), "praia|77")
+        self.assertEqual(normalize_address("Rua A, Bloco 3, 2º andar, nº 7"), "|7")
+
+    def test_numero_da_porta(self):
+        cases = {
+            "Rua Igreja 23 4740-141": "igreja|23",
+            "Marginal de cedovem, Nº645": "marginal cedovem|645",
+            "Rua de São João, Barqueiros 510": "sao joao barqueiros|510",
+            "Av. 25 de Abril, 100": "25 abril|100",
+            "Rua 1º de Maio nº 5": "1 maio|5",
+            "Rua 31 de Janeiro 79A R/C ESQ": "31 janeiro|79",
+            "185 Rua da caldeira": "caldeira|185",
+            "Travessa de Campos n° 3 / 4° Direito": "campos|3",
+            "Rua da Fonte cx 490": "fonte|490",
+            "Farmácia de Apúlia": "farmacia apulia|",
+        }
+        for text, key in cases.items():
+            self.assertEqual(normalize_address(text), key, text)
+
+    def test_cp7_do_zip_ou_da_guia(self):
+        class T:
+            zip_code, waybill_number, detailed_address = "4740", "CNPRT47401411234010067690", "Rua Igreja 23"
+        self.assertEqual(task_cp7(T), "4740-141")
+        self.assertEqual(address_key(T), "4740-141|igreja|23")
+        T.zip_code = "4740 141"
+        self.assertEqual(task_cp7(T), "4740-141")
 
 
 @override_settings(CACHES=LOCMEM)
@@ -56,15 +87,23 @@ class SameDoorTests(TestCase):
         b = _task("W2", addr="rua porto carreiro n 25 4740-013", hour=10)
         self.assertEqual(same_door_extra_ids([a.id, b.id], self.p), {b.id})
 
-    def test_mesma_paragem_cainiao_junta_moradas_diferentes(self):
-        a = _task("W1", addr="Av Poveiros 265 R/C", stop="12.0", hour=9)
-        b = _task("W2", addr="Avenida Poveiros 265", stop="12.0", hour=10)
-        c = _task("W3", addr="Outra rua 1", stop="13.0", hour=11)
+    def test_mesmo_numero_de_paragem_nao_junta_moradas_diferentes(self):
+        # PF-0566, 13/10/2026: Stop Number 16 repetido em duas levas.
+        a = _task("CNPRT47401411234010067690", addr="Rua Igreja 23 4740-141", zc="4740-141",
+                  stop="16.0", hour=9, lat="41.5310", lng="-8.7810")
+        b = _task("CNPRT47406951234010022009", addr="Rua de São João, Barqueiros 510",
+                  zc="4740-695", stop="16.0", hour=10, lat="41.4930", lng="-8.7270")
+        self.assertEqual(same_door_extra_ids([a.id, b.id], self.p), set())
+
+    def test_andares_diferentes_juntam(self):
+        a = _task("W1", addr="Av Poveiros 265 R/C", hour=9)
+        b = _task("W2", addr="Avenida Poveiros 265 2 esq", hour=10)
+        c = _task("W3", addr="Outra rua 1", hour=11)
         self.assertEqual(same_door_extra_ids([a.id, b.id, c.id], self.p), {b.id})
 
-    def test_paragem_de_outro_motorista_nao_junta(self):
-        a = _task("W1", addr="Rua 1", stop="5.0")
-        b = _task("W2", addr="Rua 2", stop="5.0", courier="Ana_LF")
+    def test_outro_login_nao_junta(self):
+        a = _task("W1")
+        b = _task("W2", courier="Ana_LF")
         self.assertEqual(same_door_extra_ids([a.id, b.id], self.p), set())
 
     def test_dias_diferentes_e_pudo_nao_contam(self):
@@ -72,6 +111,22 @@ class SameDoorTests(TestCase):
         b = _task("W2", day=date(2026, 10, 3))
         c = _task("W3", dtype="PUDO")
         self.assertEqual(same_door_extra_ids([a.id, b.id, c.id], self.p), set())
+
+    def test_mais_de_300m_nao_junta_e_fica_para_revisao(self):
+        a = _task("W1", lat="41.5000", lng="-8.7000", hour=9)
+        b = _task("W2", lat="41.5040", lng="-8.7000", hour=10)  # ~445 m
+        self.assertEqual(same_door_extra_ids([a.id, b.id], self.p), set())
+        groups = same_door_review_groups([a, b])
+        self.assertEqual([sorted(t.id for t in g) for g in groups], [sorted([a.id, b.id])])
+
+    def test_sem_numero_so_junta_a_menos_de_50m(self):
+        a = _task("W1", addr="Farmácia de Apúlia", lat="41.5000", lng="-8.7000", hour=9)
+        b = _task("W2", addr="Farmacia de Apulia", lat="41.5002", lng="-8.7000", hour=10)  # ~22 m
+        c = _task("W3", addr="Farmácia de Apúlia", lat="41.5010", lng="-8.7000", hour=11)  # ~111 m
+        self.assertEqual(same_door_extra_ids([a.id, b.id], self.p), {b.id})
+        self.assertEqual(same_door_extra_ids([a.id, b.id, c.id], self.p), set())
+        d = _task("W4", addr="Farmácia de Apúlia", lat="", lng="", hour=12)
+        self.assertEqual(same_door_extra_ids([a.id, d.id], self.p), set())
 
 
 @override_settings(CACHES=LOCMEM)
@@ -377,3 +432,23 @@ class PdfIdeasTests(TestCase):
     def test_pdf_completo_gera(self):
         from .reports.pdf_generator import PDFGenerator
         self.assertTrue(PDFGenerator().generate_pre_invoice_pdf(self.pf).getvalue().startswith(b"%PDF"))
+
+
+@override_settings(CACHES=LOCMEM)
+class BreakdownReviewTests(TestCase):
+    def test_grupo_a_mais_de_300m_aparece_para_revisao(self):
+        p = Partner.objects.create(
+            name="CAINIAO", nif="514154411", contact_email="c@x.pt",
+            same_door_enabled=True, same_door_additional_price=Decimal("0.30"),
+            pudo_enabled=True,
+        )
+        d = DriverProfile.objects.create(
+            nif="123456789", nome_completo="Rui", telefone="910000000",
+            email="rui@x.pt", apelido="Rui_LF", price_per_package=Decimal("1.10"),
+        )
+        _task("W1", hour=9, lat="41.5000", lng="-8.7000")
+        _task("W2", hour=10, lat="41.5040", lng="-8.7000")
+        bd = driver_breakdown(d, D1, D1, partner=p)
+        self.assertEqual(bd["totals"]["same_door"], 0)
+        self.assertEqual([(r["n"], r["waybills"]) for r in bd["same_door_review"]], [(2, ["W1", "W2"])])
+        self.assertNotIn("same_door_review", bd["totals"])

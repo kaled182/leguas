@@ -465,7 +465,7 @@ def same_door_section(pre_invoice, section_header, bd):
     ]))
     note = Paragraph(
         f"Regra mesma porta: o 1º pacote de cada porta é pago a {eur(door_rate)} e cada adicional "
-        f"a {eur(sd_rate)}. A mesma porta = mesma morada ou mesma paragem Cainiao, no mesmo dia.",
+        f"a {eur(sd_rate)}. A mesma porta = mesmo dia, mesmo login e mesma morada (CP7, rua e número da porta).",
         _style("sdn", fontSize=7, leading=8.5, textColor=MUTED))
     return [section_header("MESMA PORTA", colors.HexColor("#0D9488")), Spacer(1, 0.1 * cm),
             tbl, Spacer(1, 0.1 * cm), note, Spacer(1, 0.5 * cm)]

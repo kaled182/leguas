@@ -105,6 +105,24 @@ def pre_invoice_export(request, pk):
     return response
 
 
+ATTACHMENT_FIELDS = ("invoice_file", "credit_note_file")
+ATTACHMENT_EXTENSIONS = (".pdf", ".jpg", ".jpeg", ".png")
+ATTACHMENT_MAX_BYTES = 10 * 1024 * 1024
+
+
+def _attach_files(request, pre):
+    """Põe na pré-fatura os ficheiros enviados. Devolve o texto do erro ou ""."""
+    files = {f: request.FILES.get(f) for f in ATTACHMENT_FIELDS if request.FILES.get(f)}
+    for f in files.values():
+        if not f.name.lower().endswith(ATTACHMENT_EXTENSIONS):
+            return f"O ficheiro {f.name} não é PDF, JPG ou PNG."
+        if f.size > ATTACHMENT_MAX_BYTES:
+            return f"O ficheiro {f.name} tem mais de 10 MB."
+    for field, f in files.items():
+        setattr(pre, field, f)
+    return ""
+
+
 @login_required
 @require_http_methods(["POST"])
 def pre_invoice_update(request, pk):
@@ -121,6 +139,10 @@ def pre_invoice_update(request, pk):
         if not invoice:
             messages.error(request, "Indique o número da fatura do TOConline.")
             return redirect("cainiao-preinvoice-detail", pk=pre.pk)
+        error = _attach_files(request, pre)
+        if error:
+            messages.error(request, error)
+            return redirect("cainiao-preinvoice-detail", pk=pre.pk)
         pre.toconline_invoice = invoice[:40]
         pre.toconline_credit_note = request.POST.get("toconline_credit_note", "").strip()[:40]
         try:
@@ -130,6 +152,15 @@ def pre_invoice_update(request, pk):
         pre.status = pre.STATUS_ISSUED
         pre.save()
         messages.success(request, "Pré-fatura marcada como emitida no TOConline.")
+    elif action == "files":
+        error = _attach_files(request, pre)
+        if error:
+            messages.error(request, error)
+        elif any(request.FILES.get(f) for f in ATTACHMENT_FIELDS):
+            pre.save(update_fields=list(ATTACHMENT_FIELDS))
+            messages.success(request, "Ficheiros anexados.")
+        else:
+            messages.error(request, "Escolha pelo menos um ficheiro.")
     elif action == "reopen":
         pre.status = pre.STATUS_DRAFT
         pre.save(update_fields=["status"])

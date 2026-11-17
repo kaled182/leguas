@@ -1,0 +1,12 @@
+{# Campos para anexar a fatura e a nota de crédito do TOConline (PDF, JPG ou PNG, até 10 MB). #}
+<div class="lf-field">
+  <label class="lf-label" for="cs-inv-file">Ficheiro da fatura</label>
+  {% if pre.invoice_file %}<p class="cs-help"><a class="underline" href="{{ pre.invoice_file.url }}" target="_blank" rel="noopener">Abrir a fatura anexada</a> · um novo ficheiro substitui este.</p>{% endif %}
+  <input id="cs-inv-file" class="lf-control" type="file" name="invoice_file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png">
+</div>
+<div class="lf-field">
+  <label class="lf-label" for="cs-nc-file">Ficheiro da nota de crédito</label>
+  {% if pre.credit_note_file %}<p class="cs-help"><a class="underline" href="{{ pre.credit_note_file.url }}" target="_blank" rel="noopener">Abrir a nota de crédito anexada</a> · um novo ficheiro substitui este.</p>{% endif %}
+  <input id="cs-nc-file" class="lf-control" type="file" name="credit_note_file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png">
+</div>
+<p class="cs-help">PDF, JPG ou PNG, até 10 MB cada.</p>

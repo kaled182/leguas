@@ -162,6 +162,39 @@ class PreInvoiceTests(TestCase):
         self.assertEqual(r["Content-Type"].split(";")[0],
                          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
+    def test_anexar_fatura_e_nota_de_credito(self):
+        self.client.force_login(self.user)
+        url = reverse("cainiao-preinvoice-update", args=[self.pre.pk])
+        pdf = lambda name: SimpleUploadedFile(name, b"%PDF-1.4 teste", "application/pdf")
+        with self.settings(MEDIA_ROOT="/tmp/media-test"):
+            self.client.post(url, {"action": "issue", "toconline_invoice": "FT 2026/123",
+                                   "issued_at": "2026-11-17", "invoice_file": pdf("FT123.pdf")})
+            self.pre.refresh_from_db()
+            self.assertEqual(self.pre.status, "EMITIDA")
+            self.assertTrue(self.pre.invoice_file.name.startswith("cainiao_client_invoices/"))
+            self.assertFalse(self.pre.credit_note_file)
+            # Depois de emitida, a NC entra pelo formulário de ficheiros.
+            self.client.post(url, {"action": "files", "credit_note_file": pdf("NC9.pdf")})
+            self.pre.refresh_from_db()
+            self.assertTrue(self.pre.credit_note_file.name.endswith(".pdf"))
+            self.assertTrue(self.pre.invoice_file)
+            r = self.client.get(reverse("cainiao-preinvoice-detail", args=[self.pre.pk]))
+            self.assertContains(r, "Abrir a nota de crédito anexada")
+            # Formato errado: não grava nada.
+            old = self.pre.invoice_file.name
+            self.client.post(url, {"action": "files", "invoice_file": SimpleUploadedFile("x.exe", b"MZ")})
+            self.pre.refresh_from_db()
+            self.assertEqual(self.pre.invoice_file.name, old)
+
+    def test_anexo_so_abre_para_a_gestao(self):
+        from django.test import RequestFactory
+        from core.media_access import can_read
+        staff = User.objects.create_user("op", "o@o.pt", "x", is_staff=True)
+        request = RequestFactory().get("/")
+        request.session = {}
+        request.user = staff
+        self.assertFalse(can_read(request, "cainiao_client_invoices/2026/11/FT123.pdf"))
+
     def test_marcar_emitida_e_eliminar_so_em_rascunho(self):
         self.client.force_login(self.user)
         url = reverse("cainiao-preinvoice-update", args=[self.pre.pk])

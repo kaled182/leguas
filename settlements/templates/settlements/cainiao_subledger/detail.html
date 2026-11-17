@@ -139,7 +139,7 @@
   </div>
 
   <div data-cs-panel="toconline" class="cs-grid" hidden>
-    <form method="post" action="{% url 'cainiao-preinvoice-update' pre.pk %}" class="cs-card space-y-3">
+    <form method="post" action="{% url 'cainiao-preinvoice-update' pre.pk %}" class="cs-card space-y-3" enctype="multipart/form-data">
       {% csrf_token %}
       {% if pre.status == 'RASCUNHO' %}
         <input type="hidden" name="action" value="issue">
@@ -148,14 +148,23 @@
         <div class="lf-field"><label class="lf-label" for="cs-inv">N.º da fatura</label><input id="cs-inv" class="lf-control" name="toconline_invoice" required></div>
         <div class="lf-field"><label class="lf-label" for="cs-nc">N.º da nota de crédito</label><input id="cs-nc" class="lf-control" name="toconline_credit_note"></div>
         <div class="lf-field"><label class="lf-label" for="cs-date">Data de emissão</label><input id="cs-date" class="lf-control" type="date" name="issued_at"></div>
+        {% include 'settlements/cainiao_subledger/_attachments.html' %}
         <button class="lf-btn lf-btn-primary" type="submit">Marcar como emitida</button>
       {% else %}
         <input type="hidden" name="action" value="reopen">
         <h2 class="cs-h2">Emitida no TOConline</h2>
         <p>Fatura {{ pre.toconline_invoice }}{% if pre.toconline_credit_note %} · NC {{ pre.toconline_credit_note }}{% endif %} · {{ pre.issued_at|date:"d/m/Y" }}</p>
-        <button class="lf-btn lf-btn-ghost" type="submit" data-confirm="Reabrir a pré-fatura? Os números do TOConline ficam guardados.">Reabrir</button>
+        <button class="lf-btn lf-btn-ghost" type="submit" data-confirm="Reabrir a pré-fatura? Os números e os ficheiros do TOConline ficam guardados.">Reabrir</button>
       {% endif %}
     </form>
+    {% if pre.status != 'RASCUNHO' %}
+    <form method="post" action="{% url 'cainiao-preinvoice-update' pre.pk %}" class="cs-card space-y-3" enctype="multipart/form-data">
+      {% csrf_token %}<input type="hidden" name="action" value="files">
+      <h2 class="cs-h2">Ficheiros da fatura e da nota de crédito</h2>
+      {% include 'settlements/cainiao_subledger/_attachments.html' %}
+      <button class="lf-btn lf-btn-secondary" type="submit">Anexar ficheiros</button>
+    </form>
+    {% endif %}
     <form method="post" action="{% url 'cainiao-preinvoice-update' pre.pk %}" class="cs-card space-y-3">
       {% csrf_token %}<input type="hidden" name="action" value="notes">
       <div class="lf-field"><label class="lf-label" for="cs-notes">Notas</label><textarea id="cs-notes" class="lf-control" name="notes" rows="5" style="padding-block:var(--space-2)">{{ pre.notes }}</textarea></div>

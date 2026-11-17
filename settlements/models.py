@@ -4823,7 +4823,7 @@ class CainiaoClientPreInvoice(models.Model):
     """Pré-fatura à ESDP: as faturas Cainiao de uma quinzena.
 
     O sistema prepara a fatura e a nota de crédito. A emissão é feita
-    à mão no TOConline; aqui só se guardam os números dos documentos.
+    à mão no TOConline; aqui guardam-se os números e os ficheiros dos documentos.
     """
     STATUS_DRAFT = "RASCUNHO"
     STATUS_ISSUED = "EMITIDA"
@@ -4840,6 +4840,13 @@ class CainiaoClientPreInvoice(models.Model):
     toconline_invoice = models.CharField("N.º da fatura (TOConline)", max_length=40, blank=True)
     toconline_credit_note = models.CharField("N.º da nota de crédito (TOConline)", max_length=40, blank=True)
     issued_at = models.DateField("Emitida em", null=True, blank=True)
+    # Pasta só para a gestão: não está em core/media_access.py.
+    invoice_file = models.FileField(
+        "Fatura (ficheiro)", upload_to="cainiao_client_invoices/%Y/%m/", blank=True,
+    )
+    credit_note_file = models.FileField(
+        "Nota de crédito (ficheiro)", upload_to="cainiao_client_invoices/%Y/%m/", blank=True,
+    )
     notes = models.TextField("Notas", blank=True)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,

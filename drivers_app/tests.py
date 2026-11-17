@@ -1223,6 +1223,8 @@ class FleetInvoiceDetailTests(FleetSetupMixin, TestCase):
         self.assertEqual(r.status_code, 200)
         self.assertContains(r, "Confere com o sistema")
         self.assertContains(r, "Preço por CP")
+        self.assertContains(r, "Mesma porta (")
+        self.assertContains(r, "Entregas PUDO")
         line = fi.lines.get()
         r = self.client.get(reverse(
             "empresa-portal-driver-report", args=[self.fleet.id, fi.id, line.id],
@@ -1248,3 +1250,57 @@ class FleetInvoiceDetailTests(FleetSetupMixin, TestCase):
             "empresa-portal-driver-report", args=[other.id, fi.id, fi.lines.get().id],
         ))
         self.assertEqual(r.status_code, 404)
+
+    def test_portal_list_without_detail(self):
+        self.client.force_login(self.admin)
+        r = self.client.get(reverse("empresa-portal-invoices", args=[self.fleet.id]))
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, "Sem pré-faturas emitidas")
+
+    def test_same_door_and_pudo_detail(self):
+        import json
+
+        from settlements.models import CainiaoOperationTask, FleetInvoice
+        from settlements.services_fleet_invoice import overview
+
+        p = self.partner
+        p.same_door_enabled = True
+        p.same_door_additional_price = self.D("0.50")
+        p.pudo_enabled = True
+        p.pudo_first_delivery_price = self.D("1.00")
+        p.pudo_additional_delivery_price = self.D("0.20")
+        p.save()
+        d = self.date
+        for i in range(2):  # 2 guias na mesma morada e dia → 1 extra
+            CainiaoOperationTask.objects.create(
+                waybill_number=f"SD{i}", task_date=d(2026, 10, 7), task_status="Delivered",
+                courier_name="Fx_LF", zip_code="4480-100", detailed_address="Rua Nova 5",
+            )
+        for i in range(3):  # 3 pacotes no mesmo PUDO
+            CainiaoOperationTask.objects.create(
+                waybill_number=f"PU{i}", task_date=d(2026, 10, 8), task_status="Delivered",
+                courier_name="Fx_LF", zip_code="4910-200", detailed_address="Loja PUDO",
+                delivery_type="PUDO", receiver_latitude="41.5000", receiver_longitude="-8.7000",
+            )
+        self.client.force_login(self.admin)
+        r = self.client.post(
+            f"/settlements/empresas/{self.fleet.id}/lote-emit/",
+            data=json.dumps({"from": "2026-10-01", "to": "2026-10-31"}),
+            content_type="application/json",
+        )
+        self.assertEqual(r.status_code, 200, r.content[:300])
+        fi = FleetInvoice.objects.get()
+        ov = overview(fi)
+        self.assertEqual(ov["totals"]["same_door"], 1)
+        self.assertEqual(len(ov["same_door"]), 1)
+        self.assertEqual(ov["same_door_amount"], self.D("0.50"))
+        self.assertEqual(ov["totals"]["pudo"], 3)
+        self.assertEqual([r["n_packages"] for r in ov["pudo"]], [3])
+        self.assertEqual(ov["pudo_amount"], self.D("1.40"))
+        # Linha gravada = cálculo de agora: 1,10 (porta) + 0,50 + 1,40.
+        self.assertEqual(fi.lines.get().base_amount, self.D("3.00"))
+        self.assertEqual(ov["check"]["amount_diff"], self.D("0.00"))
+        r = self.client.get(reverse(
+            "empresa-portal-driver-report", args=[self.fleet.id, fi.id, fi.lines.get().id],
+        ))
+        self.assertEqual(r.status_code, 200)

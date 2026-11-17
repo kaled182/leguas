@@ -3,10 +3,28 @@
 {% load static %}
 
 {% block portal_content %}
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-6"
+<div class="grid grid-cols-1 {% if not detail %}lg:grid-cols-3{% endif %} gap-6"
      x-data="invoicePortal()"
      x-init="init()">
 
+  {% if detail %}
+  {# ─── FF aberta: lista compacta no topo; o detalhe usa a largura toda ─── #}
+  <div class="min-w-0">
+    <div class="flex items-center gap-2 overflow-x-auto pb-1" aria-label="Pré-faturas da frota">
+      <span class="text-xs font-bold uppercase text-gray-500 whitespace-nowrap mr-1">Faturas ({{ invoices|length }})</span>
+      {% for fi in invoices %}
+        <a href="?id={{ fi.id }}"
+           class="whitespace-nowrap px-3 py-1.5 rounded-lg border text-sm {% if fi.id == detail.id %}border-purple-500 bg-purple-100 dark:bg-purple-900/30 font-bold{% else %}border-gray-200 dark:border-gray-700 hover:bg-purple-50 dark:hover:bg-purple-900/20{% endif %}">
+          <span class="font-mono text-purple-700 dark:text-purple-300">{{ fi.numero }}</span>
+          <span class="text-xs text-gray-500">· {{ fi.periodo_inicio|date:"d/m" }}–{{ fi.periodo_fim|date:"d/m/y" }} · {{ fi.get_status_display }}</span>
+        </a>
+      {% endfor %}
+      <button @click="openGenerate()" class="lf-btn lf-btn-ghost whitespace-nowrap ml-auto">
+        <i data-lucide="plus" class="w-3.5 h-3.5"></i> Gerar
+      </button>
+    </div>
+  </div>
+  {% else %}
   {# ─── Coluna esquerda: lista de faturas ─── #}
   <div class="lg:col-span-1">
     <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm sticky top-4">
@@ -46,8 +64,10 @@
     </div>
   </div>
 
-  {# ─── Coluna direita: detalhe ─── #}
-  <div class="lg:col-span-2">
+  {% endif %}
+
+  {# ─── Detalhe ─── #}
+  <div class="{% if not detail %}lg:col-span-2{% endif %} min-w-0">
     {% if detail %}
       {# ── Cabeçalho: identifica a FF e concentra as ações ── #}
       <div class="lf-kpi mb-4">
@@ -123,7 +143,7 @@
       </div>
 
       {# ── Gráficos ── #}
-      <div class="grid grid-cols-1 xl:grid-cols-2 gap-3 mb-4">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-4">
         <div class="lf-chart">
           <p class="lf-chart-title">Como se chega ao valor a pagar</p>
           <div class="lf-chart-canvas"><canvas id="ff-chart-steps" role="img" aria-label="Conta da pré-fatura da frota."></canvas></div>
@@ -140,6 +160,8 @@
         <button type="button" role="tab" class="lf-tab lf-tab-active" aria-selected="true" data-ff-tab="motoristas">Por motorista ({{ ov.rows|length }})</button>
         <button type="button" role="tab" class="lf-tab" aria-selected="false" data-ff-tab="cp">Preço por CP ({{ ov.by_cp|length }})</button>
         <button type="button" role="tab" class="lf-tab" aria-selected="false" data-ff-tab="dias">Por dia ({{ ov.by_day|length }})</button>
+        <button type="button" role="tab" class="lf-tab" aria-selected="false" data-ff-tab="mesmaporta">Mesma porta ({{ ov.totals.same_door|default:0 }})</button>
+        <button type="button" role="tab" class="lf-tab" aria-selected="false" data-ff-tab="pudo">PUDO ({{ ov.totals.pudo|default:0 }})</button>
         <button type="button" role="tab" class="lf-tab" aria-selected="false" data-ff-tab="descontos">Reclamações e bónus ({{ ov.claims_n|add:ov.bonus_n }})</button>
         <button type="button" role="tab" class="lf-tab" aria-selected="false" data-ff-tab="anexos">Anexos ({{ detail.attachments.count }})</button>
       </div>
@@ -262,6 +284,68 @@
               </tr>
               {% empty %}
               <tr><td colspan="8" class="text-center text-sm text-gray-500">Sem entregas.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      </div>
+
+      {# ─── Mesma porta ─── #}
+      <div data-ff-panel="mesmaporta" hidden>
+      <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden mb-4">
+        <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-700 flex flex-wrap items-center gap-2">
+          <i data-lucide="home" class="w-5 h-5 text-teal-500"></i>
+          <h3 class="font-bold text-gray-900 dark:text-white">Mesma porta</h3>
+          <span class="text-xs text-gray-500">{{ ov.same_door|length }} morada{{ ov.same_door|length|pluralize }} · {{ ov.totals.same_door|default:0 }} pacotes extra a {{ ov.same_door_price|eur }} · {{ ov.same_door_amount|eur }}</span>
+          <span class="ml-auto text-[11px] text-gray-400 italic">Mesmo dia + login + morada. A 1.ª guia conta como porta.</span>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="lf-table">
+            <thead><tr><th>Data</th><th>Motorista</th><th>Morada</th><th>CP</th><th class="text-right">Extra</th><th>Guias</th></tr></thead>
+            <tbody>
+              {% for g in ov.same_door %}
+              <tr class="align-top">
+                <td class="whitespace-nowrap font-mono">{{ g.date|date:"d/m/Y" }}</td>
+                <td class="whitespace-nowrap">{{ g.driver.nome_completo }}</td>
+                <td class="text-sm">{{ g.address|default:"—" }}</td>
+                <td class="font-mono text-xs">{{ g.zip|default:"—" }}</td>
+                <td class="text-right font-mono font-semibold text-teal-600 dark:text-teal-400">{{ g.n }}</td>
+                <td class="font-mono text-[11px] text-gray-500">{{ g.waybills|join:", " }}</td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="6" class="text-center text-sm text-gray-500">Sem entregas de mesma porta.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      </div>
+
+      {# ─── PUDO ─── #}
+      <div data-ff-panel="pudo" hidden>
+      <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden mb-4">
+        <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-700 flex flex-wrap items-center gap-2">
+          <i data-lucide="package-check" class="w-5 h-5 text-violet-500"></i>
+          <h3 class="font-bold text-gray-900 dark:text-white">Entregas PUDO</h3>
+          <span class="text-xs text-gray-500">{{ ov.pudo|length }} dia/ponto · {{ ov.totals.pudo|default:0 }} pacotes · {{ ov.pudo_amount|eur }}</span>
+          <span class="ml-auto text-[11px] text-gray-400 italic">Fórmula 1.ª + adicionais no mesmo ponto e dia</span>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="lf-table">
+            <thead><tr><th>Data</th><th>Motorista</th><th>Morada / ponto</th><th>CP</th><th class="text-right">Pacotes</th><th class="text-right">Valor</th></tr></thead>
+            <tbody>
+              {% for r in ov.pudo %}
+              <tr>
+                <td class="whitespace-nowrap font-mono">{{ r.date|date:"d/m/Y" }}</td>
+                <td class="whitespace-nowrap">{{ r.driver.nome_completo }}</td>
+                <td class="text-sm">{{ r.address|default:r.city|default:"—" }}</td>
+                <td class="font-mono text-xs">{{ r.zip_code|default:"—" }}</td>
+                <td class="text-right font-mono"><span class="px-2 py-0.5 rounded text-xs font-semibold bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300">{{ r.n_packages }} pct</span></td>
+                <td class="text-right font-mono font-bold text-violet-600 dark:text-violet-300">+ {{ r.amount|eur }}</td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="6" class="text-center text-sm text-gray-500">Sem entregas PUDO.</td></tr>
               {% endfor %}
             </tbody>
           </table>

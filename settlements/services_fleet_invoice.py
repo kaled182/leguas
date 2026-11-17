@@ -28,6 +28,19 @@ def line_detail(line, partner=None, hubs=None):
         dd.by_hub.setdefault(l["hub"], []).append(l)
     detail = driver_detail(dd, fi.periodo_inicio, fi.periodo_fim)
     total = detail["total"]
+    # PUDO por dia e ponto: a mesma fonte da PF do motorista.
+    from .services_pudo import pudo_breakdown_for_driver
+    pudo = pudo_breakdown_for_driver(line.driver, fi.periodo_inicio, fi.periodo_fim, partner)
+    sd_price = getattr(partner, "same_door_additional_price", None) or ZERO
+    detail.update({
+        "pudo_rows": sorted(pudo["rows"], key=lambda r: r["date"]),
+        "pudo_totals": pudo["totals"],
+        "same_door_price": sd_price,
+        "same_door_amount": sum(
+            (l["amount"] for l in lines if l["kind"] == "mesma porta"), ZERO,
+        ),
+        "pudo_amount": sum((l["amount"] for l in lines if l["kind"] == "PUDO"), ZERO),
+    })
     claims = list(line.claims_detail.all())
     bonus_days = list(line.bonus_days_detail.all())
     detail.update({
@@ -114,6 +127,17 @@ def overview(fi):
         "by_day": days,
         "check": check,
         "charts": {"steps": waterfall_steps(fi), "days": day_series(days)},
+        "same_door": sorted(
+            ({"driver": d["driver"], **g} for d in rows for g in d["same_door"]),
+            key=lambda g: (g["date"], g["driver"].nome_completo, g["address"]),
+        ),
+        "same_door_amount": sum((d["same_door_amount"] for d in rows), ZERO),
+        "same_door_price": rows[0]["same_door_price"] if rows else ZERO,
+        "pudo": sorted(
+            ({"driver": d["driver"], **r} for d in rows for r in d["pudo_rows"]),
+            key=lambda r: (r["date"], r["driver"].nome_completo),
+        ),
+        "pudo_amount": sum((d["pudo_amount"] for d in rows), ZERO),
         "claims_n": sum(len(d["fleet_claims"]) for d in rows),
         "bonus_n": sum(len(d["fleet_bonus_days"]) for d in rows),
     }

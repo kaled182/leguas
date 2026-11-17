@@ -442,6 +442,16 @@ def fleet_driver_pdf(detail, user=None):
                 tipo = f"{tipo} ({b.feriado_nome})"
             rows.append([_d(b.data), tipo, _num(b.deliveries), eur(b.bonus)])
         story.append(_table(rows, [width * w for w in (0.2, 0.45, 0.15, 0.2)], right_from=2))
+    if detail["pudo_rows"]:
+        pt = detail["pudo_totals"]
+        story.append(Paragraph(
+            f"PUDO ({pt['n_packages']} pacotes em {pt['n_pudo_days']} dia/ponto · {eur(pt['amount'])})", H2))
+        rows = [["Data", "Morada / ponto", "CP", "Pacotes", "Valor"]]
+        for r in detail["pudo_rows"]:
+            rows.append([_d(r["date"]), Paragraph((r["address"] or r["city"] or "-")[:90], CELL),
+                         r["zip_code"] or "-", _num(r["n_packages"]), eur(r["amount"])])
+        story.append(_table(rows, [width * w for w in (0.12, 0.5, 0.12, 0.1, 0.16)], right_from=3))
+        story.append(Paragraph("Fórmula PUDO: 1.ª entrega + adicionais no mesmo ponto e dia.", NOTE))
     story.append(_signatures(width))
 
     story += _detail_pages(detail, width)

@@ -297,7 +297,7 @@
         <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-700 flex flex-wrap items-center gap-2">
           <i data-lucide="home" class="w-5 h-5 text-teal-500"></i>
           <h3 class="font-bold text-gray-900 dark:text-white">Mesma porta</h3>
-          <span class="text-xs text-gray-500">{{ ov.same_door|length }} morada{{ ov.same_door|length|pluralize }} · {{ ov.totals.same_door|default:0 }} pacotes extra a {{ ov.same_door_price|eur }} · {{ ov.same_door_amount|eur }}</span>
+          <span class="text-xs text-gray-500">{{ ov.same_door|length }} morada{{ ov.same_door|length|pluralize }} · {{ ov.totals.same_door|default:0 }} pacotes extra · {{ ov.same_door_amount|eur }} · a {{ ov.same_door_price|eur }} por extra{% if ov.same_door_fixed_n %}, exceto {{ ov.same_door_fixed_n }} guia{{ ov.same_door_fixed_n|pluralize }} com preço fixo por guia{% endif %}</span>
           <span class="ml-auto text-[11px] text-gray-400 italic">Mesmo dia + login + morada. A 1.ª guia conta como porta.</span>
         </div>
         <div class="overflow-x-auto">

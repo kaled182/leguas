@@ -40,6 +40,10 @@ def line_detail(line, partner=None, hubs=None):
             (l["amount"] for l in lines if l["kind"] == "mesma porta"), ZERO,
         ),
         "pudo_amount": sum((l["amount"] for l in lines if l["kind"] == "PUDO"), ZERO),
+        # Guias extra com preço fixo por guia: o preço fixo tem prioridade.
+        "same_door_fixed_n": sum(
+            1 for l in lines if l["kind"] == "mesma porta" and l["source"] == "fixo por guia"
+        ),
     })
     claims = list(line.claims_detail.all())
     bonus_days = list(line.bonus_days_detail.all())
@@ -133,6 +137,7 @@ def overview(fi):
         ),
         "same_door_amount": sum((d["same_door_amount"] for d in rows), ZERO),
         "same_door_price": rows[0]["same_door_price"] if rows else ZERO,
+        "same_door_fixed_n": sum(d["same_door_fixed_n"] for d in rows),
         "pudo": sorted(
             ({"driver": d["driver"], **r} for d in rows for r in d["pudo_rows"]),
             key=lambda r: (r["date"], r["driver"].nome_completo),

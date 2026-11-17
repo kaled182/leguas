@@ -136,10 +136,11 @@ class PreInvoiceTests(TestCase):
     def test_nome_do_ficheiro_segue_o_periodo(self):
         P = type("P", (), {})
         cases = (
-            ((date(2026, 11, 1), date(2026, 11, 15)), "cn9-leguas-franzinas-unipessoal-nov_1q.xlsx"),
-            ((date(2026, 10, 16), date(2026, 10, 31)), "cn9-leguas-franzinas-unipessoal-out_2q.xlsx"),
-            ((date(2026, 2, 16), date(2026, 2, 28)), "cn9-leguas-franzinas-unipessoal-fev_2q.xlsx"),
-            ((date(2026, 12, 1), date(2026, 12, 31)), "cn9-leguas-franzinas-unipessoal-dez.xlsx"),
+            ((date(2026, 11, 1), date(2026, 11, 15)), "cn9-leguas-franzinas-unipessoal-nov26_1q.xlsx"),
+            ((date(2026, 10, 16), date(2026, 10, 31)), "cn9-leguas-franzinas-unipessoal-out26_2q.xlsx"),
+            ((date(2026, 2, 16), date(2026, 2, 28)), "cn9-leguas-franzinas-unipessoal-fev26_2q.xlsx"),
+            ((date(2026, 12, 1), date(2026, 12, 31)), "cn9-leguas-franzinas-unipessoal-dez26.xlsx"),
+            ((date(2027, 11, 1), date(2027, 11, 15)), "cn9-leguas-franzinas-unipessoal-nov27_1q.xlsx"),
             ((date(2026, 10, 10), date(2026, 11, 5)), "cn9-leguas-franzinas-unipessoal-20261010-20261105.xlsx"),
         )
         for (pf, pt), name in cases:
@@ -149,7 +150,7 @@ class PreInvoiceTests(TestCase):
         self.assertEqual(period_title(date(2026, 11, 1), date(2026, 11, 15)), "1.ª quinzena novembro")
         self.client.force_login(self.user)
         r = self.client.get(reverse("cainiao-preinvoice-export", args=[self.pre.pk]))
-        self.assertIn('filename="cn9-leguas-franzinas-unipessoal-out_2q.xlsx"', r["Content-Disposition"])
+        self.assertIn('filename="cn9-leguas-franzinas-unipessoal-out26_2q.xlsx"', r["Content-Disposition"])
 
     def test_paginas_abrem(self):
         self.client.force_login(self.user)

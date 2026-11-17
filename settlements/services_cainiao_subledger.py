@@ -426,10 +426,10 @@ def period_title(period_from, period_to):
 
 
 def export_filename(pre_invoice):
-    """Ex.: cn9-leguas-franzinas-unipessoal-nov_1q.xlsx (mesmo padrão da folha da equipa)."""
+    """Ex.: cn9-leguas-franzinas-unipessoal-nov26_1q.xlsx (padrão da folha da equipa, com o ano)."""
     pf, pt = pre_invoice.period_from, pre_invoice.period_to
     kind = _period_kind(pf, pt)
-    month = MONTHS[pf.month - 1]
+    month = f"{MONTHS[pf.month - 1]}{pf:%y}"
     if kind in ("1q", "2q"):
         suffix = f"{month}_{kind}"
     elif kind == "mes":

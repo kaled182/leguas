@@ -49,71 +49,260 @@
   {# ─── Coluna direita: detalhe ─── #}
   <div class="lg:col-span-2">
     {% if detail %}
-      {# ── Card cabeçalho ── #}
-      <div class="bg-gray-50 dark:bg-gray-800/40 rounded-xl p-5 border border-purple-200 dark:border-purple-800 shadow-sm mb-4">
-        <div class="flex items-start justify-between mb-3">
-          <div>
-            <div class="text-xs uppercase font-semibold text-purple-600 dark:text-purple-400 flex items-center gap-2">
-              Pré-fatura
-              <span class="px-2 py-0.5 rounded-full text-[10px]
-                {% if detail.status == 'PAGO' %}bg-emerald-100 text-emerald-700 dark:text-emerald-300{% elif detail.status == 'APROVADO' %}bg-blue-100 text-blue-700{% elif detail.status == 'CALCULADO' %}bg-amber-100 text-amber-700{% elif detail.status == 'CANCELADO' %}bg-gray-200 text-gray-500{% else %}bg-gray-100 text-gray-700{% endif %}">
-                {{ detail.get_status_display }}
-              </span>
-            </div>
-            <div class="text-2xl font-extrabold text-purple-700 dark:text-purple-300 font-mono">{{ detail.numero }}</div>
-            <div class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-              {{ detail.periodo_inicio|date:"d/m/Y" }} → {{ detail.periodo_fim|date:"d/m/Y" }}
-            </div>
+      {# ── Cabeçalho: identifica a FF e concentra as ações ── #}
+      <div class="lf-kpi mb-4">
+        <div class="flex items-center justify-between flex-wrap gap-3">
+          <div class="min-w-0">
+            <p class="font-bold text-gray-900 dark:text-white"><span class="font-mono">{{ detail.numero }}</span> · {{ detail.periodo_inicio|date:"d/m/Y" }} → {{ detail.periodo_fim|date:"d/m/Y" }}</p>
+            <span class="lf-badge lf-tone-brand">{{ detail.get_status_display }}</span>
           </div>
-          <div class="flex flex-wrap items-center gap-2 justify-end">
-            <a href="{% url 'fleet-invoice-pdf' detail.id %}" target="_blank"
-               class="lf-btn lf-btn-danger">
-              <i data-lucide="file-down" class="w-4 h-4"></i> PDF
+          <div class="flex flex-wrap items-center gap-2">
+            {% if is_admin_view %}
+            <button @click="openStatus()" class="lf-btn lf-btn-primary">
+              <i data-lucide="check-circle" class="w-3.5 h-3.5"></i> Mudar estado
+            </button>
+            {% endif %}
+            <a href="{% url 'fleet-invoice-pdf' detail.id %}" target="_blank" class="lf-btn lf-btn-ghost">
+              <i data-lucide="file-down" class="w-3.5 h-3.5"></i> PDF
+            </a>
+            <a href="{% url 'empresa-portal-reports-zip' empresa.id detail.id %}" class="lf-btn lf-btn-ghost">
+              <i data-lucide="folder-down" class="w-3.5 h-3.5"></i> Relatórios (ZIP)
             </a>
             {% if detail.status != 'PAGO' and detail.status != 'CANCELADO' %}
-            <button @click="recalculate()"
-                    class="lf-btn lf-btn-ghost">
-              <i data-lucide="refresh-cw" class="w-4 h-4"></i> Recalcular
+            <button @click="recalculate()" class="lf-btn lf-btn-ghost">
+              <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Recalcular
             </button>
             {% endif %}
-            <button @click="openStatus()"
-                    class="lf-btn lf-btn-ghost">
-              <i data-lucide="git-branch" class="w-4 h-4"></i> Estado
-            </button>
             {% if detail.status == 'RASCUNHO' or detail.status == 'CANCELADO' %}
-            <button @click="deleteInvoice()"
-                    class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-200 dark:bg-gray-700 hover:bg-rose-100 dark:hover:bg-rose-900/30 text-rose-600 dark:text-rose-300 rounded-lg text-sm font-semibold transition">
-              <i data-lucide="trash-2" class="w-4 h-4"></i> Eliminar
+            <button @click="deleteInvoice()" class="lf-btn lf-btn-ghost text-rose-600 dark:text-rose-300">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Eliminar
             </button>
             {% endif %}
-          </div>
-        </div>
-
-        <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
-          <div class="bg-white/60 dark:bg-gray-800/60 rounded-lg p-3">
-            <div class="text-xs text-gray-500">Entregas</div>
-            <div class="text-xl font-bold">{{ detail.total_deliveries }}</div>
-          </div>
-          <div class="bg-white/60 dark:bg-gray-800/60 rounded-lg p-3">
-            <div class="text-xs text-gray-500">Base</div>
-            <div class="text-xl font-bold">{{ detail.total_base|eur }}</div>
-          </div>
-          <div class="bg-white/60 dark:bg-gray-800/60 rounded-lg p-3">
-            <div class="text-xs text-gray-500">Bónus</div>
-            <div class="text-xl font-bold text-amber-600 dark:text-amber-300">{{ detail.total_bonus|eur }}</div>
-          </div>
-          <div class="bg-white/60 dark:bg-gray-800/60 rounded-lg p-3">
-            <div class="text-xs text-gray-500">Reclamações</div>
-            <div class="text-xl font-bold text-rose-600 dark:text-rose-300">-{{ detail.total_claims|eur }}</div>
-          </div>
-          <div class="bg-white/60 dark:bg-gray-800/60 rounded-lg p-3">
-            <div class="text-xs text-gray-500">Total c/ IVA ({{ detail.vat_rate|pct:0 }})</div>
-            <div class="text-xl font-bold text-purple-700 dark:text-purple-300">{{ detail.total_com_iva|eur }}</div>
           </div>
         </div>
       </div>
 
-      {# ── Anexos ── #}
+      {# ── Conferência com o sistema ── #}
+      {% with c=ov.check %}
+      <div class="lf-alert {% if c.ok and not c.amount_diff %}lf-tone-success{% else %}lf-tone-warning{% endif %} mb-4">
+        <i data-lucide="{% if c.ok and not c.amount_diff %}check-circle{% else %}alert-triangle{% endif %}" class="w-4 h-4 mt-0.5"></i>
+        <span>
+          {% if c.ok and not c.amount_diff %}
+            <b>Confere com o sistema:</b> {{ c.saved }} entregas e {{ detail.total_base|eur }} em entregas.
+          {% elif c.ok %}
+            <b>Entregas conferem ({{ c.saved }}); o valor não.</b> Com as regras de agora, as entregas valem {{ ov.totals.amount|eur }} (diferença {{ c.amount_diff|eur }}). A FF foi emitida com outra regra de preço. Cancele e emita de novo para atualizar.
+          {% else %}
+            <b>Não confere com o sistema:</b> a FF tem {{ c.saved }} entregas; o sistema tem {{ c.now }}{% if c.drivers_off %} ({% for d in c.drivers_off %}{{ d.driver.nome_completo }}{% if not forloop.last %}, {% endif %}{% endfor %}){% endif %}. Cancele e emita a FF de novo.
+          {% endif %}
+        </span>
+      </div>
+      {% endwith %}
+
+      {# ── Indicadores ── #}
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+        <div class="lf-kpi col-span-2 lg:col-span-1" style="border-color: var(--brand-orange);">
+          <p class="lf-kpi-label">A pagar à frota</p>
+          <p class="lf-kpi-value">{{ detail.total_com_iva|eur }}</p>
+          <p class="lf-kpi-note">Inclui IVA ({{ detail.vat_rate|pct:0 }}): {{ detail.vat_amount|eur }}</p>
+        </div>
+        <div class="lf-kpi">
+          <p class="lf-kpi-label">Sem IVA</p>
+          <p class="lf-kpi-value">{{ detail.total_a_receber|eur }}</p>
+          <p class="lf-kpi-note">Entregas {{ detail.total_base|eur }} · bónus {{ detail.total_bonus|eur }}</p>
+        </div>
+        <div class="lf-kpi">
+          <p class="lf-kpi-label">Reclamações</p>
+          <p class="lf-kpi-value"{% if detail.total_claims %} style="color: var(--tone-danger-fg);"{% endif %}>-{{ detail.total_claims|eur }}</p>
+          <p class="lf-kpi-note">{{ ov.claims_n }} reclamaç{{ ov.claims_n|pluralize:"ão,ões" }}</p>
+        </div>
+        <div class="lf-kpi">
+          <p class="lf-kpi-label">Entregas pagas</p>
+          <p class="lf-kpi-value">{{ detail.total_deliveries }}</p>
+          <p class="lf-kpi-note">{{ ov.rows|length }} motorista{{ ov.rows|length|pluralize:"s" }} · {{ ov.by_day|length }} dias · {{ ov.totals.failures|default:0 }} falhas não pagas</p>
+        </div>
+      </div>
+
+      {# ── Gráficos ── #}
+      <div class="grid grid-cols-1 xl:grid-cols-2 gap-3 mb-4">
+        <div class="lf-chart">
+          <p class="lf-chart-title">Como se chega ao valor a pagar</p>
+          <div class="lf-chart-canvas"><canvas id="ff-chart-steps" role="img" aria-label="Conta da pré-fatura da frota."></canvas></div>
+        </div>
+        <div class="lf-chart">
+          <p class="lf-chart-title">Entregas da frota por dia</p>
+          <div class="lf-chart-canvas"><canvas id="ff-chart-days" role="img" aria-label="Entregas por dia, por tipo, e falhas."></canvas></div>
+        </div>
+      </div>
+      {{ ov.charts|json_script:"ff-charts" }}
+
+      {# ── Separadores ── #}
+      <div class="lf-tabs" role="tablist" aria-label="Detalhe da pré-fatura da frota">
+        <button type="button" role="tab" class="lf-tab lf-tab-active" aria-selected="true" data-ff-tab="motoristas">Por motorista ({{ ov.rows|length }})</button>
+        <button type="button" role="tab" class="lf-tab" aria-selected="false" data-ff-tab="cp">Preço por CP ({{ ov.by_cp|length }})</button>
+        <button type="button" role="tab" class="lf-tab" aria-selected="false" data-ff-tab="dias">Por dia ({{ ov.by_day|length }})</button>
+        <button type="button" role="tab" class="lf-tab" aria-selected="false" data-ff-tab="descontos">Reclamações e bónus ({{ ov.claims_n|add:ov.bonus_n }})</button>
+        <button type="button" role="tab" class="lf-tab" aria-selected="false" data-ff-tab="anexos">Anexos ({{ detail.attachments.count }})</button>
+      </div>
+
+      {# ─── Por motorista ─── #}
+      <div data-ff-panel="motoristas">
+      <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden mb-4">
+        <div class="overflow-x-auto">
+          <table class="lf-table">
+            <thead>
+              <tr>
+                <th>Motorista</th>
+                <th class="text-right">Entregues</th>
+                <th class="text-right">Porta</th>
+                <th class="text-right">Mesma porta</th>
+                <th class="text-right">PUDO</th>
+                <th class="text-right">€/pacote</th>
+                <th class="text-right">Entregas</th>
+                <th class="text-right">Bónus</th>
+                <th class="text-right">Reclamações</th>
+                <th class="text-right">Subtotal</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for d in ov.rows %}{% with ln=d.line t=d.total %}
+              <tr class="align-top">
+                <td>
+                  <div class="font-semibold">{{ ln.driver_name_snapshot|default:d.driver.nome_completo }}</div>
+                  <div class="text-[11px] text-gray-500">{{ d.logins|join:", " }}{% if d.hubs %} · {% for h in d.hubs %}{{ h.hub }}{% if not forloop.last %}, {% endif %}{% endfor %}{% endif %}</div>
+                  {% if not d.check.deliveries_ok %}<div class="text-[11px] text-amber-700 dark:text-amber-300">Sistema agora: {{ t.delivered }} entregas</div>{% endif %}
+                </td>
+                <td class="text-right font-mono font-bold">{{ ln.deliveries }}</td>
+                <td class="text-right font-mono">{{ t.door_normal }}</td>
+                <td class="text-right font-mono">{{ t.same_door }}</td>
+                <td class="text-right font-mono">{{ t.pudo }}</td>
+                <td class="text-right font-mono text-gray-500">{% if d.door_avg is not None %}{{ d.door_avg|floatformat:3 }}{% else %}{{ ln.price_per_package|floatformat:3 }}{% endif %} €</td>
+                <td class="text-right font-mono">{{ ln.base_amount|eur }}{% if d.check.amount_diff %}<div class="text-[11px] text-amber-700 dark:text-amber-300">agora {{ t.amount|eur }}</div>{% endif %}</td>
+                <td class="text-right font-mono">{{ ln.bonus_amount|eur }}{% if ln.bonus_days_count %} <span class="text-[10px] text-gray-400">({{ ln.bonus_days_count }}d)</span>{% endif %}</td>
+                <td class="text-right font-mono {% if ln.claims_amount %}text-rose-600 dark:text-rose-300{% else %}text-gray-400{% endif %}">-{{ ln.claims_amount|eur }}{% if ln.claims_count %} <span class="text-[10px] text-gray-400">({{ ln.claims_count }})</span>{% endif %}</td>
+                <td class="text-right font-mono font-bold">{{ ln.subtotal|eur }}</td>
+                <td class="text-right whitespace-nowrap">
+                  <a href="{% url 'empresa-portal-driver-report' empresa.id detail.id ln.id %}" target="_blank" class="lf-btn lf-btn-ghost text-xs" title="Relatório PDF do motorista">
+                    <i data-lucide="file-text" class="w-3.5 h-3.5"></i> Relatório
+                  </a>
+                </td>
+              </tr>
+              {% endwith %}{% endfor %}
+            </tbody>
+            <tfoot class="bg-gray-50 dark:bg-gray-900/40">
+              <tr class="font-bold">
+                <td>Total</td>
+                <td class="text-right font-mono">{{ detail.total_deliveries }}</td>
+                <td class="text-right font-mono">{{ ov.totals.door_normal|default:0 }}</td>
+                <td class="text-right font-mono">{{ ov.totals.same_door|default:0 }}</td>
+                <td class="text-right font-mono">{{ ov.totals.pudo|default:0 }}</td>
+                <td></td>
+                <td class="text-right font-mono">{{ detail.total_base|eur }}</td>
+                <td class="text-right font-mono">{{ detail.total_bonus|eur }}</td>
+                <td class="text-right font-mono">-{{ detail.total_claims|eur }}</td>
+                <td class="text-right font-mono">{{ detail.total_a_receber|eur }}</td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        <p class="px-5 py-2 text-[11px] text-gray-500">Sem IVA por motorista: o IVA aplica-se ao total da FF. O relatório de cada motorista mostra o detalhe por hub, dia, CP e mesma porta.</p>
+      </div>
+      </div>
+
+      {# ─── Preço por CP ─── #}
+      <div data-ff-panel="cp" hidden>
+      <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden mb-4">
+        <div class="overflow-x-auto">
+          <table class="lf-table">
+            <thead><tr><th>CP4</th><th>Hub</th><th class="text-right">Motoristas</th><th class="text-right">Entregues</th><th class="text-right">Porta</th><th class="text-right">Mesma porta</th><th class="text-right">PUDO</th><th class="text-right">Preço à porta</th><th class="text-right">Valor</th></tr></thead>
+            <tbody>
+              {% for c in ov.by_cp %}
+              <tr>
+                <td class="font-mono font-semibold">{{ c.cp4|default:"—" }}</td>
+                <td>{{ c.hub }}</td>
+                <td class="text-right">{{ c.drivers }}</td>
+                <td class="text-right font-mono font-bold">{{ c.delivered }}</td>
+                <td class="text-right font-mono">{{ c.door_normal }}</td>
+                <td class="text-right font-mono">{{ c.same_door }}</td>
+                <td class="text-right font-mono">{{ c.pudo }}</td>
+                <td class="text-right font-mono">{% for u in c.unit %}{{ u|floatformat:2 }} €{% if not forloop.last %} / {% endif %}{% empty %}—{% endfor %}</td>
+                <td class="text-right font-mono font-bold">{{ c.amount|eur }}</td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="9" class="text-center text-sm text-gray-500">Sem entregas.</td></tr>
+              {% endfor %}
+            </tbody>
+            <tfoot class="bg-gray-50 dark:bg-gray-900/40">
+              <tr class="font-bold"><td colspan="3">Total</td><td class="text-right font-mono">{{ ov.totals.delivered|default:0 }}</td><td class="text-right font-mono">{{ ov.totals.door_normal|default:0 }}</td><td class="text-right font-mono">{{ ov.totals.same_door|default:0 }}</td><td class="text-right font-mono">{{ ov.totals.pudo|default:0 }}</td><td></td><td class="text-right font-mono">{{ ov.totals.amount|eur }}</td></tr>
+            </tfoot>
+          </table>
+        </div>
+        <p class="px-5 py-2 text-[11px] text-gray-500">Valor calculado agora com as regras da PF. O preço por CP vem da tabela da frota e das exceções na ficha do motorista (separador Hubs e CP).</p>
+      </div>
+      </div>
+
+      {# ─── Por dia ─── #}
+      <div data-ff-panel="dias" hidden>
+      <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden mb-4">
+        <div class="overflow-x-auto">
+          <table class="lf-table">
+            <thead><tr><th>Data</th><th class="text-right">Motoristas</th><th class="text-right">Entregues</th><th class="text-right">Porta</th><th class="text-right">Mesma porta</th><th class="text-right">PUDO</th><th class="text-right">Falhas</th><th class="text-right">Valor</th></tr></thead>
+            <tbody>
+              {% for x in ov.by_day %}
+              <tr>
+                <td>{{ x.date|date:"D d/m" }}</td>
+                <td class="text-right">{{ x.drivers }}</td>
+                <td class="text-right font-mono font-bold">{{ x.delivered }}</td>
+                <td class="text-right font-mono">{{ x.door_normal }}</td>
+                <td class="text-right font-mono">{{ x.same_door }}</td>
+                <td class="text-right font-mono">{{ x.pudo }}</td>
+                <td class="text-right font-mono {% if x.failures %}text-rose-600 dark:text-rose-300{% endif %}">{{ x.failures }}</td>
+                <td class="text-right font-mono">{{ x.amount|eur }}</td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="8" class="text-center text-sm text-gray-500">Sem entregas.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      </div>
+
+      {# ─── Reclamações e bónus ─── #}
+      <div data-ff-panel="descontos" hidden>
+      <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden mb-4">
+        <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-700"><h3 class="font-bold text-gray-900 dark:text-white">Reclamações descontadas ({{ ov.claims_n }})</h3></div>
+        <div class="overflow-x-auto">
+          <table class="lf-table">
+            <thead><tr><th>Motorista</th><th>Guia</th><th>Descrição</th><th class="text-right">Valor</th></tr></thead>
+            <tbody>
+              {% for d in ov.rows %}{% for c in d.fleet_claims %}
+              <tr><td>{{ d.driver.nome_completo }}</td><td class="font-mono text-xs">{{ c.waybill_number|default:"—" }}</td><td class="text-xs">{{ c.descricao|default:"—"|truncatechars:140 }}</td><td class="text-right font-mono text-rose-600 dark:text-rose-300">-{{ c.valor|eur }}</td></tr>
+              {% endfor %}{% endfor %}
+              {% if not ov.claims_n %}<tr><td colspan="4" class="text-center text-sm text-gray-500">Sem reclamações nesta FF.</td></tr>{% endif %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden mb-4">
+        <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-700"><h3 class="font-bold text-gray-900 dark:text-white">Bónus domingo/feriado ({{ ov.bonus_n }})</h3></div>
+        <div class="overflow-x-auto">
+          <table class="lf-table">
+            <thead><tr><th>Motorista</th><th>Data</th><th>Tipo</th><th class="text-right">Entregas</th><th class="text-right">Bónus</th></tr></thead>
+            <tbody>
+              {% for d in ov.rows %}{% for b in d.fleet_bonus_days %}
+              <tr><td>{{ d.driver.nome_completo }}</td><td>{{ b.data|date:"d/m/Y" }}</td><td>{{ b.tipo }}{% if b.feriado_nome %} · {{ b.feriado_nome }}{% endif %}</td><td class="text-right font-mono">{{ b.deliveries }}</td><td class="text-right font-mono">{{ b.bonus|eur }}</td></tr>
+              {% endfor %}{% endfor %}
+              {% if not ov.bonus_n %}<tr><td colspan="5" class="text-center text-sm text-gray-500">Sem bónus nesta FF.</td></tr>{% endif %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      </div>
+
+      {# ─── Anexos ─── #}
+      <div data-ff-panel="anexos" hidden>
       <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm mb-4">
         <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
           <h3 class="text-sm font-bold text-gray-700 dark:text-gray-300 uppercase flex items-center gap-2">
@@ -160,53 +349,6 @@
         </div>
       </div>
 
-      {# ── Detalhe por motorista ── #}
-      <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
-        <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-700">
-          <h3 class="text-sm font-bold text-gray-700 dark:text-gray-300 uppercase flex items-center gap-2">
-            <i data-lucide="users" class="w-4 h-4 text-indigo-500"></i>
-            Detalhe por motorista ({{ detail.lines.count }})
-          </h3>
-        </div>
-        <div class="overflow-x-auto">
-          <table class="lf-table">
-            <thead>
-              <tr>
-                <th >Motorista</th>
-                <th class="text-right">Entregas</th>
-                <th class="text-right">€/pacote</th>
-                <th class="text-right">Base</th>
-                <th class="text-right">Bónus</th>
-                <th class="text-right">Reclamações</th>
-                <th class="text-right">Subtotal</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for ln in detail.lines.all %}
-              <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
-                <td >
-                  <div class="font-semibold">{{ ln.driver_name_snapshot }}</div>
-                  {% if ln.courier_name_snapshot %}
-                    <div class="text-[10px] text-gray-400">{{ ln.courier_name_snapshot }}</div>
-                  {% endif %}
-                </td>
-                <td class="text-right font-mono">{{ ln.deliveries }}</td>
-                <td class="text-right font-mono text-gray-500">€{{ ln.price_per_package|floatformat:4 }}</td>
-                <td class="text-right font-mono">{{ ln.base_amount|eur }}</td>
-                <td class="text-right font-mono text-amber-600 dark:text-amber-300">
-                  {{ ln.bonus_amount|eur }}
-                  <span class="text-[9px] text-gray-400">({{ ln.bonus_days_count }}d)</span>
-                </td>
-                <td class="px-4 py-2 text-right font-mono {% if ln.claims_amount %}text-rose-600 dark:text-rose-300{% else %}text-gray-400{% endif %}">
-                  -{{ ln.claims_amount|eur }}
-                  {% if ln.claims_count %}<span class="text-[9px] text-gray-400">({{ ln.claims_count }})</span>{% endif %}
-                </td>
-                <td class="text-right font-mono font-bold text-purple-600 dark:text-purple-300">{{ ln.subtotal|eur }}</td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
       </div>
     {% else %}
       <div class="bg-white dark:bg-gray-800 rounded-xl p-10 border border-dashed border-gray-300 dark:border-gray-600 text-center">
@@ -589,5 +731,66 @@ function invoicePortal() {
     },
   };
 }
+
+// ─── Separadores e gráficos do detalhe da FF ───
+(function () {
+  const tabs = document.querySelectorAll('[data-ff-tab]');
+  if (!tabs.length) return;
+  function abrir(nome) {
+    tabs.forEach(t => {
+      const on = t.dataset.ffTab === nome;
+      t.classList.toggle('lf-tab-active', on);
+      t.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    document.querySelectorAll('[data-ff-panel]').forEach(p => { p.hidden = p.dataset.ffPanel !== nome; });
+    history.replaceState(null, '', location.search + '#' + nome);
+  }
+  tabs.forEach(t => t.addEventListener('click', () => abrir(t.dataset.ffTab)));
+  if ([...tabs].some(t => t.dataset.ffTab === location.hash.slice(1))) abrir(location.hash.slice(1));
+
+  const el = document.getElementById('ff-charts');
+  if (!el || typeof Chart === 'undefined' || !window.lfChartColors) return;
+  const data = JSON.parse(el.textContent);
+  const cores = window.lfChartColors();
+  const eur = v => v.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+  new Chart(document.getElementById('ff-chart-steps'), {
+    type: 'bar',
+    data: {
+      labels: data.steps.map(p => [p.label, eur(p.value)]),
+      datasets: [{
+        data: data.steps.map(p => p.value),
+        backgroundColor: data.steps.map(p => p.total ? cores.primary : (p.value < 0 ? cores.danger : cores.success)),
+        borderRadius: 3,
+      }],
+    },
+    options: {
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => eur(data.steps[c.dataIndex].value) } } },
+      scales: {
+        x: { grid: { display: false }, ticks: { autoSkip: false } },
+        y: { ticks: { callback: v => eur(v) },
+             grid: { color: c => c.tick.value === 0 ? cores.neutral : Chart.defaults.borderColor,
+                     lineWidth: c => c.tick.value === 0 ? 2 : 1 } },
+      },
+    },
+  });
+  new Chart(document.getElementById('ff-chart-days'), {
+    type: 'bar',
+    data: {
+      labels: data.days.labels,
+      datasets: [
+        { label: 'Porta', data: data.days.door, backgroundColor: cores.secondary, stack: 'entregas' },
+        { label: 'Mesma porta', data: data.days.same_door, backgroundColor: cores.primary, stack: 'entregas' },
+        { label: 'PUDO', data: data.days.pudo, backgroundColor: cores.success, stack: 'entregas' },
+        { label: 'Falhas', data: data.days.failures, backgroundColor: cores.danger, stack: 'falhas' },
+      ],
+    },
+    options: {
+      maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } } },
+      scales: { x: { stacked: true, grid: { display: false } }, y: { stacked: true } },
+    },
+  });
+})();
 </script>
 {% endblock %}

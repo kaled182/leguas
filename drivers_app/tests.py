@@ -1040,8 +1040,8 @@ class CarryNegativeBalanceTests(TestCase):
         self.assertEqual(self.pf.total_a_receber, self.D("0"))
 
 
-class FleetHubTests(TestCase):
-    """Tabela de hubs/CP da frota: herança, exceção na ficha, portal e FF."""
+class FleetSetupMixin:
+    """Frota com tabela de CP (Fão 4480=1,10, 4910=1,15) e um motorista."""
 
     def setUp(self):
         from datetime import date
@@ -1076,6 +1076,11 @@ class FleetHubTests(TestCase):
         self.drv.empresa_parceira = self.fleet
         self.drv.save()
         self.admin = User.objects.create_superuser("suf", "s@x.pt", "x")
+
+
+
+class FleetHubTests(FleetSetupMixin, TestCase):
+    """Tabela de hubs/CP da frota: herança, exceção na ficha, portal e FF."""
 
     def test_driver_inherits_fleet_and_exception_wins(self):
         from .models import DriverHubAssignment
@@ -1165,3 +1170,81 @@ class FleetHubTests(TestCase):
         a = self.fleet.hub_assignments.get()
         self.assertEqual(a.hub_id, porto.id)
         self.assertEqual(a.cp_prices, {"4480": "1.10", "4910": "1.15"})
+
+
+class FleetInvoiceDetailTests(FleetSetupMixin, TestCase):
+    """Detalhe da FF no padrão da PF e relatório de cada motorista da frota."""
+
+    def _emit(self):
+        import json
+
+        from settlements.models import CainiaoOperationTask, FleetInvoice
+
+        d = self.date
+        for i, cp in enumerate(["4480", "4480", "4910", "4920"]):
+            CainiaoOperationTask.objects.create(
+                waybill_number=f"FD{i}", task_date=d(2026, 10, 6 + i),
+                task_status="Delivered", courier_name="Fx_LF",
+                zip_code=f"{cp}-00{i}", detailed_address=f"Rua {i}",
+            )
+        CainiaoOperationTask.objects.create(
+            waybill_number="FDX", task_date=d(2026, 10, 6),
+            task_status="Attempt Failure", courier_name="Fx_LF", zip_code="4480-001",
+        )
+        self.client.force_login(self.admin)
+        r = self.client.post(
+            f"/settlements/empresas/{self.fleet.id}/lote-emit/",
+            data=json.dumps({"from": "2026-10-01", "to": "2026-10-31"}),
+            content_type="application/json",
+        )
+        self.assertEqual(r.status_code, 200, r.content[:300])
+        return FleetInvoice.objects.get()
+
+    def test_overview_matches_saved_line(self):
+        from settlements.services_fleet_invoice import overview
+
+        fi = self._emit()
+        ov = overview(fi)
+        self.assertTrue(ov["check"]["ok"])
+        self.assertEqual(ov["check"]["amount_diff"], self.D("0.00"))
+        self.assertEqual(ov["totals"]["delivered"], 4)
+        self.assertEqual(ov["totals"]["failures"], 1)
+        self.assertEqual({c["cp4"]: c["delivered"] for c in ov["by_cp"]},
+                         {"4480": 2, "4910": 1, "4920": 1})
+        labels = [s["label"] for s in ov["charts"]["steps"]]
+        self.assertEqual(labels[0], "Entregas")
+        self.assertEqual(labels[-1], "A pagar à frota")
+
+    def test_portal_detail_and_reports(self):
+        fi = self._emit()
+        r = self.client.get(
+            reverse("empresa-portal-invoices", args=[self.fleet.id]) + f"?id={fi.id}",
+        )
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, "Confere com o sistema")
+        self.assertContains(r, "Preço por CP")
+        line = fi.lines.get()
+        r = self.client.get(reverse(
+            "empresa-portal-driver-report", args=[self.fleet.id, fi.id, line.id],
+        ))
+        self.assertEqual(r.status_code, 200)
+        self.assertTrue(r.content.startswith(b"%PDF"))
+        r = self.client.get(reverse("empresa-portal-reports-zip", args=[self.fleet.id, fi.id]))
+        self.assertEqual(r.status_code, 200)
+        import io
+        import zipfile
+        names = zipfile.ZipFile(io.BytesIO(r.content)).namelist()
+        self.assertEqual(len([n for n in names if n.startswith("motoristas/")]), 1)
+        self.assertTrue(any(n.endswith(".xlsx") for n in names))
+        r = self.client.get(f"/settlements/fleet-invoices/{fi.id}/pdf/")
+        self.assertEqual(r.status_code, 200, r.content[:200])
+
+    def test_report_of_other_fleet_is_404(self):
+        from .models import EmpresaParceira
+
+        fi = self._emit()
+        other = EmpresaParceira.objects.create(nome="Outra")
+        r = self.client.get(reverse(
+            "empresa-portal-driver-report", args=[other.id, fi.id, fi.lines.get().id],
+        ))
+        self.assertEqual(r.status_code, 404)

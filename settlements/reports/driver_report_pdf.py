@@ -212,6 +212,40 @@ def hub_pdf(report, hub_label, date_from, date_to, user=None):
     return buf.getvalue()
 
 
+def _detail_pages(detail, width):
+    """Páginas 2+: dia a dia, por CP4 e grupos de mesma porta."""
+    story = [PageBreak(), Paragraph("Dia a dia", H2)]
+    rows = [["Data", "Entregues", "Porta", "Mesma porta", "PUDO", "Falhas", "1.ª entrega",
+             "Última", "Sem IVA"]]
+    for x in detail["by_day"]:
+        rows.append([_d(x["date"]), _num(x["delivered"]), _num(x["door_normal"]), _num(x["same_door"]),
+                     _num(x["pudo"]), _num(x["failures"]),
+                     x["first"].strftime("%H:%M") if x["first"] else "-",
+                     x["last"].strftime("%H:%M") if x["last"] else "-", eur(x["amount"])])
+    story.append(_table(rows, [width * w for w in (0.13, 0.1, 0.09, 0.12, 0.08, 0.08, 0.12, 0.1, 0.18)]))
+
+    story.append(Paragraph("Por CP4", H2))
+    rows = [["CP4", "Hub", "Entregues", "Porta", "Mesma porta", "PUDO", "Preço à porta", "Sem IVA"]]
+    for x in detail["by_cp"]:
+        rows.append([x["cp4"] or "-", x["hub"], _num(x["delivered"]), _num(x["door_normal"]),
+                     _num(x["same_door"]), _num(x["pudo"]),
+                     " / ".join(eur(u) for u in x["unit"]) or "-", eur(x["amount"])])
+    story.append(_table(rows, [width * w for w in (0.08, 0.16, 0.1, 0.09, 0.12, 0.08, 0.22, 0.15)], right_from=2))
+
+    if detail["same_door"]:
+        story.append(Paragraph(f"Mesma porta ({len(detail['same_door'])} moradas)", H2))
+        story.append(Paragraph("A 1.ª guia da morada conta como porta. As guias extra são pagas "
+                               "ao preço de mesma porta.", NOTE))
+        rows = [["Data", "Morada", "CP", "Extra", "Guias"]]
+        for x in detail["same_door"]:
+            rows.append([_d(x["date"]), Paragraph(x["address"][:90], CELL), x["zip"], x["n"],
+                         Paragraph(", ".join(x["waybills"]), CELL)])
+        story.append(_table(rows, [width * w for w in (0.11, 0.37, 0.1, 0.07, 0.35)], right_from=3))
+        story[-1].setStyle(TableStyle([("ALIGN", (4, 0), (4, -1), "LEFT")]))
+
+    return story
+
+
 def driver_pdf(detail, user=None):
     """Resumo na página 1; depois dia a dia, por CP4 e grupos de mesma porta."""
     buf = BytesIO()
@@ -317,35 +351,100 @@ def driver_pdf(detail, user=None):
         story.append(Paragraph("Não há pré-fatura para este período.", NOTE))
     story.append(_signatures(width))
 
-    story += [PageBreak(), Paragraph("Dia a dia", H2)]
-    rows = [["Data", "Entregues", "Porta", "Mesma porta", "PUDO", "Falhas", "1.ª entrega",
-             "Última", "Sem IVA"]]
-    for x in detail["by_day"]:
-        rows.append([_d(x["date"]), _num(x["delivered"]), _num(x["door_normal"]), _num(x["same_door"]),
-                     _num(x["pudo"]), _num(x["failures"]),
-                     x["first"].strftime("%H:%M") if x["first"] else "-",
-                     x["last"].strftime("%H:%M") if x["last"] else "-", eur(x["amount"])])
-    story.append(_table(rows, [width * w for w in (0.13, 0.1, 0.09, 0.12, 0.08, 0.08, 0.12, 0.1, 0.18)]))
-
-    story.append(Paragraph("Por CP4", H2))
-    rows = [["CP4", "Hub", "Entregues", "Porta", "Mesma porta", "PUDO", "Preço à porta", "Sem IVA"]]
-    for x in detail["by_cp"]:
-        rows.append([x["cp4"] or "-", x["hub"], _num(x["delivered"]), _num(x["door_normal"]),
-                     _num(x["same_door"]), _num(x["pudo"]),
-                     " / ".join(eur(u) for u in x["unit"]) or "-", eur(x["amount"])])
-    story.append(_table(rows, [width * w for w in (0.08, 0.16, 0.1, 0.09, 0.12, 0.08, 0.22, 0.15)], right_from=2))
-
-    if detail["same_door"]:
-        story.append(Paragraph(f"Mesma porta ({len(detail['same_door'])} moradas)", H2))
-        story.append(Paragraph("A 1.ª guia da morada conta como porta. As guias extra são pagas "
-                               "ao preço de mesma porta.", NOTE))
-        rows = [["Data", "Morada", "CP", "Extra", "Guias"]]
-        for x in detail["same_door"]:
-            rows.append([_d(x["date"]), Paragraph(x["address"][:90], CELL), x["zip"], x["n"],
-                         Paragraph(", ".join(x["waybills"]), CELL)])
-        story.append(_table(rows, [width * w for w in (0.11, 0.37, 0.1, 0.07, 0.35)], right_from=3))
-        story[-1].setStyle(TableStyle([("ALIGN", (4, 0), (4, -1), "LEFT")]))
+    story += _detail_pages(detail, width)
 
     label = f"{d.nome_completo} · {_period(date_from, date_to)}"
+    doc.build(story, onFirstPage=_footer(label), onLaterPages=_footer(label))
+    return buf.getvalue()
+
+
+def _ident_table(rows, width):
+    t = Table(rows, colWidths=[width * 0.14, width * 0.42, width * 0.14, width * 0.30])
+    t.setStyle(TableStyle([
+        ("FONT", (0, 0), (-1, -1), "Helvetica", 8.5),
+        ("FONT", (0, 0), (0, -1), "Helvetica-Bold", 8), ("FONT", (2, 0), (2, -1), "Helvetica-Bold", 8),
+        ("TEXTCOLOR", (0, 0), (0, -1), MUTED), ("TEXTCOLOR", (2, 0), (2, -1), MUTED),
+        ("LINEBELOW", (0, 0), (-1, -1), 0.25, GRID), ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+    ]))
+    return t
+
+
+def fleet_driver_pdf(detail, user=None):
+    """Relatório de um motorista dentro da pré-fatura da frota (FF).
+
+    Padrão de frota: o valor é da linha da FF (entregas + bónus − reclamações).
+    Sem IVA, IRS nem adiantamentos por motorista: o IVA aplica-se ao total da
+    FF e a frota paga ao motorista.
+    """
+    buf = BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=A4, leftMargin=1.5 * cm, rightMargin=1.5 * cm,
+                            topMargin=1.3 * cm, bottomMargin=1.4 * cm)
+    width = A4[0] - doc.leftMargin - doc.rightMargin
+    d = detail["driver"]
+    fi = detail["fleet_invoice"]
+    line = detail["line"]
+    date_from, date_to = detail["period"]
+    tot = detail["total"]
+    doc.title = f"Relatório {d.nome_completo} {fi.numero}"
+    story = _header("Relatório do motorista da frota",
+                    f"{fi.numero} · {fi.empresa.nome} · Período {_period(date_from, date_to)} · {_emitted(user)}")
+    story += [_ident_table([
+        ["Motorista", d.nome_completo, "NIF", d.nif or "-"],
+        ["Logins", Paragraph(", ".join(detail["logins"]) or "-", CELL), "Frota", fi.empresa.nome],
+        ["Pré-fatura", f"{fi.numero} · {fi.get_status_display()}", "Preço médio à porta",
+         eur(detail["door_avg"]) if detail["door_avg"] is not None else "-"],
+    ], width), Paragraph("Entregas por hub", H2)]
+
+    rows = [["Hub", "Dias", "Entregues", "Porta", "Mesma porta", "PUDO", "Falhas", "Valor"]]
+    for h in detail["hubs"]:
+        rows.append([h["hub"], h["days"], _num(h["delivered"]), _num(h["door_normal"]),
+                     _num(h["same_door"]), _num(h["pudo"]), _num(h["failures"]), eur(h["amount"])])
+    rows.append(["Total", tot["days"], _num(tot["delivered"]), _num(tot["door_normal"]),
+                 _num(tot["same_door"]), _num(tot["pudo"]), _num(tot["failures"]), eur(tot["amount"])])
+    story.append(_table(rows, [width * w for w in (0.2, 0.08, 0.12, 0.11, 0.13, 0.09, 0.1, 0.17)],
+                        total_rows=[len(rows) - 1]))
+
+    story.append(Paragraph(f"Valores na {fi.numero}", H2))
+    vals = [["Entregas", eur(line.base_amount)],
+            [f"Bónus domingo/feriado ({line.bonus_days_count} dias)", eur(line.bonus_amount)],
+            [f"Reclamações ({line.claims_count})", _minus(line.claims_amount)],
+            ["Subtotal do motorista (sem IVA)", eur(line.subtotal)]]
+    story.append(_table([["Item", "Valor"]] + vals, [width * 0.7, width * 0.3], total_rows=[4]))
+    vat = fi.vat_rate
+    story.append(Paragraph(
+        f"O IVA ({_num(vat, 2)} %) aplica-se ao total da {fi.numero}, faturado pela frota. "
+        "A frota paga ao motorista.", NOTE))
+    chk = detail["check"]
+    if chk["deliveries_ok"] and not chk["amount_diff"]:
+        story.append(Paragraph("Confere com o sistema: entregas e valor iguais à linha da FF.", NOTE))
+    else:
+        story.append(Paragraph(
+            f"<b>Não confere com o sistema:</b> a FF tem {line.deliveries} entregas e {eur(line.base_amount)}; "
+            f"o cálculo de agora dá {tot['delivered']} entregas e {eur(tot['amount'])} "
+            f"(diferença {eur(chk['amount_diff'])}).", NOTE))
+
+    story.append(Paragraph(f"Reclamações na FF ({len(detail['fleet_claims'])})", H2))
+    if detail["fleet_claims"]:
+        rows = [["Guia", "Descrição", "Valor"]]
+        for c in detail["fleet_claims"]:
+            rows.append([Paragraph(c.waybill_number or "-", CELL),
+                         Paragraph((c.descricao or "-")[:200], CELL), eur(c.valor)])
+        story.append(_table(rows, [width * w for w in (0.3, 0.55, 0.15)], right_from=2))
+    else:
+        story.append(Paragraph("Não há reclamações nesta FF.", NOTE))
+
+    if detail["fleet_bonus_days"]:
+        story.append(Paragraph(f"Bónus domingo/feriado ({len(detail['fleet_bonus_days'])})", H2))
+        rows = [["Data", "Tipo", "Entregas", "Bónus"]]
+        for b in detail["fleet_bonus_days"]:
+            tipo = b.get_tipo_display() if hasattr(b, "get_tipo_display") else b.tipo
+            if b.feriado_nome:
+                tipo = f"{tipo} ({b.feriado_nome})"
+            rows.append([_d(b.data), tipo, _num(b.deliveries), eur(b.bonus)])
+        story.append(_table(rows, [width * w for w in (0.2, 0.45, 0.15, 0.2)], right_from=2))
+    story.append(_signatures(width))
+
+    story += _detail_pages(detail, width)
+    label = f"{d.nome_completo} · {fi.numero} · {_period(date_from, date_to)}"
     doc.build(story, onFirstPage=_footer(label), onLaterPages=_footer(label))
     return buf.getvalue()

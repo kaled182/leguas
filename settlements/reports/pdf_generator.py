@@ -1640,44 +1640,123 @@ class PDFGenerator:
         ))
         elements.append(Spacer(1, 0.15 * cm))
 
+        # Divisão por tipo e preço por CP: mesma regra da PF e do portal.
+        try:
+            from settlements.services_fleet_invoice import overview
+            ov = overview(fi)
+        except Exception:
+            ov = None
+        by_line = {d["line"].id: d for d in ov["rows"]} if ov else {}
+
+        def _e(v):
+            return f"€{v:.2f}" if v is not None else "—"
+
         header = [
-            "Motorista", "Entregas", "€/pacote",
-            "Base", "Bónus", "Claims", "Subtotal",
+            "Motorista", "Entreg.", "Porta", "M. porta", "PUDO", "€/pac.",
+            "Entregas", "Bónus", "Reclam.", "Subtotal",
         ]
         rows = [header]
         for line in fi.lines.all().order_by("-deliveries"):
+            d = by_line.get(line.id)
+            t = d["total"] if d else None
             rows.append([
-                line.driver_name_snapshot or "?",
+                Paragraph((line.driver_name_snapshot or "?").replace("&", "&amp;"), sub_style),
                 str(line.deliveries),
-                f"€{line.price_per_package}",
-                f"€{line.base_amount}",
-                f"€{line.bonus_amount}",
-                (
-                    f"-€{line.claims_amount}"
-                    if line.claims_amount else "—"
-                ),
-                f"€{line.subtotal}",
+                str(t["door_normal"]) if t else "—",
+                str(t["same_door"]) if t else "—",
+                str(t["pudo"]) if t else "—",
+                (f"€{d['door_avg']:.3f}" if d and d["door_avg"] is not None
+                 else f"€{line.price_per_package:.3f}"),
+                _e(line.base_amount),
+                _e(line.bonus_amount),
+                f"-€{line.claims_amount:.2f}" if line.claims_amount else "—",
+                _e(line.subtotal),
             ])
-        t2 = Table(rows, colWidths=[
-            5 * cm, 1.6 * cm, 1.8 * cm, 2 * cm,
-            2 * cm, 2 * cm, 2.5 * cm,
+        rows.append([
+            "Total", str(fi.total_deliveries),
+            str(ov["totals"].get("door_normal", 0)) if ov else "—",
+            str(ov["totals"].get("same_door", 0)) if ov else "—",
+            str(ov["totals"].get("pudo", 0)) if ov else "—",
+            "", _e(fi.total_base), _e(fi.total_bonus),
+            f"-€{fi.total_claims:.2f}" if fi.total_claims else "—",
+            _e(fi.total_a_receber),
+        ])
+        t2 = Table(rows, repeatRows=1, colWidths=[
+            4.0 * cm, 1.3 * cm, 1.2 * cm, 1.4 * cm, 1.1 * cm, 1.5 * cm,
+            1.9 * cm, 1.6 * cm, 1.8 * cm, 2.1 * cm,
         ])
         t2.setStyle(TableStyle([
             ("BACKGROUND", (0, 0), (-1, 0), purple),
             ("TEXTCOLOR", (0, 0), (-1, 0), rlcolors.white),
             ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-            ("FONTSIZE", (0, 0), (-1, -1), 8.5),
+            ("FONTSIZE", (0, 0), (-1, -1), 8),
             ("ALIGN", (1, 0), (-1, -1), "RIGHT"),
             ("ALIGN", (0, 0), (0, -1), "LEFT"),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
             ("BOX", (0, 0), (-1, -1), 0.4, rlcolors.grey),
             ("INNERGRID", (0, 0), (-1, -1), 0.2,
              rlcolors.lightgrey),
-            ("ROWBACKGROUNDS", (0, 1), (-1, -1),
+            ("ROWBACKGROUNDS", (0, 1), (-1, -2),
              [rlcolors.white, rlcolors.HexColor("#f5f3ff")]),
-            ("TOPPADDING", (0, 0), (-1, -1), 4),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+            ("BACKGROUND", (0, -1), (-1, -1), light_purple),
+            ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold"),
+            ("TOPPADDING", (0, 0), (-1, -1), 3),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+            ("LEFTPADDING", (0, 0), (-1, -1), 3),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 3),
         ]))
         elements.append(t2)
+        if ov and not ov["check"]["ok"]:
+            elements.append(Spacer(1, 0.1 * cm))
+            elements.append(Paragraph(
+                f"<b>Atenção:</b> a FF tem {ov['check']['saved']} entregas; o cálculo de agora "
+                f"dá {ov['check']['now']}. Cancele e emita a FF de novo.", sub_style,
+            ))
+
+        # ── Preço por CP (todos os motoristas) ────────────────────────
+        if ov and ov["by_cp"]:
+            elements.append(Spacer(1, 0.4 * cm))
+            elements.append(Paragraph("Entregas por CP", section_style))
+            elements.append(Spacer(1, 0.15 * cm))
+            r = [["CP4", "Hub", "Motor.", "Entreg.", "Porta", "M. porta", "PUDO",
+                   "Preço à porta", "Valor"]]
+            for c in ov["by_cp"]:
+                r.append([
+                    c["cp4"] or "—", c["hub"], str(c["drivers"]), str(c["delivered"]),
+                    str(c["door_normal"]), str(c["same_door"]), str(c["pudo"]),
+                    " / ".join(f"€{u:.2f}" for u in c["unit"]) or "—",
+                    _e(c["amount"]),
+                ])
+            r.append(["Total", "", "", str(ov["totals"].get("delivered", 0)),
+                      str(ov["totals"].get("door_normal", 0)),
+                      str(ov["totals"].get("same_door", 0)),
+                      str(ov["totals"].get("pudo", 0)), "",
+                      _e(ov["totals"].get("amount", Decimal("0")))])
+            tcp = Table(r, repeatRows=1, colWidths=[
+                1.4 * cm, 3.0 * cm, 1.3 * cm, 1.5 * cm, 1.4 * cm, 1.6 * cm,
+                1.3 * cm, 3.8 * cm, 2.6 * cm,
+            ])
+            tcp.setStyle(TableStyle([
+                ("BACKGROUND", (0, 0), (-1, 0), purple),
+                ("TEXTCOLOR", (0, 0), (-1, 0), rlcolors.white),
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("FONTSIZE", (0, 0), (-1, -1), 8),
+                ("ALIGN", (2, 0), (-1, -1), "RIGHT"),
+                ("BOX", (0, 0), (-1, -1), 0.4, rlcolors.grey),
+                ("INNERGRID", (0, 0), (-1, -1), 0.2, rlcolors.lightgrey),
+                ("ROWBACKGROUNDS", (0, 1), (-1, -2),
+                 [rlcolors.white, rlcolors.HexColor("#f5f3ff")]),
+                ("BACKGROUND", (0, -1), (-1, -1), light_purple),
+                ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold"),
+                ("TOPPADDING", (0, 0), (-1, -1), 3),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+            ]))
+            elements.append(tcp)
+            elements.append(Spacer(1, 0.1 * cm))
+            elements.append(Paragraph(
+                "Valor calculado agora com as regras da PF (preço por CP, mesma porta, PUDO). "
+                "O relatório de cada motorista está no ZIP da pré-fatura.", sub_style,
+            ))
 
         # ── Detalhe bónus + claims (compactado, sem PageBreak) ───────
         drivers_with_detail = [

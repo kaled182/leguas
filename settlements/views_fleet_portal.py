@@ -203,14 +203,125 @@ def empresa_portal_invoices(request, empresa_id):
             for s in FleetInvoice.TRANSICOES.get(detail.status, [])
         ]
 
+    ov = None
+    if detail:
+        from .services_fleet_invoice import overview
+        ov = overview(detail)
+
     ctx = _common_ctx(empresa)
     ctx.update({
         "invoices": invoices,
         "detail": detail,
+        "ov": ov,
         "status_transitions": status_transitions,
         "active_tab": "invoices",
     })
     return render(request, "settlements/portal_empresa/invoices.html", ctx)
+
+
+def _fleet_line_or_404(empresa_id, fleet_invoice_id, line_id):
+    from .models import FleetInvoiceDriverLine
+
+    return get_object_or_404(
+        FleetInvoiceDriverLine.objects.select_related(
+            "driver", "fleet_invoice", "fleet_invoice__empresa",
+        ),
+        id=line_id, fleet_invoice_id=fleet_invoice_id,
+        fleet_invoice__empresa_id=empresa_id,
+    )
+
+
+def _pdf_name(*parts):
+    from django.utils.text import slugify
+
+    return "-".join(slugify(str(p)) for p in parts if p) + ".pdf"
+
+
+@empresa_login_required
+def empresa_portal_driver_report(request, empresa_id, fleet_invoice_id, line_id):
+    """PDF do relatório de um motorista da FF (padrão de frota)."""
+    from django.http import HttpResponse
+
+    from .reports.driver_report_pdf import fleet_driver_pdf
+    from .services_fleet_invoice import line_detail
+
+    line = _fleet_line_or_404(empresa_id, fleet_invoice_id, line_id)
+    user = request.user if request.user.is_authenticated else None
+    pdf = fleet_driver_pdf(line_detail(line), user)
+    resp = HttpResponse(pdf, content_type="application/pdf")
+    name = _pdf_name("relatorio", line.fleet_invoice.numero, line.driver.nome_completo)
+    resp["Content-Disposition"] = f'inline; filename="{name}"'
+    return resp
+
+
+@empresa_login_required
+def empresa_portal_reports_zip(request, empresa_id, fleet_invoice_id):
+    """ZIP da FF: PDF da FF, Excel e um PDF por motorista."""
+    import io
+    import zipfile
+
+    from django.http import HttpResponse
+    from django.utils.text import slugify
+
+    from .reports.driver_report_pdf import fleet_driver_pdf
+    from .reports.pdf_generator import PDFGenerator
+    from .services_fleet_invoice import overview
+
+    empresa = _empresa_or_404(empresa_id)
+    fi = get_object_or_404(FleetInvoice, id=fleet_invoice_id, empresa=empresa)
+    ov = overview(fi)
+    user = request.user if request.user.is_authenticated else None
+    stem = f"{fi.numero}-{slugify(empresa.nome)}"
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr(f"{stem}.pdf", PDFGenerator().generate_fleet_invoice_pdf(fi).read())
+        z.writestr(f"{stem}.xlsx", _fleet_xlsx(fi, ov))
+        for d in ov["rows"]:
+            z.writestr(
+                f"motoristas/{slugify(d['driver'].nome_completo)}-{d['driver'].id}.pdf",
+                fleet_driver_pdf(d, user),
+            )
+    resp = HttpResponse(buf.getvalue(), content_type="application/zip")
+    resp["Content-Disposition"] = f'attachment; filename="{stem}.zip"'
+    return resp
+
+
+def _fleet_xlsx(fi, ov):
+    """Excel da FF: resumo por motorista, por CP e uma linha por entrega."""
+    import io
+
+    from openpyxl import Workbook
+
+    wb = Workbook(write_only=True)
+    ws = wb.create_sheet("Motoristas")
+    ws.append(["Motorista", "NIF", "Logins", "Entregues", "Porta", "Mesma porta", "PUDO",
+               "Falhas", "Preco medio porta", "Entregas (FF)", "Bonus", "Reclamacoes",
+               "Subtotal (FF)", "Calculo agora", "Diferenca"])
+    for d in ov["rows"]:
+        ln, t = d["line"], d["total"]
+        ws.append([d["driver"].nome_completo, d["driver"].nif, ", ".join(d["logins"]),
+                   t["delivered"], t["door_normal"], t["same_door"], t["pudo"], t["failures"],
+                   float(d["door_avg"]) if d["door_avg"] is not None else None,
+                   float(ln.base_amount), float(ln.bonus_amount), float(ln.claims_amount),
+                   float(ln.subtotal), float(t["amount"]), float(d["check"]["amount_diff"])])
+    ws = wb.create_sheet("CP")
+    ws.append(["CP4", "Hub", "Motoristas", "Entregues", "Porta", "Mesma porta", "PUDO",
+               "Preco a porta", "Valor"])
+    for c in ov["by_cp"]:
+        ws.append([c["cp4"], c["hub"], c["drivers"], c["delivered"], c["door_normal"],
+                   c["same_door"], c["pudo"], " / ".join(f"{u:.2f}" for u in c["unit"]),
+                   float(c["amount"])])
+    ws = wb.create_sheet("Entregas")
+    ws.append(["Motorista", "Hub", "Login", "Data", "Guia", "Estado", "Tipo", "CP4",
+               "Codigo postal", "Morada", "Preco", "Valor sem IVA"])
+    for d in ov["rows"]:
+        for l in d["task_lines"]:
+            ws.append([d["driver"].nome_completo, l["hub"], l["login"], l["date"], l["waybill"],
+                       l["status"], l["kind"], l["cp4"], l["zip"], l["address"], l["source"],
+                       float(l["amount"])])
+    out = io.BytesIO()
+    wb.save(out)
+    return out.getvalue()
 
 
 @empresa_login_required

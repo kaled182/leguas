@@ -474,6 +474,16 @@ urlpatterns = [
         name="empresa-portal-attachment-upload",
     ),
     path(
+        "empresas/<int:empresa_id>/portal/faturas/<int:fleet_invoice_id>/motoristas/<int:line_id>/relatorio.pdf",
+        views_fleet_portal.empresa_portal_driver_report,
+        name="empresa-portal-driver-report",
+    ),
+    path(
+        "empresas/<int:empresa_id>/portal/faturas/<int:fleet_invoice_id>/relatorios.zip",
+        views_fleet_portal.empresa_portal_reports_zip,
+        name="empresa-portal-reports-zip",
+    ),
+    path(
         "empresas/<int:empresa_id>/portal/anexos/<int:attachment_id>/delete/",
         views_fleet_portal.empresa_portal_attachment_delete,
         name="empresa-portal-attachment-delete",

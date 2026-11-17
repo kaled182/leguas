@@ -14,7 +14,7 @@ from drivers_app.models import DriverProfile
 from .models import CainiaoBill, CainiaoBillCharge, CainiaoOperationTask
 from .services_cainiao_subledger import (
     SubledgerError, charges_for, checks, create_pre_invoice, documents,
-    dynamic, export_xlsx, import_subledger,
+    dynamic, export_filename, export_xlsx, import_subledger, period_title,
 )
 
 HEADER = (
@@ -116,6 +116,40 @@ class PreInvoiceTests(TestCase):
         wb = load_workbook(io.BytesIO(export_xlsx(self.pre)), read_only=True)
         self.assertEqual(wb.sheetnames, ["Faturacao", "Dinamica", "Compensacoes", "Linhas"])
         self.assertEqual(len(list(wb["Linhas"].iter_rows())), 7)
+
+    def test_excel_tem_o_visual_da_folha_da_equipa(self):
+        wb = load_workbook(io.BytesIO(export_xlsx(self.pre)))
+        fat = wb["Faturacao"]
+        self.assertEqual((fat["A1"].font.b, fat["A1"].font.color.rgb), (True, "002E0A3E"))
+        self.assertEqual(fat["A5"].font.color.rgb, "00F7941D")
+        self.assertEqual(fat["A6"].fill.fgColor.rgb, "002E0A3E")
+        self.assertEqual(fat["D7"].number_format, "#,##0.00\\ \\€")
+        net = next(r for r in fat.iter_rows() if r[1].value == "LÍQUIDO A RECEBER")
+        self.assertEqual(net[6].fill.fgColor.rgb, "00FDE9D0")
+        self.assertEqual(fat.column_dimensions["B"].width, 52)
+        linhas = wb["Linhas"]
+        self.assertEqual((linhas.freeze_panes, linhas.auto_filter.ref), ("A2", "A1:N7"))
+        self.assertEqual(linhas["A1"].font.color.rgb, "00FFFFFF")
+        self.assertEqual(linhas["E2"].number_format, "yyyy\\-mm\\-dd\\ hh:mm:ss")
+        self.assertTrue(wb["Dinamica"]["A1"].value.endswith("2.ª quinzena outubro"))
+
+    def test_nome_do_ficheiro_segue_o_periodo(self):
+        P = type("P", (), {})
+        cases = (
+            ((date(2026, 11, 1), date(2026, 11, 15)), "cn9-leguas-franzinas-unipessoal-nov_1q.xlsx"),
+            ((date(2026, 10, 16), date(2026, 10, 31)), "cn9-leguas-franzinas-unipessoal-out_2q.xlsx"),
+            ((date(2026, 2, 16), date(2026, 2, 28)), "cn9-leguas-franzinas-unipessoal-fev_2q.xlsx"),
+            ((date(2026, 12, 1), date(2026, 12, 31)), "cn9-leguas-franzinas-unipessoal-dez.xlsx"),
+            ((date(2026, 10, 10), date(2026, 11, 5)), "cn9-leguas-franzinas-unipessoal-20261010-20261105.xlsx"),
+        )
+        for (pf, pt), name in cases:
+            p = P()
+            p.period_from, p.period_to = pf, pt
+            self.assertEqual(export_filename(p), name)
+        self.assertEqual(period_title(date(2026, 11, 1), date(2026, 11, 15)), "1.ª quinzena novembro")
+        self.client.force_login(self.user)
+        r = self.client.get(reverse("cainiao-preinvoice-export", args=[self.pre.pk]))
+        self.assertIn('filename="cn9-leguas-franzinas-unipessoal-out_2q.xlsx"', r["Content-Disposition"])
 
     def test_paginas_abrem(self):
         self.client.force_login(self.user)

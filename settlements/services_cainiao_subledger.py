@@ -391,6 +391,104 @@ def create_pre_invoice(bill_ids, period_from, period_to, user):
     return pre
 
 
+# ─── Excel da pré-fatura ───────────────────────────────────────────────────────
+# O visual segue a folha que a equipa usava (cn9-leguas-franzinas-unipessoal-out_2q.xlsx).
+
+XLSX_PREFIX = "cn9-leguas-franzinas-unipessoal"
+MONTHS = ("jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez")
+MONTH_NAMES = ("janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho",
+               "agosto", "setembro", "outubro", "novembro", "dezembro")
+PURPLE, ORANGE, HIGHLIGHT = "2E0A3E", "F7941D", "FDE9D0"
+FMT_EUR = "#,##0.00\\ \\€"
+FMT_DATE = "mm-dd-yy"
+FMT_DATETIME = "yyyy\\-mm\\-dd\\ hh:mm:ss"
+
+
+def _period_kind(period_from, period_to):
+    """'1q', '2q', 'mes' ou None (período livre)."""
+    import calendar
+    if (period_from.year, period_from.month) != (period_to.year, period_to.month):
+        return None
+    last = calendar.monthrange(period_to.year, period_to.month)[1]
+    return {(1, 15): "1q", (16, last): "2q", (1, last): "mes"}.get((period_from.day, period_to.day))
+
+
+def period_title(period_from, period_to):
+    kind = _period_kind(period_from, period_to)
+    month = MONTH_NAMES[period_from.month - 1]
+    if kind == "1q":
+        return f"1.ª quinzena {month}"
+    if kind == "2q":
+        return f"2.ª quinzena {month}"
+    if kind == "mes":
+        return f"{month} {period_from.year}"
+    return f"{period_from:%d/%m/%Y} a {period_to:%d/%m/%Y}"
+
+
+def export_filename(pre_invoice):
+    """Ex.: cn9-leguas-franzinas-unipessoal-nov_1q.xlsx (mesmo padrão da folha da equipa)."""
+    pf, pt = pre_invoice.period_from, pre_invoice.period_to
+    kind = _period_kind(pf, pt)
+    month = MONTHS[pf.month - 1]
+    if kind in ("1q", "2q"):
+        suffix = f"{month}_{kind}"
+    elif kind == "mes":
+        suffix = month
+    else:
+        suffix = f"{pf:%Y%m%d}-{pt:%Y%m%d}"
+    return f"{XLSX_PREFIX}-{suffix}.xlsx"
+
+
+class _Sheet:
+    """Folha write-only com os estilos da folha da equipa (Arial, roxo e laranja)."""
+
+    def __init__(self, wb, title, widths):
+        from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+        self.ws = wb.create_sheet(title)
+        for letter, width in widths.items():
+            self.ws.column_dimensions[letter].width = width
+        purple_fill = PatternFill("solid", fgColor=PURPLE)
+        self.styles = {
+            "title": {"font": Font(name="Arial", size=14, bold=True, color=PURPLE)},
+            "note": {"font": Font(name="Arial", size=9, italic=True)},
+            "section": {"font": Font(name="Arial", size=11, bold=True, color=ORANGE)},
+            "head": {"font": Font(name="Arial", size=11, bold=True, color="FFFFFF"), "fill": purple_fill,
+                     "alignment": Alignment(wrap_text=True, vertical="center")},
+            "body": {"font": Font(name="Arial", size=10)},
+            "total": {"font": Font(name="Arial", size=10, bold=True),
+                      "border": Border(top=Side(style="thin"))},
+            "net": {"font": Font(name="Arial", size=11, bold=True, color=PURPLE)},
+            "net_hl": {"font": Font(name="Arial", size=11, bold=True, color=PURPLE),
+                       "fill": PatternFill("solid", fgColor=HIGHLIGHT)},
+            "plain": {"font": Font(name="Arial", size=11)},
+        }
+
+    def cell(self, value, style="body", fmt=None):
+        from openpyxl.cell import WriteOnlyCell
+        c = WriteOnlyCell(self.ws, value=value)
+        for attr, v in self.styles[style].items():
+            setattr(c, attr, v)
+        if fmt:
+            c.number_format = fmt
+        return c
+
+    def row(self, values, style="body", fmts=None, width=None):
+        """Escreve uma linha. `fmts` é {índice: formato}; `width` estende o estilo (ex.: borda do total)."""
+        fmts = fmts or {}
+        values = list(values) + [None] * max(0, (width or 0) - len(values))
+        self.ws.append([self.cell(v, style, fmts.get(i)) for i, v in enumerate(values)])
+
+    def text(self, value, style):
+        self.ws.append([self.cell(value, style)])
+
+    def blank(self):
+        self.ws.append([])
+
+
+def _naive(value):
+    return timezone.localtime(value).replace(tzinfo=None) if value else None
+
+
 def export_xlsx(pre_invoice):
     """Excel com as folhas Faturacao, Dinamica, Compensacoes e Linhas."""
     from openpyxl import Workbook
@@ -399,72 +497,131 @@ def export_xlsx(pre_invoice):
     docs = documents(charges)
     dyn = dynamic(charges, pre_invoice.period_from, pre_invoice.period_to)
     period = f"Entregas de {pre_invoice.period_from:%d/%m/%Y} a {pre_invoice.period_to:%d/%m/%Y}"
+    title = f"Léguas Franzinas — Faturação Cainiao · {period_title(pre_invoice.period_from, pre_invoice.period_to)}"
+    money = float
 
     wb = Workbook(write_only=True)
-    ws = wb.create_sheet("Faturacao")
-    ws.append(["Documentos a emitir à ESDP"])
-    ws.append([period])
-    ws.append(["Os valores Cainiao já incluem IVA: base = valor ÷ 1,23. Compensações a 0 % de IVA."])
-    ws.append([])
-    head = ["Código", "Descrição", "Qtd.", "Base (s/ IVA)", "IVA %", "Valor IVA", "Valor c/ IVA", "Rubrica Cainiao"]
-    for title, lines, total in (
-        ("DOCUMENTO 1 — FATURA", docs["invoice"], docs["invoice_total"]),
-        ("DOCUMENTO 2 — NOTA DE CRÉDITO", docs["credit"], docs["credit_total"]),
+
+    # Faturacao
+    s = _Sheet(wb, "Faturacao", {"A": 12, "B": 52, "C": 10, "D": 16, "E": 8, "F": 14, "G": 16, "H": 20})
+    s.text("Documentos a emitir à ESDP", "title")
+    s.text(period, "note")
+    s.text("Valores Cainiao já incluem IVA — base = valor ÷ (1+IVA). Compensações a 0 % de IVA.", "note")
+    s.blank()
+    head = ["Código", "Descrição", "Qtd.", "Base (s/ IVA)", "IVA %", "Valor IVA", "Valor c/ IVA", "Categoria Cainiao"]
+    line_fmts = {3: FMT_EUR, 4: "0%", 5: FMT_EUR, 6: FMT_EUR}
+    for section, total_label, lines, total in (
+        ("DOCUMENTO 1 — FATURA", "TOTAL FATURA", docs["invoice"], docs["invoice_total"]),
+        ("DOCUMENTO 2 — NOTA DE CRÉDITO (descontos)", "TOTAL NOTA DE CRÉDITO", docs["credit"], docs["credit_total"]),
     ):
-        ws.append([title])
-        ws.append(head)
+        s.text(section, "section")
+        s.row(head, "head")
         for l in lines:
-            ws.append([l["code"], l["label"], l["qty"], float(l["base"]), float(l["vat_rate"]),
-                       float(l["vat"]), float(l["gross"]), l["raw"]])
-        ws.append(["", "TOTAL", total["qty"], float(total["base"]), "", float(total["vat"]), float(total["gross"])])
-        ws.append([])
-    ws.append(["", "LÍQUIDO A RECEBER", "", float(docs["net"]["base"]), "", float(docs["net"]["vat"]), float(docs["net"]["gross"])])
-    ws.append(["", "Controlo vs. total Cainiao (deve ser 0,00)", "", "", "", "", float(docs["control"])])
+            s.row([l["code"], l["label"], l["qty"], money(l["base"]), money(l["vat_rate"]),
+                   money(l["vat"]), money(l["gross"]), l["raw"]], fmts=line_fmts)
+        s.row(["", total_label, total["qty"], money(total["base"]), None, money(total["vat"]),
+               money(total["gross"])], "total", line_fmts, width=8)
+        s.blank()
+    net = docs["net"]
+    s.ws.append([None, s.cell("LÍQUIDO A RECEBER", "net"), None,
+                 s.cell(money(net["base"]), "net", FMT_EUR), None,
+                 s.cell(money(net["vat"]), "net", FMT_EUR),
+                 s.cell(money(net["gross"]), "net_hl", FMT_EUR)])
+    s.ws.append([None, s.cell("Controlo vs. total Cainiao (deve ser 0,00)", "note"), None, None, None, None,
+                 s.cell(money(docs["control"]), "plain", FMT_EUR)])
 
-    ws = wb.create_sheet("Dinamica")
-    ws.append([period])
-    ws.append([])
-    ws.append(["Bill ID", "Nº linhas", "Valor (€)", "Rubrica", "1.ª entrega", "Última entrega", "Faturado em"])
+    # Dinamica
+    s = _Sheet(wb, "Dinamica", {"A": 34, "B": 14, "C": 20, "D": 26, "E": 28, "F": 20, "G": 20})
+    s.text(title, "title")
+    s.text(period, "note")
+    s.blank()
+    labels = dict(CainiaoBillCharge.ITEM_CHOICES)
+    by_item = list(charges.values("item", "item_raw").annotate(n=Count("id"), total=Sum("amount"))
+                   .order_by("item"))
+    s.text("Por categoria", "section")
+    s.row(["Categoria", "Registos", "Valor (€)", "Categoria Cainiao"], "head")
+    for r in by_item:
+        s.row([labels.get(r["item"], r["item"]), r["n"], money(r["total"]), r["item_raw"]], fmts={2: FMT_EUR})
+    s.row(["Total Geral", sum(r["n"] for r in by_item), money(sum((r["total"] for r in by_item), Decimal("0")))],
+          "total", {2: FMT_EUR}, width=4)
+    s.blank()
+
+    s.text("Por fatura Cainiao", "section")
+    s.row(["Bill ID", "Nº linhas", "Valor (€)", "Categoria", "1.ª entrega", "Última entrega", "Faturado em"], "head")
     for b in dyn["by_bill"]:
-        ws.append([b["bill__bill_id"], b["n"], float(b["total"]), b["bill__main_item"],
-                   timezone.localtime(b["first"]).replace(tzinfo=None) if b["first"] else None,
-                   timezone.localtime(b["last"]).replace(tzinfo=None) if b["last"] else None,
-                   timezone.localtime(b["billed"]).replace(tzinfo=None) if b["billed"] else None])
-    ws.append([])
-    ws.append(["Dia de entrega", "Entregas", "Valor entregas (€)", "Outras rubricas (€)"])
-    for day, v in dyn["by_day"]:
-        ws.append([day, v["n"], float(v["deliveries"]), float(v["other"])])
-    ws.append([])
-    ws.append(["Tarifa c/ IVA (€)", "Registos", "Valor (€)", "% registos"])
-    for t in dyn["by_tariff"]:
-        ws.append([float(t["amount"]), t["n"], float(t["total"]), float(round(t["share"], 2))])
-    ws.append([])
-    ws.append(["Período de entrega", "Registos", "Valor c/ IVA", "Base s/ IVA", "Observação"])
-    for p in dyn["periods"]:
-        ws.append([p["label"], p["n"], float(p["gross"]), float(p["base"]), p["note"]])
+        s.row([b["bill__bill_id"], b["n"], money(b["total"]), b["bill__main_item"],
+               _naive(b["first"]), _naive(b["last"]), _naive(b["billed"])],
+              fmts={2: FMT_EUR, 4: FMT_DATETIME, 5: FMT_DATETIME, 6: FMT_DATETIME})
+    s.row(["Total", sum(b["n"] for b in dyn["by_bill"]),
+           money(sum((b["total"] for b in dyn["by_bill"]), Decimal("0")))], "total", {2: FMT_EUR}, width=7)
+    s.blank()
 
-    ws = wb.create_sheet("Compensacoes")
-    ws.append(["Data", "Nº encomenda (LP)", "Valor", "Bill ID", "Comentário Cainiao",
-               "Motorista (ficha)", "Login", "Guia", "Dia da entrega", "Desconto ao motorista"])
+    s.text("Por dia de entrega", "section")
+    s.row(["Dia de entrega", "Entregas", "Valor entregas (€)", "Outras rubricas (€)"], "head")
+    for day, v in dyn["by_day"]:
+        s.row([day, v["n"], money(v["deliveries"]), money(v["other"])],
+              fmts={0: FMT_DATE, 2: FMT_EUR, 3: FMT_EUR})
+    s.row(["Total", sum(v["n"] for _, v in dyn["by_day"]),
+           money(sum((v["deliveries"] for _, v in dyn["by_day"]), Decimal("0"))),
+           money(sum((v["other"] for _, v in dyn["by_day"]), Decimal("0")))],
+          "total", {2: FMT_EUR, 3: FMT_EUR}, width=4)
+    s.blank()
+
+    s.text("Por tarifa unitária (entregas)", "section")
+    s.row(["Tarifa c/ IVA (€)", "Registos", "Valor (€)", "% registos"], "head")
+    for t in dyn["by_tariff"]:
+        s.row([money(t["amount"]), t["n"], money(t["total"]), money(t["share"] / 100)],
+              fmts={0: FMT_EUR, 2: FMT_EUR, 3: "0.0%"})
+    if dyn["by_tariff"]:
+        s.row(["Total", sum(t["n"] for t in dyn["by_tariff"]),
+               money(sum((t["total"] for t in dyn["by_tariff"]), Decimal("0"))), 1.0],
+              "total", {2: FMT_EUR, 3: "0.0%"}, width=4)
+    s.blank()
+
+    s.text("Por período de entrega", "section")
+    s.row(["Período", "Registos", "Valor c/ IVA", "Base s/ IVA", "Observação"], "head")
+    for p in dyn["periods"]:
+        s.row([p["label"], p["n"], money(p["gross"]), money(p["base"]), p["note"]],
+              fmts={2: FMT_EUR, 3: FMT_EUR})
+    s.row(["Total", sum(p["n"] for p in dyn["periods"]),
+           money(sum((p["gross"] for p in dyn["periods"]), Decimal("0"))),
+           money(sum((p["base"] for p in dyn["periods"]), Decimal("0")))],
+          "total", {2: FMT_EUR, 3: FMT_EUR}, width=5)
+
+    # Compensacoes
+    s = _Sheet(wb, "Compensacoes", {"A": 19, "B": 22, "C": 12, "D": 18, "E": 40, "F": 30,
+                                     "G": 30, "H": 18, "I": 14, "J": 44})
+    s.ws.freeze_panes = "A2"
+    s.row(["Data", "Nº encomenda (LP)", "Valor", "Bill ID", "Comentário Cainiao",
+           "Motorista (ficha)", "Login", "Guia", "Dia da entrega", "Desconto ao motorista"], "head")
     for c in dyn["compensations"]:
         o = c.owner or {}
         driver = o.get("driver")
-        ws.append([timezone.localtime(c.business_at).replace(tzinfo=None), c.lp_number,
-                   float(c.amount), c.bill.bill_id, c.claim_comment,
-                   driver.nome_completo if driver else "", o.get("login", ""), o.get("waybill", ""),
-                   o.get("day"),
-                   "; ".join(f"{cl.driver.nome_completo} · {cl.get_status_display()} · {cl.amount} €" for cl in c.claims)])
+        s.row([_naive(c.business_at), c.lp_number, money(c.amount), c.bill.bill_id, c.claim_comment,
+               driver.nome_completo if driver else "", o.get("login", ""), o.get("waybill", ""),
+               o.get("day"),
+               "; ".join(f"{cl.driver.nome_completo} · {cl.get_status_display()} · {cl.amount} €"
+                         for cl in c.claims)],
+              fmts={0: FMT_DATETIME, 2: FMT_EUR, 8: FMT_DATE})
+    s.row(["Total", len(dyn["compensations"]),
+           money(sum((c.amount for c in dyn["compensations"]), Decimal("0")))], "total", {2: FMT_EUR}, width=10)
 
-    ws = wb.create_sheet("Linhas")
-    ws.append(["Settlement ID", "Bill ID", "Rubrica", "Rubrica Cainiao", "Data de negócio",
-               "Faturado em", "Valor", "LP", "Employee ID", "Peso (g)", "1.ª na porta",
-               "CP", "Fórmula", "Comentário"])
+    # Linhas
+    head = ["Settlement ID", "Bill ID", "Categoria", "Categoria Cainiao", "Data de negócio",
+            "Faturado em", "Valor", "LP", "Employee ID", "Peso (g)", "1.ª na porta",
+            "CP", "Fórmula", "Comentário"]
+    s = _Sheet(wb, "Linhas", {"A": 16, "B": 17, "C": 18, "D": 13, "E": 19, "F": 19, "G": 10,
+                              "H": 22, "I": 16, "J": 10, "K": 10, "L": 9, "M": 17, "N": 30})
+    s.ws.freeze_panes = "A2"
+    n_rows = charges.count()
+    s.ws.auto_filter.ref = f"A1:N{n_rows + 1}"
+    s.row(head, "head")
     tz = timezone.get_current_timezone()
-    labels = dict(CainiaoBillCharge.ITEM_CHOICES)
 
     def local(value):
         return value.astimezone(tz).replace(tzinfo=None) if value else None
 
+    fmts = {4: FMT_DATETIME, 5: FMT_DATETIME, 6: "#,##0.00"}
     for row in charges.order_by("business_at").values_list(
         "settlement_id", "bill__bill_id", "item", "item_raw", "business_at", "billing_at",
         "amount", "lp_number", "employee_id", "weight_g", "first_order", "postal_code",
@@ -473,8 +630,8 @@ def export_xlsx(pre_invoice):
         row = list(row)
         row[2] = labels.get(row[2], row[2])
         row[4], row[5] = local(row[4]), local(row[5])
-        row[6] = float(row[6])
-        ws.append(row)
+        row[6] = money(row[6])
+        s.row(row, fmts=fmts)
     buf = io.BytesIO()
     wb.save(buf)
     return buf.getvalue()

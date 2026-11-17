@@ -10,7 +10,7 @@ from django.views.decorators.http import require_http_methods
 from .models import CainiaoBill, CainiaoClientPreInvoice, CainiaoSubledgerImport
 from .services_cainiao_subledger import (
     SubledgerError, charges_for, checks, create_pre_invoice, documents,
-    dynamic, export_xlsx, import_subledger, unassigned_bills,
+    dynamic, export_filename, export_xlsx, import_subledger, unassigned_bills,
 )
 
 
@@ -101,8 +101,7 @@ def pre_invoice_export(request, pk):
         export_xlsx(pre),
         content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
-    name = f"cainiao-{pre.period_from:%Y%m%d}-{pre.period_to:%Y%m%d}.xlsx"
-    response["Content-Disposition"] = f'attachment; filename="{name}"'
+    response["Content-Disposition"] = f'attachment; filename="{export_filename(pre)}"'
     return response
 
 

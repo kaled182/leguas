@@ -1300,6 +1300,16 @@ class FleetInvoiceDetailTests(FleetSetupMixin, TestCase):
         # Linha gravada = cálculo de agora: 1,10 (porta) + 0,50 + 1,40.
         self.assertEqual(fi.lines.get().base_amount, self.D("3.00"))
         self.assertEqual(ov["check"]["amount_diff"], self.D("0.00"))
+        g = ov["same_door"][0]
+        self.assertEqual((g["n"], g["n_total"], g["value"]), (1, 2, self.D("1.60")))
+        self.assertEqual(ov["same_door_value"], self.D("1.60"))
+        r = self.client.get(f"/settlements/fleet-invoices/{fi.id}/pdf/")
+        self.assertEqual(r.status_code, 200)
+        r = self.client.get(
+            reverse("empresa-portal-invoices", args=[self.fleet.id]) + f"?id={fi.id}",
+        )
+        self.assertContains(r, "1 + 1")
+        self.assertContains(r, "1 porta · 1 pacote adicional")
         r = self.client.get(reverse(
             "empresa-portal-driver-report", args=[self.fleet.id, fi.id, fi.lines.get().id],
         ))

@@ -291,34 +291,54 @@
       </div>
       </div>
 
-      {# ─── Mesma porta ─── #}
+      {# ─── Mesma porta (padrão da PF do motorista) ─── #}
       <div data-ff-panel="mesmaporta" hidden>
       <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/50 dark:border-gray-700/50 overflow-hidden mb-4">
         <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-700 flex flex-wrap items-center gap-2">
           <i data-lucide="home" class="w-5 h-5 text-teal-500"></i>
           <h3 class="font-bold text-gray-900 dark:text-white">Mesma porta</h3>
-          <span class="text-xs text-gray-500">{{ ov.same_door|length }} morada{{ ov.same_door|length|pluralize }} · {{ ov.totals.same_door|default:0 }} pacotes extra · {{ ov.same_door_amount|eur }} · a {{ ov.same_door_price|eur }} por extra{% if ov.same_door_fixed_n %}, exceto {{ ov.same_door_fixed_n }} guia{{ ov.same_door_fixed_n|pluralize }} com preço fixo por guia{% endif %}</span>
-          <span class="ml-auto text-[11px] text-gray-400 italic">Mesmo dia + login + morada. A 1.ª guia conta como porta.</span>
+          <span class="text-xs text-gray-500">({{ ov.same_door|length }} porta{{ ov.same_door|length|pluralize }} · {{ ov.totals.same_door|default:0 }} adicionais · adicionais {{ ov.same_door_amount|eur }})</span>
+          <span class="ml-auto text-[11px] text-gray-400 italic">1.º pacote + adicionais a {{ ov.same_door_price|eur }}</span>
         </div>
         <div class="overflow-x-auto">
           <table class="lf-table">
-            <thead><tr><th>Data</th><th>Motorista</th><th>Morada</th><th>CP</th><th class="text-right">Extra</th><th>Guias</th></tr></thead>
+            <thead><tr><th>Data</th><th>Motorista</th><th>Morada</th><th class="text-center">Pacotes</th><th class="text-right">Valor</th></tr></thead>
             <tbody>
               {% for g in ov.same_door %}
               <tr class="align-top">
                 <td class="whitespace-nowrap font-mono">{{ g.date|date:"d/m/Y" }}</td>
                 <td class="whitespace-nowrap">{{ g.driver.nome_completo }}</td>
-                <td class="text-sm">{{ g.address|default:"—" }}</td>
-                <td class="font-mono text-xs">{{ g.zip|default:"—" }}</td>
-                <td class="text-right font-mono font-semibold text-teal-600 dark:text-teal-400">{{ g.n }}</td>
-                <td class="font-mono text-[11px] text-gray-500">{{ g.waybills|join:", " }}</td>
+                <td>
+                  <div class="text-sm">{{ g.address|default:"—" }} <span class="text-xs text-gray-500">{{ g.zip }}</span></div>
+                  <div class="font-mono text-[11px] text-gray-500">{{ g.waybills|join:" · " }}</div>
+                  {% if g.fixed_n %}<div class="text-[11px] text-amber-700 dark:text-amber-300">{{ g.fixed_n }} guia{{ g.fixed_n|pluralize }} com preço fixo por guia</div>{% endif %}
+                </td>
+                <td class="text-center font-mono font-semibold text-teal-600 dark:text-teal-400 whitespace-nowrap">1 + {{ g.n }}</td>
+                <td class="text-right font-mono font-bold">{{ g.value|eur }}</td>
               </tr>
               {% empty %}
-              <tr><td colspan="6" class="text-center text-sm text-gray-500">Sem entregas de mesma porta.</td></tr>
+              <tr><td colspan="5" class="text-center text-sm text-gray-500">Sem entregas de mesma porta.</td></tr>
               {% endfor %}
             </tbody>
+            {% if ov.same_door %}
+            <tfoot class="bg-teal-50 dark:bg-teal-900/20 font-bold">
+              <tr><td colspan="3">{{ ov.same_door|length }} porta{{ ov.same_door|length|pluralize }} · {{ ov.totals.same_door|default:0 }} pacote{{ ov.totals.same_door|pluralize }} adiciona{{ ov.totals.same_door|pluralize:"l,is" }}</td><td></td><td class="text-right font-mono">{{ ov.same_door_value|eur }}</td></tr>
+            </tfoot>
+            {% endif %}
           </table>
         </div>
+        <p class="px-5 py-2 text-[11px] text-gray-500">Regra mesma porta: o 1.º pacote de cada porta é pago ao preço da porta (preço do CP) e cada adicional a {{ ov.same_door_price|eur }}. Uma guia com preço fixo mantém o preço fixo. A mesma porta = mesmo dia, mesmo login e mesma morada (CP7, rua e número da porta).</p>
+        {% if ov.same_door_review %}
+        <div class="px-5 py-3 border-t border-gray-200 dark:border-gray-700 text-sm">
+          <p class="font-semibold text-amber-700 dark:text-amber-400">Mesma porta para revisão ({{ ov.same_door_review|length }})</p>
+          <p class="text-xs text-gray-500 mb-1">Mesma morada, mas pacotes a mais de 300 m. Não contam como mesma porta.</p>
+          <ul class="text-xs space-y-0.5">
+            {% for g in ov.same_door_review %}
+            <li>{{ g.date|date:"d/m/Y" }} · {{ g.driver.nome_completo }} · {{ g.address }} {{ g.zip_code }} · {{ g.n }} pacotes · {{ g.spread_m }} m · {{ g.waybills|join:", " }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endif %}
       </div>
       </div>
 

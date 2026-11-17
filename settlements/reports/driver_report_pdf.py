@@ -212,6 +212,39 @@ def hub_pdf(report, hub_label, date_from, date_to, user=None):
     return buf.getvalue()
 
 
+def same_door_table(groups, width, with_driver=False):
+    """Mesma porta no padrão da PF: data, morada (guias por baixo), 1 + N e valor da porta."""
+    wb = ParagraphStyle("sdw", fontName="Helvetica", fontSize=6.5, leading=8, textColor=MUTED)
+    head = ["Data"] + (["Motorista"] if with_driver else []) + ["Morada", "Pacotes", "Valor"]
+    rows = [head]
+    total = Decimal("0")
+    n_extra = 0
+    for g in groups:
+        addr = (g["address"] or "-")[:90].replace("&", "&amp;").replace("<", "&lt;")
+        cell = [Paragraph(f'{addr} <font color="#5E5470">{g["zip"]}</font>', CELL),
+                Paragraph(" · ".join(g["waybills"]), wb)]
+        row = [_d(g["date"])]
+        if with_driver:
+            row.append(Paragraph(g["driver"].nome_completo, CELL))
+        rows.append(row + [cell, f'1 + {g["n"]}', eur(g["value"])])
+        total += g["value"]
+        n_extra += g["n"]
+    blank = [""] * (1 if with_driver else 0)
+    rows.append([""] + blank + [f"{len(groups)} porta{'s' if len(groups) != 1 else ''} · {n_extra} "
+                            f"{'pacote adicional' if n_extra == 1 else 'pacotes adicionais'}", "", eur(total)])
+    widths = ((0.11, 0.2, 0.43, 0.11, 0.15) if with_driver else (0.12, 0.62, 0.11, 0.15))
+    t = _table(rows, [width * w for w in widths], total_rows=[len(rows) - 1], right_from=len(head) - 2)
+    t.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0D9488")),
+        ("BACKGROUND", (0, -1), (-1, -1), colors.HexColor("#CCFBF1")),
+        ("ALIGN", (len(head) - 2, 0), (len(head) - 2, -1), "CENTER"),
+    ]))
+    return [Paragraph(f"Mesma porta ({len(groups)} porta{'s' if len(groups) != 1 else ''})", H2), t, Paragraph(
+        "Regra mesma porta: o 1.º pacote de cada porta é pago ao preço da porta e cada adicional ao "
+        "preço de mesma porta. Uma guia com preço fixo mantém o preço fixo. A mesma porta = mesmo dia, "
+        "mesmo login e mesma morada (CP7, rua e número da porta).", NOTE)]
+
+
 def _detail_pages(detail, width):
     """Páginas 2+: dia a dia, por CP4 e grupos de mesma porta."""
     story = [PageBreak(), Paragraph("Dia a dia", H2)]
@@ -233,16 +266,7 @@ def _detail_pages(detail, width):
     story.append(_table(rows, [width * w for w in (0.08, 0.16, 0.1, 0.09, 0.12, 0.08, 0.22, 0.15)], right_from=2))
 
     if detail["same_door"]:
-        story.append(Paragraph(f"Mesma porta ({len(detail['same_door'])} moradas)", H2))
-        story.append(Paragraph("A 1.ª guia da morada conta como porta. As guias extra são pagas "
-                               "ao preço de mesma porta.", NOTE))
-        rows = [["Data", "Morada", "CP", "Extra", "Guias"]]
-        for x in detail["same_door"]:
-            rows.append([_d(x["date"]), Paragraph(x["address"][:90], CELL), x["zip"], x["n"],
-                         Paragraph(", ".join(x["waybills"]), CELL)])
-        story.append(_table(rows, [width * w for w in (0.11, 0.37, 0.1, 0.07, 0.35)], right_from=3))
-        story[-1].setStyle(TableStyle([("ALIGN", (4, 0), (4, -1), "LEFT")]))
-
+        story += same_door_table(detail["same_door"], width)
     return story
 
 

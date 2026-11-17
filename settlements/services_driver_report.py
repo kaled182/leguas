@@ -486,6 +486,10 @@ def driver_detail(dd, date_from, date_to):
             sd[l["sd_group"]].append(l)
     same_door = [{"date": g[0]["date"], "address": g[0]["address"], "zip": g[0]["zip"],
                   "n": sum(1 for x in g if x["kind"] == "mesma porta"),
+                  "n_total": len(g),
+                  # Valor da porta: 1.º pacote + adicionais, com o preço real de cada guia.
+                  "value": sum((x["amount"] for x in g), Decimal("0")),
+                  "fixed_n": sum(1 for x in g if x["source"] == "fixo por guia"),
                   "waybills": [x["waybill"] for x in g]}
                  for g in sorted(sd.values(), key=lambda g: (g[0]["date"], g[0]["address"]))]
     total = summarize(dd.lines)

@@ -1758,6 +1758,12 @@ class PDFGenerator:
                 "O relatório de cada motorista está no ZIP da pré-fatura.", sub_style,
             ))
 
+        # ── Mesma porta (padrão da PF do motorista) ──────────────────
+        if ov and ov["same_door"]:
+            from settlements.reports.driver_report_pdf import same_door_table
+            elements.append(Spacer(1, 0.4 * cm))
+            elements.extend(same_door_table(ov["same_door"], 18 * cm, with_driver=True))
+
         # ── Detalhe bónus + claims (compactado, sem PageBreak) ───────
         drivers_with_detail = [
             ln for ln in fi.lines.all().order_by("-deliveries")

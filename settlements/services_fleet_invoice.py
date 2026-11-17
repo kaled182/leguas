@@ -32,7 +32,11 @@ def line_detail(line, partner=None, hubs=None):
     from .services_pudo import pudo_breakdown_for_driver
     pudo = pudo_breakdown_for_driver(line.driver, fi.periodo_inicio, fi.periodo_fim, partner)
     sd_price = getattr(partner, "same_door_additional_price", None) or ZERO
+    # Mesma morada, mas pacotes a mais de 300 m: não contam (como na PF).
+    from .services_driver_breakdown import driver_breakdown
+    review = driver_breakdown(line.driver, fi.periodo_inicio, fi.periodo_fim, partner)["same_door_review"]
     detail.update({
+        "same_door_review": review,
         "pudo_rows": sorted(pudo["rows"], key=lambda r: r["date"]),
         "pudo_totals": pudo["totals"],
         "same_door_price": sd_price,
@@ -136,6 +140,11 @@ def overview(fi):
             key=lambda g: (g["date"], g["driver"].nome_completo, g["address"]),
         ),
         "same_door_amount": sum((d["same_door_amount"] for d in rows), ZERO),
+        "same_door_value": sum((g["value"] for d in rows for g in d["same_door"]), ZERO),
+        "same_door_review": sorted(
+            ({"driver": d["driver"], **g} for d in rows for g in d["same_door_review"]),
+            key=lambda g: (g["date"], g["driver"].nome_completo),
+        ),
         "same_door_price": rows[0]["same_door_price"] if rows else ZERO,
         "same_door_fixed_n": sum(d["same_door_fixed_n"] for d in rows),
         "pudo": sorted(

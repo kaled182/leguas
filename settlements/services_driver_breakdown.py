@@ -59,34 +59,30 @@ def split_counts(tasks, partner):
     return counts, extra_ids, pudo_tasks, door_delivered, groups
 
 
-def driver_breakdown(driver, date_from, date_to, partner=None):
-    """Total do motorista no período, dividido por tipo e por dia."""
+TASK_FIELDS = (
+    "id", "waybill_number", "task_date", "task_status",
+    "delivery_type", "delivery_time", "detailed_address", "zip_code",
+    "receiver_latitude", "receiver_longitude", "courier_name",
+    "task_group_order",
+)
+
+
+def price_tasks(driver, tasks, date_from, date_to, partner):
+    """Valor das tasks do motorista com as regras da pré-fatura.
+
+    Ordem por pacote à porta: override de preço → mesma porta (valor do
+    parceiro) → preço por CP (CpPricer). PUDO: fórmula por ponto e dia.
+    Fonte única para o resumo do motorista e para o lote da frota (FF).
+    """
     from core.finance import resolve_driver_price
-    from core.models import Partner
-    from drivers_app.portal_views import _driver_base_queryset
+    from drivers_app.services_cp_pricing import CpPricer
 
     from .models import PackagePriceOverride
     from .services_pudo import compute_pudo_payment, pudo_key
-    from .services_same_door import max_spread_m
 
-    if partner is None:
-        partner = Partner.objects.filter(name__iexact="CAINIAO").first()
-
-    tasks = list(
-        _driver_base_queryset(driver, date_from, date_to).only(
-            "id", "waybill_number", "task_date", "task_status",
-            "delivery_type", "delivery_time", "detailed_address", "zip_code",
-            "receiver_latitude", "receiver_longitude", "courier_name",
-            "task_group_order",
-        )
-    )
     counts, extra_ids, pudo_tasks, door_delivered, sd_groups = split_counts(tasks, partner)
-
-    # ─── Valor estimado (mesmas regras da pré-fatura) ───
-    base_price, _src = resolve_driver_price(driver, partner)
+    base_price, base_src = resolve_driver_price(driver, partner)
     base_price = base_price or Decimal("0")
-    # Preço por CP (valor negociado → tarifa do CP → base), como na PF.
-    from drivers_app.services_cp_pricing import CpPricer
     pricer = CpPricer(driver, partner, date_from, date_to)
     sd_price = getattr(partner, "same_door_additional_price", None) or Decimal("0")
     overrides = dict(
@@ -98,6 +94,7 @@ def driver_breakdown(driver, date_from, date_to, partner=None):
     amount_door_normal = Decimal("0")
     amount_same_door = Decimal("0")
     n_same_door_paid = 0
+    n_cp_negotiated = 0
     for t in door_delivered:
         if t.waybill_number in overrides:
             amount_door_normal += overrides[t.waybill_number]
@@ -105,8 +102,10 @@ def driver_breakdown(driver, date_from, date_to, partner=None):
             amount_same_door += sd_price
             n_same_door_paid += 1
         else:
-            unit, _src, _cp = pricer.price(t.zip_code)
+            unit, src, _cp = pricer.price(t.zip_code)
             amount_door_normal += unit
+            if src == "negociado":
+                n_cp_negotiated += 1
 
     pudo_groups = defaultdict(list)
     for t in pudo_tasks:
@@ -117,6 +116,52 @@ def driver_breakdown(driver, date_from, date_to, partner=None):
         a = compute_pudo_payment(len(g), partner)
         amount_pudo += a
         pudo_amount_by_day[day] += a
+
+    n_door_paid = len(door_delivered) - n_same_door_paid
+    return {
+        "counts": counts,
+        "extra_ids": extra_ids,
+        "pudo_tasks": pudo_tasks,
+        "door_delivered": door_delivered,
+        "sd_groups": sd_groups,
+        "base_price": base_price,
+        "base_src": base_src,
+        "cp_active": pricer.active,
+        "n_cp_negotiated": n_cp_negotiated,
+        "sd_price": sd_price,
+        "n_same_door_paid": n_same_door_paid,
+        "door_avg_price": (
+            (amount_door_normal / n_door_paid).quantize(Decimal("0.001"))
+            if n_door_paid else base_price
+        ),
+        "amount_door_normal": amount_door_normal,
+        "amount_same_door": amount_same_door,
+        "amount_pudo": amount_pudo,
+        "pudo_amount_by_day": pudo_amount_by_day,
+        "amount_total": amount_door_normal + amount_same_door + amount_pudo,
+    }
+
+
+def driver_breakdown(driver, date_from, date_to, partner=None):
+    """Total do motorista no período, dividido por tipo e por dia."""
+    from core.models import Partner
+    from drivers_app.portal_views import _driver_base_queryset
+
+    from .services_same_door import max_spread_m
+
+    if partner is None:
+        partner = Partner.objects.filter(name__iexact="CAINIAO").first()
+
+    tasks = list(_driver_base_queryset(driver, date_from, date_to).only(*TASK_FIELDS))
+    p = price_tasks(driver, tasks, date_from, date_to, partner)
+    counts, extra_ids = p["counts"], p["extra_ids"]
+    pudo_tasks, door_delivered, sd_groups = p["pudo_tasks"], p["door_delivered"], p["sd_groups"]
+    base_price, sd_price = p["base_price"], p["sd_price"]
+    n_same_door_paid = p["n_same_door_paid"]
+    amount_door_normal = p["amount_door_normal"]
+    amount_same_door = p["amount_same_door"]
+    amount_pudo = p["amount_pudo"]
+    pudo_amount_by_day = p["pudo_amount_by_day"]
 
     # ─── Por dia ───
     from django.utils import timezone
@@ -181,11 +226,8 @@ def driver_breakdown(driver, date_from, date_to, partner=None):
         "n_days": sum(1 for d in days if d["delivered"]),
         "base_price": base_price,
         # Preço médio à porta (com preço por CP, varia por pacote).
-        "door_avg_price": (
-            (amount_door_normal / (len(door_delivered) - n_same_door_paid)).quantize(Decimal("0.001"))
-            if len(door_delivered) - n_same_door_paid else base_price
-        ),
-        "cp_pricing": pricer.active,
+        "door_avg_price": p["door_avg_price"],
+        "cp_pricing": p["cp_active"],
         "same_door_price": sd_price,
         "same_door_active": bool(partner and partner.same_door_enabled),
         "same_door_groups": same_door_groups,

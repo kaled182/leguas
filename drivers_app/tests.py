@@ -1038,3 +1038,130 @@ class CarryNegativeBalanceTests(TestCase):
         self.client.post(reverse("drivers_app:payments_bulk"), {"ids": [self.pf.id], "action": "carry"})
         self.pf.refresh_from_db()
         self.assertEqual(self.pf.total_a_receber, self.D("0"))
+
+
+class FleetHubTests(TestCase):
+    """Tabela de hubs/CP da frota: herança, exceção na ficha, portal e FF."""
+
+    def setUp(self):
+        from datetime import date
+        from decimal import Decimal
+
+        from contracts.models import ContractSettings
+        from core.models import Partner
+        from settlements.models import CainiaoHub, CainiaoHubCP4
+
+        from .models import EmpresaParceira, FleetHubAssignment
+
+        self.D = Decimal
+        self.date = date
+        self.partner = Partner.objects.create(
+            name="CAINIAO", nif="500000000", contact_email="c@x.pt",
+            driver_default_price_per_package=Decimal("1.00"),
+        )
+        st = ContractSettings.get()
+        st.cp_pricing_from = date(2026, 9, 1)
+        st.save()
+        self.hub = CainiaoHub.objects.create(name="Fão")
+        for cp in ("4480", "4910", "4920"):
+            CainiaoHubCP4.objects.create(hub=self.hub, cp4=cp)
+        self.fleet = EmpresaParceira.objects.create(
+            nome="Frota X", driver_default_price_per_package=Decimal("1.00"),
+        )
+        FleetHubAssignment.objects.create(
+            empresa=self.fleet, hub=self.hub, is_primary=True,
+            cp4s=["4480", "4910"], cp_prices={"4480": "1.10", "4910": "1.15"},
+        )
+        self.drv = _driver("700000101", apelido="Fx_LF")
+        self.drv.empresa_parceira = self.fleet
+        self.drv.save()
+        self.admin = User.objects.create_superuser("suf", "s@x.pt", "x")
+
+    def test_driver_inherits_fleet_and_exception_wins(self):
+        from .models import DriverHubAssignment
+        from .services_cp_pricing import CpPricer
+
+        d = self.date
+        p = CpPricer(self.drv, self.partner, d(2026, 10, 1), d(2026, 10, 31))
+        self.assertEqual(p.price("4480-001")[:2], (self.D("1.10"), "negociado"))
+        self.assertEqual(p.price("4910-001")[:2], (self.D("1.15"), "negociado"))
+        self.assertEqual(p.price("4920-001")[:2], (self.D("1.00"), "base"))
+        DriverHubAssignment.objects.create(
+            driver=self.drv, hub=self.hub, cp4s=["4910", "4920"],
+            cp_prices={"4910": "1.30", "4920": "1.20"},
+        )
+        p = CpPricer(self.drv, self.partner, d(2026, 10, 1), d(2026, 10, 31))
+        self.assertEqual(p.price("4480")[:2], (self.D("1.10"), "negociado"))
+        self.assertEqual(p.price("4910")[:2], (self.D("1.30"), "negociado"))
+        self.assertEqual(p.price("4920")[:2], (self.D("1.20"), "negociado"))
+
+    def test_portal_saves_table_and_logs(self):
+        self.client.force_login(self.admin)
+        url = reverse("empresa-portal-hubs", args=[self.fleet.id])
+        r = self.client.get(url)
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, "Hubs e CP contratados pela frota")
+        self.assertContains(r, "1.15 € negociado")
+        h = self.hub.id
+        r = self.client.post(url, {
+            "section": "hubs", f"cp_{h}": ["4480", "4920"], "primary_hub": str(h),
+            f"cpp_{h}_4480": "1,12", f"cpp_{h}_4920": "1.20",
+        })
+        self.assertEqual(r.status_code, 302)
+        a = self.fleet.hub_assignments.get()
+        self.assertEqual(a.cp4s, ["4480", "4920"])
+        self.assertEqual(a.cp_prices, {"4480": "1.12", "4920": "1.20"})
+        self.assertEqual(self.fleet.edit_logs.count(), 1)
+
+    def test_ficha_shows_inherited_table(self):
+        self.client.force_login(self.admin)
+        r = self.client.get(reverse("drivers_app:driver_admin_edit", args=[self.drv.id]))
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, "Herda a tabela da frota Frota X")
+        self.assertContains(r, "1.15 € frota")
+        # Guardar a ficha sem CP próprios não copia a tabela da frota.
+        self.client.post(
+            reverse("drivers_app:driver_admin_edit", args=[self.drv.id]),
+            {"section": "hubs"},
+        )
+        self.assertFalse(self.drv.hub_assignments.exists())
+
+    def test_fleet_invoice_uses_cp_prices(self):
+        import json
+
+        from settlements.models import CainiaoOperationTask, FleetInvoice
+
+        d = self.date
+        for i, cp in enumerate(["4480", "4480", "4910", "4920"]):
+            CainiaoOperationTask.objects.create(
+                waybill_number=f"FX{i}", task_date=d(2026, 10, 6 + i),
+                task_status="Delivered", courier_name="Fx_LF",
+                zip_code=f"{cp}-00{i}", detailed_address=f"Rua {i}",
+            )
+        self.client.force_login(self.admin)
+        r = self.client.get(
+            f"/settlements/empresas/{self.fleet.id}/lote-preview/?from=2026-10-01&to=2026-10-31",
+        )
+        row = r.json()["rows"][0]
+        self.assertEqual(row["base"], "4.35")  # 1,10 + 1,10 + 1,15 + 1,00
+        r = self.client.post(
+            f"/settlements/empresas/{self.fleet.id}/lote-emit/",
+            data=json.dumps({"from": "2026-10-01", "to": "2026-10-31"}),
+            content_type="application/json",
+        )
+        self.assertEqual(r.status_code, 200, r.content[:300])
+        line = FleetInvoice.objects.get().lines.get()
+        self.assertEqual(line.base_amount, self.D("4.35"))
+        self.assertEqual(line.price_source, "cp_negociado")
+
+    def test_retire_hub_moves_fleet_table(self):
+        from settlements.models import CainiaoHub, CainiaoHubCP4
+
+        from .services_hubs import retire_hub
+
+        porto = CainiaoHub.objects.create(name="Porto")
+        CainiaoHubCP4.objects.filter(hub=self.hub).update(hub=porto)
+        retire_hub(self.hub)
+        a = self.fleet.hub_assignments.get()
+        self.assertEqual(a.hub_id, porto.id)
+        self.assertEqual(a.cp_prices, {"4480": "1.10", "4910": "1.15"})

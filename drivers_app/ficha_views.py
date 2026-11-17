@@ -2,7 +2,6 @@
 o seu botão Editar → Guardar / Cancelar. Grava só os campos desse bloco
 e regista quem mudou o quê."""
 from datetime import timedelta
-from decimal import Decimal, InvalidOperation
 
 from django import forms
 from django.contrib import messages
@@ -17,8 +16,9 @@ from .models import (
     DriverProfileEditLog,
 )
 from .services_hubs import (
-    contract_completeness, driver_cp_selection, driver_hub_suggestions, hub_options,
-    is_placeholder_email, is_placeholder_phone,
+    contract_completeness, driver_cp_selection, driver_hub_suggestions,
+    fleet_cp_selection, hub_view_options, is_placeholder_email, is_placeholder_phone,
+    save_hub_post,
 )
 
 
@@ -116,63 +116,13 @@ def _next_cycle_start(regime, today):
 
 def _save_hubs(request, driver):
     """Grava hubs/CP a partir do POST do bloco 'hubs'."""
-    from settlements.models import CainiaoHub
-
-    primary = request.POST.get("primary_hub", "")
-    keep = set()
-    errors = []
-
-    def snap():
-        return {
-            a.hub_id: (sorted(a.cp4s), a.is_primary, dict(sorted((a.cp_prices or {}).items())))
-            for a in driver.hub_assignments.all()
-        }
-
-    before = snap()
-    for hub in CainiaoHub.objects.all():
-        cps = sorted(set(request.POST.getlist(f"cp_{hub.id}")))
-        if not cps and request.POST.get(f"hub_{hub.id}") != "on":
-            continue
-        prices = {}
-        for cp in cps:
-            raw = (request.POST.get(f"cpp_{hub.id}_{cp}") or "").strip().replace(",", ".")
-            if not raw:
-                continue
-            try:
-                val = Decimal(raw).quantize(Decimal("0.01"))
-            except InvalidOperation:
-                errors.append(f"{hub.name} CP {cp}: valor '{raw}' inválido")
-                continue
-            if val <= 0 or val > 10:
-                errors.append(f"{hub.name} CP {cp}: valor tem de estar entre 0,01 € e 10 €")
-                continue
-            prices[cp] = str(val)
-        keep.add(hub.id)
-        DriverHubAssignment.objects.update_or_create(
-            driver=driver, hub=hub,
-            defaults={"cp4s": cps, "is_primary": str(hub.id) == primary, "cp_prices": prices},
-        )
-    driver.hub_assignments.exclude(hub_id__in=keep).delete()
-    if keep and not driver.hub_assignments.filter(is_primary=True).exists():
-        first = driver.hub_assignments.order_by("hub__name").first()
-        first.is_primary = True
-        first.save(update_fields=["is_primary"])
-    after = snap()
-    if before != after:
-        names = dict(CainiaoHub.objects.values_list("id", "name"))
-
-        def fmt(d):
-            return "; ".join(
-                f"{names.get(h, h)}{' (principal)' if p else ''}: "
-                + (", ".join(f"{x}{'=' + pr[x] + '€' if x in pr else ''}" for x in c) or "—")
-                for h, (c, p, pr) in sorted(d.items())
-            )
-
+    changes, errors = save_hub_post(request.POST, driver, DriverHubAssignment, "driver")
+    if changes:
         DriverProfileEditLog.objects.create(
             driver=driver, user=request.user, section="hubs",
-            changes={"hubs": [fmt(before), fmt(after)]},
+            changes={"hubs": changes},
         )
-    return before != after, errors
+    return bool(changes), errors
 
 
 @admin_required
@@ -262,20 +212,11 @@ def driver_ficha(request, driver_id):
         })
 
     pct, missing = contract_completeness(driver)
-    assignments = {a.hub_id: a for a in driver.hub_assignments.select_related("hub")}
-    options = hub_options()
-    selected, negotiated = driver_cp_selection(driver)
-    for opt in options:
-        a = assignments.get(opt["hub"].id)
-        for cp in opt["cps"]:
-            cp["checked"] = cp["cp4"] in selected
-            cp["negotiated"] = negotiated.get(cp["cp4"], "") if cp["checked"] else ""
-        opt["assigned"] = a is not None or any(cp["checked"] for cp in opt["cps"])
-        opt["primary"] = bool(a and a.is_primary)
-    # O hub principal pode já não existir no parceiro.
-    shown = [opt for opt in options if opt["assigned"]]
-    if shown and not any(opt["primary"] for opt in shown):
-        shown[0]["primary"] = True
+    assignments = list(driver.hub_assignments.select_related("hub"))
+    selected, negotiated = driver_cp_selection(driver, include_fleet=False)
+    fleet = driver.empresa_parceira
+    inherited = fleet_cp_selection(fleet) if fleet else (set(), {})
+    options = hub_view_options(assignments, selected, negotiated, inherited)
     suggestions = driver_hub_suggestions(driver)
 
     from contracts.models import GeneratedContract
@@ -286,7 +227,9 @@ def driver_ficha(request, driver_id):
         "completeness_pct": pct,
         "completeness_missing": missing,
         "hub_options": options,
-        "assignments": list(assignments.values()),
+        "assignments": assignments,
+        "fleet": fleet,
+        "fleet_has_table": bool(inherited[0]),
         "suggestions": suggestions,
         "regime_changes": driver.regime_changes.select_related("changed_by")[:10],
         "edit_logs": driver.edit_logs.select_related("user")[:15],

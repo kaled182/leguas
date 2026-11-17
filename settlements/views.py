@@ -4563,6 +4563,27 @@ def _billable_fleet_claims_for_driver(driver, date_to):
     return billable
 
 
+def _fleet_line_amount(driver, task_ids, date_from, date_to, partner):
+    """(base, preço médio à porta, origem) de uma linha da FF.
+
+    Usa `price_tasks`, a mesma regra da PF individual e do portal do
+    motorista: preço por CP (frota + exceções da ficha), mesma porta por
+    morada, PUDO e overrides de preço.
+    """
+    from decimal import Decimal
+
+    from .models import CainiaoOperationTask
+    from .services_driver_breakdown import TASK_FIELDS, price_tasks
+
+    tasks = list(
+        CainiaoOperationTask.objects.filter(id__in=task_ids).only(*TASK_FIELDS)
+    )
+    p = price_tasks(driver, tasks, date_from, date_to, partner)
+    src = "cp_negociado" if p["n_cp_negotiated"] else p["base_src"]
+    price = Decimal(p["door_avg_price"]).quantize(Decimal("0.0001"))
+    return p["amount_total"].quantize(Decimal("0.01")), price, src
+
+
 def _empresa_lote_compute(empresa, date_from, date_to):
     """Calcula lote de PFs para todos os drivers activos de uma frota.
 
@@ -4657,8 +4678,6 @@ def _empresa_lote_compute(empresa, date_from, date_to):
             task_date__range=(date_from, date_to),
             task_status="Delivered",
         )
-
-        price, price_source = resolve_driver_price(d, cainiao_partner)
 
         # Iterar por login: cada login conta as entregas que NÃO foram
         # já vistas em logins anteriores (evita dupla contagem quando
@@ -4776,11 +4795,9 @@ def _empresa_lote_compute(empresa, date_from, date_to):
                     bonus_amount += PreInvoiceBonus.BONUS_30
                     bonus_days += 1
 
-        # Mesma porta: pacotes adicionais pagos ao valor do parceiro
-        from .services_same_door import same_door_extra_ids
-        n_sd = len(same_door_extra_ids(final_ids, cainiao_partner))
-        base = price * (n_delivered - n_sd) + (
-            cainiao_partner.same_door_additional_price * n_sd if n_sd else 0
+        # Valor com as regras da PF: preço por CP, mesma porta, PUDO, overrides.
+        base, price, price_source = _fleet_line_amount(
+            d, final_ids, date_from, date_to, cainiao_partner,
         )
 
         # Claims APROVADOS do driver ainda não cobrados em fatura activa.
@@ -5115,12 +5132,9 @@ def empresa_lote_emit(request, empresa_id):
             })
             continue
 
-        price, src = resolve_driver_price(d, cainiao_partner)
-        # Mesma porta: pacotes adicionais pagos ao valor do parceiro
-        from .services_same_door import same_door_extra_ids
-        n_sd = len(same_door_extra_ids(final_ids, cainiao_partner))
-        base = price * (n_delivered - n_sd) + (
-            cainiao_partner.same_door_additional_price * n_sd if n_sd else 0
+        # Valor com as regras da PF: preço por CP, mesma porta, PUDO, overrides.
+        base, price, src = _fleet_line_amount(
+            d, final_ids, date_from, date_to, cainiao_partner,
         )
         ids = all_ids
         names = all_names

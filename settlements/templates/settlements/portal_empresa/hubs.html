@@ -1,0 +1,77 @@
+{% extends "settlements/portal_empresa/_base.html" %}
+
+{% block portal_content %}
+<div class="space-y-5">
+
+  {% if messages %}
+    {% for message in messages %}
+    <div class="p-3 rounded-lg text-sm flex items-center gap-2
+      {% if message.level == 25 %}bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800
+      {% elif message.level == 40 %}bg-rose-50 dark:bg-rose-900/20 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800
+      {% else %}bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700{% endif %}">
+      {{ message }}
+    </div>
+    {% endfor %}
+  {% endif %}
+
+  {% include 'drivers_app/portal/_hub_block.html' with fleet_mode=True %}
+
+  {# ─── Motoristas: herança e exceções ─── #}
+  <section class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/50 dark:border-gray-700/50">
+    <div class="px-5 py-3 border-b border-gray-100 dark:border-gray-700">
+      <h3 class="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+        <i data-lucide="users" class="w-5 h-5 text-indigo-500"></i>Motoristas ativos e exceções por CP
+      </h3>
+      <p class="text-xs text-gray-500 mt-0.5">Cada motorista herda a tabela acima. Um valor na ficha do motorista substitui o valor da frota só para esse motorista.</p>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="lf-table">
+        <thead><tr><th>Motorista</th><th class="text-right">CP</th><th>Exceções na ficha</th><th>CP só na ficha</th>{% if hub_can_edit %}<th></th>{% endif %}</tr></thead>
+        <tbody>
+          {% for r in drivers %}
+            <tr>
+              <td>{{ r.driver.nome_completo }}{% if r.driver.apelido %} <span class="text-xs text-gray-500">({{ r.driver.apelido }})</span>{% endif %}</td>
+              <td class="text-right">{{ r.n_cps }}</td>
+              <td class="text-xs">
+                {% for cp, val, fleet_val in r.exceptions %}
+                  <span class="inline-block px-1.5 py-0.5 rounded bg-amber-50 dark:bg-amber-900/20 mr-1 mb-0.5"><b class="font-mono">{{ cp }}</b> {{ val }} €{% if fleet_val %} <span class="text-gray-500">(frota {{ fleet_val }})</span>{% endif %}</span>
+                {% empty %}<span class="text-gray-400">—</span>{% endfor %}
+              </td>
+              <td class="text-xs">{% if r.extra %}<span class="font-mono">{{ r.extra|join:", " }}</span>{% else %}<span class="text-gray-400">—</span>{% endif %}</td>
+              {% if hub_can_edit %}
+                <td class="text-right"><a href="{% url 'drivers_app:driver_admin_edit' r.driver.id %}#hubs" class="text-xs text-indigo-600 dark:text-indigo-300 hover:underline">Ficha →</a></td>
+              {% endif %}
+            </tr>
+          {% empty %}
+            <tr><td colspan="5" class="text-sm text-gray-500">Sem motoristas ativos.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  {% if edit_logs %}
+  <section class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/50 dark:border-gray-700/50">
+    <div class="px-5 py-3 border-b border-gray-100 dark:border-gray-700">
+      <h3 class="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+        <i data-lucide="history" class="w-5 h-5 text-indigo-500"></i>Histórico da tabela
+      </h3>
+    </div>
+    <div class="overflow-x-auto p-5">
+      <table class="lf-table">
+        <thead><tr><th>Quando</th><th>Quem</th><th>Alterações</th></tr></thead>
+        <tbody>
+          {% for log in edit_logs %}
+            <tr class="align-top">
+              <td class="whitespace-nowrap">{{ log.created_at|date:"d/m/Y H:i" }}</td>
+              <td>{{ log.user.username|default:"—" }}</td>
+              <td class="text-xs">{% for field, vals in log.changes.items %}<div>{{ vals.0|default:"—" }} → <b>{{ vals.1|default:"—" }}</b></div>{% endfor %}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  {% endif %}
+</div>
+{% endblock %}

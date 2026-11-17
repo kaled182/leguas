@@ -38,6 +38,11 @@
         <i data-lucide="users" class="w-4 h-4 inline -mt-0.5"></i>
         <span>Motoristas</span>
       </a>
+      <a href="{% url 'empresa-portal-hubs' empresa.id %}"
+         class="lf-tab{% if active_tab == 'hubs' %} lf-tab-active{% endif %}">
+        <i data-lucide="map-pin" class="w-4 h-4 inline -mt-0.5"></i>
+        <span>Hubs e CP</span>
+      </a>
       <a href="{% url 'empresa-portal-claims' empresa.id %}"
          class="lf-tab{% if active_tab == 'claims' %} lf-tab-active{% endif %}">
         <i data-lucide="alert-octagon" class="w-4 h-4 inline -mt-0.5"></i>

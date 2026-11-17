@@ -1284,6 +1284,61 @@ class DriverHubAssignment(models.Model):
         return f"{self.driver_id} · {self.hub.name} · {','.join(self.cp4s)}"
 
 
+class FleetHubAssignment(models.Model):
+    """Hub e CP4 contratados pela frota, com valor negociado por CP.
+
+    Os motoristas da frota herdam esta tabela. A ficha do motorista pode
+    ter uma exceção por CP (o valor do motorista ganha).
+    """
+
+    empresa = models.ForeignKey(
+        EmpresaParceira, on_delete=models.CASCADE, related_name="hub_assignments",
+    )
+    hub = models.ForeignKey(
+        "settlements.CainiaoHub", on_delete=models.PROTECT,
+        related_name="fleet_assignments",
+    )
+    cp4s = models.JSONField("CP4 contratados", default=list, blank=True)
+    cp_prices = models.JSONField(
+        "Valor negociado por CP (€)", default=dict, blank=True,
+        help_text='{"4740": "1.10"} — só para CP selecionados.',
+    )
+    is_primary = models.BooleanField("Hub principal", default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Hub da Frota"
+        verbose_name_plural = "Hubs das Frotas"
+        ordering = ["-is_primary", "hub__name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["empresa", "hub"], name="unique_fleet_hub",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.empresa_id} · {self.hub.name} · {','.join(self.cp4s)}"
+
+
+class FleetEditLog(models.Model):
+    """Quem mudou o quê nos hubs/CP da frota."""
+
+    empresa = models.ForeignKey(
+        EmpresaParceira, on_delete=models.CASCADE, related_name="edit_logs",
+    )
+    user = models.ForeignKey(
+        "auth.User", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="+",
+    )
+    section = models.CharField(max_length=30, blank=True)
+    changes = models.JSONField(default=dict, help_text="{campo: [antes, depois]}")
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+
 class DriverPaymentRegimeChange(models.Model):
     """Histórico do regime de pagamento (vale a partir do ciclo seguinte)."""
 

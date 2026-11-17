@@ -36,6 +36,13 @@ def primary_hub_terms(driver):
         driver.hub_assignments.select_related("hub__contract_terms")
         .order_by("-is_primary", "hub__name").first()
     )
+    if not a and driver.empresa_parceira_id:
+        # Motorista de frota sem hub próprio: usa o hub principal da frota.
+        a = (
+            driver.empresa_parceira.hub_assignments
+            .select_related("hub__contract_terms")
+            .order_by("-is_primary", "hub__name").first()
+        )
     if not a:
         return None
     return getattr(a.hub, "contract_terms", None)

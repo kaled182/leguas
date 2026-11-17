@@ -453,6 +453,78 @@ def empresa_portal_drivers(request, empresa_id):
 
 
 # ════════════════════════════════════════════════════════════════════════
+# Hubs e CP da frota (tabela herdada pelos motoristas)
+# ════════════════════════════════════════════════════════════════════════
+@empresa_login_required
+@require_http_methods(["GET", "POST"])
+def empresa_portal_hubs(request, empresa_id):
+    from django.db import transaction
+
+    from drivers_app.models import FleetEditLog, FleetHubAssignment
+    from drivers_app.services_hubs import (
+        driver_cp_selection, fleet_cp_selection, fleet_drivers_cp_table,
+        fleet_hub_suggestions, hub_view_options, save_hub_post,
+    )
+
+    empresa = _empresa_or_404(empresa_id)
+    can_edit = _admin_required(request.user)
+
+    if request.method == "POST":
+        if not can_edit:
+            messages.error(request, "Só a Léguas pode alterar a tabela de CP.")
+            return redirect("empresa-portal-hubs", empresa_id=empresa.id)
+        with transaction.atomic():
+            changes, errors = save_hub_post(
+                request.POST, empresa, FleetHubAssignment, "empresa",
+            )
+            if changes:
+                FleetEditLog.objects.create(
+                    empresa=empresa, user=request.user, section="hubs",
+                    changes={"hubs": changes},
+                )
+        for e in errors:
+            messages.error(request, e)
+        messages.success(request, "Hubs e CP da frota guardados." if changes else "Sem alterações.")
+        return redirect("empresa-portal-hubs", empresa_id=empresa.id)
+
+    assignments = list(empresa.hub_assignments.select_related("hub"))
+    selected, negotiated = fleet_cp_selection(empresa)
+    options = hub_view_options(assignments, selected, negotiated)
+
+    # Preço efetivo de cada motorista ativo: frota + exceções da ficha.
+    drivers = []
+    for d in empresa.motoristas.filter(is_active=True).order_by("nome_completo"):
+        own_cps, own_neg = driver_cp_selection(d, include_fleet=False)
+        all_cps, all_neg = driver_cp_selection(d)
+        exceptions = sorted(
+            (cp, own_neg[cp], negotiated.get(cp, ""))
+            for cp in own_cps
+            if own_neg.get(cp) and own_neg[cp] != negotiated.get(cp)
+        )
+        extra = sorted(cp for cp in own_cps if cp not in selected)
+        drivers.append({
+            "driver": d,
+            "n_cps": len(all_cps),
+            "exceptions": exceptions,
+            "extra": extra,
+            "price_base": d.price_per_package,
+        })
+
+    ctx = _common_ctx(empresa)
+    ctx.update({
+        "active_tab": "hubs",
+        "hub_options": options,
+        "assignments": assignments,
+        "suggestions": fleet_hub_suggestions(empresa),
+        "drivers_cp_table": fleet_drivers_cp_table(empresa) if can_edit else None,
+        "hub_can_edit": can_edit,
+        "drivers": drivers,
+        "edit_logs": empresa.edit_logs.select_related("user")[:10],
+    })
+    return render(request, "settlements/portal_empresa/hubs.html", ctx)
+
+
+# ════════════════════════════════════════════════════════════════════════
 # Claims da frota (descontos)
 # ════════════════════════════════════════════════════════════════════════
 @empresa_login_required

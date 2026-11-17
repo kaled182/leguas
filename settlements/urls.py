@@ -484,6 +484,11 @@ urlpatterns = [
         name="empresa-portal-drivers",
     ),
     path(
+        "empresas/<int:empresa_id>/portal/hubs/",
+        views_fleet_portal.empresa_portal_hubs,
+        name="empresa-portal-hubs",
+    ),
+    path(
         "empresas/<int:empresa_id>/portal/claims/",
         views_fleet_portal.empresa_portal_claims,
         name="empresa-portal-claims",

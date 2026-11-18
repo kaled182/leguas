@@ -311,7 +311,6 @@
                 <td>
                   <div class="text-sm">{{ g.address|default:"—" }} <span class="text-xs text-gray-500">{{ g.zip }}</span></div>
                   <div class="font-mono text-[11px] text-gray-500">{{ g.waybills|join:" · " }}</div>
-                  {% if g.fixed_n %}<div class="text-[11px] text-amber-700 dark:text-amber-300">{{ g.fixed_n }} guia{{ g.fixed_n|pluralize }} com preço fixo por guia</div>{% endif %}
                 </td>
                 <td class="text-center font-mono font-semibold text-teal-600 dark:text-teal-400 whitespace-nowrap">1 + {{ g.n }}</td>
                 <td class="text-right font-mono font-bold">{{ g.value|eur }}</td>
@@ -327,7 +326,7 @@
             {% endif %}
           </table>
         </div>
-        <p class="px-5 py-2 text-[11px] text-gray-500">Regra mesma porta: o 1.º pacote de cada porta é pago ao preço da porta (preço do CP) e cada adicional a {{ ov.same_door_price|eur }}. Uma guia com preço fixo mantém o preço fixo. A mesma porta = mesmo dia, mesmo login e mesma morada (CP7, rua e número da porta).</p>
+        <p class="px-5 py-2 text-[11px] text-gray-500">Regra mesma porta: o 1.º pacote de cada porta é pago ao preço da porta (preço do CP) e cada adicional a {{ ov.same_door_price|eur }}. O preço fixo por guia só substitui o preço da porta. A mesma porta = mesmo dia, mesmo login e mesma morada (CP7, rua e número da porta).</p>
         {% if ov.same_door_review %}
         <div class="px-5 py-3 border-t border-gray-200 dark:border-gray-700 text-sm">
           <p class="font-semibold text-amber-700 dark:text-amber-400">Mesma porta para revisão ({{ ov.same_door_review|length }})</p>

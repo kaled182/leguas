@@ -289,10 +289,10 @@ def find_drivers_without_pf(date_from, date_to, min_gap_days=MIN_GAP_DAYS,
                 else:
                     # Door normal: aplica preço base + override.
                     po = price_overrides_map.get(wb)
-                    if po:
-                        unit = po.price
-                    elif r["id"] in sd_extras:
+                    if r["id"] in sd_extras:
                         unit = cainiao.same_door_additional_price
+                    elif po:
+                        unit = po.price
                     else:
                         unit = base_price
                     base_amount += unit

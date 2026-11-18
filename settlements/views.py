@@ -1865,10 +1865,10 @@ def driver_pre_invoice_create(request, driver_id):
                 price_groups = {}
                 for r in rows_door:
                     po = price_overrides_map.get(r["waybill_number"])
-                    is_sd = not po and r["id"] in sd_extras
+                    is_sd = r["id"] in sd_extras
                     cp_price, cp_src, cp4 = pricer.price(r.get("zip_code"))
                     unit_price = (
-                        po.price if po else sd_price if is_sd else cp_price
+                        sd_price if is_sd else po.price if po else cp_price
                     )
                     kind = "special" if (po or is_sd) else cp_src
                     key = (unit_price, kind)
@@ -1877,7 +1877,7 @@ def driver_pre_invoice_create(request, driver_id):
                             "n": 0, "reasons": set(), "cps": set(),
                         }
                     price_groups[key]["n"] += 1
-                    if po and po.reason:
+                    if po and po.reason and not is_sd:
                         price_groups[key]["reasons"].add(po.reason)
                     if is_sd:
                         price_groups[key]["reasons"].add(SD_REASON)
@@ -1992,10 +1992,10 @@ def driver_pre_invoice_create(request, driver_id):
                     price_groups_inc = {}
                     for r in rows_inc_door:
                         po = price_overrides_map.get(r["waybill_number"])
-                        is_sd = not po and r["id"] in sd_extras_inc
+                        is_sd = r["id"] in sd_extras_inc
                         cp_price, cp_src, cp4 = pricer.price(r.get("zip_code"))
                         unit_price = (
-                            po.price if po else sd_price if is_sd else cp_price
+                            sd_price if is_sd else po.price if po else cp_price
                         )
                         kind = "special" if (po or is_sd) else cp_src
                         key = (unit_price, kind)
@@ -2004,7 +2004,7 @@ def driver_pre_invoice_create(request, driver_id):
                                 "n": 0, "reasons": set(), "cps": set(),
                             }
                         price_groups_inc[key]["n"] += 1
-                        if po and po.reason:
+                        if po and po.reason and not is_sd:
                             price_groups_inc[key]["reasons"].add(po.reason)
                         if is_sd:
                             price_groups_inc[key]["reasons"].add(SD_REASON)
@@ -4346,13 +4346,13 @@ def driver_pre_invoice_preview(request, driver_id):
         price_groups = {}  # price → {n, waybills}
         for r in rows_this:
             po = price_overrides_map.get(r["waybill_number"])
-            is_sd = not po and r["id"] in sd_extras
-            unit_price = po.price if po else sd_price if is_sd else price
+            is_sd = r["id"] in sd_extras
+            unit_price = sd_price if is_sd else po.price if po else price
             key = unit_price
             if key not in price_groups:
                 price_groups[key] = {"n": 0, "reasons": set()}
             price_groups[key]["n"] += 1
-            if po and po.reason:
+            if po and po.reason and not is_sd:
                 price_groups[key]["reasons"].add(po.reason)
             if is_sd:
                 price_groups[key]["reasons"].add(
@@ -4414,14 +4414,14 @@ def driver_pre_invoice_preview(request, driver_id):
             price_groups_inc = {}
             for r in rows_inc:
                 po = price_overrides_map.get(r["waybill_number"])
-                is_sd = not po and r["id"] in sd_extras_inc
-                unit_price = po.price if po else sd_price if is_sd else price
+                is_sd = r["id"] in sd_extras_inc
+                unit_price = sd_price if is_sd else po.price if po else price
                 if unit_price not in price_groups_inc:
                     price_groups_inc[unit_price] = {
                         "n": 0, "reasons": set(),
                     }
                 price_groups_inc[unit_price]["n"] += 1
-                if po and po.reason:
+                if po and po.reason and not is_sd:
                     price_groups_inc[unit_price]["reasons"].add(po.reason)
                 if is_sd:
                     price_groups_inc[unit_price]["reasons"].add(

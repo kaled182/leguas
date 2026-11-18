@@ -1314,3 +1314,58 @@ class FleetInvoiceDetailTests(FleetSetupMixin, TestCase):
             "empresa-portal-driver-report", args=[self.fleet.id, fi.id, fi.lines.get().id],
         ))
         self.assertEqual(r.status_code, 200)
+
+    def test_same_door_wins_over_fixed_price(self):
+        """Guia extra de mesma porta com preço fixo: paga o preço de mesma porta."""
+        import json
+
+        from settlements.models import (
+            CainiaoOperationTask, DriverPreInvoice, FleetInvoice, PackagePriceOverride,
+        )
+
+        p = self.partner
+        p.same_door_enabled = True
+        p.same_door_additional_price = self.D("0.30")
+        p.save()
+        d = self.date
+        for i in range(2):
+            CainiaoOperationTask.objects.create(
+                waybill_number=f"FX{i}", task_date=d(2026, 10, 7), task_status="Delivered",
+                courier_name="Fx_LF", zip_code="4910-604", detailed_address="Rua de Senandes 514",
+            )
+            PackagePriceOverride.objects.create(
+                waybill_number=f"FX{i}", task_date=d(2026, 10, 7), cp4="4910",
+                price=self.D("1.15"),
+            )
+        self.client.force_login(self.admin)
+        r = self.client.post(
+            f"/settlements/empresas/{self.fleet.id}/lote-emit/",
+            data=json.dumps({"from": "2026-10-01", "to": "2026-10-31"}),
+            content_type="application/json",
+        )
+        self.assertEqual(r.status_code, 200, r.content[:300])
+        self.assertEqual(FleetInvoice.objects.get().lines.get().base_amount, self.D("1.45"))
+        # PF individual (motorista sem frota) com a mesma regra.
+        solo = _driver("700000102", apelido="Solo_LF")
+        solo.price_per_package = self.D("1.00")
+        solo.save()
+        for i in range(2):
+            CainiaoOperationTask.objects.create(
+                waybill_number=f"SO{i}", task_date=d(2026, 10, 8), task_status="Delivered",
+                courier_name="Solo_LF", zip_code="4910-604", detailed_address="Rua Velha 9",
+            )
+            PackagePriceOverride.objects.create(
+                waybill_number=f"SO{i}", task_date=d(2026, 10, 8), cp4="4910",
+                price=self.D("1.15"),
+            )
+        r = self.client.post(
+            f"/settlements/pre-invoices/driver/{solo.id}/create/",
+            data=json.dumps({"periodo_inicio": "2026-10-01", "periodo_fim": "2026-10-31"}),
+            content_type="application/json",
+        )
+        self.assertEqual(r.status_code, 200, r.content[:300])
+        pf = DriverPreInvoice.objects.get(driver=solo)
+        self.assertEqual(pf.base_entregas, self.D("1.45"))
+        from settlements.services_fleet_invoice import overview
+        g = overview(FleetInvoice.objects.get())["same_door"][0]
+        self.assertEqual((g["n"], g["value"]), (1, self.D("1.45")))

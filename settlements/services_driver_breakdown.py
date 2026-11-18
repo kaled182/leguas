@@ -96,11 +96,12 @@ def price_tasks(driver, tasks, date_from, date_to, partner):
     n_same_door_paid = 0
     n_cp_negotiated = 0
     for t in door_delivered:
-        if t.waybill_number in overrides:
-            amount_door_normal += overrides[t.waybill_number]
-        elif t.id in extra_ids:
+        # Mesma porta primeiro: o preço fixo por guia só substitui o preço da porta.
+        if t.id in extra_ids:
             amount_same_door += sd_price
             n_same_door_paid += 1
+        elif t.waybill_number in overrides:
+            amount_door_normal += overrides[t.waybill_number]
         else:
             unit, src, _cp = pricer.price(t.zip_code)
             amount_door_normal += unit

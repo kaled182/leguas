@@ -60,14 +60,13 @@ def task_lines(driver, date_from, date_to, partner, hubs):
     )
 
     kind, amount, source = {}, {}, {}
-    # Contagem igual à do portal: a guia extra de mesma porta conta como
-    # mesma porta, mesmo quando tem preço fixo por guia.
+    # Mesma porta primeiro (como na PF): a guia extra paga o preço de mesma
+    # porta, mesmo quando tem preço fixo por guia.
     for t in door_delivered:
-        if t.waybill_number in overrides:
-            k = "mesma porta" if t.id in extra_ids else "porta"
-            kind[t.id], amount[t.id], source[t.id] = k, overrides[t.waybill_number], "fixo por guia"
-        elif t.id in extra_ids:
+        if t.id in extra_ids:
             kind[t.id], amount[t.id], source[t.id] = "mesma porta", sd_price, "mesma porta"
+        elif t.waybill_number in overrides:
+            kind[t.id], amount[t.id], source[t.id] = "porta", overrides[t.waybill_number], "fixo por guia"
         else:
             unit, src, _cp = pricer.price(t.zip_code)
             kind[t.id], amount[t.id], source[t.id] = "porta", unit or Decimal("0"), src

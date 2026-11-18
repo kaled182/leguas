@@ -241,7 +241,7 @@ def same_door_table(groups, width, with_driver=False):
     ]))
     return [Paragraph(f"Mesma porta ({len(groups)} porta{'s' if len(groups) != 1 else ''})", H2), t, Paragraph(
         "Regra mesma porta: o 1.º pacote de cada porta é pago ao preço da porta e cada adicional ao "
-        "preço de mesma porta. Uma guia com preço fixo mantém o preço fixo. A mesma porta = mesmo dia, "
+        "preço de mesma porta. O preço fixo por guia só substitui o preço da porta. A mesma porta = mesmo dia, "
         "mesmo login e mesma morada (CP7, rua e número da porta).", NOTE)]
 
 
